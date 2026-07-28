@@ -5,8 +5,10 @@ livrables, ses dépendances, ses risques et ses critères de validation. Les
 phases sont séquentielles quant aux dépendances, mais leur calendrier n'est pas
 figé ici.
 
-> Priorité absolue : livrer la **tranche verticale Mandats** décrite dans
-> [02-MVP-SCOPE.md](02-MVP-SCOPE.md).
+> Priorité absolue : livrer la **tranche verticale Mandats jusqu'au résultat du
+> mandat** décrite dans [02-MVP-SCOPE.md](02-MVP-SCOPE.md). On conserve une
+> **acquisition verticale** et on évite toute phase trop large impossible à
+> valider.
 
 ---
 
@@ -17,14 +19,15 @@ surdimensionner.
 
 **Livrables**
 - Initialisation de l'application web unique (Next.js, App Router, TypeScript
-  strict) — sans figer de version.
+  strict), avec **versions stables sélectionnées, verrouillées** (package.json +
+  lockfile) et **documentées** dans l'ADR.
 - Structure en monolithe modulaire (modules métier séparés).
 - Base PostgreSQL (Supabase envisagé) avec **migrations versionnées**.
-- Authentification et gestion des **rôles / organisations** (multi-organisations
-  prête).
+- Authentification et **modèle d'accès** (organisations, memberships, rôles) —
+  voir [06-ACCESS-MODEL.md](06-ACCESS-MODEL.md) ; multi-organisations prête.
 - Fondations du **design system** (variables CSS, composants accessibles).
 - Validation des données (Zod ou équivalent) posée comme convention.
-- **Journal d'activité** de base.
+- **Journal d'audit** (AuditEvent) de base, distinct des activités métier.
 - Séparation des environnements **dev / preview / production** ; secrets hors
   dépôt.
 - Complétion des **commandes de validation** dans [CLAUDE.md](../CLAUDE.md).
@@ -35,132 +38,165 @@ surdimensionner.
 modèle de domaine évolue.
 
 **Critères de validation** : l'application démarre dans les trois environnements ;
-un utilisateur peut s'authentifier avec un rôle et une organisation ; une
-migration peut être appliquée ; les permissions de base fonctionnent.
+un utilisateur s'authentifie avec un rôle et une organisation ; une migration
+peut être appliquée ; les permissions de base et l'audit fonctionnent.
 
 ---
 
 ## Phase 1 — Funnel Mandats
 
-**Objectif** : capter des leads propriétaires depuis la publicité et les
-enregistrer dans la base centrale.
+**Objectif** : capter des leads propriétaires depuis la publicité et conserver la
+**soumission originale** en base centrale.
 
 **Livrables**
 - **Landing** Mandats (emplacement VSL) fidèle à la direction artistique.
 - **Quiz** propriétaire structuré.
-- **Collecte des coordonnées et consentements** (RGPD, horodatés).
-- **Attribution publicitaire** (capture source/campagne).
-- **Enregistrement du lead** en base : création d'une **personne** et d'une
-  **opportunité** distinctes.
+- **FunnelSubmission** conservée (idempotence, version de formulaire, landing/
+  variante, réponses brutes + normalisées, UTM, source/campagne/ad set/annonce,
+  identifiants de clic, URL/referrer).
+- **PrivacyRecord / ConsentRecord** (finalité, base légale, notice, canaux,
+  preuve, choix).
+- **Attribution multi-points** (premier / dernier contact) rattachée à la
+  soumission.
+- Résolution **contact / opportunité** avec **dédoublonnage retraçable** (aucune
+  soumission supprimée).
 
 **Dépendances** : Phase 0.
 
 **Risques** : qualité/fiabilité de l'attribution ; conformité RGPD des
-consentements ; abus/spam du formulaire.
+enregistrements ; abus/spam du formulaire ; qualité du dédoublonnage.
 
-**Critères de validation** : un lead soumis via le funnel crée une personne et
-une opportunité reliées, avec sa source et ses consentements, **sans passer par
-Systeme.io ou Google Sheets comme source de vérité**.
+**Critères de validation** : une soumission crée/relie une personne et une
+opportunité, conserve la soumission d'origine, capture l'attribution et les
+enregistrements RGPD, **sans** traiter Systeme.io ou Google Sheets comme source
+de vérité.
 
 ---
 
-## Phase 2 — CRM Mandats
+## Phase 2 — CRM Mandats (jusqu'au résultat du mandat) — **fin du MVP**
 
-**Objectif** : permettre le setting, la qualification et le suivi jusqu'à la
-décision de segment.
+**Objectif** : setting, qualification, rendez-vous, estimation, décision de
+segment, proposition puis **résultat du mandat**.
 
 **Livrables**
-- Liste et fiche des **opportunités**.
-- **Pipeline** (stades) et **Segment** **séparés**.
-- **Activités**, **notes**, **tâches**, **rendez-vous**.
-- **Qualification** (champs distincts du pipeline).
-- **Segmentation** selon le seuil premium **configurable**.
-- **Permissions** par rôle/organisation ; **journal d'activité** exploitable.
+- Liste et fiche des **opportunités** ; **contacts multiples** (OpportunityContact)
+  et **organisations participantes** (OpportunityOrganization) ; **affectations**
+  (OpportunityAssignment).
+- **Pipeline** (stades) et **Segment** **séparés** ; **décision de segment**
+  tracée (recommandé/validé, raison, auteur, date, dérogation tracée).
+- **Activités** métier et **AuditEvent** distincts.
+- **Notes**, **Tâches**, **Rendez-vous** (avec résultat), **Qualification**.
+- **Mandat** (entité distincte) : issue signé/refusé/perdu, date de signature,
+  organisation porteuse, type et exclusivité, document signé rattaché, raison de
+  perte/refus, **snapshot** des règles économiques versionnées.
+- **Fonctions opérationnelles** : notification nouveau lead, affectation setter,
+  prochaine action, alerte tâches en retard, vue « à rappeler », **tableau de
+  bord minimal** (indicateurs de [02-MVP-SCOPE.md](02-MVP-SCOPE.md)).
+- **Permissions** par rôle/organisation ; **journal d'audit** exploitable.
 
 **Dépendances** : Phases 0 et 1.
 
-**Risques** : confusion stade/segment dans l'UI ; complexité des permissions ;
-ergonomie du setter.
+**Risques** : confusion stade/segment ou activité/audit dans l'UI ; complexité
+des permissions ; ergonomie du setter ; saisie manuelle de l'issue du mandat.
 
 **Critères de validation** : ceux du MVP (voir
-[02-MVP-SCOPE.md](02-MVP-SCOPE.md)). **Fin du périmètre MVP.**
+[02-MVP-SCOPE.md](02-MVP-SCOPE.md)) — le parcours va **jusqu'au résultat du
+mandat**. **Fin du périmètre MVP.**
 
 ---
 
-## Phase 3 — Moteur Biens & Acquéreurs
+## Phase 3 — Fabrique de biens
 
-**Objectif** : commercialiser le bien et acquérir des acheteurs (post-MVP).
+**Objectif** : produire les actifs de commercialisation d'un bien (post-MVP).
 
-**Livrables**
-- **Fiche bien** commercialisable, **landing** dédiée, **brochure
-  confidentielle**.
-- **Campagnes publicitaires** acheteurs et **acquisition** d'acheteurs.
-- **Qualification** budget/projet acheteur, **setting**, **visites**, **offres**,
-  **vente**.
+**Livrables** : **fiche bien** commercialisable, **contenus**, **médias**,
+**landing** dédiée et **brochure confidentielle**.
 
 **Dépendances** : Phase 2 (mandats signés à commercialiser).
 
-**Risques** : coordination avec l'agence partenaire (visites) ; financement des
-campagnes acheteurs ; volumétrie des acheteurs.
+**Risques** : coût et délai de production des contenus ; cohérence de la
+direction artistique ; financement des shootings (voir questions ouvertes).
 
-**Critères de validation** : un bien peut être commercialisé de la fiche jusqu'à
-l'offre/vente, avec acquisition d'acheteurs pilotée par Prodigio.
+**Critères de validation** : un bien sous mandat dispose d'une fiche, d'une
+landing et d'une brochure prêtes à diffuser.
 
 ---
 
-## Phase 4 — Portail Propriétaire
+## Phase 4 — Acquisition et CRM Acquéreurs
 
-**Objectif** : offrir de la transparence au vendeur.
+**Objectif** : acquérir et convertir des acheteurs (post-MVP).
+
+**Livrables** : campagnes acheteurs, **leads acheteurs**, **qualification**
+budget/projet, **setting**, **visites**, **offres**, **vente**.
+
+**Dépendances** : Phase 3 (actifs de commercialisation disponibles).
+
+**Risques** : coordination avec l'agence partenaire (visites) ; volumétrie
+acheteurs ; financement des campagnes acheteurs.
+
+**Critères de validation** : un bien peut être commercialisé de l'acquisition
+d'acheteurs jusqu'à l'offre/vente, avec setting et visites suivis dans le CRM.
+
+---
+
+## Phase 5 — Analytics de commercialisation et Portail Propriétaire
+
+**Objectif** : mesurer la commercialisation et **restituer** au propriétaire.
+
+> **Ordre corrigé** : le portail dépend des **statistiques du moteur acquéreurs**
+> et des **campagnes publicitaires**. Les analytics de commercialisation
+> nécessaires sont donc livrés **avec** le portail, pas après.
 
 **Livrables**
-- Présentation de la **stratégie** ; **statistiques publicitaires** ; demandes
-  générées ; profils qualifiés ; visites planifiées/réalisées ; offres ;
-  progression ; **documents et comptes rendus**.
+- **Analytics de commercialisation** : statistiques publicitaires, demandes
+  générées, profils qualifiés, visites planifiées/réalisées, offres,
+  progression.
+- **Portail Propriétaire** : présentation de la stratégie, restitution des
+  statistiques et documents/comptes rendus, en **lecture** cloisonnée par
+  propriétaire.
 
-**Dépendances** : Phases 2 et 3 (données à restituer).
+**Dépendances** : Phases 3 et 4 (données à mesurer et à restituer).
 
 **Risques** : exposition de données sensibles ; permissions propriétaire ;
-attentes de fraîcheur des statistiques.
+fraîcheur des statistiques.
 
-**Critères de validation** : un propriétaire authentifié consulte, en lecture,
-la stratégie et les résultats de son bien, sans accès aux données d'autres
-organisations/biens.
-
----
-
-## Phase 5 — Automatisations & Analytics
-
-**Objectif** : industrialiser et mesurer.
-
-**Livrables**
-- Automatisations (relances, tâches, notifications).
-- Tableaux de bord et **analytics** (acquisition, conversion, segmentation).
-- Éventuel **export secondaire** Google Sheets (jamais source de vérité).
-
-**Dépendances** : phases précédentes selon les données mesurées.
-
-**Risques** : automatisations mal calibrées ; qualité des données ; RGPD sur les
-communications automatisées.
-
-**Critères de validation** : les indicateurs clés (voir
-[01-PRODUCT-VISION.md](01-PRODUCT-VISION.md)) sont disponibles et fiables ; les
-automatisations réduisent le travail manuel sans dégrader la conformité.
+**Critères de validation** : un propriétaire authentifié consulte la stratégie et
+les résultats de **son** bien, sans accès aux données d'autres organisations ou
+biens.
 
 ---
 
-## Phase 6 — Évolution multi-partenaires
+## Phase 6 — Automatisations avancées
+
+**Objectif** : industrialiser les process (post-portail).
+
+**Livrables** : séquences avancées, **nurturing automatisé**, relances,
+notifications enrichies, éventuel **export secondaire** Google Sheets (jamais
+source de vérité).
+
+**Dépendances** : phases précédentes selon les process automatisés.
+
+**Risques** : automatisations mal calibrées ; RGPD sur les communications
+automatisées (canaux autorisés) ; qualité des données.
+
+**Critères de validation** : les automatisations réduisent le travail manuel sans
+dégrader la conformité ni la traçabilité.
+
+---
+
+## Phase 7 — Multi-partenaires à l'échelle
 
 **Objectif** : exploiter réellement plusieurs agences partenaires.
 
-**Livrables**
-- Gestion opérationnelle de **plusieurs organisations partenaires**.
-- Paramétrage par partenaire (seuil, partages, périmètre).
-- Cloisonnement et permissions à l'échelle multi-partenaires.
+**Livrables** : gestion opérationnelle de **plusieurs organisations
+partenaires** ; paramétrage par partenaire (règles économiques versionnées,
+seuil, partages, périmètre) ; cloisonnement et permissions à l'échelle.
 
-**Dépendances** : architecture multi-organisations posée en Phase 0.
+**Dépendances** : architecture multi-organisations posée en Phase 0 ; modèle
+d'accès ([06-ACCESS-MODEL.md](06-ACCESS-MODEL.md)).
 
-**Risques** : cloisonnement des données ; complexité de configuration ;
-équité/cohérence des règles entre partenaires.
+**Risques** : cloisonnement des données ; complexité de configuration ; cohérence
+des règles entre partenaires.
 
 **Critères de validation** : deux partenaires (ou plus) opèrent en parallèle avec
 des paramètres distincts, sans fuite de données entre organisations.

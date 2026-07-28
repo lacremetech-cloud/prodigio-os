@@ -22,7 +22,8 @@ Prodigio est un **système technologique et opérationnel** qui industrialise la
 
 - il **finance et attribue** les publicités d'acquisition de propriétaires
   vendeurs ;
-- il **capte, qualifie et oriente** les leads dans une base centrale unique ;
+- il **capte, qualifie et oriente** les leads dans une base centrale unique, en
+  **conservant la soumission originale** du funnel ;
 - il **pilote la stratégie marketing** de commercialisation pour les biens
   premium ;
 - il **finance également** l'acquisition d'acheteurs pour ces biens ;
@@ -34,49 +35,54 @@ Prodigio est un **système technologique et opérationnel** qui industrialise la
 Prodigio n'est pas, à ce stade, une agence : c'est le **moteur** qui alimente et
 pilote la commercialisation, l'agence partenaire apportant le cadre légal.
 
-> **Statut de portage.** Le système est actuellement porté par **INDESCALE**,
-> dans l'attente de la création de l'entité Prodigio. Le premier partenaire
-> agence envisagé est **Héritage Patrimoine** (dirigé par Cyril Gallon). Les
-> éléments juridiques ne sont pas tous validés — voir
+> **Statut de portage.** **INDESCALE** porte actuellement le **développement et
+> l'exploitation du système Prodigio**, dans l'attente de la création de l'entité
+> Prodigio. **INDESCALE ne porte pas les mandats immobiliers** : ceux-ci sont
+> portés par une **entité immobilière habilitée**, à confirmer contractuellement.
+> **Héritage Patrimoine** (dirigé par Cyril Gallon) est le **premier partenaire
+> envisagé**, sous réserve de validation de son entité exacte et de ses
+> habilitations. Les éléments juridiques ne sont pas tous validés — voir
 > [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md).
 
 ## Utilisateurs
 
 - **Administrateur Prodigio** — configure le système, les paramètres (seuil,
-  partages), les organisations et les accès.
+  partages, règles économiques versionnées), les organisations et les accès.
 - **Manager** — pilote l'activité commerciale, supervise les setters et les
   performances.
 - **Setter** — rappelle les leads entrants, qualifie le bien et le projet,
   planifie les rendez-vous.
 - **Agent immobilier partenaire** — porte le mandat, réalise notamment les
-  visites, agit dans le cadre de l'agence partenaire.
+  visites, agit dans le cadre de l'agence partenaire ; ne voit que les dossiers
+  partagés avec son organisation.
 - **Propriétaire vendeur** — client final ; plus tard, accède au portail
   propriétaire pour suivre la stratégie et les résultats.
-- **Accès lecture seule** (éventuel) — consultation sans modification (audit,
-  observation).
+- **Accès lecture seule** (éventuel) — consultation sans modification.
 
-Les droits dépendent du **rôle** et de l'**organisation**.
+Les droits dépendent du **rôle** et de l'**organisation** — voir
+[06-ACCESS-MODEL.md](06-ACCESS-MODEL.md).
 
 ## Moteurs du produit
 
 1. **Moteur Mandats** — acquérir et qualifier des propriétaires vendeurs :
-   landing avec VSL, quiz propriétaire, attribution publicitaire, collecte des
-   coordonnées et consentements, CRM de qualification, appels/notes/tâches/
-   rendez-vous, estimation, segmentation du bien, suivi jusqu'à la signature du
-   mandat.
+   landing avec VSL, quiz propriétaire, **conservation de la soumission**,
+   attribution publicitaire, collecte des coordonnées et **enregistrements RGPD**,
+   CRM de qualification, appels/notes/tâches/rendez-vous, estimation,
+   segmentation du bien, et **suivi jusqu'au résultat du mandat** (signé, refusé
+   ou perdu).
 
 2. **Moteur Biens & Acquéreurs** — commercialiser le bien et trouver l'acheteur :
-   fiche bien, landing dédiée, brochure confidentielle, campagnes publicitaires,
-   acquisition d'acheteurs, qualification du budget et du projet, setting,
-   visites, offres, vente.
+   fiche bien, contenus/médias, landing dédiée, brochure confidentielle,
+   campagnes publicitaires, acquisition d'acheteurs, qualification du budget et
+   du projet, setting, visites, offres, vente.
 
 3. **Portail Propriétaire** — donner de la visibilité au vendeur : présentation
    de la stratégie, statistiques publicitaires, demandes générées, profils
    qualifiés, visites planifiées et réalisées, offres, progression de la
    commercialisation, documents et comptes rendus.
 
-Le MVP se concentre sur une **tranche verticale du moteur Mandats** — voir
-[02-MVP-SCOPE.md](02-MVP-SCOPE.md).
+Le MVP se concentre sur une **tranche verticale du moteur Mandats**, **jusqu'au
+résultat du mandat** — voir [02-MVP-SCOPE.md](02-MVP-SCOPE.md).
 
 ## Principes d'expérience
 
@@ -87,21 +93,24 @@ Le MVP se concentre sur une **tranche verticale du moteur Mandats** — voir
 - **Palette** : ivoire, noir bois, or vieilli (référence visuelle Chalet Mitja /
   Le Cambre d'Aze — inspiration éditoriale uniquement, pas de reprise technique).
 - **Clarté opérationnelle** côté interne : le CRM privilégie la lisibilité et la
-  rapidité d'action (setting, qualification, rendez-vous).
+  rapidité d'action (setting, qualification, rendez-vous, décision de mandat).
 - **Accessibilité** et **français** au lancement, structure prête pour
   l'internationalisation.
 
 ## Indicateurs de réussite
 
 > Hypothèses de pilotage à affiner ; les cibles chiffrées ne sont pas fixées ici.
+> Le tableau de bord opérationnel minimal du MVP est détaillé dans
+> [02-MVP-SCOPE.md](02-MVP-SCOPE.md).
 
-- **Acquisition** : nombre de leads propriétaires générés, coût par lead,
-  qualité d'attribution des sources.
-- **Qualification** : taux de leads contactés, délai moyen de premier rappel,
-  taux de qualification aboutie.
-- **Conversion mandats** : taux de passage du lead au rendez-vous, du rendez-vous
-  à la proposition de mandat, à la signature.
-- **Segmentation** : répartition des biens entre cible premium et hors cible,
-  fiabilité de la segmentation.
+- **Acquisition** : nouveaux leads, leads non traités, coût par lead (si dépense
+  disponible), qualité d'attribution des sources.
+- **Qualification & setting** : taux de contact, délai du premier rappel, taux de
+  qualification aboutie.
+- **Conversion mandats** : rendez-vous planifiés et réalisés, mandats proposés,
+  mandats signés, **taux de signature**, coût par mandat signé (si dépense
+  disponible).
+- **Segmentation** : répartition premium / hors cible, fiabilité de la décision
+  de segment (recommandé vs validé).
 - **Fiabilité du système** : complétude et traçabilité des données, part des
-  informations centralisées (vs. hors base).
+  informations centralisées (vs hors base).

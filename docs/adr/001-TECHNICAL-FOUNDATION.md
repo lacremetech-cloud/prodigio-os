@@ -5,20 +5,27 @@
 - **Portée** : orientation technique du projet Prodigio OS avant tout
   développement.
 
-> Cette ADR **documente une orientation**. Aucun outil n'est installé, aucune
-> version n'est figée : utiliser « dernière version stable au moment de
-> l'installation ».
+> Cette ADR **documente une orientation**. Aucun outil n'est installé pendant la
+> phase documentaire. Les **versions majeures** seront **sélectionnées,
+> verrouillées et documentées** au moment de l'initialisation (voir §Décision,
+> point 11).
 
 ## Contexte
 
 Prodigio OS est un système technologique et opérationnel pour la
 commercialisation active de biens d'exception (voir
 [../01-PRODUCT-VISION.md](../01-PRODUCT-VISION.md)). Le projet démarre par une
-**tranche verticale Mandats** (voir [../02-MVP-SCOPE.md](../02-MVP-SCOPE.md)),
-avec une base de données centrale comme **unique source de vérité**. Le précédent
-projet (Chalet Mitja / Le Cambre d'Aze) sert de **référence visuelle et
-éditoriale uniquement** ; son architecture HTML / Systeme.io / Google Sheets **ne
-doit pas** servir de fondation technique.
+**tranche verticale Mandats jusqu'au résultat du mandat** (voir
+[../02-MVP-SCOPE.md](../02-MVP-SCOPE.md)), avec une base de données centrale comme
+**unique source de vérité**. Le précédent projet (Chalet Mitja / Le Cambre
+d'Aze) sert de **référence visuelle et éditoriale uniquement** ; son architecture
+HTML / Systeme.io / Google Sheets **ne doit pas** servir de fondation technique.
+
+> **Portage.** **INDESCALE** porte le **développement et l'exploitation** du
+> système Prodigio, dans l'attente de la création de l'entité Prodigio.
+> **INDESCALE ne porte pas les mandats immobiliers** : ceux-ci relèvent d'une
+> **entité immobilière habilitée**, à confirmer contractuellement (Héritage
+> Patrimoine envisagé). Voir [../05-OPEN-QUESTIONS.md](../05-OPEN-QUESTIONS.md).
 
 ## Décision
 
@@ -33,36 +40,51 @@ doit pas** servir de fondation technique.
    l'authentification et le stockage.
 5. **Vercel** pour l'hébergement et les previews.
 6. **Architecture multi-organisations prête** dès la conception, **mais non
-   surdimensionnée** (le MVP n'exploite qu'un partenaire).
-7. **Validation** des données avec **Zod** (ou équivalent).
+   surdimensionnée** : une opportunité peut réunir **plusieurs organisations**
+   (opérateur Prodigio + agence porteuse) et **plusieurs contacts** ; modèle
+   d'accès dans [../06-ACCESS-MODEL.md](../06-ACCESS-MODEL.md).
+7. **Validation** des données avec **Zod** (ou équivalent) à toutes les
+   frontières.
 8. **Design system** fondé sur des **variables CSS** et des composants
    **accessibles**.
-9. **Permissions** par rôle et organisation ; **journal d'activité** ;
-   **migrations versionnées**.
+9. **Permissions** par rôle et organisation ; **journal d'audit (AuditEvent)**
+   distinct des activités métier ; **migrations versionnées**.
 10. **Environnements séparés** dev / preview / production ; **secrets hors
     dépôt**.
-11. Aucune **version** figée : « dernière version stable au moment de
-    l'installation ».
+11. **Gestion des versions de dépendances** :
+    - **sélectionner** des versions stables et **compatibles** au moment de
+      l'initialisation ;
+    - **verrouiller** les dépendances dans le `package.json` et le **lockfile** ;
+    - **documenter** ici (ou dans la doc technique) les **versions majeures
+      réellement testées** ;
+    - **ne jamais** utiliser de dépendances **flottantes** en production ;
+    - toute **mise à niveau majeure** doit être **volontaire, testée et
+      documentée**.
+
+> **Versions majeures testées** : _à compléter lors de l'initialisation_ (Next.js,
+> TypeScript, PostgreSQL/Supabase, Zod…). Aucune version n'est arrêtée pendant la
+> phase documentaire.
 
 ## Raisons du choix
 
 - **Monolithe modulaire** : simplicité opérationnelle et vélocité pour un MVP,
-  tout en gardant des frontières de modules qui permettront d'extraire des
-  services plus tard si nécessaire. Évite la sur-ingénierie.
+  tout en gardant des frontières de modules permettant d'extraire des services
+  plus tard si nécessaire. Évite la sur-ingénierie.
 - **Next.js + TypeScript strict** : un seul socle pour les landings immersives
-  (funnel, VSL, brochure) et l'application interne (CRM), avec typage fort pour
-  la fiabilité.
-- **PostgreSQL / Supabase** : base relationnelle robuste adaptée à un modèle de
-  domaine relationnel (personnes, opportunités, activités…) ; Supabase apporte
-  base + auth + stockage cohérents, réduisant le nombre de services à câbler pour
-  le MVP.
+  (funnel, VSL, brochure) et l'application interne (CRM), avec typage fort.
+- **PostgreSQL / Supabase** : base relationnelle robuste adaptée à un modèle
+  fortement relationnel (contacts, opportunités, mandats, activités, audit…) ;
+  Supabase apporte base + auth + stockage cohérents, réduisant le câblage pour le
+  MVP.
 - **Vercel** : previews par branche et déploiement natif de Next.js, alignés sur
   la séparation dev/preview/prod.
-- **Multi-organisations prête** : le modèle prévoit plusieurs partenaires ; poser
-  la frontière d'organisation tôt évite une refonte, sans complexité inutile
-  côté MVP.
-- **Zod, variables CSS, permissions, journal, migrations** : garanties de
-  qualité, de sécurité et de traçabilité exigées par la constitution
+- **Multi-organisations prête** : le modèle prévoit plusieurs partenaires et la
+  co-participation Prodigio/agence sur un même dossier ; poser ces frontières tôt
+  évite une refonte, sans complexité inutile côté MVP.
+- **Verrouillage des versions** : reproductibilité des builds et sécurité ; les
+  mises à niveau majeures restent maîtrisées.
+- **Zod, variables CSS, permissions, audit, migrations** : garanties de qualité,
+  de sécurité et de traçabilité exigées par la constitution
   ([../../CLAUDE.md](../../CLAUDE.md)).
 
 ## Alternatives non retenues
@@ -72,13 +94,12 @@ doit pas** servir de fondation technique.
 - **Poursuivre sur Systeme.io + Google Sheets** : ne peuvent pas être la source
   de vérité ; verrouillage, absence de modèle relationnel et de traçabilité.
   Google Sheets reste au mieux un **export secondaire**.
-- **Back-end séparé + SPA** (deux dépôts/app distincts) : surcoût
-  d'intégration ; Next.js couvre front et back dans un seul socle pour ce
-  périmètre.
+- **Back-end séparé + SPA** (deux dépôts/app distincts) : surcoût d'intégration ;
+  Next.js couvre front et back dans un seul socle pour ce périmètre.
 - **Autre base (NoSQL)** : le domaine est fortement relationnel ; une base
   documentaire compliquerait l'intégrité et les requêtes transverses.
-- **Figer des versions d'outils** : contraire à la règle « dernière version
-  stable au moment de l'installation ».
+- **Dépendances flottantes / non verrouillées** : builds non reproductibles et
+  risques de régression ; écartées au profit d'un verrouillage explicite.
 
 ## Risques et conditions de réévaluation
 
