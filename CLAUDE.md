@@ -81,7 +81,8 @@ base de données et l'interface.
 | **OpportunityContact** | Relation N-N opportunité ↔ contact, avec rôle (propriétaire, copropriétaire, conjoint, représentant, intermédiaire, décisionnaire) et un **contact principal**. |
 | **OpportunityOrganization** | Organisations participant à un dossier, avec fonction (opérateur Prodigio, agence porteuse du mandat, partenaire commercial). |
 | **OpportunityAssignment** | Utilisateurs affectés à un dossier, avec responsabilité (setter, manager, agent immobilier, responsable marketing). |
-| **Mandat** | **Acte contractuel** résultant d'une opportunité (issue signé/refusé/perdu, date, organisation porteuse, type, exclusivité, document, raison). **Distinct de l'opportunité.** |
+| **Mandat** | **Proposition puis contrat** de mandat (statut : brouillon / proposé / en attente de signature / signé / refusé / expiré ou annulé). Document signé et date de signature obligatoires **uniquement si `signé`** ; snapshot économique obligatoire **dès `proposé`**. **Distinct de l'opportunité et du résultat commercial.** |
+| **OpportunityOutcome** | **Résultat commercial de l'opportunité** : `signé/gagné` / `refusé après proposition` / `perdu ou disqualifié avant signature`. La raison de perte appartient **principalement à l'opportunité**. |
 | **Lead** | Une **soumission entrante** et le **dossier commercial** qui en résulte. **Pas nécessairement une table unique.** |
 | **FunnelSubmission** | La **soumission originale** du funnel, **conservée telle quelle** (idempotence, UTM, source/campagne/annonce, `fbclid`, referrer, réponses brutes + normalisées, preuves d'information). |
 | **Bien candidat** | Le bien immobilier rattaché à une opportunité, avant signature du mandat. |
@@ -104,8 +105,12 @@ base de données et l'interface.
 
 - **Contact ≠ Opportunité de mandat.** Deux objets différents ; une opportunité
   peut réunir plusieurs contacts, un contact peut porter plusieurs opportunités.
-- **Opportunité de mandat ≠ Mandat.** L'opportunité est le dossier commercial ;
-  le mandat est l'acte contractuel qui en résulte.
+- **Opportunité ≠ Mandat ≠ Résultat commercial.** L'opportunité est le dossier
+  commercial ; le **Mandat** est la proposition puis le contrat de mandat ; le
+  **résultat commercial** (`OpportunityOutcome`) est l'issue du dossier
+  (gagné / refusé après proposition / perdu avant signature). Une opportunité
+  perdue **avant toute proposition** peut n'avoir **aucun Mandat**. L'expression
+  métier « résultat du mandat » reste possible côté parcours utilisateur.
 - **Contact ≠ Organisation ≠ Utilisateur.** Contact = partie externe ;
   Organisation = entité interne ; Utilisateur = compte authentifié.
 - **Stade ≠ Segment.** Le stade est la progression commerciale ; le segment est
@@ -134,9 +139,10 @@ Modèle conceptuel complet : [docs/03-DOMAIN-MODEL.md](docs/03-DOMAIN-MODEL.md).
 - Architecture en **monolithe modulaire** : modules métier clairement séparés
   (mandats, biens & acquéreurs, portail), sans microservices tant que ce n'est
   pas justifié. **Ne pas surdimensionner.**
-- **PostgreSQL** comme base ; **Supabase** envisagé pour base, authentification
-  et stockage.
-- **Vercel** pour l'hébergement et les previews.
+- **PostgreSQL** comme base ; **Supabase retenu pour le MVP** (base,
+  authentification et stockage), réévaluable selon les déclencheurs documentés.
+- **Vercel retenu pour le MVP** (hébergement et previews), réévaluable selon les
+  déclencheurs documentés.
 - Validation des données avec **Zod** (ou équivalent) à toutes les frontières
   (formulaires, API, webhooks).
 - **Design system** fondé sur des **variables CSS** et des composants
@@ -177,8 +183,13 @@ Modèle d'accès : [docs/06-ACCESS-MODEL.md](docs/06-ACCESS-MODEL.md).
   valeurs réelles).
 - **Environnements séparés** : développement, preview et production, avec des
   secrets distincts.
-- **Contrôle d'accès systématique** par rôle et organisation. Ne jamais exposer
-  les données d'une organisation à une autre.
+- **Contrôle d'accès systématique** par rôle et organisation. Les données
+  **propres et non partagées** d'une organisation restent **cloisonnées** ;
+  seules les données d'un **dossier explicitement partagé** via
+  `OpportunityOrganization` deviennent accessibles à l'autre organisation, selon
+  sa **fonction**, son **rôle** et l'**affectation**. Le partage d'un dossier ne
+  donne **jamais** accès aux autres dossiers ni aux données internes de
+  l'organisation (voir [docs/06-ACCESS-MODEL.md](docs/06-ACCESS-MODEL.md)).
 - **RGPD** : les données personnelles sont traitées selon les principes du RGPD
   (base légale, minimisation, information, droit à l'effacement, durée de
   conservation). La traçabilité passe par un modèle **PrivacyRecord /
@@ -199,7 +210,9 @@ Modèle d'accès : [docs/06-ACCESS-MODEL.md](docs/06-ACCESS-MODEL.md).
 - **TypeScript strict**, sans `any` implicite.
 - **Validation Zod** systématique aux frontières.
 - **Tests** : tests unitaires sur la logique métier et **tests des parcours
-  critiques** (funnel → lead → CRM → rendez-vous).
+  critiques** : funnel → soumission → résolution contact/opportunité → setting →
+  qualification → rendez-vous → estimation → segmentation → proposition →
+  résultat commercial signé/refusé/perdu.
 - Code **lisible**, cohérent avec le style environnant, sans jargon inutile.
 - **Cohérence documentaire** : toute évolution du modèle ou du périmètre doit
   être répercutée dans les documents `docs/`.
@@ -243,8 +256,11 @@ Modèle d'accès : [docs/06-ACCESS-MODEL.md](docs/06-ACCESS-MODEL.md).
   **Organisation** et **Utilisateur**, ni **Opportunité** et **Mandat**.
 - ❌ **Ne pas** imposer un **propriétaire unique** par opportunité, ni rattacher
   une opportunité à une **organisation unique exclusive**.
-- ❌ **Ne pas** supprimer silencieusement une **FunnelSubmission** ni écraser
-  l'historique d'attribution.
+- ❌ **Ne pas** supprimer une **FunnelSubmission** au seul motif qu'elle est un
+  **doublon**, ni écraser l'historique d'attribution. (Une suppression /
+  anonymisation reste possible selon les **règles de rétention**, une
+  **obligation légale** ou une **demande recevable**, et doit être **tracée** ;
+  ne pas affirmer une conservation **indéfinie**.)
 - ❌ **Ne pas** affirmer une **conformité RGPD automatique** ni présumer qu'une
   preuve conservée suffit.
 - ❌ **Ne pas** associer automatiquement la notion **HT/TTC des honoraires** à la

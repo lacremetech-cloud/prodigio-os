@@ -1,6 +1,7 @@
 # ADR 001 — Fondation technique
 
-- **Statut** : Provisoire (accepté à titre de décision fondatrice, révisable).
+- **Statut** : **Acceptée pour le MVP, réévaluable** (selon les déclencheurs
+  documentés).
 - **Date** : hypothèse fondatrice — voir historique Git pour la date effective.
 - **Portée** : orientation technique du projet Prodigio OS avant tout
   développement.
@@ -36,9 +37,9 @@ HTML / Systeme.io / Google Sheets **ne doit pas** servir de fondation technique.
    microservices tant que ce n'est pas justifié.
 3. **Application web unique** sous **Next.js (App Router)** en **TypeScript
    strict**.
-4. **PostgreSQL** comme base de données ; **Supabase** envisagé pour la base,
-   l'authentification et le stockage.
-5. **Vercel** pour l'hébergement et les previews.
+4. **PostgreSQL** comme base de données ; **Supabase retenu pour le MVP** (base,
+   authentification et stockage).
+5. **Vercel retenu pour le MVP** (hébergement et previews).
 6. **Architecture multi-organisations prête** dès la conception, **mais non
    surdimensionnée** : une opportunité peut réunir **plusieurs organisations**
    (opérateur Prodigio + agence porteuse) et **plusieurs contacts** ; modèle

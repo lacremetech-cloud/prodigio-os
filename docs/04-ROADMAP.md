@@ -22,7 +22,9 @@ surdimensionner.
   strict), avec **versions stables sélectionnées, verrouillées** (package.json +
   lockfile) et **documentées** dans l'ADR.
 - Structure en monolithe modulaire (modules métier séparés).
-- Base PostgreSQL (Supabase envisagé) avec **migrations versionnées**.
+- Base PostgreSQL (**Supabase retenu pour le MVP** — base, auth, stockage) avec
+  **migrations versionnées** ; **Vercel retenu** pour l'hébergement et les
+  previews.
 - Authentification et **modèle d'accès** (organisations, memberships, rôles) —
   voir [06-ACCESS-MODEL.md](06-ACCESS-MODEL.md) ; multi-organisations prête.
 - Fondations du **design system** (variables CSS, composants accessibles).
@@ -59,7 +61,9 @@ peut être appliquée ; les permissions de base et l'audit fonctionnent.
 - **Attribution multi-points** (premier / dernier contact) rattachée à la
   soumission.
 - Résolution **contact / opportunité** avec **dédoublonnage retraçable** (aucune
-  soumission supprimée).
+  soumission supprimée **au seul motif d'un doublon** ; immuable pendant sa durée
+  de conservation ; suppression/anonymisation possible et **tracée** selon
+  rétention, obligation légale ou demande recevable).
 
 **Dépendances** : Phase 0.
 
@@ -76,7 +80,8 @@ de vérité.
 ## Phase 2 — CRM Mandats (jusqu'au résultat du mandat) — **fin du MVP**
 
 **Objectif** : setting, qualification, rendez-vous, estimation, décision de
-segment, proposition puis **résultat du mandat**.
+segment, proposition de mandat puis **résultat commercial de l'opportunité**
+(« résultat du mandat » en langage métier).
 
 **Livrables**
 - Liste et fiche des **opportunités** ; **contacts multiples** (OpportunityContact)
@@ -86,10 +91,16 @@ segment, proposition puis **résultat du mandat**.
   tracée (recommandé/validé, raison, auteur, date, dérogation tracée).
 - **Activités** métier et **AuditEvent** distincts.
 - **Notes**, **Tâches**, **Rendez-vous** (avec résultat), **Qualification**.
-- **Mandat** (entité distincte) : issue signé/refusé/perdu, date de signature,
-  organisation porteuse, type et exclusivité, document signé rattaché, raison de
-  perte/refus, **snapshot** des règles économiques versionnées.
-- **Fonctions opérationnelles** : notification nouveau lead, affectation setter,
+- **Résultat commercial** (`OpportunityOutcome`, distinct du Mandat) :
+  signé/gagné, refusé après proposition, perdu/disqualifié avant signature ;
+  raison de perte portée par l'opportunité.
+- **Mandat** (entité distincte de l'opportunité et du résultat) : statut
+  brouillon → proposé → en attente de signature → signé / refusé / expiré ou
+  annulé ; organisation porteuse, type et exclusivité ; **document signé + date
+  obligatoires si `signé`** ; **snapshot** des règles économiques versionnées
+  **obligatoire dès `proposé`**.
+- **Fonctions opérationnelles** : notification nouveau lead, affectation setter
+  (automatique **ou** file « non affecté » avec alerte, aucun lead orphelin),
   prochaine action, alerte tâches en retard, vue « à rappeler », **tableau de
   bord minimal** (indicateurs de [02-MVP-SCOPE.md](02-MVP-SCOPE.md)).
 - **Permissions** par rôle/organisation ; **journal d'audit** exploitable.

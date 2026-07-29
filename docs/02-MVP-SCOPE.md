@@ -35,7 +35,8 @@ Publicité
    retraçable) et crée/relie une **opportunité** ; l'**attribution** (premier /
    dernier contact) est rattachée à la soumission.
 5. Un **nouveau lead** déclenche une **notification**, une **affectation** à un
-   setter et une **prochaine action**.
+   setter actif (ou un placement en **file « non affecté »** avec alerte) et une
+   **prochaine action**.
 6. Un **setter** **rappelle** (setting) ; chaque appel/tentative est une
    **activité** (le nombre de tentatives est **calculé**, ce n'est pas un stade).
 7. Le setter **qualifie** le bien et le projet (qualification distincte du stade).
@@ -44,10 +45,14 @@ Publicité
 9. Une **estimation / étude du dossier** est menée.
 10. Une **décision de segment** est prise : **segment recommandé** par les règles,
     **validé** par un humain, avec **raison, auteur et date**.
-11. Une **proposition de mandat** est faite.
-12. L'**issue du mandat** est enregistrée manuellement : `signé`, `refusé` ou
-    `perdu`, avec date de signature, organisation porteuse, type et exclusivité,
-    document signé rattaché, et raison en cas de perte/refus.
+11. Une **proposition de mandat** est faite (Mandat au statut `proposé`, avec
+    **snapshot** des conditions économiques réellement proposées).
+12. Le **résultat commercial de l'opportunité** est enregistré manuellement :
+    `signé/gagné`, `refusé après proposition` ou `perdu/disqualifié avant
+    signature`. Pour un Mandat **signé** : date de signature, organisation
+    porteuse, type et exclusivité, document signé rattaché. La **raison** de
+    perte/refus est portée par l'**opportunité**. (Une opportunité perdue avant
+    proposition n'a **aucun Mandat**.)
 
 ## Fonctionnalités incluses
 
@@ -60,7 +65,10 @@ Publicité
 - **Attribution multi-points** (premier / dernier contact au minimum), rattachée
   à la soumission ; historique conservé même si une campagne est renommée.
 - **Dédoublonnage** : e-mails/téléphones normalisés, rattachement possible à un
-  contact existant, résolution retraçable ; **aucune** soumission supprimée.
+  contact existant, résolution retraçable ; **aucune** soumission supprimée **au
+  seul motif d'un doublon** (la soumission reste immuable pendant sa **durée de
+  conservation applicable** ; suppression/anonymisation possible selon les règles
+  de rétention, une obligation légale ou une demande recevable, et **tracée**).
 
 **CRM Mandats**
 - **Contacts** multiples par opportunité via **OpportunityContact** (rôles :
@@ -78,17 +86,27 @@ Publicité
 - **Qualification** (champs distincts du pipeline).
 - **Décision de segment** tracée (recommandé/validé, raison, auteur, date,
   dérogation manuelle tracée).
-- **Mandat** : entité distincte de l'opportunité — issue (signé/refusé/perdu),
-  date de signature, organisation porteuse, type et exclusivité, document signé
-  rattaché, raison de perte/refus, **snapshot** des règles économiques
-  applicables.
-- **Raisons de perte** et **raisons de disqualification** enregistrables.
+- **Résultat commercial de l'opportunité** (`OpportunityOutcome`), **distinct du
+  Mandat** : `signé/gagné` / `refusé après proposition` / `perdu ou disqualifié
+  avant signature` ; la **raison de perte / disqualification** appartient
+  **principalement à l'opportunité**. Une opportunité perdue **avant toute
+  proposition** peut n'avoir **aucun Mandat**.
+- **Mandat** : entité distincte de l'opportunité et du résultat commercial —
+  statut (brouillon / proposé / en attente de signature / signé / refusé /
+  expiré ou annulé), organisation porteuse, type et exclusivité. **Document signé
+  et date de signature obligatoires uniquement si `signé`** ; **snapshot** des
+  règles économiques **obligatoire dès le statut `proposé`** (conditions
+  réellement proposées).
 
 **Opérationnel (setting)**
 - **Notification** d'un nouveau lead.
-- **Affectation** à un setter.
+- **Affectation** à un setter : soit **automatique** à un **setter actif**, soit
+  placement dans une **file « non affecté »** explicite avec **alerte visible**.
+  **Aucun lead** ne reste sans affectation ni sans prochaine action de façon
+  silencieuse.
 - **Création d'une prochaine action** (tâche).
-- **Alerte / visibilité** sur les tâches **en retard**.
+- **Alerte / visibilité** sur les tâches **en retard** et sur la file **« non
+  affecté »**.
 - **Vue des leads à rappeler**.
 - **Tableau de bord opérationnel minimal**.
 
@@ -131,11 +149,18 @@ Publicité
 ## Critères permettant de considérer le MVP exploitable
 
 - Un lead issu d'une publicité va **de bout en bout** : de la landing jusqu'au
-  **résultat du mandat** (signé / refusé / perdu), **sans sortir de la base
+  **résultat commercial de l'opportunité** (signé/gagné, refusé après
+  proposition, ou perdu/disqualifié avant signature), **sans sortir de la base
   centrale**.
+- Le **Mandat** et le **résultat commercial** (`OpportunityOutcome`) sont
+  **distincts** : une opportunité perdue avant proposition n'a **aucun Mandat**,
+  et le document/date de signature ne sont exigés que pour un Mandat **signé**.
 - La **FunnelSubmission** est conservée et distincte du contact et de
-  l'opportunité créés ; le **dédoublonnage** est retraçable.
+  l'opportunité créés ; le **dédoublonnage** est retraçable ; aucune conservation
+  **indéfinie** n'est présumée (rétention/effacement possibles et tracés).
 - **Soumission**, **activité** et **audit** sont **trois concepts distincts**.
+- **Aucun lead** ne reste **silencieusement** sans affectation ni prochaine
+  action (affectation automatique **ou** file « non affecté » avec alerte).
 - Une opportunité peut réunir **plusieurs contacts** (avec un contact principal)
   et **plusieurs organisations** (opérateur Prodigio + agence porteuse).
 - Le **stade** et le **segment** sont **indépendants** ; la **décision de

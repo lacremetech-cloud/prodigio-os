@@ -24,8 +24,14 @@ données concret et les migrations viendront lors de la phase Fondations.
 - **Personne / Contact ≠ Opportunité de mandat.** Un contact du monde réel peut
   porter plusieurs opportunités ; l'opportunité est le projet de vente. Une
   opportunité peut réunir **plusieurs contacts**.
-- **Opportunité de mandat ≠ Mandat.** L'opportunité est le *dossier commercial* ;
-  le **Mandat** est l'*acte contractuel* qui en résulte (signé, refusé ou perdu).
+- **Opportunité de mandat ≠ Mandat ≠ Résultat commercial.** L'opportunité est le
+  *dossier commercial*. Le **Mandat** est la *proposition puis le contrat* de
+  mandat (brouillon → proposé → signé…). Le **résultat commercial de
+  l'opportunité** (`OpportunityOutcome`) est l'*issue du dossier* (gagné / refusé
+  après proposition / perdu ou disqualifié avant signature). Une opportunité
+  **perdue avant toute proposition** peut n'avoir **aucun Mandat**. En parcours
+  utilisateur, l'expression métier « résultat du mandat » peut rester employée,
+  mais le modèle utilise « résultat commercial de l'opportunité ».
 - **Contact ≠ Organisation ≠ Utilisateur.** Un **Contact** est une partie
   externe (personne physique ou morale) ; une **Organisation** est une entité
   interne au fonctionnement de Prodigio OS (Prodigio, agence partenaire) ; un
@@ -96,8 +102,12 @@ Le **projet de vente** d'un bien. Objet central du CRM Mandats.
   **affectations** d'utilisateurs (OpportunityAssignment).
 - Reliée à : **FunnelSubmission** d'origine, **Attributions**, **Qualification**,
   **Activités**, **AuditEvents**, **Notes**, **Tâches**, **Rendez-vous**,
-  **Documents**, et le cas échéant un **Mandat**.
-- **Raisons de perte / disqualification** enregistrables (voir énumérations).
+  **Documents**, un **OpportunityOutcome** (résultat commercial), et le cas
+  échéant un **Mandat**.
+- Porte un **résultat commercial** (`OpportunityOutcome`) : `signé/gagné` /
+  `refusé après proposition` / `perdu ou disqualifié avant signature`.
+- La **raison de perte / disqualification** appartient **principalement à
+  l'opportunité** (voir énumérations).
 - **Décision MVP** : une opportunité **n'est pas** rattachée à une organisation
   unique exclusive — elle peut être **opérée par Prodigio** tout en ayant son
   **mandat porté par une agence partenaire**.
@@ -115,7 +125,10 @@ Relation **N-N Opportunité ↔ Utilisateur**, porteuse d'une **responsabilité*
 - Opportunité, utilisateur, responsabilité, dates.
 - **Responsabilités** (exemples) : `setter`, `manager`, `agent immobilier`,
   `responsable marketing`.
-- **Décision MVP** : au moins un **setter** affecté après capture du lead.
+- **Décision MVP** : à la capture du lead, l'opportunité est **soit** affectée
+  automatiquement à un **setter actif**, **soit** placée dans une **file « non
+  affecté »** explicite avec **alerte visible**. **Aucun lead** ne reste sans
+  affectation **ni** sans prochaine action de façon silencieuse.
 
 ### Bien candidat
 Le bien immobilier rattaché à une opportunité, **avant** signature du mandat.
@@ -125,20 +138,32 @@ Le bien immobilier rattaché à une opportunité, **avant** signature du mandat.
   un bien commercialisé relèvera du moteur Biens & Acquéreurs (hors MVP).
 
 ### FunnelSubmission
-La **soumission originale** issue du funnel. **Conservée telle quelle** ;
-**jamais** remplacée par la seule création de contact/opportunité.
+La **soumission originale** issue du funnel. **Conservée telle quelle** pendant
+sa **durée de conservation applicable** ; **jamais** remplacée par la seule
+création de contact/opportunité.
 - **Identifiant unique** et **clé d'idempotence**.
 - Date et heure ; **version du formulaire** ; **landing** et **variante**.
 - **Réponses originales** (brutes) et **données normalisées** (e-mail/téléphone).
 - **Paramètres UTM** ; **source**, **campagne**, **ad set**, **annonce** si
   disponibles ; **identifiants de clic** (ex. `fbclid`) si disponibles.
 - **URL d'origine** et **referrer**.
-- **Preuves d'information** et **choix de contact** (alimentent le PrivacyRecord).
+- **Preuves d'information** et **choix de contact** (portent la **preuve RGPD
+  originale**, reliée à un **PrivacyRecord** — voir cet objet).
 - **Résultat du traitement** : `nouveau contact` / `contact existant` /
   `nouvelle opportunité` / `doublon`.
-- **Décision MVP** : **toutes** les soumissions sont conservées ; **aucune** n'est
-  supprimée silencieusement ; le rattachement à un contact existant et la
-  **résolution des doublons** sont **retraçables** (via AuditEvent).
+- **Décision MVP** (conservation et effacement) :
+  - **aucune** soumission n'est supprimée **simplement parce qu'elle est un
+    doublon** ;
+  - la soumission originale reste **immuable pendant sa durée de conservation
+    applicable** ;
+  - une **suppression ou anonymisation** peut intervenir conformément aux
+    **règles de rétention**, à une **obligation légale** ou à une **demande
+    recevable** ;
+  - toute **suppression / anonymisation** est **tracée** (via AuditEvent) ;
+  - le **journal d'audit ne conserve pas indirectement** les données
+    personnelles qui devaient être effacées.
+  - le rattachement à un contact existant et la **résolution des doublons**
+    restent **retraçables**.
 
 ### Source / Attribution
 Modèle d'attribution **multi-points de contact** (plus « une source unique »).
@@ -201,18 +226,36 @@ Action à réaliser (prochaine action du setting).
 - **Décision MVP** : rattaché à une **Opportunité** ; les participants contacts
   sont référencés en attributs.
 
+### OpportunityOutcome (résultat commercial de l'opportunité)
+L'**issue** du dossier commercial. **Distinct du Mandat.**
+- **Valeur** : `signé/gagné` / `refusé après proposition` / `perdu ou disqualifié
+  avant signature`.
+- **Raison** de perte / disqualification (appartient **principalement à
+  l'opportunité**), auteur, date.
+- **Décision MVP** : un **OpportunityOutcome** par opportunité (l'issue courante) ;
+  une opportunité perdue **avant proposition** a un résultat sans Mandat associé.
+
 ### Mandat
-**Acte contractuel** résultant d'une opportunité. **Distinct de l'opportunité.**
-- **Issue** : `signé` / `refusé` / `perdu`.
-- **Date de signature** (si signé).
+La **proposition puis le contrat** de mandat résultant d'une opportunité.
+**Distinct de l'opportunité** et **distinct du résultat commercial**
+(`OpportunityOutcome`). Une opportunité **perdue avant toute proposition** peut
+n'avoir **aucun Mandat**.
+- **Statut** : `brouillon` / `proposé` / `en attente de signature` / `signé` /
+  `refusé` / `expiré ou annulé`.
 - **Organisation porteuse** du mandat (référence à une Organisation).
 - **Type de mandat** et **exclusivité**.
-- **Document signé** téléversé/rattaché (référence à un Document).
-- **Raison** de perte ou de refus (si applicable).
-- **Photographie des conditions économiques** applicables au moment de la
-  signature (référence à une version de **EconomicRuleSet**, voir ci-dessous).
-- **Décision MVP** : saisie **manuelle** de l'issue et des attributs ci-dessus ;
+- **Document signé** et **date de signature** : **obligatoires uniquement** pour
+  un Mandat **signé** (le document est une référence à un Document).
+- **Snapshot des conditions économiques** (référence à une version de
+  **EconomicRuleSet**) : **obligatoire à partir du statut `proposé`**, afin de
+  conserver les conditions **réellement proposées**.
+- La **raison de perte / refus** appartient **principalement à l'opportunité**
+  (via `OpportunityOutcome`) ; le Mandat peut porter un motif propre de refus/
+  d'annulation contractuelle.
+- **Décision MVP** : saisie **manuelle** du statut et des attributs ci-dessus ;
   **pas** d'intégration de signature électronique (hors MVP).
+- **Relations** : Opportunité 1 → **0..1** Mandat ; Mandat → **0..1** document
+  signé ; Mandat → **snapshot économique obligatoire dès le statut `proposé`**.
 
 ### EconomicRuleSet (règles économiques versionnées)
 Paramètres économiques **versionnés**, jamais de simples valeurs globales
@@ -222,8 +265,9 @@ réécrites.
   honoraires (à confirmer) — **toutes configurables**.
 - **Date d'entrée en vigueur** ; **historique des versions**.
 - **Décision MVP** : stockage et **versionnage** des règles + **snapshot** dans
-  le Mandat à la signature ; **pas** de calcul financier automatique (hors MVP).
-  Modifier une règle **ne réinterprète pas** les anciens dossiers.
+  le Mandat **dès sa formalisation (statut `proposé`)**, pour figer les
+  conditions réellement proposées ; **pas** de calcul financier automatique (hors
+  MVP). Modifier une règle **ne réinterprète pas** les anciens dossiers.
 
 ### Décision de segment
 Segmentation **traçable**, pas seulement dérivée de la valeur.
@@ -246,9 +290,12 @@ consentement explicite.
 - **Choix** : `accordé` / `refusé` / `retiré` ; date, heure, **source**.
 - **Preuve** de l'action de l'utilisateur.
 - Préférence **« ne plus contacter »** par canal.
-- **Décision MVP** : rattaché à un **Contact** ; conserver la **preuve**
-  nécessaire. La documentation **n'affirme pas** que cela suffit à garantir la
-  conformité (voir [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md)).
+- **Décision MVP** (rattachement) : le PrivacyRecord est relié **directement à la
+  FunnelSubmission** qui porte la **preuve originale**, **puis au Contact** une
+  fois celui-ci résolu ou créé. Une soumission **invalide, en attente de
+  résolution ou considérée comme doublon** conserve sa **preuve sans dépendre
+  immédiatement d'un Contact**. Conserver la preuve nécessaire **n'affirme pas**
+  la conformité (voir [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md)).
 
 ### Document
 Fichier rattaché au dossier.
@@ -275,15 +322,21 @@ Fichier rattaché au dossier.
 - **FunnelSubmission** 1 — 0..1 **Opportunité** et 0..1 **Contact** (résultat de
   traitement ; une soumission peut aussi être un doublon rattaché à un contact
   existant sans nouvelle opportunité).
+- **FunnelSubmission** 1 — N **PrivacyRecord** (la soumission porte la preuve
+  originale) ; **PrivacyRecord** N — 0..1 **Contact** (rattaché une fois le
+  contact résolu/créé ; une preuve peut exister **sans** Contact).
 - **Opportunité** 1 — N **Attribution** (événements ; premier/dernier contact),
   chacune reliée à la **FunnelSubmission**.
 - **Opportunité** 1 — 1 **Qualification** (enregistrement évolutif).
+- **Opportunité** 1 — 1 **OpportunityOutcome** (résultat commercial courant).
 - **Opportunité** 1 — N **Activités**, **AuditEvents**, **Notes**, **Tâches**,
   **Rendez-vous**, **Documents**.
-- **Opportunité** 1 — 0..1 **Mandat** ; **Mandat** 1 — 1 **Organisation
-  porteuse** ; **Mandat** 1 — 0..1 **Document** signé ; **Mandat** 1 — 1
-  **snapshot EconomicRuleSet**.
-- **Contact** 1 — N **PrivacyRecord**, **Notes**, **Documents**.
+- **Opportunité** 1 — **0..1 Mandat** ; **Mandat** 1 — 1 **Organisation
+  porteuse** ; **Mandat** 1 — **0..1 Document** signé (obligatoire si `signé`) ;
+  **Mandat** 1 — 1 **snapshot EconomicRuleSet** (**obligatoire dès le statut
+  `proposé`**).
+- **Contact** 1 — N **PrivacyRecord**, **Notes**, **Documents** (le PrivacyRecord
+  est d'abord porté par la FunnelSubmission, puis relié au Contact).
 - **EconomicRuleSet** : N versions **par organisation partenaire × segment**,
   avec date d'entrée en vigueur.
 
@@ -317,7 +370,11 @@ Fichier rattaché au dossier.
   abandonné`, `honoraires refusés`, `hors périmètre`.
 - **Raisons de disqualification** : ex. `bien hors zone`, `non vendeur`,
   `coordonnées invalides`, `doublon`.
-- **Issue de mandat** : `signé` / `refusé` / `perdu`.
+- **Résultat commercial de l'opportunité** (`OpportunityOutcome`) :
+  `signé/gagné` / `refusé après proposition` / `perdu ou disqualifié avant
+  signature`.
+- **Statut de Mandat** : `brouillon` / `proposé` / `en attente de signature` /
+  `signé` / `refusé` / `expiré ou annulé`.
 
 > Le rattachement d'un segment premium dépend d'un **seuil configurable**
 > (hypothèse 800 000 €) dont la **base** (estimation / prix de mandat / prix de

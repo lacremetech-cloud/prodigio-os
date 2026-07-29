@@ -54,7 +54,7 @@ fonction et sa visibilité propre.
 | Créer / éditer une opportunité | ✔ | ✔ | ✔ | ∂ | — | — |
 | Setting (appels, notes, tâches, RDV) | ✔ | ✔ | ✔ | ∂ | — | — |
 | Modifier le **segment** validé | ✔ | ✔ | ∂ | — | — | — |
-| Enregistrer l'**issue du mandat** | ✔ | ✔ | ∂ | ∂ | — | — |
+| Enregistrer le **résultat commercial / mandat** | ✔ | ✔ | ∂ | ∂ | — | — |
 | Modifier les **paramètres économiques** (règles, seuil, partages) | ✔ | — | — | — | — | — |
 | Gérer utilisateurs / memberships / permissions | ✔ | ∂ | — | — | — | — |
 | Consulter le **journal d'audit** | ✔ | ∂ | — | — | ∂ | — |
@@ -71,7 +71,13 @@ Le **propriétaire** n'accède qu'à son propre dossier, et uniquement via le
   les **paramètres économiques**.
 - Un **agent partenaire** ne voit **que** les dossiers **explicitement partagés**
   avec **son** organisation (via OpportunityOrganization).
-- Les données d'une organisation ne sont **jamais** exposées à une autre.
+- Les **données propres et non partagées** d'une organisation restent
+  **cloisonnées**. **Seules** les données d'un **dossier explicitement partagé**
+  via `OpportunityOrganization` deviennent accessibles à l'autre organisation, et
+  cet accès dépend de la **fonction**, du **rôle** et de l'**affectation**.
+- Le **partage d'un dossier** (p. ex. entre Prodigio opérateur et l'agence
+  porteuse du mandat) **ne donne jamais** accès aux **autres dossiers** ni aux
+  **données internes** de l'organisation.
 - Chaque changement de **permission**, d'**affectation**, de **stade** ou de
   **segment** génère un **AuditEvent** retraçable.
 
