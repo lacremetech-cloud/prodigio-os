@@ -190,3 +190,44 @@ de la migration, puis **nettoyage complet** des données de test.
 
 > La migration reste appliquée ; **seules les données de test** ont été insérées
 > puis supprimées. Aucune donnée réelle n'existe encore en base.
+
+---
+
+## 7. Préqualification (scoring) — migration PRÉPARÉE, non appliquée
+
+Migration **versionnée non déployée** :
+`supabase/migrations/20260729160000_mandate_scoring.sql` (additive au-dessus de
+la capture). À appliquer **seulement après contrôle** (même procédure qu'au §2).
+
+Ce qu'elle ajoute :
+- fonction `compute_mandate_scores(...)` **déterministe, `IMMUTABLE`**, miroir SQL
+  de `src/modules/mandates/scoring/config.ts` (version `mandate-scoring-v1`) ;
+- colonnes de scoring sur `funnel_submissions` (photographie immuable :
+  `compatibility_score`, `maturity_score`, `operational_priority`,
+  `public_appreciation`, `score_version`, `score_breakdown`,
+  `contact_recall_preference`) et de **recommandation** sur `opportunities`
+  (`recommended_priority`, `compatibility_score`, `maturity_score`,
+  `score_version`) ;
+- mise à jour de `submit_mandate_funnel` : les scores sont **recalculés côté
+  base** à partir des réponses validées — tout score fourni dans le payload est
+  **ignoré** (impossible d'imposer un score depuis le navigateur). RLS, GRANT,
+  idempotence, dédoublonnage et **réponse neutre `{ accepted: true }`** inchangés.
+
+Principes :
+- **Deux scores distincts** (compatibilité propriété / maturité projet), jamais
+  fusionnés ; en découlent une **priorité opérationnelle** (interne) et une
+  **appréciation publique** qualitative (`fort_potentiel` / `a_confirmer` /
+  `analyse_personnalisee`) — **jamais** de « non éligible » automatique.
+- Le **seuil premium** (docs/05 #6) n'est pas une constante € dans l'UI : il est
+  porté par la répartition de points entre bandes de valeur, **versionnée**.
+- La **segmentation validée reste humaine** : `opportunities.segment` demeure
+  `non_determine` ; le scoring n'est qu'une **recommandation** (docs/03 —
+  « Décision de segment »).
+- L'appréciation affichée au propriétaire est aussi calculée **côté serveur**
+  (action Next, mêmes règles) : le navigateur ne voit **jamais** les scores
+  numériques.
+
+> Compatibilité de déploiement : la migration est **additive** (les colonnes
+> utilisent `add column if not exists`, la fonction est remplacée). Tant qu'elle
+> n'est pas appliquée, l'appréciation publique fonctionne (calcul côté action) ;
+> le stockage des scores en base s'activera au déploiement contrôlé.

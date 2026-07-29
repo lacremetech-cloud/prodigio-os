@@ -6,6 +6,7 @@ import {
   normalizeText,
 } from "./normalize";
 import { consent } from "./content";
+import type { AppreciationKey } from "../scoring";
 import {
   CONSENT_NOTICE_VERSION,
   FUNNEL_KEY,
@@ -60,7 +61,12 @@ export type SubmissionRequest = z.infer<typeof submissionRequestSchema>;
  * minimal : un booléen d'acceptation, jamais de donnée ni d'état interne.
  */
 export type SubmitResult =
-  | { ok: true }
+  | {
+      ok: true;
+      // Appréciation qualitative publique (calculée côté serveur). Jamais de
+      // score numérique interne. Absente pour un dépôt honeypot silencieux.
+      appreciation: AppreciationKey | null;
+    }
   | {
       ok: false;
       reason: "unavailable" | "validation" | "error";
@@ -99,6 +105,7 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
       phone: contact.phoneRaw,
       email: contact.emailRaw,
       preference: contact.preference ?? null,
+      recall_preference: contact.recallPreference,
     },
   };
 
@@ -114,6 +121,7 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
       phone: phoneNormalized,
       email: emailNormalized,
       preference: contact.preference ?? null,
+      recall_preference: contact.recallPreference,
     },
   };
 
@@ -144,6 +152,7 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
     contact_phone: phoneNormalized,
     contact_phone_raw: contact.phoneRaw,
     contact_preference: contact.preference ?? null,
+    contact_recall_preference: contact.recallPreference,
 
     consent_given: contact.consent === true,
     consent_notice_version: CONSENT_NOTICE_VERSION,

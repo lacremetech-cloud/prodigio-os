@@ -17,7 +17,8 @@ interface PayloadShape {
   first_touch: unknown;
   last_touch: unknown;
   consent_proof: { given: boolean; notice_version: string };
-  raw_answers: { contact: { phone: string; email: string } };
+  contact_recall_preference: string;
+  raw_answers: { contact: { phone: string; email: string; recall_preference: string } };
   normalized_answers: { contact: { phone: string | null; email: string | null } };
 }
 
@@ -48,6 +49,7 @@ function buildRequest(overrides?: {
         phoneRaw: "06 12 34 56 78",
         emailRaw: "Jean.Dupont@Example.com",
         preference: overrides?.preference,
+        recallPreference: "matin",
         consent: true,
       },
       company: "",
@@ -71,6 +73,12 @@ describe("buildSubmissionPayload", () => {
     expect(p.idempotency_key).toBe("550e8400-e29b-41d4-a716-446655440000");
     expect(p.funnel_version).toBe("v1");
     expect(p.property_type).toBe("villa_architecte");
+  });
+
+  it("porte la préférence de rappel (plat + réponses brutes)", () => {
+    const p = buildSubmissionPayload(buildRequest()) as unknown as PayloadShape;
+    expect(p.contact_recall_preference).toBe("matin");
+    expect(p.raw_answers.contact.recall_preference).toBe("matin");
   });
 
   it("sépare la valeur brute et la valeur normalisée", () => {

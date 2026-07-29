@@ -3,6 +3,7 @@
 import { isSupabaseConfigured } from "@/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json, SubmitMandateFunnelResult } from "@/lib/supabase/types";
+import { scoreFromAnswers } from "../scoring";
 import { analysis } from "./content";
 import {
   buildSubmissionPayload,
@@ -31,11 +32,17 @@ export async function submitMandateFunnelAction(
     };
   }
 
-  // Honeypot : un champ leurre rempli => on répond « ok » sans rien enregistrer.
-  // (Défense faible : voir docs/07 — Turnstile reste requis avant production.)
+  // Honeypot : un champ leurre rempli => on répond « ok » sans rien enregistrer
+  // ni révéler d'appréciation. (Défense faible : Turnstile reste requis — docs/07.)
   if (parsed.data.answers.company && parsed.data.answers.company.length > 0) {
-    return { ok: true };
+    return { ok: true, appreciation: null };
   }
+
+  // Appréciation qualitative calculée CÔTÉ SERVEUR à partir des seules réponses
+  // validées : le navigateur ne peut ni l'imposer ni la modifier (les scores
+  // numériques ne sont jamais renvoyés). La valeur stockée en base est, elle,
+  // recalculée par la fonction SQL (source de vérité) — voir la migration scoring.
+  const appreciation = scoreFromAnswers(parsed.data.answers).appreciation;
 
   // 2) Supabase requis pour enregistrer réellement la demande.
   if (!isSupabaseConfigured()) {
@@ -64,7 +71,7 @@ export async function submitMandateFunnelAction(
     // La réponse est un accusé neutre ; on ne s'appuie sur aucune donnée renvoyée.
     const result = data as unknown as SubmitMandateFunnelResult | null;
     if (result && result.accepted === true) {
-      return { ok: true };
+      return { ok: true, appreciation };
     }
     return { ok: false, reason: "error", message: analysis.errors.generic };
   } catch (cause) {

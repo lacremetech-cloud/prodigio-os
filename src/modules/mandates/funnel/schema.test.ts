@@ -13,6 +13,7 @@ function validAnswers() {
       lastName: "Dupont",
       phoneRaw: "06 12 34 56 78",
       emailRaw: "jean@example.com",
+      recallPreference: "des_que_possible",
       consent: true,
     },
     company: "",

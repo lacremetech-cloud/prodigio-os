@@ -50,11 +50,21 @@ export const MANDATE_SITUATIONS = [
 
 export const CONTACT_PREFERENCES = ["telephone", "email", "indifferent"] as const;
 
+// Préférence de créneau de rappel (logistique du futur entretien d'éligibilité).
+// N'ENTRE PAS dans le scoring : simple confort de mise en relation.
+export const RECALL_PREFERENCES = [
+  "des_que_possible",
+  "matin",
+  "apres_midi",
+  "debut_soiree",
+] as const;
+
 export type PropertyType = (typeof PROPERTY_TYPES)[number];
 export type ValueBand = (typeof VALUE_BANDS)[number];
 export type SaleHorizon = (typeof SALE_HORIZONS)[number];
 export type MandateSituation = (typeof MANDATE_SITUATIONS)[number];
 export type ContactPreference = (typeof CONTACT_PREFERENCES)[number];
+export type RecallPreference = (typeof RECALL_PREFERENCES)[number];
 
 // --- Schémas par étape -------------------------------------------------------
 
@@ -97,6 +107,9 @@ export const contactSchema = z.object({
     .min(1, "Merci d'indiquer un e-mail.")
     .max(180),
   preference: z.enum(CONTACT_PREFERENCES).optional(),
+  recallPreference: z.enum(RECALL_PREFERENCES, {
+    message: "Merci d'indiquer un moment de rappel.",
+  }),
   consent: z.literal(true, {
     message: "Votre accord est nécessaire pour que nous puissions vous recontacter.",
   }),
