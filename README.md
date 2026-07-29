@@ -24,9 +24,11 @@ soumission réelle crée FunnelSubmission + Contact + Opportunity +
 OpportunityContact + PrivacyRecord et affiche la confirmation. Sécurité vérifiée
 en base (RLS active, aucune lecture publique, réponse neutre `{ accepted: true }`,
 idempotence). Voir [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md).
-**Vercel** n'est pas connecté. **Cloudflare Turnstile** (anti-abus) et la
-**validation juridique RGPD** restent des **prérequis de production non
-terminés**.
+**Vercel** n'est pas connecté. **Cloudflare Turnstile** (anti-abus) est
+**implémenté** : le dépôt Supabase n'a lieu que si le jeton est **vérifié côté
+serveur** (siteverify) — il reste à fournir de **vraies clés** en preview / prod
+(voir [docs/07 §8](docs/07-SUPABASE-SETUP.md)). La **validation juridique RGPD**
+reste un **prérequis de production non terminé**.
 
 ## Prérequis
 

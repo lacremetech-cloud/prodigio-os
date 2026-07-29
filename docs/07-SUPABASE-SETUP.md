@@ -26,8 +26,14 @@ et prérequis de production.
 > confirmés, **scores non falsifiables depuis le navigateur** (recalcul serveur).
 > Les données de test ont été supprimées ; les tables sont vides.
 >
-> ⚠️ **Non terminé (bloquants de production)** : Cloudflare Turnstile (anti-abus)
-> et la **validation juridique RGPD** ne sont **pas** faits — voir §5.
+> ✅ **Ajouté (cette tranche)** : **Cloudflare Turnstile** (anti-abus) protège
+> désormais le dépôt public — la soumission Supabase n'a lieu **que** si le jeton
+> est vérifié côté serveur (siteverify). Aucun changement de schéma ni de
+> migration (voir §8). Il reste à **fournir les vraies clés** et le hostname en
+> preview / production.
+>
+> ⚠️ **Non terminé (bloquant de production)** : la **validation juridique RGPD**
+> n'est **pas** faite — voir §5.
 
 ---
 
@@ -41,6 +47,9 @@ et prérequis de production.
 | `NEXT_PUBLIC_SUPABASE_URL` | URL publique du projet (`https://<ref>.supabase.co`) | Non |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clé **publiable** (anon), protégée par RLS | Non (publique par conception) |
 | `SUPABASE_PROJECT_REF` | Référence du projet (documentation / CLI) | Non |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Clé de site Cloudflare Turnstile (rendue au navigateur) | Non (publique par conception) |
+| `TURNSTILE_SECRET_KEY` | Secret Turnstile pour siteverify | **Oui — strictement serveur** |
+| `TURNSTILE_EXPECTED_HOSTNAME` | Hostname attendu (contrôle d'origine ; imposé en prod) | Non |
 
 > **À NE JAMAIS ajouter ici ni dans le dépôt** : clé `service_role`, mot de passe
 > Supabase, `SUPABASE_DB_URL`, ou toute chaîne de connexion PostgreSQL. Le funnel
@@ -141,9 +150,12 @@ supabase db push        # applique les migrations de supabase/migrations/
 Ces points **doivent** être traités avant une mise en production réelle — ils ne
 sont **pas** résolus par cette tranche :
 
-- ⛔ **Cloudflare Turnstile** (anti-abus) : le funnel dispose d'un honeypot et
-  d'une clé d'idempotence, mais **n'est pas** protégé contre les abus
-  automatisés. Turnstile doit être ajouté avant l'ouverture publique.
+- ✅ **Cloudflare Turnstile** (anti-abus) : **implémenté** (voir §8). Le dépôt
+  Supabase n'a lieu que si le jeton est vérifié côté serveur. Il reste, avant la
+  mise en production, à **créer un widget Turnstile** (mode *Managed*, action
+  `mandate_submission`) et à renseigner `NEXT_PUBLIC_TURNSTILE_SITE_KEY`,
+  `TURNSTILE_SECRET_KEY` et `TURNSTILE_EXPECTED_HOSTNAME` avec de **vraies**
+  clés (les clés de test sont refusées en production).
 - ⛔ **Validation juridique RGPD** : la base légale est enregistrée comme
   `a_valider_juridiquement` et la formulation du consentement est **provisoire**.
   Aucune conformité n'est présumée (voir [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md)).
@@ -361,3 +373,99 @@ de test ensuite supprimée ; les 5 tables sont revenues à **0 ligne**.
 > `service_role` (clé serveur / back-office) conserve volontairement son
 > `EXECUTE` ; seuls les rôles publics `PUBLIC`/`anon`/`authenticated` sont
 > concernés par le retrait.
+
+---
+
+## 8. Cloudflare Turnstile — anti-abus du dépôt public (APPLIQUÉ, app-layer)
+
+Le funnel public est désormais protégé par **Cloudflare Turnstile** (mode
+**Managed**). Le dépôt Supabase (`submit_mandate_funnel`) n'est exécuté **que**
+si un **jeton** Turnstile a été **vérifié côté serveur**. **Aucun changement de
+schéma** ni **de migration** : Turnstile est entièrement une couche applicative
+(Next.js), la base reste inchangée.
+
+### 8.1 Principe
+
+```
+Navigateur (widget Turnstile, action=mandate_submission)
+  → obtient un JETON (le SEUL élément anti-abus transmis)
+  → Action serveur submitMandateFunnelAction
+      → siteverify (https://challenges.cloudflare.com/turnstile/v0/siteverify)
+      → si et seulement si OK : RPC submit_mandate_funnel (dépôt Supabase)
+```
+
+- Le **secret** reste **strictement côté serveur** (jamais `NEXT_PUBLIC_`, jamais
+  renvoyé au client).
+- Le **jeton n'est jamais** stocké (Supabase / FunnelSubmission / `raw_answers`),
+  **ni journalisé**, **ni** placé dans les analytics ou les erreurs client : il
+  vit à part du payload et n'est utilisé que pour la vérification.
+- **Rendu « interaction-only »** : le widget reste **invisible** tant que
+  Cloudflare ne juge pas un challenge nécessaire (discret, premium).
+- **Réinitialisation** propre du widget après échec / expiration (nouvel essai).
+
+### 8.2 Le dépôt Supabase est refusé si…
+
+La vérification (`verifyTurnstileToken`) échoue — et donc **aucune RPC** n'est
+appelée — dans chacun de ces cas :
+
+- jeton **absent** ;
+- jeton **invalide** (`success=false`) ;
+- jeton **expiré** ou **déjà utilisé** (`timeout-or-duplicate` / `token-already-spent`) ;
+- **action** ≠ `mandate_submission` ;
+- **hostname** ≠ `TURNSTILE_EXPECTED_HOSTNAME` (imposé **en production**) ;
+- **siteverify indisponible** (timeout / erreur réseau) — message utilisateur
+  **neutre** : « Nous n'avons pas pu vérifier votre demande. Veuillez réessayer
+  dans quelques instants. »
+
+Sont **intégralement préservés** : idempotence, dédoublonnage conservateur,
+**réponse publique neutre** `{ accepted: true }`, **scoring serveur**, UTM /
+attribution, **préférence de rappel**, RLS et permissions (§3, §6, §7).
+
+### 8.3 Variables et garde-fou de production
+
+| Variable | Rôle |
+|---|---|
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Clé de site (publique) rendue au navigateur |
+| `TURNSTILE_SECRET_KEY` | Secret serveur pour siteverify (**jamais** exposé) |
+| `TURNSTILE_EXPECTED_HOSTNAME` | Hostname attendu (imposé en production) |
+
+**Garde-fou** : en **production**, les **clés de test** Cloudflare sont
+**refusées** (`isTurnstileProductionSafe`) — une clé de test ne peut jamais
+accorder l'accès en prod ; le dépôt est refusé (message neutre) plutôt que
+« validé » par une clé de test.
+
+### 8.4 Clés de test officielles (dev / tests)
+
+- Sitekey succès : `1x00000000000000000000AA` · échec : `2x00000000000000000000AB`
+  · challenge forcé : `3x00000000000000000000FF`.
+- Secret succès : `1x0000000000000000000000000000000AA` · échec :
+  `2x0000000000000000000000000000000AA` · déjà utilisé :
+  `3x0000000000000000000000000000000AA`.
+
+### 8.5 Vérifications réalisées
+
+- **Tests unitaires / intégration** (Vitest) : jeton valide, absent, invalide,
+  expiré / déjà utilisé, mauvaise action, mauvais hostname, timeout / erreur
+  réseau, **absence de RPC Supabase quand Turnstile échoue**, **RPC exécutée
+  quand Turnstile réussit**, exclusion du jeton du payload, garde-fou de
+  production. `lint` · `typecheck` · `test:run` · `build` : **verts**.
+- **E2E local avec les clés de test officielles** contre l'endpoint **réel**
+  `siteverify` : succès → `ok` ; secret d'échec → `invalid-token` ; secret
+  « déjà utilisé » → `duplicate-or-expired` ; jeton absent → `missing-token`
+  (sans réseau) ; action vide en mode production → `action-mismatch`.
+
+### 8.6 Captures (étape finale)
+
+`docs/assets/turnstile/` — desktop et mobile :
+
+- `normal-*.png` — état normal (widget « interaction-only » invisible, mention
+  discrète « Demande protégée … par Cloudflare ») ;
+- `verifying-*.png` — vérification / transmission en cours (spinner) ;
+- `error-*.png` — message neutre d'erreur avec **possibilité de réessayer**
+  (widget réinitialisé).
+
+> Note : la capture du **challenge interactif** Cloudflare lui-même n'a pas pu
+> être produite depuis l'environnement de développement (accès navigateur à
+> `challenges.cloudflare.com` bloqué : `ERR_CONNECTION_RESET`). Le challenge
+> n'apparaît, en production, que lorsque Cloudflare le juge nécessaire (mode
+> *interaction-only*), dans la zone réservée au-dessus de la mention de sécurité.

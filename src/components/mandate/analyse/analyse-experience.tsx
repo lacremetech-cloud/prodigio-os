@@ -13,6 +13,7 @@ import {
   VALUE_BANDS,
   valueBandLabels,
 } from "@/modules/mandates/funnel";
+import { TURNSTILE_ACTION } from "@/modules/mandates/funnel";
 import { ChoiceCardGrid } from "./choice-card-grid";
 import { PreAnalysisScreen } from "./pre-analysis-screen";
 import { ContactFields } from "./contact-fields";
@@ -21,6 +22,7 @@ import { LocationFields } from "./location-fields";
 import { OptionList } from "./option-list";
 import { ProgressRail } from "./progress-rail";
 import { StepShell } from "./step-shell";
+import { TurnstileWidget } from "./turnstile-widget";
 import { locatedPhrase, propertyLabel, valuePhrase } from "./personalize";
 import {
   CONFIRMATION_STEP,
@@ -29,6 +31,10 @@ import {
   useAnalyseMachine,
   type DraftAnswers,
 } from "./use-analyse-machine";
+
+// Clé de site PUBLIQUE (inlinée au build par Next). Absente => le widget n'est
+// pas rendu ; la vérification serveur reste, elle, la garde décisive.
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 const valueOptions = VALUE_BANDS.map((v) => ({ value: v, label: valueBandLabels[v] }));
 const horizonOptions = SALE_HORIZONS.map((v) => ({
@@ -249,6 +255,41 @@ export function AnalyseExperience() {
                   honeypot={m.draft.company}
                   onHoneypotChange={(v) => m.patch({ company: v })}
                 />
+
+                {/* Vérification anti-abus Cloudflare Turnstile (« interaction-only » :
+                    invisible tant qu'aucun challenge n'est requis). Discrète, elle
+                    n'apparaît qu'en cas de doute et se réinitialise après un échec. */}
+                {TURNSTILE_SITE_KEY ? (
+                  <div className="mt-8 border-t border-[color:var(--color-border-dark)] pt-6">
+                    <div className="transition-all duration-300">
+                      <TurnstileWidget
+                        siteKey={TURNSTILE_SITE_KEY}
+                        action={TURNSTILE_ACTION}
+                        onToken={m.setTurnstileToken}
+                        onExpire={() => m.setTurnstileToken(null)}
+                        onError={() => m.setTurnstileToken(null)}
+                        resetKey={m.challengeResetKey}
+                        className="mx-auto w-full max-w-sm"
+                      />
+                    </div>
+                    <p className="mt-4 flex items-center gap-2 text-xs text-text-on-dark-muted">
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        className="size-3.5 shrink-0 text-gold-soft"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 3l7 3v5c0 4.4-3 8.3-7 9-4-0.7-7-4.6-7-9V6l7-3z" />
+                        <path d="M9 12l2 2 4-4" />
+                      </svg>
+                      {analysis.securityNote}
+                    </p>
+                  </div>
+                ) : null}
               </StepShell>
             ) : null}
 

@@ -57,6 +57,19 @@ export const submissionRequestSchema = z.object({
 export type SubmissionRequest = z.infer<typeof submissionRequestSchema>;
 
 /**
+ * Entrée de l'action serveur : la requête de soumission **plus** le jeton
+ * Cloudflare Turnstile. Le jeton est le **seul** élément transmis par le
+ * navigateur pour l'anti-abus ; il vit à part (jamais dans `context`, donc
+ * jamais dans le payload persistant). Il peut être `null` si le widget n'a pas
+ * encore produit de jeton — la vérification renverra alors « jeton absent ».
+ */
+export const submitActionInputSchema = submissionRequestSchema.extend({
+  turnstileToken: z.string().min(1).max(4096).nullable().default(null),
+});
+
+export type SubmitActionInput = z.infer<typeof submitActionInputSchema>;
+
+/**
  * Résultat renvoyé par l'action serveur de dépôt de demande. Volontairement
  * minimal : un booléen d'acceptation, jamais de donnée ni d'état interne.
  */
@@ -69,8 +82,11 @@ export type SubmitResult =
     }
   | {
       ok: false;
-      reason: "unavailable" | "validation" | "error";
+      reason: "unavailable" | "validation" | "error" | "turnstile";
       message: string;
+      // Signale au client de réinitialiser le widget anti-abus pour réessayer
+      // (jeton refusé, expiré, déjà utilisé, ou vérification indisponible).
+      resetChallenge?: boolean;
     };
 
 type Json = Record<string, unknown>;

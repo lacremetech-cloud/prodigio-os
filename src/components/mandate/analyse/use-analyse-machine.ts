@@ -79,9 +79,13 @@ export interface AnalyseMachine {
   status: Status;
   errorMessage: string | null;
   appreciation: AppreciationKey | null;
+  /** Compteur de réinitialisation du widget anti-abus (Turnstile). */
+  challengeResetKey: number;
   patch: (patch: Partial<DraftAnswers>) => void;
   patchLocation: (patch: Partial<DraftAnswers["location"]>) => void;
   patchContact: (patch: Partial<DraftAnswers["contact"]>) => void;
+  /** Mémorise (ou oublie avec `null`) le jeton Turnstile courant. */
+  setTurnstileToken: (token: string | null) => void;
   start: () => void;
   goNext: () => void;
   goBack: () => void;
@@ -149,7 +153,11 @@ export function useAnalyseMachine(): AnalyseMachine {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [appreciation, setAppreciation] = useState<AppreciationKey | null>(null);
+  const [challengeResetKey, setChallengeResetKey] = useState(0);
   const idempotencyKeyRef = useRef<string>("");
+  // Jeton Turnstile courant. Conservé en ref (jamais persisté, jamais dans le
+  // brouillon sessionStorage) : le jeton est éphémère et à usage unique.
+  const turnstileTokenRef = useRef<string | null>(null);
 
   // Hydratation depuis sessionStorage (reprise), une fois monté. La lecture est
   // synchrone ; l'application de l'état est différée d'un frame (hors corps
@@ -213,6 +221,10 @@ export function useAnalyseMachine(): AnalyseMachine {
     [],
   );
 
+  const setTurnstileToken = useCallback((token: string | null) => {
+    turnstileTokenRef.current = token;
+  }, []);
+
   const submit = useCallback(
     async (finalDraft: DraftAnswers) => {
       const answers = funnelAnswersSchema.safeParse({
@@ -256,12 +268,17 @@ export function useAnalyseMachine(): AnalyseMachine {
       }
 
       try {
-        const result = await submitMandateFunnelAction(request.data);
+        const result = await submitMandateFunnelAction({
+          ...request.data,
+          // Seul élément anti-abus transmis par le navigateur : le jeton.
+          turnstileToken: turnstileTokenRef.current,
+        });
         if (result.ok) {
           setAppreciation(result.appreciation);
           setStatus("done");
           setDirection(1);
           setStep(CONFIRMATION_STEP);
+          turnstileTokenRef.current = null;
           try {
             window.sessionStorage.removeItem(STORAGE_KEY);
           } catch {
@@ -270,6 +287,12 @@ export function useAnalyseMachine(): AnalyseMachine {
         } else {
           setStatus("error");
           setErrorMessage(result.message);
+          // Échec / indisponibilité de la vérification anti-abus : on oublie le
+          // jeton (usage unique) et on réinitialise le widget pour réessayer.
+          if (result.reason === "turnstile" || result.resetChallenge) {
+            turnstileTokenRef.current = null;
+            setChallengeResetKey((k) => k + 1);
+          }
         }
       } catch {
         setStatus("error");
@@ -329,9 +352,11 @@ export function useAnalyseMachine(): AnalyseMachine {
       status,
       errorMessage,
       appreciation,
+      challengeResetKey,
       patch,
       patchLocation,
       patchContact,
+      setTurnstileToken,
       start,
       goNext,
       goBack,
@@ -345,9 +370,11 @@ export function useAnalyseMachine(): AnalyseMachine {
       status,
       errorMessage,
       appreciation,
+      challengeResetKey,
       patch,
       patchLocation,
       patchContact,
+      setTurnstileToken,
       start,
       goNext,
       goBack,
