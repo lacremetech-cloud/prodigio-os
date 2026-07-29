@@ -5,20 +5,26 @@ propriétaire (funnel Mandats — tranche « capture ») : variables d'environne
 application de la **migration SQL versionnée**, modèle de sécurité, vérification,
 et prérequis de production.
 
-> **État actuel — DÉPLOYÉ.** La migration `mandate_funnel_capture` est
-> **appliquée** sur le projet `prodigio-os` (`wmhrpweefutwldbhllhg`, région
-> `eu-west-3`, Postgres 17), enregistrée sous la version `20260729150515`. Les
-> variables publiques sont fournies dans l'environnement cloud. Le funnel est
+> **État actuel — DÉPLOYÉ (capture + scoring + durcissement).** Trois migrations
+> sont **appliquées** sur le projet `prodigio-os` (`wmhrpweefutwldbhllhg`, région
+> `eu-west-3`, Postgres 17) : `mandate_funnel_capture` (version ledger
+> `20260729150515`), `mandate_scoring` (version ledger `20260729165606`) **et**
+> `restrict_compute_mandate_scores` (version ledger `20260729172238`) — cette
+> dernière retire l'`EXECUTE` public/anon/authenticated sur la fonction interne
+> `compute_mandate_scores` (voir §7.2).
+> Les variables publiques sont fournies dans l'environnement cloud. Le funnel est
 > **fonctionnel de bout en bout** : une soumission réelle depuis
 > `/proprietaire/analyse` crée bien FunnelSubmission + Contact + Opportunity +
-> OpportunityContact + PrivacyRecord et affiche l'écran de confirmation.
+> OpportunityContact + PrivacyRecord, **calcule et stocke les scores côté base**,
+> et affiche l'écran de confirmation.
 >
-> Vérifié après déploiement (voir §6) : RLS active sur les 5 tables, **aucune
-> politique publique**, **aucun GRANT direct** pour `anon`/`authenticated`/
-> `PUBLIC`, fonction `submit_mandate_funnel` `SECURITY DEFINER` exécutable par
-> `anon`/`authenticated` uniquement, réponse publique neutre `{ accepted: true }`,
-> idempotence et dédoublonnage conservateur confirmés. Les données de test ont
-> été supprimées ; les tables sont vides.
+> Vérifié après déploiement (voir §6 pour la capture, §7 pour le scoring) : RLS
+> active sur les 5 tables, **aucune politique publique**, **aucun GRANT direct**
+> pour `anon`/`authenticated`/`PUBLIC`, fonction `submit_mandate_funnel`
+> `SECURITY DEFINER` exécutable par `anon`/`authenticated` uniquement, réponse
+> publique neutre `{ accepted: true }`, idempotence et dédoublonnage conservateur
+> confirmés, **scores non falsifiables depuis le navigateur** (recalcul serveur).
+> Les données de test ont été supprimées ; les tables sont vides.
 >
 > ⚠️ **Non terminé (bloquants de production)** : Cloudflare Turnstile (anti-abus)
 > et la **validation juridique RGPD** ne sont **pas** faits — voir §5.
@@ -190,3 +196,168 @@ de la migration, puis **nettoyage complet** des données de test.
 
 > La migration reste appliquée ; **seules les données de test** ont été insérées
 > puis supprimées. Aucune donnée réelle n'existe encore en base.
+
+---
+
+## 7. Préqualification (scoring) — migration APPLIQUÉE et vérifiée
+
+Migration **versionnée déployée** :
+`supabase/migrations/20260729160000_mandate_scoring.sql` (additive au-dessus de
+la capture), appliquée le 2026-07-29 sur `wmhrpweefutwldbhllhg` et enregistrée au
+ledger sous la version `20260729165606`.
+
+> **Note de versionnage.** Comme pour la capture (fichier `…120000`, ledger
+> `…150515`), l'horodatage du **fichier** (`…160000`) diffère de la version
+> **ledger** (`…165606`) : la version est stampée par l'outil au moment de
+> l'application. Le **nom** (`mandate_scoring`) et le contenu SQL font foi ;
+> l'ordre relatif (scoring après capture) est préservé. `mandate_funnel_capture`
+> n'a **pas** été réappliquée.
+
+Ce qu'elle ajoute :
+- fonction `compute_mandate_scores(...)` **déterministe, `IMMUTABLE`**, miroir SQL
+  de `src/modules/mandates/scoring/config.ts` (version `mandate-scoring-v1`) ;
+- colonnes de scoring sur `funnel_submissions` (photographie immuable :
+  `compatibility_score`, `maturity_score`, `operational_priority`,
+  `public_appreciation`, `score_version`, `score_breakdown`,
+  `contact_recall_preference`) et de **recommandation** sur `opportunities`
+  (`recommended_priority`, `compatibility_score`, `maturity_score`,
+  `score_version`) ;
+- mise à jour de `submit_mandate_funnel` : les scores sont **recalculés côté
+  base** à partir des réponses validées — tout score fourni dans le payload est
+  **ignoré** (impossible d'imposer un score depuis le navigateur). RLS, GRANT,
+  idempotence, dédoublonnage et **réponse neutre `{ accepted: true }`** inchangés.
+
+Principes :
+- **Deux scores distincts** (compatibilité propriété / maturité projet), jamais
+  fusionnés ; en découlent une **priorité opérationnelle** (interne) et une
+  **appréciation publique** qualitative (`fort_potentiel` / `a_confirmer` /
+  `analyse_personnalisee`) — **jamais** de « non éligible » automatique.
+- Le **seuil premium** (docs/05 #6) n'est pas une constante € dans l'UI : il est
+  porté par la répartition de points entre bandes de valeur, **versionnée**.
+- La **segmentation validée reste humaine** : `opportunities.segment` demeure
+  `non_determine` ; le scoring n'est qu'une **recommandation** (docs/03 —
+  « Décision de segment »).
+- L'appréciation affichée au propriétaire est aussi calculée **côté serveur**
+  (action Next, mêmes règles) : le navigateur ne voit **jamais** les scores
+  numériques.
+
+> Compatibilité de déploiement : la migration est **additive** (les colonnes
+> utilisent `add column if not exists`, la fonction est remplacée). Elle a été
+> appliquée **exactement une fois** après contrôle du schéma distant.
+
+### 7.1 Vérification post-déploiement du scoring (réalisée)
+
+Contrôles effectués sur `wmhrpweefutwldbhllhg` après application, puis
+**nettoyage complet** des données de test (marqueur e-mail `@e2e-scoring.test`,
+clés `e2e-scoring-*`).
+
+**Contrôle préalable (avant écriture)**
+- Schéma distant conforme à l'état `mandate_funnel_capture` : colonnes de scoring
+  **absentes**, `compute_mandate_scores` **inexistante**, `submit_mandate_funnel`
+  **sans** appel au scoring, 5 tables **à 0 ligne**. Aucune divergence bloquante.
+- Miroir SQL ↔ `src/modules/mandates/scoring/config.ts` **exact** (barèmes des
+  bandes de valeur, types de bien, horizon, situation de mandat ; seuils
+  `compat ≥ 60` / `maturité ≥ 55` ; bornes d'appréciation `≥ 60` / `≥ 35` ;
+  versions `mandate-scoring-v1` / `economic-baseline-v1`).
+
+**Objets déployés (mesurés)**
+- Fonction `compute_mandate_scores(text,text,text,text)` — `IMMUTABLE`,
+  `search_path = pg_catalog, pg_temp`.
+- Colonnes `funnel_submissions` : `contact_recall_preference`,
+  `compatibility_score`, `maturity_score`, `operational_priority`,
+  `public_appreciation`, `score_version`, `score_breakdown`.
+- Colonnes `opportunities` : `recommended_priority`, `compatibility_score`,
+  `maturity_score`, `score_version`.
+- Contraintes CHECK : `funnel_submissions_recall_pref_check`,
+  `funnel_submissions_priority_check`, `funnel_submissions_appreciation_check`,
+  `opportunities_recommended_priority_check`.
+- RLS toujours active sur les 5 tables, **0 politique**.
+
+**Trois parcours E2E identifiables (scores stockés, recalculés côté base)**
+
+| Parcours | property_type / value_band | horizon / mandat | compat | maturité | priorité interne | appréciation publique | rappel |
+|---|---|---|---|---|---|---|---|
+| **Fort potentiel** | villa_architecte / plus_2m | des_que_possible / mandat_simple | 100 | 100 | `rappel_prioritaire` | `fort_potentiel` | matin |
+| **À confirmer** | appartement_exception / 500k_800k | six_mois / aucun_mandat | 59 | 64 | `circuit_partenaire` | `a_confirmer` | apres_midi |
+| **Analyse personnalisée** | autre / accompagnement_estimation | en_reflexion / autre | 58 | 29 | `suivi_long_terme` | `analyse_personnalisee` (needs_estimation) | debut_soiree |
+
+- Sur l'`opportunité` : `recommended_priority` + scores portés, `segment` resté
+  **`non_determine`** (la segmentation validée reste humaine).
+
+**Non-falsifiabilité (tentative de manipulation)**
+- Un payload injectant `compatibility_score=1`, `maturity_score=2`,
+  `operational_priority='suivi_long_terme'`, `public_appreciation='analyse_personnalisee'`,
+  `score_version='HACKED-CLIENT'`, `score_breakdown={"hacked":true}` a été **entièrement
+  ignoré** : la base a stocké les valeurs **recalculées** (100/100,
+  `rappel_prioritaire`, `fort_potentiel`, `mandate-scoring-v1`,
+  `needs_estimation=false`). Les scores fournis par le client n'ont **aucun effet**.
+
+**Idempotence, dédoublonnage, neutralité**
+- Rejeu d'une même `idempotency_key` → **1** seule soumission (aucun doublon).
+- Nouvelle soumission avec un e-mail déjà connu → **contact réutilisé**
+  (`resolution = contact_existant`, aucun contact en double) mais soumission et
+  opportunité distinctes conservées.
+- Les **5 appels** (dont manipulation et dédoublonnage) renvoient exactement
+  `{ accepted: true }` — aucun score, aucune donnée, aucune existence révélée.
+
+**Nettoyage**
+- Toutes les données de test supprimées ; les 5 tables sont revenues à **0 ligne**.
+  Les objets de scoring (fonctions, colonnes, migration au ledger) **persistent**.
+
+**Contrôles de validation (locaux, dépendances verrouillées)**
+- `npm run lint` ✅ · `npm run typecheck` ✅ · `npm run test:run` ✅ (**54/54**)
+  · `npm run build` ✅.
+
+### 7.2 Durcissement — `compute_mandate_scores` verrouillée (CORRIGÉ, déployé)
+
+**Constat.** La migration de scoring révoquait `compute_mandate_scores` de
+`public` avec l'intention de la garder **interne** (appelée uniquement par
+`submit_mandate_funnel`). Mais l'ACL réelle (`pg_proc.proacl`) montrait que `anon`
+et `authenticated` conservaient un `EXECUTE` **explicite** hérité des *default
+privileges* Supabase sur les fonctions du schéma `public`, que `revoke … from
+public` ne retire pas. La fonction restait donc appelable directement par le
+public (divulgation du barème ; **ni lecture, ni falsification** de données —
+`submit_mandate_funnel` recalcule toujours côté serveur).
+
+**Correction déployée.** Migration additive et versionnée dédiée :
+`supabase/migrations/20260729170000_restrict_compute_mandate_scores.sql`
+(ledger `20260729172238`). Elle exécute uniquement, sur la signature exacte
+`public.compute_mandate_scores(text, text, text, text)` :
+
+```sql
+revoke execute on function public.compute_mandate_scores(text, text, text, text) from public;
+revoke execute on function public.compute_mandate_scores(text, text, text, text) from anon;
+revoke execute on function public.compute_mandate_scores(text, text, text, text) from authenticated;
+```
+
+Elle **ne touche pas** `submit_mandate_funnel`, ni la RLS, ni les tables, ni la
+logique de scoring, et ne modifie **aucune migration antérieure**.
+
+**ACL de `compute_mandate_scores` — avant / après :**
+
+| | ACL (`proacl`) |
+|---|---|
+| Avant | `postgres=X` · **`anon=X`** · **`authenticated=X`** · `service_role=X` |
+| Après | `postgres=X` · `service_role=X` |
+
+**Vérification effective (`has_function_privilege`) :**
+- `compute_mandate_scores` exécutable par `public` / `anon` / `authenticated` :
+  **false / false / false** ✅
+- `submit_mandate_funnel` exécutable par `anon` / `authenticated` : **true / true**
+  ✅ (inchangé — seul point d'entrée public)
+- RLS active sur les 5 tables, **0 politique**, **aucun** grant direct de table
+  pour `anon`/`authenticated`/`PUBLIC` ✅
+
+**Fonctionnement préservé.** `submit_mandate_funnel` est `SECURITY DEFINER` :
+elle appelle `compute_mandate_scores` avec les droits de son **propriétaire**
+(qui conserve l'`EXECUTE`), donc le funnel continue de calculer et stocker les
+scores. Test E2E **exécuté sous le rôle `anon`** après la correction : dépôt
+`domaine_caractere` / `plus_2m` / `des_que_possible` / `aucun_mandat` →
+`{ accepted: true }`, ligne créée avec `compatibility_score = 100`,
+`maturity_score = 96`, `operational_priority = rappel_prioritaire`,
+`public_appreciation = fort_potentiel` (scores bien recalculés côté base). Donnée
+de test ensuite supprimée ; les 5 tables sont revenues à **0 ligne**.
+
+> `service_role` (clé serveur / back-office) conserve volontairement son
+> `EXECUTE` ; seuls les rôles publics `PUBLIC`/`anon`/`authenticated` sont
+> concernés par le retrait.

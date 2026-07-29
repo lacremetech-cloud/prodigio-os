@@ -212,18 +212,50 @@ export const analysis = {
         { value: "email", label: "Par e-mail" },
         { value: "indifferent", label: "Peu importe" },
       ],
+      recallLabel: "Quand préférez-vous être recontacté ?",
+      recallOptions: [
+        { value: "des_que_possible", label: "Dès que possible" },
+        { value: "matin", label: "Le matin" },
+        { value: "apres_midi", label: "L'après-midi" },
+        { value: "debut_soiree", label: "En début de soirée" },
+      ],
     },
   },
   submitCta: "Adresser ma demande à Prodigio",
   submitting: "Transmission de votre demande…",
-  confirmation: {
-    eyebrow: "Demande reçue",
-    title: "Votre propriété va maintenant être étudiée.",
+  // --- Écran final : pré-analyse terminée (appréciation qualitative seule) -----
+  preAnalysis: {
+    eyebrow: "Pré-analyse terminée",
+    title: "Votre pré-analyse est terminée",
+    // Appréciation publique — seul résultat montré au propriétaire (jamais de
+    // score numérique, jamais de « non éligible »).
+    appreciationLabels: {
+      fort_potentiel: "Fort potentiel de compatibilité",
+      a_confirmer: "Potentiel à confirmer",
+      analyse_personnalisee: "Analyse personnalisée nécessaire",
+    },
     text:
-      "Votre demande a bien été transmise à Prodigio. Si votre propriété " +
-      "correspond au périmètre d'intervention du système, un interlocuteur vous " +
-      "contactera afin d'en apprendre davantage sur votre projet.",
-    recapTitle: "Récapitulatif de votre demande",
+      "Les informations transmises nous permettent d'effectuer une première " +
+      "lecture de votre projet. Cependant, un questionnaire ne peut pas apprécier " +
+      "pleinement le caractère de votre propriété, la cohérence de son " +
+      "positionnement ni les particularités de votre vente. Un entretien " +
+      "confidentiel avec un expert Prodigio est indispensable pour confirmer son " +
+      "éligibilité.",
+    nextStepTitle: "Prochaine étape — Votre entretien d'éligibilité",
+    nextStepPoints: [
+      "comprendre précisément votre projet de vente",
+      "étudier les particularités de votre propriété",
+      "identifier ses acheteurs potentiels",
+      "déterminer si le Système Prodigio est adapté",
+    ],
+    recallEcho: "Vous préférez être recontacté :",
+    cta: "Demander mon entretien d'éligibilité",
+    // Après clic : accusé HONNÊTE — aucune réservation de créneau (pas de
+    // synchronisation Calendar à ce stade).
+    ctaConfirmedTitle: "Votre demande d'entretien est enregistrée.",
+    ctaConfirmedText:
+      "Un interlocuteur Prodigio vous recontactera pour convenir de cet " +
+      "entretien confidentiel. Aucun créneau n'est encore réservé.",
     backHome: "Revenir à l'accueil",
   },
   errors: {

@@ -4,6 +4,8 @@
  * Voir docs/02-MVP-SCOPE.md et docs/03-DOMAIN-MODEL.md.
  *
  * Première tranche livrée : la capture (landing propriétaire + analyse
- * d'éligibilité + soumission Supabase). Voir le sous-module `funnel`.
+ * d'éligibilité + soumission Supabase) et la préqualification (scoring).
+ * Voir les sous-modules `funnel` et `scoring`.
  */
 export * from "./funnel";
+export * from "./scoring";

@@ -1,6 +1,11 @@
 "use client";
 
-import { analysis, consent, type ContactPreference } from "@/modules/mandates/funnel";
+import {
+  analysis,
+  consent,
+  type ContactPreference,
+  type RecallPreference,
+} from "@/modules/mandates/funnel";
 import { Field } from "./field";
 import type { DraftAnswers } from "./use-analyse-machine";
 
@@ -91,6 +96,45 @@ export function ContactFields({
             );
           })}
         </div>
+      </fieldset>
+
+      {/* Préférence de rappel (créneau souhaité) — requise */}
+      <fieldset>
+        <legend className="text-xs uppercase tracking-[0.18em] text-text-on-dark-muted">
+          {t.recallLabel}
+        </legend>
+        <div className="mt-3 flex flex-wrap gap-3">
+          {t.recallOptions.map((option) => {
+            const isActive = value.recallPreference === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() =>
+                  onChange({
+                    recallPreference: option.value as RecallPreference,
+                  })
+                }
+                className={`inline-flex min-h-[2.75rem] items-center px-4 py-2.5 text-sm transition-colors ${
+                  isActive
+                    ? "border-2 border-text-on-dark bg-[color:var(--color-onyx-soft)] text-text-on-dark"
+                    : "border border-[color:var(--color-border-strong-dark)] text-text-on-dark/90 hover:border-text-on-dark"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        {errors["contact.recallPreference"] ? (
+          <p
+            className="mt-2 text-sm text-[color:var(--color-danger-on-dark)]"
+            role="alert"
+          >
+            {errors["contact.recallPreference"]}
+          </p>
+        ) : null}
       </fieldset>
 
       {/* Consentement explicite */}

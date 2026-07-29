@@ -14,7 +14,7 @@ import {
   valueBandLabels,
 } from "@/modules/mandates/funnel";
 import { ChoiceCardGrid } from "./choice-card-grid";
-import { ConfirmationScreen } from "./confirmation-screen";
+import { PreAnalysisScreen } from "./pre-analysis-screen";
 import { ContactFields } from "./contact-fields";
 import { IntroScreen } from "./intro-screen";
 import { LocationFields } from "./location-fields";
@@ -252,7 +252,12 @@ export function AnalyseExperience() {
               </StepShell>
             ) : null}
 
-            {isConfirmation ? <ConfirmationScreen draft={m.draft} /> : null}
+            {isConfirmation ? (
+              <PreAnalysisScreen
+                appreciation={m.appreciation}
+                recallPreference={m.draft.contact.recallPreference}
+              />
+            ) : null}
           </div>
         </main>
       </div>

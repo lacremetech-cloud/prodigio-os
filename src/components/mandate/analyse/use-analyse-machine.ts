@@ -11,10 +11,12 @@ import {
   type ContactPreference,
   type MandateSituation,
   type PropertyType,
+  type RecallPreference,
   type SaleHorizon,
   type StoredAttribution,
   type ValueBand,
 } from "@/modules/mandates/funnel";
+import type { AppreciationKey } from "@/modules/mandates/scoring";
 import { submitMandateFunnelAction } from "@/modules/mandates/funnel/submit";
 
 /** Brouillon des réponses, tolérant aux valeurs partielles pendant la saisie. */
@@ -30,6 +32,7 @@ export interface DraftAnswers {
     phoneRaw: string;
     emailRaw: string;
     preference?: ContactPreference;
+    recallPreference?: RecallPreference;
     consent: boolean;
   };
   company: string; // honeypot
@@ -75,6 +78,7 @@ export interface AnalyseMachine {
   errors: Errors;
   status: Status;
   errorMessage: string | null;
+  appreciation: AppreciationKey | null;
   patch: (patch: Partial<DraftAnswers>) => void;
   patchLocation: (patch: Partial<DraftAnswers["location"]>) => void;
   patchContact: (patch: Partial<DraftAnswers["contact"]>) => void;
@@ -144,6 +148,7 @@ export function useAnalyseMachine(): AnalyseMachine {
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [appreciation, setAppreciation] = useState<AppreciationKey | null>(null);
   const idempotencyKeyRef = useRef<string>("");
 
   // Hydratation depuis sessionStorage (reprise), une fois monté. La lecture est
@@ -253,6 +258,7 @@ export function useAnalyseMachine(): AnalyseMachine {
       try {
         const result = await submitMandateFunnelAction(request.data);
         if (result.ok) {
+          setAppreciation(result.appreciation);
           setStatus("done");
           setDirection(1);
           setStep(CONFIRMATION_STEP);
@@ -322,6 +328,7 @@ export function useAnalyseMachine(): AnalyseMachine {
       errors,
       status,
       errorMessage,
+      appreciation,
       patch,
       patchLocation,
       patchContact,
@@ -337,6 +344,7 @@ export function useAnalyseMachine(): AnalyseMachine {
       errors,
       status,
       errorMessage,
+      appreciation,
       patch,
       patchLocation,
       patchContact,

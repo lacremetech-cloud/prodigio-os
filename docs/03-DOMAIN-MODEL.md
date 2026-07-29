@@ -280,6 +280,19 @@ Segmentation **traçable**, pas seulement dérivée de la valeur.
 - ⚠️ La **base du seuil de valeur du bien** et la **base HT/TTC des honoraires**
   sont **deux choses distinctes** : ne jamais associer HT/TTC à la valeur
   immobilière du bien.
+- **Préqualification (scoring) — recommandation, pas décision.** À la capture, le
+  système calcule **deux scores indépendants et versionnés** (`score_version`) :
+  la **compatibilité** de la propriété avec le Système Prodigio et la **maturité**
+  du projet de vente. Ils **ne sont jamais fusionnés** en un score unique. En
+  découlent une **priorité opérationnelle** interne (rappel prioritaire /
+  nurturing / circuit partenaire / suivi long terme) et une **appréciation
+  publique** qualitative montrée au propriétaire (**jamais** « non éligible » :
+  la décision reste humaine). Ces éléments alimentent le **segment recommandé**
+  ci-dessus ; le **segment validé** demeure une décision humaine tracée. Le
+  scoring est **calculé côté serveur** (non falsifiable depuis le navigateur) et
+  ses paramètres restent **configurables et versionnés** (seuils, pondérations),
+  jamais codés en dur dans l'UI. Voir
+  [07-SUPABASE-SETUP.md](07-SUPABASE-SETUP.md) §7.
 
 ### PrivacyRecord / ConsentRecord
 Traçabilité **RGPD** — **ne présume pas** qu'un traitement équivaut à un

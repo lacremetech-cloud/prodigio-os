@@ -54,6 +54,10 @@ export default function RootLayout({
   return (
     <html
       lang={site.locale}
+      // Le script ci-dessous ajoute la classe `js` sur <html> avant l'hydratation
+      // (SEO / no-JS). Cette mutation intentionnelle est attendue et ne doit pas
+      // déclencher d'avertissement d'hydratation.
+      suppressHydrationWarning
       className={`${cormorant.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full">
