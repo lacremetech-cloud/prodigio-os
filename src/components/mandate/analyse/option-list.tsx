@@ -35,10 +35,10 @@ export function OptionList<T extends string>({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(option.value)}
-              className={`group flex items-center justify-between gap-4 border px-5 py-4 text-left transition-colors duration-200 ${
+              className={`group flex min-h-[3.25rem] items-center justify-between gap-4 border px-5 py-4 text-left transition-colors duration-200 ${
                 isSelected
-                  ? "border-gold bg-[color:var(--color-onyx-soft)] text-ivory"
-                  : "border-[color:var(--color-border-dark)] text-ivory/85 hover:border-[color:var(--color-gold-soft)] hover:text-ivory"
+                  ? "border-2 border-text-on-dark bg-[color:var(--color-onyx-soft)] text-text-on-dark"
+                  : "border border-[color:var(--color-border-strong-dark)] text-text-on-dark/90 hover:border-text-on-dark hover:bg-[color:var(--color-onyx-soft)]"
               }`}
             >
               <span className="text-base sm:text-lg">{option.label}</span>
@@ -47,7 +47,7 @@ export function OptionList<T extends string>({
                 className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                   isSelected
                     ? "border-gold bg-gold text-white"
-                    : "border-[color:var(--color-border-dark)] text-transparent group-hover:border-[color:var(--color-gold-soft)]"
+                    : "border-[color:var(--color-border-strong-dark)] text-transparent group-hover:border-text-on-dark"
                 }`}
               >
                 <span className="text-[0.7rem]">✓</span>
@@ -57,7 +57,10 @@ export function OptionList<T extends string>({
         })}
       </div>
       {error ? (
-        <p className="mt-4 text-sm text-[#e6a68f]" role="alert">
+        <p
+          className="mt-4 text-sm text-[color:var(--color-danger-on-dark)]"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}

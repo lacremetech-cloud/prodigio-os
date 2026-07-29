@@ -16,18 +16,15 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-/** Résultat renvoyé par la fonction SQL `submit_mandate_funnel`. */
+/**
+ * Résultat renvoyé par la fonction SQL `submit_mandate_funnel`.
+ *
+ * Volontairement NEUTRE : un simple accusé de réception. Aucune donnée
+ * personnelle, aucun identifiant réutilisable, et aucune information révélant si
+ * le contact existait déjà (pas d'oracle d'énumération via la clé publiable).
+ */
 export interface SubmitMandateFunnelResult {
-  submission_id: string;
-  contact_id: string | null;
-  opportunity_id: string | null;
-  resolution:
-    | "nouveau_contact"
-    | "contact_existant"
-    | "nouvelle_opportunite"
-    | "doublon"
-    | null;
-  idempotent_replay: boolean;
+  accepted: boolean;
 }
 
 export interface Database {

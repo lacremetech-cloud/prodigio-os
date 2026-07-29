@@ -17,7 +17,9 @@ export function SectionHeading({
   className = "",
 }: SectionHeadingProps) {
   const alignment = align === "center" ? "text-center mx-auto" : "text-left";
-  const kickerColor = tone === "dark" ? "text-gold-soft" : "text-gold";
+  // Kicker : champagne lisible sur sombre (9.7:1) ; gris neutre sur clair
+  // (l'or ne passe pas AA en petit sur fond clair — réservé aux accents).
+  const kickerColor = tone === "dark" ? "text-gold-soft" : "text-text-secondary";
   const titleColor = tone === "dark" ? "text-ivory" : "text-wood-black";
 
   return (

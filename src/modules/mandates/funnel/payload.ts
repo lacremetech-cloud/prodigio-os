@@ -55,13 +55,12 @@ export const submissionRequestSchema = z.object({
 
 export type SubmissionRequest = z.infer<typeof submissionRequestSchema>;
 
-/** Résultat renvoyé par l'action serveur de dépôt de demande. */
+/**
+ * Résultat renvoyé par l'action serveur de dépôt de demande. Volontairement
+ * minimal : un booléen d'acceptation, jamais de donnée ni d'état interne.
+ */
 export type SubmitResult =
-  | {
-      ok: true;
-      resolution: string | null;
-      idempotentReplay: boolean;
-    }
+  | { ok: true }
   | {
       ok: false;
       reason: "unavailable" | "validation" | "error";
@@ -118,14 +117,6 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
     },
   };
 
-  // Canaux autorisés déduits de la préférence (consentement général au contact).
-  const authorizedChannels: string[] =
-    contact.preference === "telephone"
-      ? ["telephone"]
-      : contact.preference === "email"
-        ? ["email"]
-        : ["telephone", "email"];
-
   const last = context.lastTouch;
 
   return {
@@ -157,7 +148,6 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
     consent_given: contact.consent === true,
     consent_notice_version: CONSENT_NOTICE_VERSION,
     consent_notice_text: consent.label,
-    privacy_controllers: "À confirmer contractuellement (validation juridique requise).",
 
     // Attribution (premier / dernier contact).
     utm_source: last?.utm_source ?? null,
@@ -173,9 +163,9 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
     last_touch: context.lastTouch,
     user_agent: context.userAgent,
 
-    // RGPD (base légale À VALIDER, gérée côté SQL).
-    privacy_purpose: "prise_de_contact_projet_vente",
-    authorized_channels: authorizedChannels,
+    // RGPD : la finalité, les canaux autorisés, les responsables et les
+    // destinataires sont fixés CÔTÉ SQL (non issus du client). On ne transmet
+    // que la preuve du geste de consentement et la version de notice.
     consent_proof: {
       given: contact.consent === true,
       notice_version: CONSENT_NOTICE_VERSION,

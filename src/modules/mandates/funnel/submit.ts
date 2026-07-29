@@ -32,8 +32,9 @@ export async function submitMandateFunnelAction(
   }
 
   // Honeypot : un champ leurre rempli => on répond « ok » sans rien enregistrer.
+  // (Défense faible : voir docs/07 — Turnstile reste requis avant production.)
   if (parsed.data.answers.company && parsed.data.answers.company.length > 0) {
-    return { ok: true, resolution: null, idempotentReplay: false };
+    return { ok: true };
   }
 
   // 2) Supabase requis pour enregistrer réellement la demande.
@@ -54,20 +55,18 @@ export async function submitMandateFunnelAction(
     });
 
     if (error) {
-      // On ne journalise pas de donnée personnelle : uniquement un code technique.
-      console.error("submit_mandate_funnel a échoué", {
-        code: error.code,
-        message: error.message,
-      });
+      // On ne journalise QUE le SQLSTATE : un message Postgres peut contenir des
+      // valeurs de ligne (donnée personnelle). Détail technique côté serveur.
+      console.error("submit_mandate_funnel a échoué", { code: error.code });
       return { ok: false, reason: "error", message: analysis.errors.generic };
     }
 
+    // La réponse est un accusé neutre ; on ne s'appuie sur aucune donnée renvoyée.
     const result = data as unknown as SubmitMandateFunnelResult | null;
-    return {
-      ok: true,
-      resolution: result?.resolution ?? null,
-      idempotentReplay: result?.idempotent_replay ?? false,
-    };
+    if (result && result.accepted === true) {
+      return { ok: true };
+    }
+    return { ok: false, reason: "error", message: analysis.errors.generic };
   } catch (cause) {
     console.error("submit_mandate_funnel exception", {
       name: cause instanceof Error ? cause.name : "unknown",

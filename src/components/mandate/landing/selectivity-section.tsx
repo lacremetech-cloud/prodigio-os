@@ -34,12 +34,10 @@ export function SelectivitySection() {
           {selectivity.text}
         </p>
         <div className="mt-11 flex flex-col items-center gap-4">
-          <CtaLink href="/proprietaire/analyse" variant="gold">
+          <CtaLink href="/proprietaire/analyse" variant="contrast">
             {selectivity.ctaPrimary}
           </CtaLink>
-          <p className="text-xs tracking-wide text-ivory/70">
-            {selectivity.ctaMicro}
-          </p>
+          <p className="text-sm text-ivory/85">{selectivity.ctaMicro}</p>
         </div>
       </div>
     </section>

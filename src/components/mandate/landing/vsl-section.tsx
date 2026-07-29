@@ -16,7 +16,7 @@ export function VslSection() {
   return (
     <section className="bg-ivory px-6 py-20 sm:px-10 sm:py-28 lg:px-16">
       <div className="mx-auto max-w-5xl">
-        <p className="eyebrow text-center text-gold">La présentation</p>
+        <p className="eyebrow text-center text-text-secondary">La présentation</p>
         <h2 className="mx-auto mt-5 max-w-2xl text-balance text-center text-3xl leading-[1.15] text-wood-black sm:text-4xl">
           Le Système Prodigio, en quelques minutes.
         </h2>

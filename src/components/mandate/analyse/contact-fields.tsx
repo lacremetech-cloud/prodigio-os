@@ -80,10 +80,10 @@ export function ContactFields({
                 onClick={() =>
                   onChange({ preference: option.value as ContactPreference })
                 }
-                className={`border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex min-h-[2.75rem] items-center px-4 py-2.5 text-sm transition-colors ${
                   isActive
-                    ? "border-gold bg-[color:var(--color-onyx-soft)] text-ivory"
-                    : "border-[color:var(--color-border-dark)] text-ivory/80 hover:border-[color:var(--color-gold-soft)]"
+                    ? "border-2 border-text-on-dark bg-[color:var(--color-onyx-soft)] text-text-on-dark"
+                    : "border border-[color:var(--color-border-strong-dark)] text-text-on-dark/90 hover:border-text-on-dark"
                 }`}
               >
                 {option.label}
@@ -101,23 +101,28 @@ export function ContactFields({
             checked={value.consent}
             onChange={(e) => onChange({ consent: e.target.checked })}
             aria-invalid={errors["contact.consent"] ? true : undefined}
-            className="mt-1 size-5 shrink-0 accent-[color:var(--color-gold)]"
+            className="mt-0.5 size-5 shrink-0 accent-[color:var(--color-gold)]"
           />
-          <span className="text-sm leading-relaxed text-ivory/90">
+          <span className="text-sm leading-relaxed text-text-on-dark">
             {consent.label}
           </span>
         </label>
         {errors["contact.consent"] ? (
-          <p className="mt-2 text-sm text-[#e6a68f]" role="alert">
+          <p
+            className="mt-2 text-sm text-[color:var(--color-danger-on-dark)]"
+            role="alert"
+          >
             {errors["contact.consent"]}
           </p>
         ) : null}
-        <p className="mt-3 text-xs leading-relaxed text-text-on-dark-muted">
+        <p className="mt-3 text-sm leading-relaxed text-text-on-dark-muted">
           {consent.helper}
         </p>
       </div>
 
-      {/* Honeypot anti-spam : masqué visuellement et aux technologies d'assistance. */}
+      {/* Honeypot (leurre) : masqué visuellement et aux technologies d'assistance.
+          Défense PARTIELLE seulement — ne protège pas contre les abus automatisés.
+          Cloudflare Turnstile reste requis avant la mise en production. */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
         <label>
           Société (ne pas remplir)

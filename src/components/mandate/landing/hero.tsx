@@ -19,11 +19,22 @@ export function Hero() {
         sizes="100vw"
         className="-z-20 object-cover"
       />
-      {/* Voile pour la lisibilité */}
+      {/* Voile global (lisibilité de la signature en haut) */}
       <div
         aria-hidden="true"
         className="-z-10 absolute inset-0"
         style={{ backgroundImage: "var(--overlay-hero)" }}
+      />
+      {/* Socle sombre dédié sous le bloc de texte : garantit un contraste AA du
+          titre ET du paragraphe quelle que soit la photographie (pas seulement
+          une ombre portée). */}
+      <div
+        aria-hidden="true"
+        className="-z-10 absolute inset-x-0 bottom-0 h-[68%]"
+        style={{
+          backgroundImage:
+            "linear-gradient(180deg, rgba(12,12,14,0) 0%, rgba(12,12,14,0.55) 45%, rgba(12,12,14,0.9) 100%)",
+        }}
       />
 
       {/* Signature (en-tête) */}
@@ -31,7 +42,7 @@ export function Hero() {
         <p className="font-signature text-sm tracking-[0.28em] text-ivory">
           PRODIGIO
         </p>
-        <p className="hidden font-signature text-[0.7rem] tracking-[0.28em] text-ivory/80 sm:block">
+        <p className="hidden font-signature text-[0.72rem] font-semibold tracking-[0.28em] text-ivory/90 sm:block">
           IMMOBILIER D&apos;EXCEPTION
         </p>
       </header>
@@ -42,16 +53,14 @@ export function Hero() {
           <h1 className="text-balance text-4xl leading-[1.08] text-ivory sm:text-5xl md:text-6xl lg:text-[4.25rem]">
             {landing.hero.title}
           </h1>
-          <p className="mt-7 max-w-2xl text-pretty text-base leading-relaxed text-ivory/85 sm:text-lg">
+          <p className="mt-7 max-w-xl text-pretty text-base leading-relaxed text-ivory/90 sm:text-lg">
             {landing.hero.text}
           </p>
           <div className="mt-10 flex flex-col items-start gap-4">
-            <CtaLink href="/proprietaire/analyse" variant="ghost-dark">
+            <CtaLink href="/proprietaire/analyse" variant="contrast">
               {landing.hero.ctaPrimary}
             </CtaLink>
-            <p className="text-xs tracking-wide text-ivory/70">
-              {landing.hero.ctaMicro}
-            </p>
+            <p className="text-sm text-ivory/85">{landing.hero.ctaMicro}</p>
           </div>
         </div>
       </div>

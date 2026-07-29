@@ -76,12 +76,29 @@ supabase db push        # applique les migrations de supabase/migrations/
 ## 3. Modèle de sécurité (résumé)
 
 - **RLS activé + aucune politique** ⇒ un visiteur public **ne peut ni lire, ni
-  modifier, ni supprimer** aucune donnée directement.
+  modifier, ni supprimer** aucune donnée directement. Privilèges révoqués pour
+  `anon`, `authenticated` **et** `public` (défense en profondeur).
 - Le dépôt passe **uniquement** par `submit_mandate_funnel`, exécutée avec les
-  droits de son propriétaire (`SECURITY DEFINER`, `search_path` verrouillé) et
-  accordée à `anon` / `authenticated`.
-- La fonction ne renvoie que des **identifiants** et un **statut** — jamais les
-  données d'un autre dossier.
+  droits de son propriétaire (`SECURITY DEFINER`, `search_path = public, pg_temp`,
+  objets tous qualifiés) et accordée à `anon` / `authenticated`.
+- La clé publiable étant publique, **on considère que la fonction peut être
+  appelée directement**, sans l'interface, l'action serveur, le honeypot ni Zod.
+  Elle se **défend donc elle-même** : validation de structure et de taille du
+  payload (≤ 64 Ko), **bornage de tous les textes**, **validation des
+  énumérations**, et valeurs de contrôle (stade, segment, statut, canaux
+  autorisés, finalité, destinataires) **fixées côté serveur** — jamais issues du
+  client.
+- **Réponse neutre** : la fonction ne renvoie qu'un **accusé booléen**
+  (`{ accepted: true }`). Aucune donnée personnelle, aucun identifiant
+  réutilisable, et **l'existence préalable d'un contact n'est jamais révélée**
+  (pas d'oracle d'énumération d'e-mails/téléphones).
+- **Idempotence sûre** : `insert … on conflict (idempotency_key) do nothing` —
+  un double-clic ou deux appels **simultanés** avec la même clé ne créent jamais
+  deux dossiers et n'échouent pas.
+- **Dédoublonnage conservateur** : rapprochement d'un contact existant **par
+  e-mail normalisé uniquement** (identifiant fort). **Pas** de fusion sur le
+  téléphone (numéros partagés en famille) ; aucune donnée d'un contact existant
+  n'est écrasée ; la soumission est conservée pour une résolution humaine.
 - La **soumission originale** est conservée telle quelle ; aucune suppression au
   seul motif de doublon.
 - Les accès du futur back-office (lecture des dossiers par rôle/organisation)
@@ -112,6 +129,12 @@ sont **pas** résolus par cette tranche :
 - ⛔ **Validation juridique RGPD** : la base légale est enregistrée comme
   `a_valider_juridiquement` et la formulation du consentement est **provisoire**.
   Aucune conformité n'est présumée (voir [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md)).
+  En particulier, le **consentement au démarchage téléphonique** devra être
+  compatible avec les **règles applicables à partir du 11 août 2026** : la
+  formulation actuelle doit être **revue et validée juridiquement** avant toute
+  prospection téléphonique. La preuve conservée (texte de notice, version, date,
+  finalité, canaux autorisés, préférence) prépare cette mise en conformité mais
+  **ne l'établit pas**.
 - ⛔ **Environnements séparés** (dev / preview / prod) avec des projets et
   secrets Supabase distincts.
 - ⛔ **Déploiement Vercel** et URL canonique (`NEXT_PUBLIC_SITE_URL`).

@@ -78,7 +78,7 @@ export function StepShell({
       {errorMessage ? (
         <p
           role="alert"
-          className="mt-6 border-l-2 border-[#d98a72] pl-4 text-sm text-[#e6a68f]"
+          className="mt-6 border-l-2 border-[color:var(--color-danger-on-dark)] pl-4 text-sm text-[color:var(--color-danger-on-dark)]"
         >
           {errorMessage}
         </p>
@@ -89,7 +89,7 @@ export function StepShell({
           type="button"
           onClick={onBack}
           disabled={!canGoBack || submitting}
-          className="inline-flex items-center gap-2 px-2 py-3 text-sm text-text-on-dark-muted transition-colors hover:text-ivory disabled:pointer-events-none disabled:opacity-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          className="inline-flex min-h-[2.75rem] items-center gap-2 px-2 py-2 text-sm text-text-on-dark-muted transition-colors hover:text-text-on-dark disabled:pointer-events-none disabled:opacity-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
         >
           <span aria-hidden="true">←</span>
           {backLabel}
@@ -98,7 +98,7 @@ export function StepShell({
           type="submit"
           disabled={submitting}
           aria-busy={submitting}
-          className="group inline-flex items-center justify-center gap-3 border border-gold bg-gold px-7 py-4 text-sm tracking-[0.02em] text-white transition-colors duration-200 hover:bg-[#9d7c4b] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          className="group inline-flex min-h-[3rem] items-center justify-center gap-3 border border-text-on-dark bg-text-on-dark px-7 py-4 text-sm font-medium tracking-[0.01em] text-wood-black transition-colors duration-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
         >
           <span>{submitting ? submittingLabel : nextLabel}</span>
           {!submitting ? (
@@ -111,7 +111,7 @@ export function StepShell({
           ) : (
             <span
               aria-hidden="true"
-              className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+              className="size-4 animate-spin rounded-full border-2 border-wood-black/30 border-t-wood-black"
             />
           )}
         </button>

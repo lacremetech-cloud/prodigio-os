@@ -27,15 +27,18 @@ export function Field({ label, error, className = "", ...props }: FieldProps) {
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={`mt-2 w-full border-0 border-b bg-transparent px-0 py-2.5 text-lg text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-0 ${
+        className={`mt-2 w-full border-0 border-b bg-transparent px-0 py-2.5 text-lg text-text-on-dark placeholder:text-text-on-dark/30 focus:outline-none focus:ring-0 ${
           error
-            ? "border-b-2 border-[#d98a72]"
-            : "border-[color:var(--color-border-dark)] focus:border-gold"
+            ? "border-b-2 border-[color:var(--color-danger-on-dark)]"
+            : "border-[color:var(--color-border-strong-dark)] focus:border-[color:var(--color-focus)]"
         } transition-colors`}
         {...props}
       />
       {error ? (
-        <p id={errorId} className="mt-2 text-sm text-[#e6a68f]">
+        <p
+          id={errorId}
+          className="mt-2 text-sm text-[color:var(--color-danger-on-dark)]"
+        >
           {error}
         </p>
       ) : null}

@@ -21,7 +21,7 @@ export function ProgressRail({ step, total = 6 }: ProgressRailProps) {
         <span className="font-signature text-xs tracking-[0.28em] text-gold-soft">
           {pad(current)} <span className="text-text-on-dark-muted">— {pad(total)}</span>
         </span>
-        <span className="eyebrow text-[0.62rem] text-text-on-dark-muted">
+        <span className="eyebrow text-[0.68rem] text-text-on-dark-muted">
           Analyse confidentielle
         </span>
       </div>

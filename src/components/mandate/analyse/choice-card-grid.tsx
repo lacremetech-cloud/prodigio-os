@@ -40,10 +40,10 @@ export function ChoiceCardGrid({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(value)}
-              className={`group relative aspect-[4/3] overflow-hidden border text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${
+              className={`group relative aspect-[4/3] overflow-hidden text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
                 isSelected
-                  ? "border-gold"
-                  : "border-[color:var(--color-border-dark)] hover:border-[color:var(--color-gold-soft)]"
+                  ? "border-2 border-text-on-dark"
+                  : "border border-[color:var(--color-border-strong-dark)] hover:border-text-on-dark"
               }`}
             >
               <Image
@@ -59,8 +59,8 @@ export function ChoiceCardGrid({
                 aria-hidden="true"
                 className={`absolute inset-0 transition-opacity duration-300 ${
                   isSelected
-                    ? "bg-[linear-gradient(180deg,rgba(20,17,13,0.25)_0%,rgba(20,17,13,0.82)_100%)]"
-                    : "bg-[linear-gradient(180deg,rgba(20,17,13,0.15)_0%,rgba(20,17,13,0.72)_100%)]"
+                    ? "bg-[linear-gradient(180deg,rgba(12,12,14,0.32)_0%,rgba(12,12,14,0.88)_100%)]"
+                    : "bg-[linear-gradient(180deg,rgba(12,12,14,0.12)_0%,rgba(12,12,14,0.78)_100%)]"
                 }`}
               />
               <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
@@ -72,7 +72,7 @@ export function ChoiceCardGrid({
                   className={`mb-1 flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
                     isSelected
                       ? "border-gold bg-gold text-white"
-                      : "border-ivory/50 text-transparent"
+                      : "border-text-on-dark/70 text-transparent"
                   }`}
                 >
                   <span className="text-xs">✓</span>
@@ -83,7 +83,10 @@ export function ChoiceCardGrid({
         })}
       </div>
       {error ? (
-        <p className="mt-4 text-sm text-[#e6a68f]" role="alert">
+        <p
+          className="mt-4 text-sm text-[color:var(--color-danger-on-dark)]"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}

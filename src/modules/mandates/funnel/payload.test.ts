@@ -16,7 +16,7 @@ interface PayloadShape {
   utm_campaign: string | null;
   first_touch: unknown;
   last_touch: unknown;
-  authorized_channels: string[];
+  consent_proof: { given: boolean; notice_version: string };
   raw_answers: { contact: { phone: string; email: string } };
   normalized_answers: { contact: { phone: string | null; email: string | null } };
 }
@@ -100,13 +100,14 @@ describe("buildSubmissionPayload", () => {
     expect(p.last_touch).not.toBeNull();
   });
 
-  it("déduit les canaux autorisés de la préférence", () => {
-    const both = buildSubmissionPayload(buildRequest()) as unknown as PayloadShape;
-    expect(both.authorized_channels).toEqual(["telephone", "email"]);
-
-    const phoneOnly = buildSubmissionPayload(
-      buildRequest({ preference: "telephone" }),
-    ) as unknown as PayloadShape;
-    expect(phoneOnly.authorized_channels).toEqual(["telephone"]);
+  it("transmet la preuve de consentement (les canaux/finalité sont fixés côté SQL)", () => {
+    const p = buildSubmissionPayload(buildRequest()) as unknown as PayloadShape;
+    expect(p.consent_proof.given).toBe(true);
+    expect(p.consent_proof.notice_version).toBe("v1-2026-07");
+    // Les canaux autorisés ne sont plus dérivés côté client (dérivés en SQL).
+    expect(
+      (buildSubmissionPayload(buildRequest()) as Record<string, unknown>)
+        .authorized_channels,
+    ).toBeUndefined();
   });
 });

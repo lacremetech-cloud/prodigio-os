@@ -22,7 +22,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
         <button
           type="button"
           onClick={onStart}
-          className="group inline-flex items-center justify-center gap-3 border border-gold bg-gold px-8 py-4 text-sm tracking-[0.02em] text-white transition-colors duration-200 hover:bg-[#9d7c4b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          className="group inline-flex min-h-[3rem] items-center justify-center gap-3 border border-text-on-dark bg-text-on-dark px-8 py-4 text-sm font-medium tracking-[0.01em] text-wood-black transition-colors duration-200 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
         >
           <span>{t.cta}</span>
           <span
@@ -32,9 +32,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
             →
           </span>
         </button>
-        <p className="text-xs tracking-wide text-text-on-dark-muted">
-          {t.reassurance}
-        </p>
+        <p className="text-sm text-text-on-dark-muted">{t.reassurance}</p>
       </div>
     </div>
   );

@@ -90,24 +90,24 @@ export function AnalyseExperience() {
         className="-z-10 absolute inset-0"
         style={{
           backgroundImage: isConfirmation
-            ? "linear-gradient(180deg, rgba(20,17,13,0.62) 0%, rgba(20,17,13,0.82) 100%)"
+            ? "linear-gradient(180deg, rgba(12,12,14,0.66) 0%, rgba(12,12,14,0.86) 100%)"
             : "var(--overlay-immersive)",
         }}
       />
 
       <div className="relative flex min-h-dvh flex-col">
         {/* En-tête */}
-        <header className="flex items-center justify-between px-6 pt-7 sm:px-10 lg:px-14">
+        <header className="flex items-center justify-between px-5 pt-5 sm:px-10 sm:pt-7 lg:px-14">
           <Link
             href="/proprietaire"
-            className="font-signature text-sm tracking-[0.28em] text-ivory transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+            className="font-signature inline-flex min-h-[2.75rem] items-center py-2 text-sm font-semibold tracking-[0.28em] text-text-on-dark transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
           >
             PRODIGIO
           </Link>
           {!isConfirmation ? (
             <Link
               href="/proprietaire"
-              className="text-xs uppercase tracking-[0.18em] text-text-on-dark-muted transition-colors hover:text-ivory focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+              className="inline-flex min-h-[2.75rem] items-center px-1 py-2 text-xs uppercase tracking-[0.18em] text-text-on-dark-muted transition-colors hover:text-text-on-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
             >
               Quitter
             </Link>

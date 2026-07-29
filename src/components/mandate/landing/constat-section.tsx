@@ -14,7 +14,7 @@ export function ConstatSection() {
     <section className="bg-ivory-muted px-6 py-20 sm:px-10 sm:py-28 lg:px-16">
       <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2 lg:gap-20">
         <Reveal className="order-2 lg:order-1">
-          <p className="eyebrow text-gold">{constat.kicker}</p>
+          <p className="eyebrow text-text-secondary">{constat.kicker}</p>
           <h2 className="mt-5 text-balance text-3xl leading-[1.15] text-wood-black sm:text-4xl">
             {constat.title}
           </h2>

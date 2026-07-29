@@ -77,7 +77,7 @@ export function ConfirmationScreen({ draft }: ConfirmationScreenProps) {
       </p>
 
       <div className="mt-10 border border-[color:var(--color-border-dark)] bg-[color:var(--color-onyx-soft)]/60 p-6 sm:p-8">
-        <p className="eyebrow text-[0.62rem] text-gold-soft">{t.recapTitle}</p>
+        <p className="eyebrow text-[0.68rem] text-gold-soft">{t.recapTitle}</p>
         <dl className="mt-5 divide-y divide-[color:var(--color-border-dark)]">
           {rows
             .filter((row) => row.value)
@@ -100,7 +100,7 @@ export function ConfirmationScreen({ draft }: ConfirmationScreenProps) {
       <div className="mt-10">
         <Link
           href="/proprietaire"
-          className="inline-flex items-center gap-2 border border-[color:var(--color-border-dark)] px-6 py-3 text-sm text-ivory transition-colors hover:border-gold-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          className="inline-flex min-h-[3rem] items-center gap-2 border border-[color:var(--color-border-strong-dark)] px-6 py-3 text-sm text-text-on-dark transition-colors hover:border-text-on-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
         >
           <span aria-hidden="true">←</span>
           {t.backHome}

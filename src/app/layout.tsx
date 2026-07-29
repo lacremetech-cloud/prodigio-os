@@ -1,31 +1,25 @@
 import type { Metadata } from "next";
-import { Cinzel, Cormorant_Garamond, Josefin_Sans } from "next/font/google";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { site } from "@/lib/site";
 
 // Polices auto-hébergées par Next.js lors du build (aucun appel Google Fonts
-// depuis le navigateur). Système typographique :
-//  - Cinzel : signature et intertitres capitales espacées (usage titrage).
-//  - Cormorant Garamond : titres éditoriaux (serif haut de gamme, presse de luxe).
-//  - Josefin Sans : textes courants et interface.
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-
+// depuis le navigateur). DEUX familles maîtrisées :
+//  - Cormorant Garamond : GRANDS titres éditoriaux uniquement (serif de luxe).
+//  - Inter : tout le reste — textes, questions, choix, formulaires, boutons,
+//    signature et intertitres. Sans-serif extrêmement lisible et contemporaine.
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["500", "600"],
   style: ["normal", "italic"],
   display: "swap",
 });
 
-const josefinSans = Josefin_Sans({
-  variable: "--font-josefin",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
@@ -60,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang={site.locale}
-      className={`${cinzel.variable} ${cormorant.variable} ${josefinSans.variable} h-full antialiased`}
+      className={`${cormorant.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         {/* Marque le JS actif au plus tôt : les animations « au scroll » ne
