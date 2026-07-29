@@ -17,14 +17,16 @@ Zod) reste en place. Le **CRM**, l'**authentification** et les autres modules
 métier ne sont **pas** encore développés (voir
 [docs/02-MVP-SCOPE.md](docs/02-MVP-SCOPE.md)).
 
-**Supabase est intégré côté application** (clients navigateur/serveur, clé
-publiable uniquement) et une **migration SQL versionnée** est fournie
-(`supabase/migrations/`). La migration **n'est pas encore déployée** sur la base
-distante : tant qu'elle ne l'est pas et que les variables ne sont pas fournies,
-la landing et l'analyse fonctionnent, mais le **dépôt d'une demande** est
-désactivé proprement. Voir [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md).
-**Vercel** n'est pas connecté. **Cloudflare Turnstile** reste un prérequis de
-production (anti-abus), non encore intégré.
+**Supabase est intégré et la migration est DÉPLOYÉE** sur le projet `prodigio-os`
+(clients navigateur/serveur, clé publiable uniquement ; migration versionnée
+`supabase/migrations/`). Le funnel est **fonctionnel de bout en bout** : une
+soumission réelle crée FunnelSubmission + Contact + Opportunity +
+OpportunityContact + PrivacyRecord et affiche la confirmation. Sécurité vérifiée
+en base (RLS active, aucune lecture publique, réponse neutre `{ accepted: true }`,
+idempotence). Voir [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md).
+**Vercel** n'est pas connecté. **Cloudflare Turnstile** (anti-abus) et la
+**validation juridique RGPD** restent des **prérequis de production non
+terminés**.
 
 ## Prérequis
 

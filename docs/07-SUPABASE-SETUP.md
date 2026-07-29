@@ -5,11 +5,23 @@ propriétaire (funnel Mandats — tranche « capture ») : variables d'environne
 application de la **migration SQL versionnée**, modèle de sécurité, vérification,
 et prérequis de production.
 
-> **État actuel.** L'application intègre Supabase (clients navigateur/serveur,
-> clé publiable) mais la **migration n'a pas été déployée** sur la base distante.
-> Tant que ce n'est pas fait — et tant que les variables ne sont pas fournies —
-> la landing et l'analyse fonctionnent, mais l'envoi d'une demande échoue
-> proprement (message clair, réponses conservées).
+> **État actuel — DÉPLOYÉ.** La migration `mandate_funnel_capture` est
+> **appliquée** sur le projet `prodigio-os` (`wmhrpweefutwldbhllhg`, région
+> `eu-west-3`, Postgres 17), enregistrée sous la version `20260729150515`. Les
+> variables publiques sont fournies dans l'environnement cloud. Le funnel est
+> **fonctionnel de bout en bout** : une soumission réelle depuis
+> `/proprietaire/analyse` crée bien FunnelSubmission + Contact + Opportunity +
+> OpportunityContact + PrivacyRecord et affiche l'écran de confirmation.
+>
+> Vérifié après déploiement (voir §6) : RLS active sur les 5 tables, **aucune
+> politique publique**, **aucun GRANT direct** pour `anon`/`authenticated`/
+> `PUBLIC`, fonction `submit_mandate_funnel` `SECURITY DEFINER` exécutable par
+> `anon`/`authenticated` uniquement, réponse publique neutre `{ accepted: true }`,
+> idempotence et dédoublonnage conservateur confirmés. Les données de test ont
+> été supprimées ; les tables sont vides.
+>
+> ⚠️ **Non terminé (bloquants de production)** : Cloudflare Turnstile (anti-abus)
+> et la **validation juridique RGPD** ne sont **pas** faits — voir §5.
 
 ---
 
@@ -140,3 +152,41 @@ sont **pas** résolus par cette tranche :
 - ⛔ **Déploiement Vercel** et URL canonique (`NEXT_PUBLIC_SITE_URL`).
 - ▶️ **VSL** : renseigner `NEXT_PUBLIC_MANDATE_VSL_URL` (Vimeo/Wistia) pour
   activer le lecteur sans reconstruire la page.
+
+---
+
+## 6. Vérification post-déploiement (réalisée)
+
+Contrôles effectués sur le projet distant `wmhrpweefutwldbhllhg` après application
+de la migration, puis **nettoyage complet** des données de test.
+
+**Objets déployés**
+- Tables : `contacts`, `opportunities`, `funnel_submissions`,
+  `opportunity_contacts`, `privacy_records` (RLS activée sur les 5).
+- Fonction : `submit_mandate_funnel(payload jsonb)` — `SECURITY DEFINER`,
+  `search_path = public, pg_temp`.
+
+**Sécurité (mesurée)**
+- `pg_policies` (public) : **aucune politique** → RLS = refus par défaut.
+- Sonde REST anonyme sur les 5 tables : **HTTP 401 / `42501 permission denied`**
+  (aucune lecture publique).
+- `information_schema.role_table_grants` (anon/authenticated/PUBLIC sur les 5
+  tables) : **vide** → aucun privilège direct.
+- `information_schema.role_routine_grants` : `EXECUTE` accordé à `anon` **et**
+  `authenticated` uniquement (PUBLIC exclu).
+
+**Parcours réel (E2E)**
+- Une soumission complète depuis `/proprietaire/analyse` (données de test
+  identifiables) a créé **1** ligne dans chacune des 5 tables, avec attribution
+  (UTM + `fbclid`, premier/dernier contact), `raw_answers` + `normalized_answers`,
+  `processing_status = traite`, et les champs de contrôle (stade/segment/statut/
+  source/canaux/responsables/destinataires) **fixés côté serveur**.
+- **Idempotence** : deux appels avec la même clé → **1** soumission.
+- **Dédoublonnage + neutralité** : un appel avec un e-mail déjà connu ne crée
+  **pas** de contact en double et renvoie `{ accepted: true }` (l'existence
+  préalable n'est jamais révélée).
+- **Nettoyage** : toutes les données de test (marqueur e-mail `prodigio-e2e%`)
+  supprimées ; les 5 tables sont revenues à **0 ligne**.
+
+> La migration reste appliquée ; **seules les données de test** ont été insérées
+> puis supprimées. Aucune donnée réelle n'existe encore en base.
