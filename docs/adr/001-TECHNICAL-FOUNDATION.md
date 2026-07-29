@@ -82,6 +82,35 @@ HTML / Systeme.io / Google Sheets **ne doit pas** servir de fondation technique.
 > niveau majeure de ces versions doit rester **volontaire, testée et
 > documentée**.
 
+### Sécurité des dépendances — `sharp` (override)
+
+`sharp` est une **dépendance optionnelle** de Next.js (utilisée pour
+l'optimisation d'images). Next.js 16.2.12 déclare `sharp@^0.34.5`
+(soit `< 0.35.0`), or l'avis **GHSA-f88m-g3jw-g9cj** (CVE-2026-33327/33328/
+35590/35591, vulnérabilités héritées de libvips) touche **tout `sharp < 0.35.0`**.
+Aucune version corrigée n'existe dans la ligne `0.34.x` ; le correctif n'est
+disponible qu'à partir de **`sharp 0.35.0`**.
+
+Décision : forcer `sharp` à **`0.35.3`** via un **`overrides` npm**, plutôt que
+de rétrograder Next.js (le seul « correctif » proposé par `npm audit` étant
+`next@9.3.3`, régression majeure inacceptable). Une simple dépendance directe
+ne suffirait pas : la plage `^0.34.5` de Next conserverait une copie imbriquée
+`0.34.5`. L'override est **la solution la moins intrusive et la seule compatible**
+sans downgrade.
+
+Compatibilité **validée** : `npm install` résout une **unique** copie
+`sharp@0.35.3` (aucun doublon), le module natif se charge à l'exécution
+(`libvips 8.18.3`, formats disponibles), l'avis `sharp` disparaît de
+`npm audit`, et `lint` / `typecheck` / `test:run` / `build` passent. L'API de
+`sharp` consommée par Next (redimensionnement, conversion de format, métadonnées)
+est stable entre `0.34.x` et `0.35.x`. À réévaluer lorsque Next.js élargira
+officiellement sa plage `sharp` : l'override pourra alors être retiré.
+
+> **Advisories restants (hors périmètre de ce correctif)** : `postcss` (3 avis,
+> **empaqueté dans Next.js** — non corrigeable sans downgrade de Next, à résorber
+> par une mise à jour amont) et `brace-expansion` (chaîne **de développement**
+> ESLint). Aucun ne concerne `sharp` et aucun n'est masqué.
+
 ## Raisons du choix
 
 - **Monolithe modulaire** : simplicité opérationnelle et vélocité pour un MVP,
