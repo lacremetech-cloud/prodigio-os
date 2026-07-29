@@ -223,6 +223,8 @@ export const analysis = {
   },
   submitCta: "Adresser ma demande à Prodigio",
   submitting: "Transmission de votre demande…",
+  // Mention discrète de la protection anti-robot (affichée à l'étape finale).
+  securityNote: "Demande protégée contre les envois automatisés par Cloudflare.",
   // --- Écran final : pré-analyse terminée (appréciation qualitative seule) -----
   preAnalysis: {
     eyebrow: "Pré-analyse terminée",
@@ -266,6 +268,12 @@ export const analysis = {
       "Le dépôt des demandes n'est pas encore activé sur cet environnement. " +
       "Vos réponses sont conservées ; réessayez ultérieurement.",
     validation: "Merci de vérifier les informations saisies.",
+    // Message NEUTRE en cas d'échec / d'indisponibilité de la vérification
+    // anti-abus (Cloudflare Turnstile). Ne révèle jamais le motif exact ; le
+    // widget est réinitialisé pour permettre un nouvel essai.
+    turnstile:
+      "Nous n'avons pas pu vérifier votre demande. Veuillez réessayer dans " +
+      "quelques instants.",
   },
 } as const;
 

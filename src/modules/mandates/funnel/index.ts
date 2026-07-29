@@ -14,6 +14,18 @@ export * from "./idempotency";
 export {
   buildSubmissionPayload,
   submissionRequestSchema,
+  submitActionInputSchema,
   type SubmissionRequest,
+  type SubmitActionInput,
   type SubmitResult,
 } from "./payload";
+export {
+  TURNSTILE_ACTION,
+  TURNSTILE_SITEVERIFY_URL,
+  TURNSTILE_DEFAULT_TIMEOUT_MS,
+  verifyTurnstileToken,
+  type TurnstileVerification,
+  type TurnstileFailureReason,
+  type VerifyTurnstileOptions,
+  type SiteverifyResponse,
+} from "./turnstile";

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildTouch } from "./attribution";
-import { buildSubmissionPayload, submissionRequestSchema } from "./payload";
+import {
+  buildSubmissionPayload,
+  submissionRequestSchema,
+  submitActionInputSchema,
+} from "./payload";
 
 interface PayloadShape {
   idempotency_key: string;
@@ -117,5 +121,44 @@ describe("buildSubmissionPayload", () => {
       (buildSubmissionPayload(buildRequest()) as Record<string, unknown>)
         .authorized_channels,
     ).toBeUndefined();
+  });
+
+  it("n'inscrit JAMAIS le jeton Turnstile dans le payload persistant", () => {
+    const token = "TURNSTILE.SECRET.TOKEN.MUST.NOT.LEAK.0123456789";
+    const parsed = submitActionInputSchema.parse({
+      answers: {
+        propertyType: "villa_architecte",
+        location: { city: "Cannes", postalCode: "06400", country: "France" },
+        valueBand: "plus_2m",
+        saleHorizon: "des_que_possible",
+        mandateSituation: "aucun_mandat",
+        contact: {
+          firstName: "Marie",
+          lastName: "Martin",
+          phoneRaw: "06 12 34 56 78",
+          emailRaw: "marie.martin@example.com",
+          recallPreference: "matin",
+          consent: true,
+        },
+        company: "",
+      },
+      context: {
+        idempotencyKey: "550e8400-e29b-41d4-a716-446655440000",
+        submittedAt: "2026-07-10T00:00:00.000Z",
+      },
+      turnstileToken: token,
+    });
+
+    // Le jeton est bien porté à part…
+    expect(parsed.turnstileToken).toBe(token);
+
+    // …mais n'apparaît nulle part dans le payload envoyé à Supabase.
+    const payload = buildSubmissionPayload({
+      answers: parsed.answers,
+      context: parsed.context,
+    });
+    expect(JSON.stringify(payload).includes(token)).toBe(false);
+    expect("turnstileToken" in (payload as object)).toBe(false);
+    expect("turnstile_token" in (payload as object)).toBe(false);
   });
 });
