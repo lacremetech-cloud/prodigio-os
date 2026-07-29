@@ -5,10 +5,13 @@ propriétaire (funnel Mandats — tranche « capture ») : variables d'environne
 application de la **migration SQL versionnée**, modèle de sécurité, vérification,
 et prérequis de production.
 
-> **État actuel — DÉPLOYÉ (capture + scoring).** Les migrations
-> `mandate_funnel_capture` (version ledger `20260729150515`) **et**
-> `mandate_scoring` (version ledger `20260729165606`) sont **appliquées** sur le
-> projet `prodigio-os` (`wmhrpweefutwldbhllhg`, région `eu-west-3`, Postgres 17).
+> **État actuel — DÉPLOYÉ (capture + scoring + durcissement).** Trois migrations
+> sont **appliquées** sur le projet `prodigio-os` (`wmhrpweefutwldbhllhg`, région
+> `eu-west-3`, Postgres 17) : `mandate_funnel_capture` (version ledger
+> `20260729150515`), `mandate_scoring` (version ledger `20260729165606`) **et**
+> `restrict_compute_mandate_scores` (version ledger `20260729172238`) — cette
+> dernière retire l'`EXECUTE` public/anon/authenticated sur la fonction interne
+> `compute_mandate_scores` (voir §7.2).
 > Les variables publiques sont fournies dans l'environnement cloud. Le funnel est
 > **fonctionnel de bout en bout** : une soumission réelle depuis
 > `/proprietaire/analyse` crée bien FunnelSubmission + Contact + Opportunity +
@@ -305,22 +308,56 @@ clés `e2e-scoring-*`).
 - `npm run lint` ✅ · `npm run typecheck` ✅ · `npm run test:run` ✅ (**54/54**)
   · `npm run build` ✅.
 
-### 7.2 Constat de durcissement — exécution de `compute_mandate_scores`
+### 7.2 Durcissement — `compute_mandate_scores` verrouillée (CORRIGÉ, déployé)
 
-La migration révoque `compute_mandate_scores` de `public`
-(`revoke all … from public`) avec l'intention de la garder **interne** (appelée
-uniquement par `submit_mandate_funnel`). Or, mesure de l'ACL réelle
-(`pg_proc.proacl`) : `anon` et `authenticated` conservent un `EXECUTE` **explicite**
-hérité des *default privileges* Supabase sur les fonctions du schéma `public` —
-que le `revoke … from public` ne retire pas.
+**Constat.** La migration de scoring révoquait `compute_mandate_scores` de
+`public` avec l'intention de la garder **interne** (appelée uniquement par
+`submit_mandate_funnel`). Mais l'ACL réelle (`pg_proc.proacl`) montrait que `anon`
+et `authenticated` conservaient un `EXECUTE` **explicite** hérité des *default
+privileges* Supabase sur les fonctions du schéma `public`, que `revoke … from
+public` ne retire pas. La fonction restait donc appelable directement par le
+public (divulgation du barème ; **ni lecture, ni falsification** de données —
+`submit_mandate_funnel` recalcule toujours côté serveur).
 
-- **Portée réelle : faible.** La fonction est `IMMUTABLE`, **ne lit aucune donnée**
-  et n'a **aucun effet de bord** ; l'appeler ne fait que recalculer un score à
-  partir d'entrées fournies par l'appelant. Elle **ne permet ni de lire des
-  données stockées, ni de falsifier un score enregistré** (`submit_mandate_funnel`
-  recalcule toujours côté serveur). Le seul effet est la **divulgation du barème**.
-- **Recommandation** (hors périmètre de cette tâche, à traiter dans une migration
-  ultérieure versionnée) : ajouter un `revoke all on function
-  public.compute_mandate_scores(text,text,text,text) from anon, authenticated;`
-  pour aligner l'ACL sur l'intention « interne », ou neutraliser le default
-  privilege correspondant. À décider selon la sensibilité accordée au barème.
+**Correction déployée.** Migration additive et versionnée dédiée :
+`supabase/migrations/20260729170000_restrict_compute_mandate_scores.sql`
+(ledger `20260729172238`). Elle exécute uniquement, sur la signature exacte
+`public.compute_mandate_scores(text, text, text, text)` :
+
+```sql
+revoke execute on function public.compute_mandate_scores(text, text, text, text) from public;
+revoke execute on function public.compute_mandate_scores(text, text, text, text) from anon;
+revoke execute on function public.compute_mandate_scores(text, text, text, text) from authenticated;
+```
+
+Elle **ne touche pas** `submit_mandate_funnel`, ni la RLS, ni les tables, ni la
+logique de scoring, et ne modifie **aucune migration antérieure**.
+
+**ACL de `compute_mandate_scores` — avant / après :**
+
+| | ACL (`proacl`) |
+|---|---|
+| Avant | `postgres=X` · **`anon=X`** · **`authenticated=X`** · `service_role=X` |
+| Après | `postgres=X` · `service_role=X` |
+
+**Vérification effective (`has_function_privilege`) :**
+- `compute_mandate_scores` exécutable par `public` / `anon` / `authenticated` :
+  **false / false / false** ✅
+- `submit_mandate_funnel` exécutable par `anon` / `authenticated` : **true / true**
+  ✅ (inchangé — seul point d'entrée public)
+- RLS active sur les 5 tables, **0 politique**, **aucun** grant direct de table
+  pour `anon`/`authenticated`/`PUBLIC` ✅
+
+**Fonctionnement préservé.** `submit_mandate_funnel` est `SECURITY DEFINER` :
+elle appelle `compute_mandate_scores` avec les droits de son **propriétaire**
+(qui conserve l'`EXECUTE`), donc le funnel continue de calculer et stocker les
+scores. Test E2E **exécuté sous le rôle `anon`** après la correction : dépôt
+`domaine_caractere` / `plus_2m` / `des_que_possible` / `aucun_mandat` →
+`{ accepted: true }`, ligne créée avec `compatibility_score = 100`,
+`maturity_score = 96`, `operational_priority = rappel_prioritaire`,
+`public_appreciation = fort_potentiel` (scores bien recalculés côté base). Donnée
+de test ensuite supprimée ; les 5 tables sont revenues à **0 ligne**.
+
+> `service_role` (clé serveur / back-office) conserve volontairement son
+> `EXECUTE` ; seuls les rôles publics `PUBLIC`/`anon`/`authenticated` sont
+> concernés par le retrait.
