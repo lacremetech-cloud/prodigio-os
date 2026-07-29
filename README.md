@@ -7,14 +7,26 @@ mandats portés par une agence partenaire habilitée.
 
 ## Statut actuel
 
-**Fondation technique initialisée — tunnel non développé.** Le socle applicatif
-(Next.js App Router, TypeScript strict, Tailwind CSS, ESLint, Vitest, Zod) est en
-place et validé. Le **funnel Mandats**, le **CRM** et les modules métier ne sont
-**pas** encore développés.
+**Première tranche verticale livrée : capture des demandes de mandat.**
+Parcours public complet — publicité → **landing propriétaire** (`/proprietaire`)
+→ présentation vidéo (emplacement VSL) → **analyse confidentielle d'éligibilité**
+(`/proprietaire/analyse`) → **soumission Supabase** → confirmation.
 
-**Aucun service externe n'est encore connecté** : ni **Supabase** (base, auth,
-stockage) ni **Vercel** (hébergement/previews). L'application fonctionne **sans
-aucune variable d'environnement** à ce stade.
+Le socle (Next.js App Router, TypeScript strict, Tailwind CSS, ESLint, Vitest,
+Zod) reste en place. Le **CRM**, l'**authentification** et les autres modules
+métier ne sont **pas** encore développés (voir
+[docs/02-MVP-SCOPE.md](docs/02-MVP-SCOPE.md)).
+
+**Supabase est intégré et la migration est DÉPLOYÉE** sur le projet `prodigio-os`
+(clients navigateur/serveur, clé publiable uniquement ; migration versionnée
+`supabase/migrations/`). Le funnel est **fonctionnel de bout en bout** : une
+soumission réelle crée FunnelSubmission + Contact + Opportunity +
+OpportunityContact + PrivacyRecord et affiche la confirmation. Sécurité vérifiée
+en base (RLS active, aucune lecture publique, réponse neutre `{ accepted: true }`,
+idempotence). Voir [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md).
+**Vercel** n'est pas connecté. **Cloudflare Turnstile** (anti-abus) et la
+**validation juridique RGPD** restent des **prérequis de production non
+terminés**.
 
 ## Prérequis
 
@@ -26,8 +38,13 @@ aucune variable d'environnement** à ce stade.
 
 ```bash
 npm install
-cp .env.example .env.local   # optionnel : aucune variable n'est requise pour l'instant
+cp .env.example .env.local   # renseignez les variables Supabase pour activer le dépôt
 ```
+
+L'application démarre **sans** variable. Pour activer le dépôt réel des demandes,
+renseignez `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+(clé **publiable** uniquement — jamais `service_role`), puis appliquez la
+migration : voir [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md).
 
 ## Commandes disponibles
 
@@ -50,19 +67,30 @@ Monolithe modulaire (modules métier séparés, sans surdimensionnement) :
 
 ```
 src/
-  app/                # App Router (pages, layout, route /api/health)
-  components/ui/      # composants d'interface accessibles
+  app/
+    proprietaire/     # landing propriétaire + /analyse (parcours public)
+    api/health/       # sonde de disponibilité
+  components/
+    ui/               # primitives d'interface accessibles (CTA, reveal…)
+    mandate/          # sections landing + expérience d'analyse immersive
   config/             # validation de configuration (Zod), extensible
-  lib/                # utilitaires transverses
+  lib/
+    media.ts          # manifeste des visuels (dimensions, alt, crédits)
+    supabase/         # clients Supabase (navigateur / serveur) + types
   modules/
-    mandates/         # moteur Mandats (en construction)
+    mandates/funnel/  # domaine capture : schémas Zod, normalisation,
+                      # attribution, idempotence, payload, action serveur
     shared/           # éléments partagés entre modules
-docs/                 # documentation fondatrice (voir ci-dessous)
+public/images/mandate/ # visuels premium optimisés (WebP)
+supabase/migrations/   # migrations SQL versionnées
+docs/                  # documentation fondatrice (voir ci-dessous)
 ```
 
-Design system minimal : variables CSS (palette ivoire / noir bois / or vieilli,
-espacements, rayons, transitions) dans `src/app/globals.css` ; polices Cinzel
-(titres) et Josefin Sans (textes) auto-hébergées via `next/font`.
+Design system : variables CSS (palette ivoire / noir bois / or vieilli, fond
+onyx immersif, espacements, rayons, transitions) dans `src/app/globals.css` ;
+polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
+éditoriaux), **Cinzel** (signature/intertitres capitales), **Josefin Sans**
+(textes et interface).
 
 ## Documentation fondatrice
 
@@ -74,6 +102,10 @@ espacements, rayons, transitions) dans `src/app/globals.css` ; polices Cinzel
 - [docs/05-OPEN-QUESTIONS.md](docs/05-OPEN-QUESTIONS.md) — Questions ouvertes.
 - [docs/06-ACCESS-MODEL.md](docs/06-ACCESS-MODEL.md) — Modèle d'accès (rôles,
   organisations, frontières).
+- [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md) — Application de la
+  migration, variables, RLS, prérequis de production.
+- [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
+  photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
   Décision de fondation technique (acceptée pour le MVP, réévaluable).
 
