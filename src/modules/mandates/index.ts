@@ -3,6 +3,7 @@
  * vendeurs, jusqu'au résultat commercial de l'opportunité.
  * Voir docs/02-MVP-SCOPE.md et docs/03-DOMAIN-MODEL.md.
  *
- * En construction : aucune logique métier n'est encore implémentée.
+ * Première tranche livrée : la capture (landing propriétaire + analyse
+ * d'éligibilité + soumission Supabase). Voir le sous-module `funnel`.
  */
-export {};
+export * from "./funnel";

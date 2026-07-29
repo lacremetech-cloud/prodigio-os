@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Prodigio OS — fondations visuelles (design system minimal)
+ * Prodigio OS — fondations visuelles (design system)
  * Positionnement premium et confidentiel : ivoire chaud, noir bois, or vieilli.
  * Ces variables sont la seule source de vérité des couleurs, espacements,
  * rayons et transitions. Les composants ne codent pas de valeurs en dur.
@@ -9,16 +9,38 @@
 :root {
   /* Couleurs de marque */
   --color-ivory: #f5f1ea; /* ivoire chaud (fond principal) */
+  --color-ivory-muted: #ece5d9; /* ivoire légèrement plus profond */
   --color-wood-black: #1a1410; /* noir bois (texte principal) */
+  --color-onyx: #14110d; /* fond immersif chaud (analyse) */
+  --color-onyx-soft: #211b15; /* surfaces sur fond immersif */
   --color-gold: #b08d57; /* or vieilli principal (valeur unique retenue) */
+  --color-gold-soft: #c9a978; /* or clair pour textes sur fond sombre */
   --color-surface: #ffffff; /* surfaces blanches (cartes, panneaux) */
   --color-text: var(--color-wood-black);
   --color-text-secondary: #6b5d4f; /* textes secondaires chauds */
+  --color-text-on-dark: #efe7d9; /* texte principal sur fond sombre */
+  --color-text-on-dark-muted: #b6a892; /* texte secondaire sur fond sombre */
   --color-border: #e5ddd0; /* bordures discrètes */
+  --color-border-dark: #3a3128; /* bordures sur fond sombre */
 
   /* Ombres légères */
   --shadow-sm: 0 1px 2px rgba(26, 20, 16, 0.06);
   --shadow-md: 0 4px 16px rgba(26, 20, 16, 0.08);
+  --shadow-lg: 0 24px 60px -24px rgba(26, 20, 16, 0.32);
+
+  /* Voiles / dégradés pour lisibilité sur photographies */
+  --overlay-hero: linear-gradient(
+    180deg,
+    rgba(20, 17, 13, 0.34) 0%,
+    rgba(20, 17, 13, 0.12) 34%,
+    rgba(20, 17, 13, 0.62) 100%
+  );
+  --overlay-immersive: linear-gradient(
+    180deg,
+    rgba(20, 17, 13, 0.72) 0%,
+    rgba(20, 17, 13, 0.86) 60%,
+    rgba(20, 17, 13, 0.95) 100%
+  );
 
   /* Espacements */
   --space-1: 0.25rem;
@@ -29,39 +51,144 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  /* Rayons */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  /* Rayons — sobres, jamais de gros arrondis partout */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.5rem;
 
   /* Transitions */
   --transition-fast: 120ms ease;
   --transition-base: 200ms ease;
+  --transition-slow: 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-immersive: 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Exposition des tokens à Tailwind v4 et mapping des polices auto-hébergées. */
 @theme inline {
   --color-ivory: var(--color-ivory);
+  --color-ivory-muted: var(--color-ivory-muted);
   --color-wood-black: var(--color-wood-black);
+  --color-onyx: var(--color-onyx);
+  --color-onyx-soft: var(--color-onyx-soft);
   --color-gold: var(--color-gold);
+  --color-gold-soft: var(--color-gold-soft);
   --color-surface: var(--color-surface);
   --color-border: var(--color-border);
+  --color-border-dark: var(--color-border-dark);
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
+  --color-text-on-dark: var(--color-text-on-dark);
+  --color-text-on-dark-muted: var(--color-text-on-dark-muted);
 
-  /* Cinzel pour les titres, Josefin Sans pour les textes (via next/font). */
-  --font-display: var(--font-cinzel);
+  /* Cormorant (titres éditoriaux), Cinzel (signature capitales), Josefin (UI). */
+  --font-display: var(--font-cormorant);
+  --font-signature: var(--font-cinzel);
   --font-sans: var(--font-josefin);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Base                                                                        */
+/* -------------------------------------------------------------------------- */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--color-ivory);
   color: var(--color-text);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
 h2,
 h3 {
   font-family: var(--font-display), Georgia, serif;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: #fff;
+}
+
+/* Anneau de focus accessible et cohérent (clavier). */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Utilitaires typographiques                                                  */
+/* -------------------------------------------------------------------------- */
+@utility font-signature {
+  font-family: var(--font-signature), Georgia, serif;
+}
+
+/* `text-balance` / `text-pretty` sont fournis nativement par Tailwind v4. */
+
+/* Petit intertitre en capitales espacées (kicker éditorial). */
+@utility eyebrow {
+  font-family: var(--font-signature), Georgia, serif;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Animations discrètes (désactivées si l'utilisateur le demande)             */
+/* -------------------------------------------------------------------------- */
+@keyframes pg-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pg-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Élément « révélé » au scroll. L'état masqué initial n'est appliqué QUE si le
+   JavaScript est actif (`html.js`) : sans JS (ou pour un robot d'indexation), le
+   contenu reste visible. Dégradation gracieuse garantie. */
+html.js .reveal {
+  opacity: 0;
+}
+html.js .reveal.is-visible {
+  animation: pg-fade-up var(--transition-slow) both;
+}
+
+.animate-fade-up {
+  animation: pg-fade-up var(--transition-slow) both;
+}
+.animate-fade {
+  animation: pg-fade var(--transition-immersive) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  html.js .reveal,
+  html.js .reveal.is-visible,
+  .animate-fade-up,
+  .animate-fade {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

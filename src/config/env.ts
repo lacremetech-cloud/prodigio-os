@@ -18,10 +18,25 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
 
-  // --- Emplacement réservé aux futures variables (aucune requise pour l'instant) ---
-  // Exemple (étape suivante) :
-  // NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  // SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  // --- Supabase (base + dépôt de demande publique) ---
+  // Toutes optionnelles : l'application démarre sans elles. La capture des
+  // demandes est simplement désactivée tant que l'URL et la clé publiable ne
+  // sont pas fournies (voir `isSupabaseConfigured`). On n'utilise QUE la clé
+  // publiable (anon) : aucune clé `service_role`, aucun secret de base ici.
+  NEXT_PUBLIC_SUPABASE_URL: z.url().optional(),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
+  // Référence du projet Supabase (identifiant public, non secret). Sert la
+  // documentation et les outils ; jamais requise à l'exécution de l'app.
+  SUPABASE_PROJECT_REF: z.string().min(1).optional(),
+
+  // URL canonique publique du site (métadonnées / SEO). Optionnelle.
+  NEXT_PUBLIC_SITE_URL: z.url().optional(),
+
+  // URL de la présentation vidéo (VSL), hébergée sur Vimeo/Wistia. Optionnelle :
+  // tant qu'elle est absente, la landing affiche un visuel éditorial (aucun faux
+  // lecteur, aucun faux bouton de lecture). Permet de brancher la VSL sans
+  // reconstruire la page.
+  NEXT_PUBLIC_MANDATE_VSL_URL: z.url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -39,3 +54,21 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
  * avec un environnement vide, renvoie les valeurs par défaut.
  */
 export const env: Env = parseEnv(process.env);
+
+/**
+ * Indique si Supabase est suffisamment configuré pour déposer une demande.
+ * Ne lit qu'une URL publique et une clé publiable — jamais de secret serveur.
+ */
+export function isSupabaseConfigured(
+  source: Pick<
+    Env,
+    "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  > = env,
+): boolean {
+  return (
+    typeof source.NEXT_PUBLIC_SUPABASE_URL === "string" &&
+    source.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
+    typeof source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY === "string" &&
+    source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.length > 0
+  );
+}
