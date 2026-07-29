@@ -62,9 +62,25 @@ HTML / Systeme.io / Google Sheets **ne doit pas** servir de fondation technique.
     - toute **mise à niveau majeure** doit être **volontaire, testée et
       documentée**.
 
-> **Versions majeures testées** : _à compléter lors de l'initialisation_ (Next.js,
-> TypeScript, PostgreSQL/Supabase, Zod…). Aucune version n'est arrêtée pendant la
-> phase documentaire.
+> **Versions majeures réellement installées et testées** (initialisation du
+> socle — validées via `lint`, `typecheck`, `test:run`, `build`) :
+>
+> | Outil | Version | Notes |
+> |---|---|---|
+> | Node.js | 22.22.2 (LTS) | épinglée dans `.nvmrc` |
+> | npm | 10.9.7 | gestionnaire de paquets retenu |
+> | Next.js | 16.2.12 | App Router, build Turbopack |
+> | React / React DOM | 19.2.4 | fournis avec Next.js |
+> | TypeScript | 5.9.3 | mode strict |
+> | Tailwind CSS | 4.3.3 | via `@tailwindcss/postcss` |
+> | ESLint | 9.39.5 | flat config (`eslint-config-next`) |
+> | Zod | 4.4.3 | validation aux frontières |
+> | Vitest | 4.1.10 | tests unitaires |
+>
+> Dépendances **verrouillées** dans `package-lock.json`. **Supabase et Vercel ne
+> sont pas encore connectés** (branchement à l'étape suivante). Toute mise à
+> niveau majeure de ces versions doit rester **volontaire, testée et
+> documentée**.
 
 ## Raisons du choix
 

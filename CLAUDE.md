@@ -5,10 +5,13 @@ futures sessions Claude Code travaillant sur ce dépôt. Lis-le intégralement a
 toute action et respecte-le à la lettre. En cas de conflit entre une demande
 ponctuelle et ce document, signale la contradiction avant d'agir.
 
-> **Statut actuel du dépôt : documentation / fondations.**
-> Aucune application n'est encore développée, aucune dépendance installée, aucun
-> service externe configuré, aucune base de données créée. Voir le
-> [README](README.md) et la [feuille de route](docs/04-ROADMAP.md).
+> **Statut actuel du dépôt : fondation technique initialisée.**
+> Le socle applicatif (Next.js App Router, TypeScript strict, Tailwind, ESLint,
+> Vitest, Zod) est en place et validé (`lint`, `typecheck`, `test:run`, `build`).
+> **Aucun service externe n'est encore connecté** : ni Supabase (base, auth,
+> stockage), ni Vercel (hébergement). Le funnel Mandats et le CRM ne sont pas
+> développés. Voir le [README](README.md) et la
+> [feuille de route](docs/04-ROADMAP.md).
 
 ---
 
@@ -273,28 +276,32 @@ Modèle d'accès : [docs/06-ACCESS-MODEL.md](docs/06-ACCESS-MODEL.md).
 
 ## 8. Commandes de validation
 
-> À compléter une fois le projet initialisé. Aucun outil n'est installé à ce
-> stade — n'exécute pas ces commandes tant que le projet n'existe pas.
+> Gestionnaire de paquets : **npm**. Version Node : voir `.nvmrc`. Ces commandes
+> doivent toutes passer avant de terminer une tâche touchant au code.
 
-```
-# Installation des dépendances
-# TODO: à définir (ex. installation via le gestionnaire de paquets retenu)
+```bash
+# Installation des dépendances (versions verrouillées par package-lock.json)
+npm install
 
 # Lint
-# TODO: à définir
+npm run lint
 
 # Vérification des types (TypeScript strict)
-# TODO: à définir
+npm run typecheck
 
 # Tests unitaires
-# TODO: à définir
+npm run test:run        # exécution unique (CI)
+npm run test            # mode watch (développement)
 
-# Tests de parcours critiques
-# TODO: à définir
+# Build de production
+npm run build
 
-# Build
-# TODO: à définir
+# Serveur de développement
+npm run dev
 ```
 
-Lorsque le projet sera initialisé, remplace chaque `TODO` par la commande réelle
-et supprime cet avertissement.
+> **Tests de parcours critiques** : le parcours cible est funnel → soumission →
+> résolution contact/opportunité → setting → qualification → rendez-vous →
+> estimation → segmentation → proposition → résultat commercial signé/refusé/
+> perdu. Ces tests seront ajoutés au fur et à mesure du développement du moteur
+> Mandats (aucun parcours n'est encore implémenté à ce stade).
