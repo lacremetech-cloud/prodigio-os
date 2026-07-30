@@ -35,14 +35,18 @@ export function PreAnalysisScreen({
 
   return (
     <div className="mx-auto max-w-2xl animate-fade-up">
+      {/* Panneau OPAQUE (« dossier ») — comme les étapes du quiz : le texte ne
+          flotte jamais directement sur la photo (lisibilité garantie). */}
+      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-border-dark)] bg-[color:var(--color-onyx-soft)] p-6 shadow-[var(--shadow-lg)] backdrop-blur-sm sm:p-8 lg:p-10">
       <p className="eyebrow text-gold-soft">{t.eyebrow}</p>
       <h1 className="mt-6 text-balance text-3xl leading-[1.14] text-ivory sm:text-4xl md:text-[2.6rem]">
         {t.title}
       </h1>
 
-      {/* Appréciation qualitative — seul résultat visible (aucun score chiffré). */}
+      {/* Appréciation qualitative — seul résultat visible (aucun score chiffré).
+          Fond doré discret pour ressortir sur le panneau onyx. */}
       {appreciationLabel ? (
-        <div className="mt-7 inline-flex items-center gap-3 border border-[color:var(--color-border-strong-dark)] bg-[color:var(--color-onyx-soft)] px-5 py-3">
+        <div className="mt-7 inline-flex items-center gap-3 rounded-[var(--radius-md)] border border-[color:var(--color-gold)]/40 bg-[color:var(--color-gold)]/10 px-5 py-3">
           <span
             aria-hidden="true"
             className="size-2.5 shrink-0 rounded-full bg-gold"
@@ -113,11 +117,12 @@ export function PreAnalysisScreen({
           </div>
         )}
       </div>
+      </div>
 
-      <div className="mt-10">
+      <div className="mt-8">
         <Link
           href="/proprietaire"
-          className="inline-flex min-h-[3rem] items-center gap-2 border border-[color:var(--color-border-strong-dark)] px-6 py-3 text-sm text-text-on-dark transition-colors hover:border-text-on-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+          className="inline-flex min-h-[3rem] items-center gap-2 border border-[color:var(--color-border-strong-dark)] bg-[color:var(--color-onyx-soft)]/70 px-6 py-3 text-sm text-text-on-dark backdrop-blur-sm transition-colors hover:border-text-on-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
         >
           <span aria-hidden="true">←</span>
           {t.backHome}
