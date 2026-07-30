@@ -98,3 +98,31 @@ elles figurent aussi dans [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md) :
 - **Propriété et attribution des leads** entre Prodigio et l'agence.
 - Étendue exacte du rôle **lecture seule**.
 - Conditions d'appartenance d'un utilisateur à **plusieurs organisations**.
+
+---
+
+## 5. Implémentation V1 (RLS PostgreSQL)
+
+Le modèle d'accès est appliqué **en base** (défense en profondeur avec les
+contrôles applicatifs) :
+
+- **Lecture** : RLS active sur toutes les tables métier ; politique `SELECT` pour
+  `authenticated` conditionnée par des helpers `SECURITY DEFINER`
+  (`crm_has_access`, `crm_has_role`) lisant les memberships sans récursion. `anon`
+  n'a **aucun** privilège.
+- **Écriture** : aucun `INSERT/UPDATE/DELETE` direct pour `authenticated` ; toute
+  mutation passe par des fonctions `SECURITY DEFINER` (`crm_change_stage`,
+  `crm_assign_opportunity`, `crm_decide_segment`, `crm_record_outcome`, …) qui
+  **revérifient le rôle** du·de la caller·euse et écrivent un **AuditEvent**.
+- **Frontière organisationnelle** : la V1 accorde la visibilité au niveau de
+  l'**organisation opérateur Prodigio** (seule organisation active). La table
+  `opportunity_organizations` et le rattachement automatique (trigger + backfill)
+  **préparent** l'isolation par partenaire, activable sans refonte lorsque les
+  décisions ouvertes (§4) seront tranchées.
+- **Coordonnées sensibles** : masquées côté application pour les rôles non
+  autorisés (`partenaire_lecture`) ; `agent_immobilier` / `partenaire_lecture`
+  restent **préparés** mais non pleinement opérationnels en V1.
+- **Journal d'audit** : consultable par admin/manager, **non modifiable**
+  (déclencheur bloquant UPDATE/DELETE).
+
+Détails et guide : [09-CRM-GUIDE.md](09-CRM-GUIDE.md).

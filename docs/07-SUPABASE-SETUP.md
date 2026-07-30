@@ -469,3 +469,76 @@ accorder l'accès en prod ; le dépôt est refusé (message neutre) plutôt que
 > `challenges.cloudflare.com` bloqué : `ERR_CONNECTION_RESET`). Le challenge
 > n'apparaît, en production, que lorsque Cloudflare le juge nécessaire (mode
 > *interaction-only*), dans la zone réservée au-dessus de la mention de sécurité.
+
+---
+
+## 9. CRM interne Mandats V1 — migrations et sécurité (APPLIQUÉ)
+
+Trois migrations **additives** déploient le CRM interne au-dessus du funnel,
+**sans** modifier les migrations antérieures ni la fonction publique
+`submit_mandate_funnel`. Appliquées sur `wmhrpweefutwldbhllhg` :
+
+| Fichier | Ledger | Rôle |
+|---|---|---|
+| `20260730120000_crm_internal_v1.sql` | `20260730153703` | Tables CRM + colonnes additives + helpers + RLS + fonctions de mutation + org opérateur |
+| `20260730160000_crm_lock_anon_execute.sql` | `20260730160843`* | Retire `EXECUTE` à `anon`/`public` sur toutes les fonctions `crm_*` |
+| `20260730170000_harden_set_updated_at.sql` | `20260730…`* | Fixe un `search_path` immuable sur `set_updated_at()` |
+
+<sub>* version ledger stampée par l'outil au moment de l'application.</sub>
+
+**Objets créés** (schéma `public`) :
+- Tables : `organizations`, `organization_memberships`, `opportunity_organizations`,
+  `opportunity_assignments`, `activities`, `tasks`, `audit_events`.
+- Colonnes additives sur `opportunities` : `outcome`, `outcome_reason`,
+  `outcome_recorded_by/at`, `segment_decided_by/at`, `segment_decision_reason`,
+  `segment_is_derogation`.
+- Helpers `SECURITY DEFINER` : `crm_active_roles`, `crm_has_access`,
+  `crm_has_role`, `crm_can_view_contact_details`, `crm_list_members`.
+- Fonctions de mutation `SECURITY DEFINER` (revérifient le rôle + écrivent l'audit) :
+  `crm_assign_opportunity`, `crm_self_assign`, `crm_change_stage`,
+  `crm_log_activity`, `crm_create_task`, `crm_set_task_status`,
+  `crm_decide_segment`, `crm_record_outcome`.
+- Bootstrap / administration : `crm_bootstrap_first_admin`, `crm_invite_member`.
+- Organisation opérateur **Prodigio** (`slug='prodigio'`) + **trigger** de
+  rattachement automatique (`opportunity_organizations`) + **backfill** des
+  opportunités existantes.
+- Journal d'audit **immuable** (déclencheur bloquant UPDATE/DELETE).
+
+**Modèle de sécurité (mesuré sur le projet distant, après déploiement) :**
+- RLS **active** sur les **12** tables métier, **1 politique de lecture** chacune.
+- `anon` : `has_table_privilege = false` (SELECT **et** INSERT) sur **toutes** les
+  tables ; sonde `select` sous `role anon` → `42501 permission denied`.
+- `authenticated` : **SELECT uniquement** (`INSERT/UPDATE/DELETE = false`) ; toute
+  écriture passe par les fonctions `SECURITY DEFINER`.
+- `anon` ne peut exécuter **aucune** fonction `crm_*` (`has_function_privilege =
+  false`) ; `submit_mandate_funnel` reste exécutable par `anon` (funnel inchangé),
+  `compute_mandate_scores` reste verrouillée.
+- Advisors sécurité : seuls des WARN **attendus** subsistent (fonctions
+  `SECURITY DEFINER` exécutables par `authenticated` — c'est **l'architecture
+  d'écriture** voulue ; et `submit_mandate_funnel` exécutable par `anon` — point
+  d'entrée public du funnel). `function_search_path_mutable` sur `set_updated_at`
+  est **corrigé** par la 3ᵉ migration.
+
+**Vérifications fonctionnelles (simulation de JWT côté base, transactions
+annulées) :**
+- Admin (membre actif) : lit les dossiers sous RLS (5 opportunités de test).
+- Utilisateur authentifié **sans** membership : **0** dossier visible (RLS).
+- `anon` : lecture directe → `permission denied`.
+- `crm_change_stage` : admin → OK ; sans rôle → `42501` ; `anon` → `permission
+  denied for function`.
+- **Idempotence** : deux `crm_self_assign` → **1** seule affectation.
+- **Audit immuable** : UPDATE sur `audit_events` → exception `0A000`.
+
+**Parcours réel (E2E navigateur, données de test identifiables) :**
+connexion → CRM → liste des leads → fiche → affectation → activité → prochaine
+action → changement de stade. Captures desktop et mobile dans
+`docs/assets/crm/` (données réelles **masquées**, données de démo clairement
+identifiables `@crm-e2e.test`).
+
+**Données préservées.** La **soumission réelle** déjà présente (1 opportunité,
+1 contact, 1 soumission, 1 privacy record) est **conservée** et rattachée à
+l'organisation opérateur (backfill). Seules les données de **test** créées pour
+cette mission ont été supprimées. **Premier administrateur réel** créé à la
+demande du propriétaire (`agence@indescale.com`, rôle `administrateur`).
+
+Guide d'utilisation, rôles et bootstrap : [09-CRM-GUIDE.md](09-CRM-GUIDE.md).
