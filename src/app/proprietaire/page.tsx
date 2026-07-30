@@ -4,7 +4,7 @@ import { Hero } from "@/components/mandate/landing/hero";
 import { Marquee } from "@/components/mandate/landing/marquee";
 import { StatementSection } from "@/components/mandate/landing/statement-section";
 import { ConstatSection } from "@/components/mandate/landing/constat-section";
-import { SystemeSection } from "@/components/mandate/landing/systeme-section";
+import { HorizontalSystem } from "@/components/mandate/landing/horizontal-system";
 import { ModeleSection } from "@/components/mandate/landing/modele-section";
 import { ProofSection } from "@/components/mandate/landing/proof-section";
 import { ComparaisonSection } from "@/components/mandate/landing/comparaison-section";
@@ -36,7 +36,7 @@ export default function ProprietairePage() {
       <StatementSection />
       <Marquee items={marqueeItems} tone="light" />
       <ConstatSection />
-      <SystemeSection />
+      <HorizontalSystem />
       <ModeleSection />
       <ProofSection />
       <ComparaisonSection />

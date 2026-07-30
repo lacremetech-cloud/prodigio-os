@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { LandingCta } from "@/components/ui/landing-cta";
 import { Reveal } from "@/components/ui/reveal";
+import { ScrollScale } from "@/components/ui/scroll-scale";
 import { media } from "@/lib/media";
 import { ANALYSE_ROUTE } from "@/lib/routes";
 import { HeroVsl } from "./hero-vsl";
@@ -55,9 +56,11 @@ export function Hero() {
           </Reveal>
         </div>
 
-        {/* Écrin VSL — pièce maîtresse */}
+        {/* Écrin VSL — pièce maîtresse (grandit légèrement au défilement) */}
         <Reveal variant="scale" delayMs={220} className="mx-auto mt-8 w-full max-w-4xl sm:mt-10">
-          <HeroVsl />
+          <ScrollScale to={1.1}>
+            <HeroVsl />
+          </ScrollScale>
         </Reveal>
 
         {/* Sous-titre + grand CTA */}
