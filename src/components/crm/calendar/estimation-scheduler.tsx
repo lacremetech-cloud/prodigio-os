@@ -177,7 +177,7 @@ export function EstimationScheduler({
               <label className="flex flex-col gap-1">
                 <span className="crm-label">Agent immobilier</span>
                 <select
-                  className="crm-select h-9"
+                  className="crm-select"
                   value={agentId}
                   onChange={(e) => {
                     setAgentId(e.target.value);
@@ -195,7 +195,7 @@ export function EstimationScheduler({
                 <span className="crm-label">Date</span>
                 <input
                   type="date"
-                  className="crm-input h-9"
+                  className="crm-input"
                   value={date}
                   min={todayIso}
                   onChange={(e) => {
@@ -242,7 +242,7 @@ export function EstimationScheduler({
                 <label className="flex flex-col gap-1">
                   <span className="crm-label">Adresse du bien</span>
                   <input
-                    className="crm-input h-9"
+                    className="crm-input"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Numéro, rue, code postal, ville"
@@ -253,7 +253,7 @@ export function EstimationScheduler({
                     <span className="crm-label">E-mail du propriétaire (invitation)</span>
                     <input
                       type="email"
-                      className="crm-input h-9"
+                      className="crm-input"
                       value={ownerEmail}
                       onChange={(e) => setOwnerEmail(e.target.value)}
                       placeholder="proprietaire@exemple.fr"
@@ -262,7 +262,7 @@ export function EstimationScheduler({
                   <label className="flex flex-col gap-1">
                     <span className="crm-label">Nom du propriétaire</span>
                     <input
-                      className="crm-input h-9"
+                      className="crm-input"
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
                     />

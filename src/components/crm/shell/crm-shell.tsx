@@ -98,7 +98,7 @@ function GlobalSearch() {
         type="search"
         placeholder="Rechercher un lead (nom, e-mail, ville…)"
         aria-label="Recherche globale"
-        className="crm-input h-9 max-w-md"
+        className="crm-input max-w-md"
       />
     </form>
   );
@@ -196,8 +196,8 @@ function UserCard({ name, roleLabel }: { name: string; roleLabel: string }) {
     <div className="mt-4 flex items-center gap-3 rounded-[10px] border border-[var(--crm-line)] bg-[var(--crm-panel-2)] px-3 py-2.5">
       <Avatar name={name} size={32} />
       <div className="min-w-0">
-        <p className="truncate text-xs font-medium text-[var(--crm-text)]">{name}</p>
-        <p className="truncate text-[11px] text-[var(--crm-text-faint)]">{roleLabel}</p>
+        <p className="crm-ellipsis text-xs font-medium text-[var(--crm-text)]" title={name}>{name}</p>
+        <p className="crm-ellipsis text-[11px] text-[var(--crm-text-faint)]">{roleLabel}</p>
       </div>
     </div>
   );

@@ -122,7 +122,7 @@ export function AppointmentActions({
             <span className="crm-label">Nouveau créneau</span>
             <input
               type="datetime-local"
-              className="crm-input h-9"
+              className="crm-input"
               value={newStart}
               onChange={(e) => setNewStart(e.target.value)}
             />

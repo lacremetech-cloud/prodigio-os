@@ -83,7 +83,7 @@ export default async function CalendarSettingsPage({
         </div>
 
         {connection?.google_account_email ? (
-          <p className="mb-4 text-sm text-[var(--crm-text-dim)]">
+          <p className="crm-wrap mb-4 text-sm text-[var(--crm-text-dim)]">
             Compte connecté : <span className="text-[var(--crm-text)]">{connection.google_account_email}</span>
           </p>
         ) : null}

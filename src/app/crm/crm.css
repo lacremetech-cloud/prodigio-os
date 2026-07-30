@@ -109,16 +109,25 @@
 }
 
 /* ------------------------------------------------------------------ Buttons */
+/*
+ * Hauteur par `min-height` (jamais fixe) + `line-height` maîtrisé : un libellé
+ * d'action n'est JAMAIS rogné. Si le texte est trop long pour la largeur
+ * disponible, le bouton grandit (il ne coupe pas). `max-width: 100%` évite tout
+ * débordement horizontal du conteneur sur mobile.
+ */
 .crm-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 16px;
+  min-height: 2.375rem; /* 38px confortable, extensible au contenu */
+  padding: 0.375rem 1rem;
   border-radius: 9px;
   font-size: 13px;
+  line-height: 1.3;
   font-weight: 600;
+  text-align: center;
+  max-width: 100%;
   border: 1px solid var(--crm-line);
   background: var(--crm-elevated);
   color: var(--crm-text);
@@ -150,24 +159,44 @@
   background: transparent;
 }
 .crm-btn--sm {
-  height: 32px;
-  padding: 0 12px;
+  min-height: 2rem; /* 32px */
+  padding: 0.25rem 0.75rem;
   font-size: 12px;
+}
+/* Bouton purement icône (⋯, ☰, ↻) : reste carré et centré. */
+.crm-btn--icon {
+  padding: 0.25rem;
+  min-width: 2rem;
 }
 
 /* ------------------------------------------------------------------- Inputs */
+/*
+ * Champs robustes au contenu : hauteur par `min-height` (≈44px, confort tactile)
+ * plutôt qu'une hauteur fixe fragile, `line-height` adapté à la police, et texte
+ * centré verticalement. Aucun texte n'est écrasé, même quand un utilitaire de
+ * hauteur (h-8/h-9/h-10) est appliqué : `min-height` garantit le plancher.
+ * `box-sizing: border-box` (padding inclus dans la hauteur).
+ */
 .crm-input,
 .crm-select,
 .crm-textarea {
+  box-sizing: border-box;
   width: 100%;
   background: var(--crm-panel-2);
   border: 1px solid var(--crm-line);
   border-radius: 9px;
   color: var(--crm-text);
   font-size: 14px;
-  padding: 10px 12px;
+  line-height: 1.4;
+  min-height: 2.75rem; /* 44px */
+  padding: 0.5rem 0.875rem;
   outline: none;
   transition: border-color 120ms ease;
+}
+.crm-textarea {
+  min-height: 4.75rem;
+  line-height: 1.5;
+  resize: vertical;
 }
 .crm-input:focus,
 .crm-select:focus,
@@ -180,12 +209,14 @@
 }
 .crm-select {
   appearance: none;
+  /* Chevron centré verticalement (indépendant de la hauteur du champ) et
+     n'empiétant jamais sur le texte grâce au padding-right dédié. */
   background-image: linear-gradient(45deg, transparent 50%, var(--crm-text-dim) 50%),
     linear-gradient(135deg, var(--crm-text-dim) 50%, transparent 50%);
-  background-position: calc(100% - 18px) 17px, calc(100% - 13px) 17px;
-  background-size: 5px 5px, 5px 5px;
+  background-position: calc(100% - 19px) center, calc(100% - 14px) center;
+  background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
-  padding-right: 34px;
+  padding-right: 2.25rem;
 }
 .crm-label {
   font-size: 11px;
@@ -278,6 +309,30 @@
   border-radius: 999px;
   border: 2px solid var(--crm-bg);
   background: var(--crm-gold-strong);
+}
+
+/* --------------------------------------------------- Lisibilité du contenu */
+/*
+ * Politique de troncature du design system :
+ *  - `.crm-wrap` : valeur importante (e-mail, nom, adresse, ville, libellé) qui
+ *    doit rester lisible INTÉGRALEMENT — passe à la ligne proprement, y compris
+ *    les longues chaînes sans espace (e-mails).
+ *  - `.crm-ellipsis` : troncature VOLONTAIRE sur une seule ligne, réservée aux
+ *    contextes denses (lignes de tableau, cartes compactes). Toujours
+ *    accompagnée d'un `title` pour rendre la valeur complète accessible.
+ *  Les deux posent `min-width: 0` pour se réduire correctement dans un flex/grid.
+ */
+.crm-wrap {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.crm-ellipsis {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Focus visible cohérent et accessible partout dans le CRM. */

@@ -44,13 +44,15 @@ export function LeadRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <Avatar name={name} size={30} />
-          <span className="truncate text-sm font-semibold text-[var(--crm-text)]">{name}</span>
+          <span className="crm-ellipsis max-w-full text-sm font-semibold text-[var(--crm-text)]" title={name}>
+            {name}
+          </span>
           {isHighPotential(lead) ? <Chip variant="gold">Fort potentiel</Chip> : null}
           {lead.assignees.length === 0 ? <Chip variant="danger">Non affecté</Chip> : null}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--crm-text-dim)]">
-          {phone ? <span>{phone}</span> : null}
-          {email ? <span className="truncate">{email}</span> : null}
+          {phone ? <span className="crm-wrap">{phone}</span> : null}
+          {email ? <span className="crm-wrap">{email}</span> : null}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--crm-text-faint)]">
           <span className="text-[var(--crm-text-dim)]">{propertyLabel(lead.propertyType) ?? "Type inconnu"}</span>

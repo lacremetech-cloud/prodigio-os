@@ -75,7 +75,7 @@ export function StageControl({
     <div className="flex flex-col gap-1">
       <select
         aria-label="Changer le stade"
-        className="crm-select h-9"
+        className="crm-select"
         value={stage}
         disabled={pending}
         onChange={(e) => {
@@ -120,7 +120,7 @@ export function AssignControl({
         </button>
         <select
           aria-label="Affecter à un membre"
-          className="crm-select h-8 max-w-[220px] text-xs"
+          className="crm-select max-w-[220px] text-xs"
           value={value}
           disabled={pending || members.length === 0}
           onChange={(e) => {
@@ -176,7 +176,7 @@ export function ActivityForm({ opportunityId }: { opportunityId: string }) {
         <label className="flex flex-col gap-1">
           <span className="crm-label">Type</span>
           <select
-            className="crm-select h-9"
+            className="crm-select"
             value={type}
             onChange={(e) => setType(e.target.value)}
           >
@@ -191,7 +191,7 @@ export function ActivityForm({ opportunityId }: { opportunityId: string }) {
           <label className="flex flex-col gap-1">
             <span className="crm-label">Résultat</span>
             <select
-              className="crm-select h-9"
+              className="crm-select"
               value={outcome}
               onChange={(e) => setOutcome(e.target.value)}
             >
@@ -264,7 +264,7 @@ export function TaskForm({
       <label className="flex flex-col gap-1">
         <span className="crm-label">Prochaine action</span>
         <input
-          className="crm-input h-9"
+          className="crm-input"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Rappeler le propriétaire, préparer l’estimation…"
@@ -274,7 +274,7 @@ export function TaskForm({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <label className="flex flex-col gap-1">
           <span className="crm-label">Type</span>
-          <select className="crm-select h-9" value={kind} onChange={(e) => setKind(e.target.value)}>
+          <select className="crm-select" value={kind} onChange={(e) => setKind(e.target.value)}>
             <option value="rappel">Rappel</option>
             <option value="tache">Tâche</option>
           </select>
@@ -283,7 +283,7 @@ export function TaskForm({
           <span className="crm-label">Échéance</span>
           <input
             type="datetime-local"
-            className="crm-input h-9"
+            className="crm-input"
             value={due}
             onChange={(e) => setDue(e.target.value)}
           />
@@ -291,7 +291,7 @@ export function TaskForm({
         <label className="flex flex-col gap-1">
           <span className="crm-label">Responsable</span>
           <select
-            className="crm-select h-9"
+            className="crm-select"
             value={assignee}
             onChange={(e) => setAssignee(e.target.value)}
           >
@@ -370,7 +370,7 @@ export function SegmentDecisionForm({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="crm-label">Segment validé (décision humaine)</span>
-          <select className="crm-select h-9" value={value} onChange={(e) => setValue(e.target.value)}>
+          <select className="crm-select" value={value} onChange={(e) => setValue(e.target.value)}>
             {Object.entries(segmentLabels).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
@@ -429,7 +429,7 @@ export function OutcomeForm({ opportunityId }: { opportunityId: string }) {
     >
       <label className="flex flex-col gap-1">
         <span className="crm-label">Résultat commercial</span>
-        <select className="crm-select h-9" value={outcome} onChange={(e) => setOutcome(e.target.value)}>
+        <select className="crm-select" value={outcome} onChange={(e) => setOutcome(e.target.value)}>
           {Object.entries(outcomeLabels).map(([v, l]) => (
             <option key={v} value={v}>
               {l}

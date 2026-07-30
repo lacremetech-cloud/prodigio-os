@@ -42,7 +42,7 @@ export default async function SettingsPage() {
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar name={name} size={30} />
-                    <span className="truncate text-sm text-[var(--crm-text)]">{name}</span>
+                    <span className="crm-ellipsis text-sm text-[var(--crm-text)]" title={name}>{name}</span>
                   </div>
                   <Chip variant={role === "administrateur" ? "gold" : "neutral"}>
                     {role ? roleLabels[role] : info.role}
