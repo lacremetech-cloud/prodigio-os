@@ -8,11 +8,19 @@ mandats portés par une agence partenaire habilitée.
 ## Statut actuel
 
 **Tranches verticales livrées : (1) capture des demandes de mandat, (2) CRM
-interne Mandats V1.**
+interne Mandats V1, (3) alerte Slack « Nouvelle demande de mandat », (4) page
+d'accueil publique.**
 
-Parcours public complet — publicité → **landing propriétaire** (`/proprietaire`)
-→ présentation vidéo (emplacement VSL) → **analyse confidentielle d'éligibilité**
-(`/proprietaire/analyse`) → **soumission Supabase** → confirmation.
+**Page d'accueil publique** (`/`) — porte d'entrée premium et courte vers
+l'écosystème : signature cinématographique, positionnement en points courts,
+puis aiguillage « Choisissez votre accès » (propriétaire / espace sécurisé).
+Elle ne duplique pas la landing et n'expose aucune route interne. Voir
+[docs/11-PUBLIC-HOME.md](docs/11-PUBLIC-HOME.md).
+
+Parcours public complet — publicité → **accueil** (`/`) ou **landing
+propriétaire** (`/proprietaire`) → présentation vidéo (emplacement VSL) →
+**analyse confidentielle d'éligibilité** (`/proprietaire/analyse`) →
+**soumission Supabase** → confirmation.
 
 **CRM interne** (authentifié, `/connexion` + `/crm/*`) : les données du funnel
 deviennent réellement exploitables par l'équipe — vue d'ensemble (indicateurs +
@@ -82,12 +90,14 @@ Monolithe modulaire (modules métier séparés, sans surdimensionnement) :
 src/
   middleware.ts       # protège /crm/* + rafraîchit la session (Supabase Auth)
   app/
+    page.tsx          # accueil public premium (/) — aiguillage vers les parcours
     proprietaire/     # landing propriétaire + /analyse (parcours public)
     connexion/        # page de connexion interne
     crm/              # CRM interne : vue d'ensemble, mandats, pipeline, fiche, tâches
     api/health/       # sonde de disponibilité
   components/
     ui/               # primitives d'interface accessibles (CTA, reveal…)
+    home/             # sections de la page d'accueil publique (hero, positionnement, accès)
     mandate/          # sections landing + expérience d'analyse immersive
     crm/              # interface CRM (shell, listes, fiche, actions)
   config/             # validation de configuration (Zod), extensible
@@ -128,6 +138,9 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
 - [docs/10-SLACK-ALERTS.md](docs/10-SLACK-ALERTS.md) — Alerte Slack « Nouvelle
   demande de mandat » : architecture, anti-doublon, panne non bloquante, deep
   link CRM, données incluses/exclues.
+- [docs/11-PUBLIC-HOME.md](docs/11-PUBLIC-HOME.md) — Page d'accueil publique
+  (`/`) : rôle, structure, réutilisation du design system, attribution, SEO,
+  et note sur le futur lanceur privé dans `/crm`.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
