@@ -33,8 +33,8 @@ function TaskSection({
             className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5"
           >
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[var(--crm-text)]">{task.title}</p>
-              <p className="truncate text-xs text-[var(--crm-text-faint)]">
+              <p className="crm-wrap text-sm font-medium text-[var(--crm-text)]">{task.title}</p>
+              <p className="crm-ellipsis text-xs text-[var(--crm-text-faint)]">
                 <Link href={`/crm/mandats/${opportunityId}`} className="hover:text-[var(--crm-text)]">
                   {contactLabel}
                   {city ? ` · ${city}` : ""}

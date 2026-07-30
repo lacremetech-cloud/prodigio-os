@@ -281,7 +281,7 @@ export default async function LeadDetailPage({
                             <p className="text-sm font-medium text-[var(--crm-text)]">
                               {formatAppointmentRange(a.starts_at, a.ends_at, a.timezone)}
                             </p>
-                            <p className="text-xs text-[var(--crm-text-faint)]">
+                            <p className="crm-wrap text-xs text-[var(--crm-text-faint)]">
                               Agent : {memberDisplayName(a.agent_user_id, members)}
                               {a.address ? ` · ${a.address}` : ""}
                             </p>
@@ -522,7 +522,7 @@ export default async function LeadDetailPage({
                     {openTasks.map((t) => (
                       <li key={t.id} className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-xs text-[var(--crm-text)]">{t.title}</p>
+                          <p className="crm-wrap text-xs text-[var(--crm-text)]">{t.title}</p>
                           {t.due_at ? (
                             <p className="text-[11px] text-[var(--crm-text-faint)]">
                               {formatDateTime(t.due_at)}

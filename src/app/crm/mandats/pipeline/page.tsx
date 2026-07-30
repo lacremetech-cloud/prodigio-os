@@ -26,14 +26,17 @@ function KanbanCard({
     <div className="crm-panel-2 flex flex-col gap-2 p-3">
       <Link href={`/crm/mandats/${lead.opportunityId}`} className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium text-[var(--crm-text)]">{name}</span>
+          <span className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]" title={name}>{name}</span>
           {isHighPotential(lead) ? <Chip variant="gold">★</Chip> : null}
         </div>
-        <p className="mt-1 truncate text-xs text-[var(--crm-text-faint)]">
+        <p
+          className="crm-ellipsis mt-1 text-xs text-[var(--crm-text-faint)]"
+          title={`${propertyLabel(lead.propertyType) ?? "Type inconnu"}${lead.city ? ` · ${lead.city}` : ""}`}
+        >
           {propertyLabel(lead.propertyType) ?? "Type inconnu"}
           {lead.city ? ` · ${lead.city}` : ""}
         </p>
-        <p className="mt-0.5 truncate text-xs text-[var(--crm-text-faint)]">
+        <p className="crm-ellipsis mt-0.5 text-xs text-[var(--crm-text-faint)]">
           {valueBandLabel(lead.valueBand) ?? "Valeur à estimer"}
         </p>
       </Link>

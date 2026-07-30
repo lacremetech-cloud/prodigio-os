@@ -63,7 +63,7 @@ export function FilterBar({
           type="search"
           placeholder="Rechercher un lead (nom, e-mail, téléphone, ville…)"
           aria-label="Rechercher"
-          className="crm-input h-10"
+          className="crm-input"
         />
         <button type="submit" className="crm-btn crm-btn--sm shrink-0">
           Rechercher
@@ -91,7 +91,7 @@ export function FilterBar({
         <label className="ml-auto flex items-center gap-2 text-xs text-[var(--crm-text-faint)]">
           Trier
           <select
-            className="crm-select h-8 text-xs"
+            className="crm-select text-xs"
             value={sort}
             onChange={(e) => push({ sort: e.target.value })}
           >

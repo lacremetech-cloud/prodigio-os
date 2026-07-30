@@ -79,7 +79,7 @@ function InviteForm({
         <label className="flex flex-col gap-1.5">
           <span className="crm-label">Prénom</span>
           <input
-            className="crm-input h-10"
+            className="crm-input"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             autoComplete="given-name"
@@ -89,7 +89,7 @@ function InviteForm({
         <label className="flex flex-col gap-1.5">
           <span className="crm-label">Nom</span>
           <input
-            className="crm-input h-10"
+            className="crm-input"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             autoComplete="family-name"
@@ -101,7 +101,7 @@ function InviteForm({
       <label className="flex flex-col gap-1.5">
         <span className="crm-label">Adresse e-mail</span>
         <input
-          className="crm-input h-10"
+          className="crm-input"
           type="email"
           required
           value={email}
@@ -114,7 +114,7 @@ function InviteForm({
       <label className="flex flex-col gap-1.5">
         <span className="crm-label">Rôle</span>
         <select
-          className="crm-select h-10"
+          className="crm-select"
           value={role}
           onChange={(e) => setRole(e.target.value as CrmRole)}
         >
@@ -383,8 +383,10 @@ function EntryRow({ entry, onChanged }: { entry: TeamEntry; onChanged: () => voi
       <div className="flex min-w-0 items-center gap-3">
         <Avatar name={entry.name} size={34} />
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-[var(--crm-text)]">{entry.name}</p>
-          <p className="truncate text-xs text-[var(--crm-text-faint)]">{entry.email}</p>
+          <p className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]" title={entry.name}>
+            {entry.name}
+          </p>
+          <p className="crm-wrap text-xs text-[var(--crm-text-faint)]">{entry.email}</p>
         </div>
       </div>
 

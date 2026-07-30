@@ -90,7 +90,7 @@ export function AppointmentsBoard({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-2">
         <select
-          className="crm-select h-9 max-w-[240px]"
+          className="crm-select max-w-[240px]"
           value={agent}
           onChange={(e) => setAgent(e.target.value)}
           aria-label="Filtrer par agent"
@@ -103,7 +103,7 @@ export function AppointmentsBoard({
           ))}
         </select>
         <select
-          className="crm-select h-9 max-w-[220px]"
+          className="crm-select max-w-[220px]"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           aria-label="Filtrer par statut"
@@ -150,11 +150,14 @@ export function AppointmentsBoard({
                       className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] px-4 py-3 transition-colors hover:border-[var(--crm-line)] hover:bg-[var(--crm-panel-2)]"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-[var(--crm-text)]">
+                        <p
+                          className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]"
+                          title={a.city ? `${a.contactLabel} · ${a.city}` : a.contactLabel}
+                        >
                           {a.contactLabel}
                           {a.city ? <span className="text-[var(--crm-text-faint)]"> · {a.city}</span> : null}
                         </p>
-                        <p className="text-xs text-[var(--crm-text-faint)]">
+                        <p className="crm-ellipsis text-xs text-[var(--crm-text-faint)]" title={a.agentName}>
                           {formatAppointmentRange(a.startsAt, a.endsAt, a.timezone)} · {a.agentName}
                         </p>
                       </div>

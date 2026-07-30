@@ -61,8 +61,8 @@ function PriorityItem({ lead, canView, meta }: { lead: Lead; canView: boolean; m
       className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[#34353c]"
     >
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-[var(--crm-text)]">{name}</p>
-        <p className="truncate text-xs text-[var(--crm-text-faint)]">
+        <p className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]" title={name}>{name}</p>
+        <p className="crm-ellipsis text-xs text-[var(--crm-text-faint)]">
           {propertyLabel(lead.propertyType) ?? "Type inconnu"}
           {lead.city ? ` · ${lead.city}` : ""}
           {valueBandLabel(lead.valueBand) ? ` · ${valueBandLabel(lead.valueBand)}` : ""}

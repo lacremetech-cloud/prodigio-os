@@ -116,7 +116,7 @@ export function CalendarConnectionManager({
           <p className="text-sm text-[var(--crm-text-faint)]">Chargement des calendriers…</p>
         ) : calendars && calendars.length > 0 ? (
           <select
-            className="crm-select h-9 max-w-md"
+            className="crm-select max-w-md"
             value={selectedCalendarId ?? ""}
             disabled={pending}
             onChange={(e) => onSelect(e.target.value)}
@@ -130,11 +130,11 @@ export function CalendarConnectionManager({
             ))}
           </select>
         ) : (
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-[var(--crm-text-dim)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="crm-wrap min-w-0 flex-1 text-sm text-[var(--crm-text-dim)]">
               {selectedCalendarSummary ?? selectedCalendarId ?? "Calendrier principal"}
             </p>
-            <button type="button" className="crm-btn crm-btn--ghost crm-btn--sm" onClick={loadCalendars}>
+            <button type="button" className="crm-btn crm-btn--ghost crm-btn--sm shrink-0" onClick={loadCalendars}>
               Recharger la liste
             </button>
           </div>

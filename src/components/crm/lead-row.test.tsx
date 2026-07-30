@@ -63,4 +63,22 @@ describe("LeadRow", () => {
     expect(queryByText("marie@example.com")).toBeNull();
     expect(getAllByText("•••• masqué").length).toBeGreaterThanOrEqual(1);
   });
+
+  it("rend une valeur longue lisible : nom tronqué mais accessible (title), e-mail qui passe à la ligne", () => {
+    const longName = "Marie-Alexandra de la Rochefoucauld-Montmorency";
+    const longEmail = "prenom.nom.tres.long@immobilier-prestige-cotedazur.example.com";
+    const { getByText } = render(
+      <LeadRow
+        lead={{ ...lead, contactFirstName: "Marie-Alexandra", contactLastName: "de la Rochefoucauld-Montmorency", contactEmail: longEmail }}
+        canViewDetails={true}
+      />,
+    );
+    // Nom : troncature VOLONTAIRE (crm-ellipsis) MAIS valeur complète via title.
+    const nameEl = getByText(longName);
+    expect(nameEl.className).toContain("crm-ellipsis");
+    expect(nameEl.getAttribute("title")).toBe(longName);
+    // E-mail : valeur importante → passe à la ligne (crm-wrap), jamais rognée.
+    const emailEl = getByText(longEmail);
+    expect(emailEl.className).toContain("crm-wrap");
+  });
 });
