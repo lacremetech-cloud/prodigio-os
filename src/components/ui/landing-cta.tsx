@@ -1,0 +1,57 @@
+import Link from "next/link";
+import type { ComponentProps, ReactNode } from "react";
+
+type Tone = "contrast" | "gold" | "ghost-dark";
+type Size = "lg" | "xl";
+
+const tones: Record<Tone, string> = {
+  // Bouton clair plein (sur fond sombre) — contraste maximal, très visible.
+  contrast:
+    "bg-text-on-dark text-wood-black border border-text-on-dark hover:bg-white",
+  // Bouton doré — accent premium fort pour la conversion.
+  gold:
+    "text-wood-black border border-[color:var(--color-gold-soft)] bg-[color:var(--color-gold-soft)] hover:bg-white hover:border-white",
+  // Contour clair sur sombre.
+  "ghost-dark":
+    "border border-ivory/70 text-ivory hover:bg-ivory hover:text-wood-black",
+};
+
+const sizes: Record<Size, string> = {
+  lg: "min-h-[3.5rem] px-8 py-4 text-[0.95rem]",
+  xl: "min-h-[4.25rem] px-10 py-5 text-base sm:text-lg",
+};
+
+interface LandingCtaProps extends Omit<ComponentProps<typeof Link>, "className"> {
+  children: ReactNode;
+  tone?: Tone;
+  size?: Size;
+  className?: string;
+}
+
+/**
+ * Grand appel à l'action premium pour la landing : taille généreuse, reflet
+ * lumineux traversant au survol (`cta-shine`), flèche animée, halo doux. Conçu
+ * pour « donner envie de cliquer » — bien plus présent qu'un lien discret.
+ */
+export function LandingCta({
+  children,
+  tone = "contrast",
+  size = "xl",
+  className = "",
+  ...props
+}: LandingCtaProps) {
+  return (
+    <Link
+      className={`cta-shine group relative inline-flex items-center justify-center gap-3 font-medium tracking-[0.01em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${sizes[size]} ${tones[tone]} ${className}`}
+      {...props}
+    >
+      <span>{children}</span>
+      <span
+        aria-hidden="true"
+        className="transition-transform duration-300 group-hover:translate-x-1.5"
+      >
+        →
+      </span>
+    </Link>
+  );
+}
