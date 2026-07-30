@@ -83,7 +83,22 @@ export const media = {
     alt: "Résidences contemporaines en bord d'eau, reflets sur un lac calme.",
   },
 
-  // --- Comparaison « écrin » (annonce standard ↔ mise en marché Prodigio) ------
+  // --- Comparaison « écrin » (agences classiques ↔ mise en marché Prodigio) ----
+  // Fiches d'agences classiques (marques neutralisées) — fiche COMPLÈTE : prix,
+  // caractéristiques, descriptif visibles. Elles illustrent le format standard
+  // identique partout, sans citer d'agence.
+  ecrinAgence1: {
+    src: "/images/ecrin/agence-1.webp",
+    width: 1400,
+    height: 764,
+    alt: "Fiche d'annonce d'une agence classique : caractéristiques, prix (880 000 €) et descriptif — format standard.",
+  },
+  ecrinAgence2: {
+    src: "/images/ecrin/agence-2.webp",
+    width: 1400,
+    height: 494,
+    alt: "Fiche d'annonce d'une autre agence classique : vignettes, photo et prix (3 068 000 €) — même présentation.",
+  },
   ecrinAnnonce: {
     src: "/images/ecrin/annonce-standard.webp",
     width: 1600,

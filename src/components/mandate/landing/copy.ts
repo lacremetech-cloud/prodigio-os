@@ -55,16 +55,29 @@ export const constat = {
   },
 } as const;
 
-/** Comparaison interactive « annonce standard ↔ écrin Prodigio » + illustrations. */
+/** Comparaison en deux parties : agences classiques ↔ mise en marché Prodigio. */
 export const ecrin = {
-  beforeLabel: "Annonce standard",
-  afterLabel: "Écrin Prodigio",
-  hint: "Glissez pour comparer",
-  gallery: [
-    { key: "ecrinIdentite", caption: "Carte d'identité du bien" },
-    { key: "ecrinBrochureCover", caption: "Brochure confidentielle" },
-    { key: "ecrinPublicites", caption: "≈ 15 publicités par bien" },
-  ],
+  classique: {
+    label: "Partout ailleurs",
+    title: "La même fiche, partout.",
+    text:
+      "Sur les portails et chez les agences classiques, votre bien est présenté " +
+      "comme n'importe quel autre : un prix, quelques photos, un descriptif, un " +
+      "formulaire de contact. La même fiche, le même format.",
+  },
+  prodigio: {
+    label: "Avec Prodigio",
+    title: "Une marque. Un site dédié.",
+    text:
+      "Un écrin éditorial complet : une page dédiée à votre bien, sa carte " +
+      "d'identité et une brochure confidentielle. Il retrouve sa singularité — " +
+      "et sa propre stratégie de mise en marché.",
+    captions: {
+      ecrinProdigio: "Site dédié au bien",
+      ecrinIdentite: "Carte d'identité",
+      ecrinBrochureCover: "Brochure confidentielle",
+    },
+  },
 } as const;
 
 export const systeme = {

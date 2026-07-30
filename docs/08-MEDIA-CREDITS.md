@@ -59,4 +59,17 @@ Illustrations issues des **actifs marketing Prodigio** (récupérés depuis
 - `annonce-standard.webp` — capture d'une annonce de portail servant d'exemple
   « standard ». **Marque tierce neutralisée** (en-tête recadré, logo/pastille et
   filigrane floutés) afin d'éviter toute publicité comparative dénigrante :
-  aucune agence n'est identifiable.
+  aucune agence n'est identifiable. *(N'est plus affichée depuis la refonte de
+  la comparaison en deux parties ; conservée pour référence.)*
+- `agence-1.webp`, `agence-2.webp` — fiches d'agences classiques servant
+  d'exemples du **format standard identique partout** (bloc « Partout ailleurs »
+  de la section 01). Fiche **complète** conservée (prix, caractéristiques,
+  descriptif, vignettes) pour que le contraste avec l'écrin Prodigio soit
+  lisible, mais **marque, logo, bloc agent et filigranes neutralisés** (floutés) :
+  **aucune agence n'est identifiable**. Le but est de montrer un format, jamais
+  de dénigrer une enseigne nommée.
+
+> ⚠️ **Publicité comparative — validation juridique requise.** Réafficher des
+> marques d'agences identifiables (comparaison nominative) relève d'une décision
+> à valider par Cyril / Victor et, le cas échéant, un conseil juridique. En
+> l'absence de validation, les fiches restent **neutralisées**.
