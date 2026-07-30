@@ -29,6 +29,17 @@ const envSchema = z.object({
   // documentation et les outils ; jamais requise à l'exécution de l'app.
   SUPABASE_PROJECT_REF: z.string().min(1).optional(),
 
+  // Clé SECRÈTE Supabase (moderne « sb_secret_… » ou service_role JWT), utilisée
+  // EXCLUSIVEMENT côté serveur pour les opérations administratives Supabase Auth
+  // (invitations `inviteUserByEmail`). STRICTEMENT serveur :
+  //   - JAMAIS préfixée NEXT_PUBLIC_ (jamais incluse dans le bundle navigateur) ;
+  //   - JAMAIS renvoyée au client, JAMAIS journalisée.
+  // Optionnelle : sans elle, la gestion des membres reste consultable mais l'envoi
+  // réel d'invitations est désactivé proprement (erreur de configuration réservée
+  // aux administrateurs — voir `isSupabaseAdminConfigured`). Aucun appel Admin
+  // n'est déclenché tant qu'elle est absente.
+  SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+
   // URL canonique publique du site (métadonnées / SEO). Optionnelle.
   NEXT_PUBLIC_SITE_URL: z.url().optional(),
 
@@ -93,6 +104,23 @@ export function isSupabaseConfigured(
     source.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
     typeof source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY === "string" &&
     source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.length > 0
+  );
+}
+
+/**
+ * Indique si les opérations administratives Supabase Auth sont configurées :
+ * URL du projet **et** clé secrète serveur présentes. Ne lit qu'une présence —
+ * ne révèle jamais la valeur du secret. Sans elle, aucune opération Admin n'est
+ * tentée (l'espace administrateur affiche une erreur de configuration dédiée).
+ */
+export function isSupabaseAdminConfigured(
+  source: Pick<Env, "NEXT_PUBLIC_SUPABASE_URL" | "SUPABASE_SECRET_KEY"> = env,
+): boolean {
+  return (
+    typeof source.NEXT_PUBLIC_SUPABASE_URL === "string" &&
+    source.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
+    typeof source.SUPABASE_SECRET_KEY === "string" &&
+    source.SUPABASE_SECRET_KEY.length > 0
   );
 }
 
@@ -191,4 +219,31 @@ export function mandateCrmBaseUrl(
   return source.NODE_ENV === "production"
     ? "https://go.prodigio.fr"
     : "http://localhost:3000";
+}
+
+/**
+ * URL canonique publique du site (identique à `mandateCrmBaseUrl`) — base des
+ * liens d'invitation / redirection d'authentification. Priorité à
+ * `NEXT_PUBLIC_SITE_URL` ; fallback production `https://go.prodigio.fr`.
+ */
+export function canonicalSiteUrl(
+  source: Pick<Env, "NEXT_PUBLIC_SITE_URL" | "NODE_ENV"> = env,
+): string {
+  return mandateCrmBaseUrl(source);
+}
+
+/**
+ * Construit une URL de redirection **interne** sûre (anti open-redirect). Renvoie
+ * un chemin absolu commençant par un seul `/` (jamais `//` ni un schéma), sinon
+ * la valeur de repli. Utilisée pour les redirections post-authentification.
+ */
+export function safeInternalPath(
+  target: string | null | undefined,
+  fallback = "/crm",
+): string {
+  if (typeof target !== "string") return fallback;
+  const t = target.trim();
+  // Doit commencer par un seul « / » et ne pas être un chemin protocol-relative.
+  if (!t.startsWith("/") || t.startsWith("//") || t.startsWith("/\\")) return fallback;
+  return t;
 }

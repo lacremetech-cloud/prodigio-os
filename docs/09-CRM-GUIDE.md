@@ -67,22 +67,21 @@ La **création du compte** d'authentification et l'**attribution du rôle** sont
 
 ## 3. Inviter un membre
 
-Réservé aux **administrateurs** :
+Réservé aux **administrateurs**, désormais **entièrement depuis l'interface**
+(plus besoin du SQL Editor) : **`/crm/parametres/equipe`** → « Inviter un
+membre » (prénom, nom, e-mail, rôle). La personne reçoit une **invitation native
+Supabase Auth**, définit son mot de passe et accepte — le rôle est attribué à
+l'acceptation. Voir le guide dédié : [12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md).
 
-1. Créer l'accès dans **Supabase → Authentication → Users** (invitation par
-   e-mail ou création avec mot de passe).
-2. Attribuer le rôle :
+Depuis ce même écran : voir les membres et invitations en attente, **renvoyer**
+ou **révoquer** une invitation, **modifier un rôle**, **désactiver / réactiver**
+un accès. Les rôles réellement attribuables en V1 : `administrateur`, `manager`,
+`setter`, `agent_immobilier` (`partenaire_lecture` reste **préparé mais non
+attribuable** — voir §7).
 
-   ```sql
-   select public.crm_invite_member('membre@votre-domaine.tld', 'setter');
-   -- rôles: 'administrateur' | 'manager' | 'setter' | 'agent_immobilier' | 'partenaire_lecture'
-   ```
-
-   `crm_invite_member` refuse un compte inexistant (crée d'abord l'accès Auth),
-   valide le rôle et trace l'attribution (audit).
-
-Un futur écran d'administration pourra encapsuler ces appels ; en V1 ils passent
-par le SQL Editor pour éviter de surdimensionner.
+> La fonction historique `crm_invite_member` (attribution de rôle à un compte
+> déjà existant, via SQL) demeure disponible mais n'est plus le chemin nominal :
+> l'écran équipe la remplace pour l'usage courant.
 
 ---
 
@@ -173,9 +172,12 @@ Le détail des migrations et des contrôles effectués figure dans
   mais la V1 accorde une visibilité **au niveau de l'organisation opérateur
   Prodigio** ; la restriction par partenaire sera activée quand un partenaire réel
   sera intégré (docs/06 — décisions ouvertes).
-- **Rôles `agent_immobilier` / `partenaire_lecture`** : préparés, non pleinement
-  opérationnels.
-- **Écran d'administration** des membres (invitation via UI) : en V1, via SQL.
+- **Rôle `agent_immobilier`** : opérationnel en **lecture seule** sur ses dossiers
+  **affectés** (isolation RLS active — voir [12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md)).
+- **Rôle `partenaire_lecture`** : préparé mais **non attribuable** en V1 (isolation
+  fine du partage non finalisée).
+- **Écran d'administration des membres** (invitation via UI) : **livré**
+  (`/crm/parametres/equipe`) — voir [12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md).
 - **Temps réel**, **drag-and-drop** du Kanban (menu de stade fluide en V1),
   **glisser-déposer**.
 - Tout le périmètre listé « hors mission » (CRM Acquéreurs, portail propriétaire,

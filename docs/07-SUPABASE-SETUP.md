@@ -569,3 +569,58 @@ Vérification (transaction annulée, aucune donnée persistée) : nouvelle deman
 `created:true` + `opportunity_id` + 5 objets créés (dont rattachement org
 opérateur) ; rejeu même clé → `created:false` ; `anon`/`authenticated` conservent
 l'`EXECUTE`.
+
+---
+
+## 11. Utilisateurs, invitations, rôles & accès — V1 (APPLIQUÉ)
+
+Deux migrations **additives** déploient la gestion des utilisateurs au-dessus du
+CRM, **sans** modifier les migrations antérieures ni `submit_mandate_funnel`.
+Appliquées sur `wmhrpweefutwldbhllhg` :
+
+| Fichier | Rôle |
+|---|---|
+| `20260730190000_users_and_access_v1.sql` | Table `organization_invitations` + fonctions d'administration (invitations, rôles, activation) + acceptation + isolation RLS `agent_immobilier` (dossiers affectés) + extension additive des contraintes `audit_events` |
+| `20260730191000_users_access_lock_anon_execute.sql` | Retire `EXECUTE` à `anon`/`public` sur les nouvelles fonctions (même correctif que `crm_lock_anon_execute`) |
+
+**Objets créés** (schéma `public`) :
+- Table `organization_invitations` (RLS active, lecture réservée aux
+  administrateurs, aucune écriture directe, index unique partiel « une invitation
+  active par organisation et e-mail », **aucun token brut stocké**).
+- Fonctions `SECURITY DEFINER` (`search_path` figé) : `crm_create_invitation`,
+  `crm_resend_invitation`, `crm_mark_invitation_sent`, `crm_revoke_invitation`,
+  `crm_accept_invitation`, `crm_my_pending_invitation`, `crm_change_member_role`,
+  `crm_set_member_status`, `crm_list_team`, `crm_list_invitations`, et les helpers
+  d'isolation `crm_is_operator`, `crm_assigned_opportunity_ids`,
+  `crm_role_is_assignable`.
+- Politiques RLS de lecture **role-aware** : les rôles opérateur
+  (admin/manager/setter) conservent la visibilité complète ; `agent_immobilier`
+  est restreint à ses **dossiers affectés** ; `partenaire_lecture` ne voit aucun
+  dossier (partage non activé en V1).
+- Contraintes `audit_events` **étendues** (entité `invitation` ; événements
+  `invitation_*`, `changement_role`, `activation_membre`, `desactivation_membre`).
+
+**Sécurité (mesurée sur le projet distant, transactions annulées)** — voir le
+détail dans [12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md) §8 :
+- **Aucune régression** : l'admin réel voit toujours le dossier réel ; `anon`
+  refusé ; `submit_mandate_funnel` toujours exécutable par `anon` (funnel intact).
+- `anon` **ne peut exécuter aucune** fonction de gestion (`EXECUTE` = false) ;
+  `authenticated` conserve l'`EXECUTE` (chaque fonction re-vérifie le rôle).
+- Isolation RLS vérifiée : non-membre → 0 dossier ; `agent_immobilier` → dossiers
+  affectés uniquement ; `partenaire_lecture` → 0 dossier ; mutations refusées.
+- Invariants : admin seul invite ; auto-élévation / auto-désactivation impossibles ;
+  **dernier administrateur actif protégé** ; désactivation = perte immédiate
+  d'accès sans suppression du compte `auth.users` ; acceptation unique/idempotente.
+- Advisors sécurité : seuls des **WARN attendus** (fonctions `SECURITY DEFINER`
+  exécutables par `authenticated` = architecture d'écriture ; funnel public).
+
+**Clé serveur.** Les opérations d'invitation Auth utilisent `SUPABASE_SECRET_KEY`
+(clé `sb_secret_…`), **strictement serveur**. Absente de l'environnement de
+travail → l'envoi d'e-mail d'invitation est **désactivé proprement** (erreur de
+configuration réservée aux administrateurs ; **aucune invitation réelle envoyée**,
+aucune valeur inventée). Manipulation manuelle unique restante : voir
+[12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md) §6.
+
+**Données préservées.** Le compte administrateur réel (`agence@indescale.com`) et
+l'unique dossier propriétaire réel sont **intacts** ; **aucune** donnée de test
+persistée.

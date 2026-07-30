@@ -18,8 +18,55 @@ export const CRM_ROLES = [
 
 export type CrmRole = (typeof CRM_ROLES)[number];
 
-/** Rôles pleinement opérationnels dans cette V1. */
+/** Rôles pleinement opérationnels (visibilité complète des dossiers) en V1. */
 export const OPERATIONAL_ROLES: CrmRole[] = ["administrateur", "manager", "setter"];
+
+/**
+ * Rôles réellement **attribuables depuis l'interface** en V1 (invitation /
+ * changement de rôle). `partenaire_lecture` en est **exclu** : son isolation fine
+ * (dossiers explicitement partagés uniquement) n'est pas terminée — il reste
+ * préparé mais non attribuable tant qu'il n'est pas sécurisé (docs/11). La règle
+ * est aussi appliquée **en base** (`crm_role_is_assignable`), pas seulement ici.
+ */
+export const ASSIGNABLE_ROLES: CrmRole[] = [
+  "administrateur",
+  "manager",
+  "setter",
+  "agent_immobilier",
+];
+
+/** Vrai si le rôle peut être attribué via l'interface en V1. */
+export function isAssignableRole(role: string): role is CrmRole {
+  return (ASSIGNABLE_ROLES as readonly string[]).includes(role);
+}
+
+/**
+ * Explication concise des permissions d'un rôle (affichée dans le formulaire
+ * d'invitation et l'écran équipe). Aucune règle codée en dur : purement éditorial.
+ */
+export const ROLE_PERMISSIONS: Record<CrmRole, string> = {
+  administrateur:
+    "Accès complet aux dossiers, gestion des membres et invitations, rôles, désactivation, paramètres et journal d'audit.",
+  manager:
+    "Pilotage opérationnel de tous les dossiers, affectation des leads, pipeline, tâches et activités, décision de segment et audit. Ne gère pas les administrateurs ni la sécurité.",
+  setter:
+    "Traitement des leads : appels, activités, tâches, changements de stade. Aucune gestion d'utilisateurs.",
+  agent_immobilier:
+    "Accès en lecture aux seuls dossiers qui lui sont explicitement affectés (qualification, estimation, suivi). Aucune visibilité sur les autres dossiers.",
+  partenaire_lecture:
+    "Lecture seule, limitée aux dossiers explicitement partagés avec son organisation, coordonnées masquées. Préparé — non attribuable en V1.",
+};
+
+/**
+ * Destination après connexion / acceptation, selon le rôle le plus fort détenu.
+ * En V1 tous les rôles autorisés atterrissent sur le tableau de bord `/crm`
+ * (l'espace s'adapte ensuite au rôle via la RLS et l'affichage). Le point
+ * d'extension existe pour, plus tard, router un agent vers sa vue dédiée.
+ */
+export function roleHome(roles: readonly string[]): string {
+  if (!hasCrmAccess(roles)) return "/acces";
+  return "/crm";
+}
 
 /** Vrai si l'ensemble de rôles contient au moins un des rôles requis. */
 export function hasAnyRole(

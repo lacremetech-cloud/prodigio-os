@@ -47,8 +47,12 @@ export async function requireCrmSession(
   if (!session) {
     redirect(`/connexion?redirect=${encodeURIComponent(redirectTo)}`);
   }
+  // Authentifié mais sans membership active (jamais invité, invitation non
+  // acceptée, ou accès désactivé) → écran dédié « Accès non autorisé ». On ne
+  // renvoie PAS vers /connexion (l'utilisateur EST connecté) afin d'éviter toute
+  // boucle de redirection avec le middleware.
   if (!hasCrmAccess(session.roles)) {
-    redirect("/connexion?error=acces");
+    redirect("/acces");
   }
   return session;
 }

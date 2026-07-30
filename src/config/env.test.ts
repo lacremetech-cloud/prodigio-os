@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
+  canonicalSiteUrl,
+  isSupabaseAdminConfigured,
   isTurnstileConfigured,
   isTurnstileProductionSafe,
   isTurnstileTestSecretKey,
   isTurnstileTestSiteKey,
   parseEnv,
+  safeInternalPath,
 } from "./env";
 
 describe("parseEnv", () => {
@@ -106,5 +109,57 @@ describe("configuration Turnstile", () => {
         TURNSTILE_SECRET_KEY: "real-production-secret",
       }),
     ).toBe(true);
+  });
+});
+
+describe("Supabase Admin (invitations)", () => {
+  it("le secret n'est JAMAIS préfixé NEXT_PUBLIC_ (jamais dans le bundle client)", () => {
+    // Le schéma lit bien SUPABASE_SECRET_KEY côté serveur…
+    expect(parseEnv({ SUPABASE_SECRET_KEY: "sb_secret_xxx" }).SUPABASE_SECRET_KEY).toBe(
+      "sb_secret_xxx",
+    );
+    // …et n'expose aucune variante publique.
+    const shape = parseEnv({}) as Record<string, unknown>;
+    expect("NEXT_PUBLIC_SUPABASE_SECRET_KEY" in shape).toBe(false);
+  });
+
+  it("isSupabaseAdminConfigured exige URL ET secret serveur", () => {
+    expect(isSupabaseAdminConfigured({} as never)).toBe(false);
+    // Secret absent → NON configuré (aucun appel Admin ne sera tenté).
+    expect(
+      isSupabaseAdminConfigured({
+        NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co",
+      } as never),
+    ).toBe(false);
+    // URL absente → NON configuré.
+    expect(
+      isSupabaseAdminConfigured({ SUPABASE_SECRET_KEY: "sb_secret_x" } as never),
+    ).toBe(false);
+    // Les deux présents → configuré.
+    expect(
+      isSupabaseAdminConfigured({
+        NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co",
+        SUPABASE_SECRET_KEY: "sb_secret_x",
+      } as never),
+    ).toBe(true);
+  });
+});
+
+describe("redirections sûres", () => {
+  it("safeInternalPath refuse les redirections externes / protocol-relative", () => {
+    expect(safeInternalPath("/crm")).toBe("/crm");
+    expect(safeInternalPath("/invitation")).toBe("/invitation");
+    expect(safeInternalPath("//evil.com")).toBe("/crm");
+    expect(safeInternalPath("https://evil.com")).toBe("/crm");
+    expect(safeInternalPath("/\\evil.com")).toBe("/crm");
+    expect(safeInternalPath(undefined)).toBe("/crm");
+    expect(safeInternalPath("relative", "/invitation")).toBe("/invitation");
+  });
+
+  it("canonicalSiteUrl : NEXT_PUBLIC_SITE_URL prioritaire, fallback prod go.prodigio.fr", () => {
+    expect(canonicalSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://x.fr/", NODE_ENV: "production" })).toBe(
+      "https://x.fr",
+    );
+    expect(canonicalSiteUrl({ NODE_ENV: "production" } as never)).toBe("https://go.prodigio.fr");
   });
 });

@@ -120,8 +120,12 @@ contrôles applicatifs) :
   **préparent** l'isolation par partenaire, activable sans refonte lorsque les
   décisions ouvertes (§4) seront tranchées.
 - **Coordonnées sensibles** : masquées côté application pour les rôles non
-  autorisés (`partenaire_lecture`) ; `agent_immobilier` / `partenaire_lecture`
-  restent **préparés** mais non pleinement opérationnels en V1.
+  autorisés (`partenaire_lecture`).
+- **Isolation `agent_immobilier` (V1)** : la RLS role-aware restreint ce rôle aux
+  **seules opportunités affectées** (et à leurs contacts / activités / tâches /
+  soumissions) ; les rôles opérateur (admin/manager/setter) conservent la
+  visibilité complète. `partenaire_lecture` reste **préparé mais non attribuable**
+  (aucun partage activé en V1). Détail : [12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md).
 - **Journal d'audit** : consultable par admin/manager, **non modifiable**
   (déclencheur bloquant UPDATE/DELETE).
 

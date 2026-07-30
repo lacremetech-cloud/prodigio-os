@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  ASSIGNABLE_ROLES,
   canDecideSegment,
   canManageMembers,
   canOperate,
   canViewAudit,
   canViewContactDetails,
   hasCrmAccess,
+  isAssignableRole,
   maskContactValue,
   primaryRole,
+  roleHome,
 } from "./roles";
 
 describe("rôles CRM", () => {
@@ -56,5 +59,22 @@ describe("rôles CRM", () => {
     expect(maskContactValue("+33612345678", false)).toBe("•••• masqué");
     expect(maskContactValue(null, true)).toBe(null);
     expect(maskContactValue("", false)).toBe(null);
+  });
+
+  it("ASSIGNABLE_ROLES exclut partenaire_lecture (non attribuable en V1)", () => {
+    expect(isAssignableRole("administrateur")).toBe(true);
+    expect(isAssignableRole("manager")).toBe(true);
+    expect(isAssignableRole("setter")).toBe(true);
+    expect(isAssignableRole("agent_immobilier")).toBe(true);
+    expect(isAssignableRole("partenaire_lecture")).toBe(false);
+    expect(isAssignableRole("role_inconnu")).toBe(false);
+    expect(ASSIGNABLE_ROLES).not.toContain("partenaire_lecture");
+  });
+
+  it("roleHome : accès → /crm, sans accès → /acces (jamais de boucle /connexion)", () => {
+    expect(roleHome(["administrateur"])).toBe("/crm");
+    expect(roleHome(["agent_immobilier"])).toBe("/crm");
+    expect(roleHome([])).toBe("/acces");
+    expect(roleHome(["role_inconnu"])).toBe("/acces");
   });
 });
