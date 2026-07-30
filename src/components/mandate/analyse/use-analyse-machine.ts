@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ATTRIBUTION_STORAGE_KEY,
   contactSchema,
-  funnelAnswersSchema,
   generateIdempotencyKey,
   locationSchema,
   submissionRequestSchema,
+  validateFunnelAnswers,
   type ContactPreference,
   type MandateSituation,
   type PropertyType,
@@ -160,6 +160,10 @@ export function useAnalyseMachine(): AnalyseMachine {
   // Jeton Turnstile courant. Conservé en ref (jamais persisté, jamais dans le
   // brouillon sessionStorage) : le jeton est éphémère et à usage unique.
   const turnstileTokenRef = useRef<string | null>(null);
+  // Verrou SYNCHRONE anti-double-envoi (double-clic rapide, réentrance). Un ref
+  // est mis à jour immédiatement, contrairement à `status` (asynchrone) qui, sur
+  // deux clics quasi simultanés, reste encore « idle » au second clic.
+  const submitInFlightRef = useRef(false);
 
   // Hydratation depuis sessionStorage (reprise), une fois monté. La lecture est
   // synchrone ; l'application de l'état est différée d'un frame (hors corps
@@ -229,7 +233,17 @@ export function useAnalyseMachine(): AnalyseMachine {
 
   const submit = useCallback(
     async (finalDraft: DraftAnswers) => {
-      const answers = funnelAnswersSchema.safeParse({
+      // Anti-double-envoi : si une soumission est déjà en cours (double-clic
+      // rapide, réentrance), on ignore ce second appel. `submitMandateFunnelAction`
+      // n'est donc appelée qu'UNE fois par soumission.
+      if (submitInFlightRef.current) return;
+
+      // Validation robuste au honeypot rempli par autofill : si l'unique échec
+      // est le champ leurre `company` (rempli automatiquement par un navigateur
+      // ou un gestionnaire de mots de passe), il est neutralisé et la
+      // soumission se poursuit — un humain ne doit jamais être bloqué par le
+      // piège anti-robot (Turnstile reste la vraie garde, côté serveur).
+      const validation = validateFunnelAnswers({
         propertyType: finalDraft.propertyType,
         location: finalDraft.location,
         valueBand: finalDraft.valueBand,
@@ -239,32 +253,29 @@ export function useAnalyseMachine(): AnalyseMachine {
         company: finalDraft.company,
       });
 
-      if (!answers.success) {
+      if (!validation.ok) {
         // Cartographie précise : une erreur sous CHAQUE champ concerné (plutôt
         // qu'un message générique). Les chemins Zod (« contact.phoneRaw ») sont
         // alignés sur les clés lues par les champs de l'étape.
-        const fieldErrors: Errors = {};
-        for (const issue of answers.error.issues) {
-          const key = issue.path.join(".");
-          if (key && !(key in fieldErrors)) fieldErrors[key] = issue.message;
-        }
+        const fieldErrors: Errors = validation.fieldErrors;
         setErrors(fieldErrors);
         setStatus("error");
-        // Message global neutre uniquement si aucun champ précis n'a pu être ciblé.
+        // Aucune erreur silencieuse : on n'omet le message global QUE si au moins
+        // un champ visible sur cette étape (coordonnées) porte l'erreur. Sinon —
+        // erreur rattachée à une étape antérieure, invisible ici — on affiche un
+        // message global clair plutôt que rien.
+        const hasVisibleFieldError = Object.keys(fieldErrors).some((key) =>
+          key.startsWith("contact."),
+        );
         setErrorMessage(
-          Object.keys(fieldErrors).length > 0
-            ? null
-            : "Merci de vérifier les informations saisies.",
+          hasVisibleFieldError ? null : "Merci de vérifier les informations saisies.",
         );
         return;
       }
 
-      setStatus("submitting");
-      setErrorMessage(null);
-
       const attribution = readAttribution();
       const request = submissionRequestSchema.safeParse({
-        answers: answers.data,
+        answers: validation.data,
         context: {
           idempotencyKey: idempotencyKeyRef.current,
           originUrl: window.location.href,
@@ -282,6 +293,12 @@ export function useAnalyseMachine(): AnalyseMachine {
         setErrorMessage("Merci de vérifier les informations saisies.");
         return;
       }
+
+      // Verrou posé juste avant l'unique appel réseau ; libéré dans `finally`
+      // (l'utilisateur peut réessayer après un échec).
+      submitInFlightRef.current = true;
+      setStatus("submitting");
+      setErrorMessage(null);
 
       try {
         const result = await submitMandateFunnelAction({
@@ -315,6 +332,8 @@ export function useAnalyseMachine(): AnalyseMachine {
         setErrorMessage(
           "Un incident est survenu lors de la transmission. Vos réponses sont conservées : vous pouvez réessayer.",
         );
+      } finally {
+        submitInFlightRef.current = false;
       }
     },
     [],
@@ -328,35 +347,36 @@ export function useAnalyseMachine(): AnalyseMachine {
 
   const start = useCallback(() => goToStep(FIRST_STEP, 1), [goToStep]);
 
+  // Navigation SANS effet de bord dans un updater `setStep` : on lit `step` de la
+  // clôture (à jour via les dépendances). Sous React StrictMode (dev), les
+  // updaters d'état sont invoqués DEUX fois pour détecter les impuretés — placer
+  // `submit()` dans l'updater le déclencherait donc en double. Ici, `submit()`
+  // est appelé une seule fois, hors updater.
   const goBack = useCallback(() => {
     if (status === "submitting") return;
-    setStep((current) => {
-      if (current <= INTRO_STEP) return current;
-      setDirection(-1);
-      setErrors({});
-      setStatus((s) => (s === "error" ? "idle" : s));
-      setErrorMessage(null);
-      return current - 1;
-    });
-  }, [status]);
+    if (step <= INTRO_STEP) return;
+    setDirection(-1);
+    setErrors({});
+    setStatus((s) => (s === "error" ? "idle" : s));
+    setErrorMessage(null);
+    setStep(step - 1);
+  }, [status, step]);
 
   const goNext = useCallback(() => {
     if (status === "submitting") return;
-    setStep((current) => {
-      const stepErrors = validateStep(current, draft);
-      if (Object.keys(stepErrors).length > 0) {
-        setErrors(stepErrors);
-        return current;
-      }
-      setErrors({});
-      if (current === LAST_STEP) {
-        void submit(draft);
-        return current; // la confirmation est déclenchée par submit()
-      }
-      setDirection(1);
-      return current + 1;
-    });
-  }, [status, draft, submit]);
+    const stepErrors = validateStep(step, draft);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      return;
+    }
+    setErrors({});
+    if (step === LAST_STEP) {
+      void submit(draft); // la confirmation est déclenchée par submit()
+      return;
+    }
+    setDirection(1);
+    setStep(step + 1);
+  }, [status, step, draft, submit]);
 
   return useMemo(
     () => ({

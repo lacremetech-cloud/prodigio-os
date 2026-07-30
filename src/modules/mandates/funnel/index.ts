@@ -7,6 +7,7 @@
  * `./submit` (fichier « use server »).
  */
 export * from "./schema";
+export * from "./validate";
 export * from "./content";
 export * from "./normalize";
 export * from "./attribution";
