@@ -39,11 +39,26 @@ export function StepShell({
   wide = false,
 }: StepShellProps) {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // Amène le focus sur la question à l'arrivée sur l'étape (accessibilité).
     headingRef.current?.focus();
   }, []);
+
+  // Dès qu'un message d'erreur de soumission apparaît, on l'amène clairement à
+  // l'écran (défilement doux) et on y place le focus : aucune erreur ne doit
+  // rester silencieuse ou hors du champ de vision, surtout sur mobile où le
+  // bouton est en bas d'un long formulaire.
+  useEffect(() => {
+    if (!errorMessage) return;
+    const node = errorRef.current;
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Le focus vient après le défilement (évite un saut brusque).
+    const id = window.setTimeout(() => node.focus(), 120);
+    return () => window.clearTimeout(id);
+  }, [errorMessage]);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -78,12 +93,36 @@ export function StepShell({
         </div>
 
         {errorMessage ? (
-          <p
+          <div
+            ref={errorRef}
             role="alert"
-            className="mt-6 border-l-2 border-[color:var(--color-danger-on-dark)] pl-4 text-sm text-[color:var(--color-danger-on-dark)]"
+            aria-live="assertive"
+            tabIndex={-1}
+            className="animate-fade mt-8 flex items-start gap-3 rounded-[var(--radius-md)] border border-[color:var(--color-danger-on-dark)]/45 bg-[color:var(--color-danger-on-dark)]/10 p-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-danger-on-dark)] sm:p-5"
           >
-            {errorMessage}
-          </p>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="mt-0.5 size-5 shrink-0 text-[color:var(--color-danger-on-dark)]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8v5" />
+              <path d="M12 16.5h.01" />
+            </svg>
+            <div className="min-w-0">
+              <p className="font-signature text-xs uppercase tracking-[0.18em] text-[color:var(--color-danger-on-dark)]">
+                Envoi non abouti
+              </p>
+              <p className="mt-1.5 text-pretty text-sm leading-relaxed text-text-on-dark">
+                {errorMessage}
+              </p>
+            </div>
+          </div>
         ) : null}
 
         <div className="mt-10 flex items-center justify-between gap-4">

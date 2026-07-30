@@ -250,11 +250,15 @@ export function useAnalyseMachine(): AnalyseMachine {
         }
         setErrors(fieldErrors);
         setStatus("error");
-        // Message global neutre uniquement si aucun champ précis n'a pu être ciblé.
+        // Aucune erreur silencieuse : on n'omet le message global QUE si au moins
+        // un champ visible sur cette étape (coordonnées) porte l'erreur. Sinon —
+        // erreur rattachée à une étape antérieure, invisible ici — on affiche un
+        // message global clair plutôt que rien.
+        const hasVisibleFieldError = Object.keys(fieldErrors).some((key) =>
+          key.startsWith("contact."),
+        );
         setErrorMessage(
-          Object.keys(fieldErrors).length > 0
-            ? null
-            : "Merci de vérifier les informations saisies.",
+          hasVisibleFieldError ? null : "Merci de vérifier les informations saisies.",
         );
         return;
       }
