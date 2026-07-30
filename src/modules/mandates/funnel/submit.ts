@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import {
   env,
   isSupabaseConfigured,
@@ -9,6 +10,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json, SubmitMandateFunnelResult } from "@/lib/supabase/types";
 import { scoreFromAnswers } from "../scoring";
+import { notifyNewMandateSubmission, type NotifyInput } from "../notifications";
 import { analysis } from "./content";
 import {
   buildSubmissionPayload,
@@ -16,6 +18,20 @@ import {
   type SubmitResult,
 } from "./payload";
 import { TURNSTILE_ACTION, verifyTurnstileToken } from "./turnstile";
+
+/**
+ * Programme l'alerte Slack APRÈS la réponse au propriétaire (`after`), afin de
+ * ne jamais bloquer ni ralentir la soumission. L'orchestrateur ne lève jamais :
+ * une panne Slack reste sans effet sur le funnel. Repli best-effort si `after`
+ * n'est pas disponible dans le contexte courant.
+ */
+function scheduleMandateSlackAlert(input: NotifyInput): void {
+  try {
+    after(() => notifyNewMandateSubmission(input));
+  } catch {
+    void notifyNewMandateSubmission(input);
+  }
+}
 
 /**
  * Réponse neutre en cas d'échec / d'indisponibilité de la vérification anti-abus
@@ -105,9 +121,11 @@ export async function submitMandateFunnelAction(
 
   // Appréciation qualitative calculée CÔTÉ SERVEUR à partir des seules réponses
   // validées : le navigateur ne peut ni l'imposer ni la modifier (les scores
-  // numériques ne sont jamais renvoyés). La valeur stockée en base est, elle,
-  // recalculée par la fonction SQL (source de vérité) — voir la migration scoring.
-  const appreciation = scoreFromAnswers(request.answers).appreciation;
+  // numériques ne sont jamais renvoyés au client). La valeur stockée en base est,
+  // elle, recalculée par la fonction SQL (source de vérité) — voir la migration
+  // scoring. Le score complet sert aussi l'alerte Slack (serveur uniquement).
+  const score = scoreFromAnswers(request.answers);
+  const appreciation = score.appreciation;
 
   // 5) Dépôt atomique via la fonction contrôlée. Le payload NE contient PAS le
   //    jeton Turnstile (écarté à l'étape 1).
@@ -125,9 +143,24 @@ export async function submitMandateFunnelAction(
       return { ok: false, reason: "error", message: analysis.errors.generic };
     }
 
-    // La réponse est un accusé neutre ; on ne s'appuie sur aucune donnée renvoyée.
+    // La réponse porte l'accusé neutre `accepted` (+ `created`/`opportunity_id`
+    // destinés au SERVEUR uniquement). On ne renvoie JAMAIS ces derniers au client.
     const result = data as unknown as SubmitMandateFunnelResult | null;
     if (result && result.accepted === true) {
+      // Alerte Slack UNIQUEMENT pour une VRAIE nouvelle demande enregistrée
+      // (`created === true`) : jamais sur un rejeu / double-clic / même clé
+      // d'idempotence (`created === false`). Aucun doublon possible.
+      if (
+        result.created === true &&
+        typeof result.opportunity_id === "string" &&
+        result.opportunity_id.length > 0
+      ) {
+        scheduleMandateSlackAlert({
+          request,
+          score,
+          opportunityId: result.opportunity_id,
+        });
+      }
       return { ok: true, appreciation };
     }
     return { ok: false, reason: "error", message: analysis.errors.generic };
