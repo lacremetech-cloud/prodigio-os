@@ -1,17 +1,17 @@
 import Image from "next/image";
 import { CtaLink } from "@/components/ui/cta-link";
 import { media } from "@/lib/media";
-import { landing } from "@/modules/mandates/funnel";
+import { ANALYSE_ROUTE } from "@/lib/routes";
+import { SectionMarker } from "./section-marker";
+import { CTA_PRIMARY, MICROCOPY, selection } from "./copy";
 
 /**
- * Sélectivité + appel à l'action final. Sur fond photographique sombre, sans
- * rareté artificielle ni faux quota.
+ * Section 05 — Sélection & confidentialité. Fond photographique sombre avec
+ * overlay solide (texte toujours parfaitement lisible), et appel à l'action.
  */
 export function SelectivitySection() {
-  const { selectivity } = landing;
-
   return (
-    <section className="relative isolate overflow-hidden px-6 py-24 sm:px-10 sm:py-32 lg:px-16">
+    <section className="relative isolate overflow-hidden px-6 py-28 sm:px-10 sm:py-36 lg:px-16">
       <Image
         src={media.ambiance2.src}
         alt={media.ambiance2.alt}
@@ -25,19 +25,19 @@ export function SelectivitySection() {
         style={{ backgroundImage: "var(--overlay-immersive)" }}
       />
 
-      <div className="mx-auto max-w-3xl text-center">
-        <p className="eyebrow text-gold-soft">{selectivity.kicker}</p>
-        <h2 className="mx-auto mt-6 max-w-2xl text-balance text-3xl leading-[1.15] text-ivory sm:text-4xl md:text-[2.75rem]">
-          {selectivity.title}
+      <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        <SectionMarker index={selection.index} label={selection.kicker} tone="light" />
+        <h2 className="mx-auto mt-7 max-w-2xl text-balance text-3xl leading-[1.15] text-ivory sm:text-4xl md:text-[2.75rem]">
+          {selection.title}
         </h2>
-        <p className="mx-auto mt-6 max-w-xl text-pretty leading-relaxed text-ivory/85">
-          {selectivity.text}
+        <p className="mx-auto mt-7 max-w-xl text-pretty leading-relaxed text-ivory/85">
+          {selection.text}
         </p>
         <div className="mt-11 flex flex-col items-center gap-4">
-          <CtaLink href="/proprietaire/analyse" variant="contrast">
-            {selectivity.ctaPrimary}
+          <CtaLink href={ANALYSE_ROUTE} variant="contrast">
+            {CTA_PRIMARY}
           </CtaLink>
-          <p className="text-sm text-ivory/85">{selectivity.ctaMicro}</p>
+          <p className="text-sm text-ivory/80">{MICROCOPY}</p>
         </div>
       </div>
     </section>

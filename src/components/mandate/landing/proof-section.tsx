@@ -1,29 +1,25 @@
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "./section-heading";
-import { landing } from "@/modules/mandates/funnel";
+import { SectionMarker } from "./section-marker";
+import { preuve } from "./copy";
 
 /**
- * La preuve : un cas réel (chalet ~1,6 M€), chiffres exacts, sans promesse ni
- * garantie de résultat. Le disclaimer est explicite.
+ * Section 03 — La preuve. Un cas réel, chiffres exacts, présentés sans promesse.
+ * Grille très visuelle ; disclaimer explicite.
  */
 export function ProofSection() {
-  const { proof } = landing;
-
   return (
-    <section className="bg-ivory px-6 py-20 sm:px-10 sm:py-28 lg:px-16">
+    <section className="bg-ivory px-6 py-24 text-wood-black sm:px-10 sm:py-32 lg:px-16">
       <div className="mx-auto max-w-6xl">
-        <SectionHeading kicker={proof.kicker} title={proof.title} />
-        <p className="mt-6 max-w-2xl text-pretty leading-relaxed text-text-secondary">
-          {proof.context}
-        </p>
+        <Reveal>
+          <SectionMarker index={preuve.index} label={preuve.kicker} />
+          <h2 className="mt-7 max-w-2xl text-balance text-3xl leading-[1.14] sm:text-4xl lg:text-[2.75rem]">
+            {preuve.title}
+          </h2>
+        </Reveal>
 
         <dl className="mt-14 grid grid-cols-2 gap-px overflow-hidden border border-border bg-border md:grid-cols-5">
-          {proof.stats.map((stat, index) => (
-            <Reveal
-              key={stat.label}
-              className="bg-surface p-7 sm:p-8"
-              delayMs={index * 70}
-            >
+          {preuve.stats.map((stat, index) => (
+            <Reveal key={stat.label} className="bg-surface p-7 sm:p-8" delayMs={index * 70}>
               <dt className="font-display text-5xl text-wood-black sm:text-6xl">
                 {stat.value}
               </dt>
@@ -35,7 +31,7 @@ export function ProofSection() {
         </dl>
 
         <p className="mt-10 max-w-2xl text-sm leading-relaxed text-text-secondary">
-          {proof.disclaimer}
+          {preuve.disclaimer}
         </p>
       </div>
     </section>
