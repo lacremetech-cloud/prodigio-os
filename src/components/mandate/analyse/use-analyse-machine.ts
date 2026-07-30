@@ -160,6 +160,10 @@ export function useAnalyseMachine(): AnalyseMachine {
   // Jeton Turnstile courant. Conservé en ref (jamais persisté, jamais dans le
   // brouillon sessionStorage) : le jeton est éphémère et à usage unique.
   const turnstileTokenRef = useRef<string | null>(null);
+  // Verrou SYNCHRONE anti-double-envoi (double-clic rapide, réentrance). Un ref
+  // est mis à jour immédiatement, contrairement à `status` (asynchrone) qui, sur
+  // deux clics quasi simultanés, reste encore « idle » au second clic.
+  const submitInFlightRef = useRef(false);
 
   // Hydratation depuis sessionStorage (reprise), une fois monté. La lecture est
   // synchrone ; l'application de l'état est différée d'un frame (hors corps
@@ -229,6 +233,11 @@ export function useAnalyseMachine(): AnalyseMachine {
 
   const submit = useCallback(
     async (finalDraft: DraftAnswers) => {
+      // Anti-double-envoi : si une soumission est déjà en cours (double-clic
+      // rapide, réentrance), on ignore ce second appel. `submitMandateFunnelAction`
+      // n'est donc appelée qu'UNE fois par soumission.
+      if (submitInFlightRef.current) return;
+
       // Validation robuste au honeypot rempli par autofill : si l'unique échec
       // est le champ leurre `company` (rempli automatiquement par un navigateur
       // ou un gestionnaire de mots de passe), il est neutralisé et la
@@ -264,9 +273,6 @@ export function useAnalyseMachine(): AnalyseMachine {
         return;
       }
 
-      setStatus("submitting");
-      setErrorMessage(null);
-
       const attribution = readAttribution();
       const request = submissionRequestSchema.safeParse({
         answers: validation.data,
@@ -287,6 +293,12 @@ export function useAnalyseMachine(): AnalyseMachine {
         setErrorMessage("Merci de vérifier les informations saisies.");
         return;
       }
+
+      // Verrou posé juste avant l'unique appel réseau ; libéré dans `finally`
+      // (l'utilisateur peut réessayer après un échec).
+      submitInFlightRef.current = true;
+      setStatus("submitting");
+      setErrorMessage(null);
 
       try {
         const result = await submitMandateFunnelAction({
@@ -320,6 +332,8 @@ export function useAnalyseMachine(): AnalyseMachine {
         setErrorMessage(
           "Un incident est survenu lors de la transmission. Vos réponses sont conservées : vous pouvez réessayer.",
         );
+      } finally {
+        submitInFlightRef.current = false;
       }
     },
     [],
@@ -333,35 +347,36 @@ export function useAnalyseMachine(): AnalyseMachine {
 
   const start = useCallback(() => goToStep(FIRST_STEP, 1), [goToStep]);
 
+  // Navigation SANS effet de bord dans un updater `setStep` : on lit `step` de la
+  // clôture (à jour via les dépendances). Sous React StrictMode (dev), les
+  // updaters d'état sont invoqués DEUX fois pour détecter les impuretés — placer
+  // `submit()` dans l'updater le déclencherait donc en double. Ici, `submit()`
+  // est appelé une seule fois, hors updater.
   const goBack = useCallback(() => {
     if (status === "submitting") return;
-    setStep((current) => {
-      if (current <= INTRO_STEP) return current;
-      setDirection(-1);
-      setErrors({});
-      setStatus((s) => (s === "error" ? "idle" : s));
-      setErrorMessage(null);
-      return current - 1;
-    });
-  }, [status]);
+    if (step <= INTRO_STEP) return;
+    setDirection(-1);
+    setErrors({});
+    setStatus((s) => (s === "error" ? "idle" : s));
+    setErrorMessage(null);
+    setStep(step - 1);
+  }, [status, step]);
 
   const goNext = useCallback(() => {
     if (status === "submitting") return;
-    setStep((current) => {
-      const stepErrors = validateStep(current, draft);
-      if (Object.keys(stepErrors).length > 0) {
-        setErrors(stepErrors);
-        return current;
-      }
-      setErrors({});
-      if (current === LAST_STEP) {
-        void submit(draft);
-        return current; // la confirmation est déclenchée par submit()
-      }
-      setDirection(1);
-      return current + 1;
-    });
-  }, [status, draft, submit]);
+    const stepErrors = validateStep(step, draft);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      return;
+    }
+    setErrors({});
+    if (step === LAST_STEP) {
+      void submit(draft); // la confirmation est déclenchée par submit()
+      return;
+    }
+    setDirection(1);
+    setStep(step + 1);
+  }, [status, step, draft, submit]);
 
   return useMemo(
     () => ({
