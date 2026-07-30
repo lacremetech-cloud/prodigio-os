@@ -45,10 +45,11 @@ export function Hero() {
         {/* Accroche + titre */}
         <div className="mx-auto max-w-3xl text-center">
           <Reveal className="flex justify-center">
-            {/* Badge court « brillant » — un reflet balaie le cartouche. */}
-            <span className="badge-shine inline-flex items-center gap-2 rounded-full border border-[color:var(--color-gold)]/35 bg-[color:var(--color-gold)]/[0.08] px-4 py-1.5">
+            {/* Badge « brillant » — un reflet balaie le cartouche. Espacement
+                resserré sur mobile pour tenir sur une ligne. */}
+            <span className="badge-shine inline-flex max-w-full items-center gap-2 rounded-full border border-[color:var(--color-gold)]/35 bg-[color:var(--color-gold)]/[0.08] px-3.5 py-1.5 sm:px-4">
               <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-gold-soft" />
-              <span className="font-signature text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-gold-soft">
+              <span className="whitespace-nowrap font-signature text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-gold-soft min-[420px]:text-[0.66rem] min-[420px]:tracking-[0.16em] sm:text-[0.72rem] sm:tracking-[0.2em]">
                 {hero.badge}
               </span>
             </span>

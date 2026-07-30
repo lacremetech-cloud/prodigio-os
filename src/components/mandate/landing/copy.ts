@@ -20,7 +20,7 @@ export const marqueeItems = [
 export const hero = {
   brand: "PRODIGIO",
   tagline: "Immobilier d'exception",
-  badge: "Système avancé",
+  badge: "Système avancé pour bien d'exception",
   titleLine1: "Votre propriété mérite",
   titleLine2: "plus qu'une annonce.",
   subtitle:
