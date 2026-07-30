@@ -56,8 +56,31 @@ export function Hero() {
           </Reveal>
         </div>
 
+        {/* Annotation manuscrite pointant la VSL. */}
+        <Reveal delayMs={180} className="mx-auto mt-7 flex w-full max-w-4xl justify-center sm:mt-9 sm:justify-end sm:pr-6">
+          <span className="flex items-end gap-2 text-gold-soft">
+            <span className="font-display text-lg italic leading-tight sm:text-xl">
+              {hero.vslNote}
+            </span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 48 44"
+              className="h-8 w-9 shrink-0 -scale-x-100"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {/* Flèche courbe pointant vers le bas (la vidéo). */}
+              <path d="M6 6c10 4 18 14 20 30" />
+              <path d="M16 30l10 8 4-11" />
+            </svg>
+          </span>
+        </Reveal>
+
         {/* Écrin VSL — pièce maîtresse (grandit légèrement au défilement) */}
-        <Reveal variant="scale" delayMs={220} className="mx-auto mt-8 w-full max-w-4xl sm:mt-10">
+        <Reveal variant="scale" delayMs={240} className="mx-auto mt-3 w-full max-w-4xl sm:mt-4">
           <ScrollScale to={1.1}>
             <HeroVsl />
           </ScrollScale>

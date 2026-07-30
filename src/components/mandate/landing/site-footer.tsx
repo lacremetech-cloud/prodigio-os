@@ -1,3 +1,5 @@
+import { ProdigioLogo } from "@/components/ui/prodigio-logo";
+
 /**
  * Pied de page sobre. Positionnement honnête : le Système Prodigio pilote la
  * mise en marché ; les mandats sont portés par une agence habilitée distincte.
@@ -11,10 +13,8 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-8 border-b border-border-dark pb-10 md:flex-row md:items-start md:justify-between">
           <div className="max-w-md">
-            <p className="font-signature text-sm tracking-[0.28em] text-ivory">
-              PRODIGIO
-            </p>
-            <p className="mt-4 text-pretty text-sm leading-relaxed text-text-on-dark-muted">
+            <ProdigioLogo />
+            <p className="mt-5 text-pretty text-sm leading-relaxed text-text-on-dark-muted">
               Le Système Prodigio pilote la mise en marché de propriétés
               d&apos;exception. Les mandats immobiliers sont portés par une agence
               immobilière habilitée, distincte du Système Prodigio.

@@ -42,7 +42,7 @@ export function LandingCta({
 }: LandingCtaProps) {
   return (
     <Link
-      className={`cta-shine group relative inline-flex items-center justify-center gap-3 font-medium tracking-[0.01em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${sizes[size]} ${tones[tone]} ${className}`}
+      className={`cta-shine group relative inline-flex items-center justify-center gap-3 font-medium tracking-[0.01em] transition-[transform,background-color,border-color,color,box-shadow] duration-200 will-change-transform hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-12px_rgba(0,0,0,0.55)] active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${sizes[size]} ${tones[tone]} ${className}`}
       {...props}
     >
       <span>{children}</span>

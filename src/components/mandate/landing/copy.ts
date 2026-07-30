@@ -6,6 +6,7 @@
 
 export const CTA_PRIMARY = "Tester l'éligibilité de ma propriété";
 export const CTA_NAV = "Tester mon éligibilité";
+export const CTA_NAV_SHORT = "Tester";
 export const MICROCOPY = "Analyse confidentielle — environ 1 minute";
 export const CTA_SUB = "1 minute · Confidentiel · Sans engagement";
 
@@ -28,6 +29,7 @@ export const hero = {
     "déploie une stratégie active pour aller chercher ses futurs acquéreurs, en " +
     "France comme à l'étranger.",
   scrollCue: "Découvrir le système",
+  vslNote: "En moins de 5 min, on vous explique tout.",
 } as const;
 
 /** Moment signature — la phrase que le client aime. */

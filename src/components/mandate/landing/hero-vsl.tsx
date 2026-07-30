@@ -32,6 +32,7 @@ export function shouldShowPlayFallback(status: VslStatus): boolean {
 
 interface YTPlayer {
   playVideo: () => void;
+  pauseVideo: () => void;
   mute: () => void;
   unMute: () => void;
   setVolume: (v: number) => void;
@@ -40,7 +41,7 @@ interface YTPlayer {
 }
 interface YTNamespace {
   Player: new (el: Element, opts: { events?: Record<string, (e: unknown) => void> }) => YTPlayer;
-  PlayerState: { PLAYING: number };
+  PlayerState: { PLAYING: number; PAUSED: number };
 }
 declare global {
   interface Window {
@@ -74,6 +75,7 @@ export function HeroVsl() {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [status, setStatus] = useState<VslStatus>("idle");
+  const [paused, setPaused] = useState(false);
   const [src, setSrc] = useState(() =>
     buildVslEmbedUrl(VSL_YOUTUBE_ID, { mute: true, autoplay: true, controls: false }),
   );
@@ -95,7 +97,10 @@ export function HeroVsl() {
             onStateChange: (e: unknown) => {
               const data = (e as { data: number }).data;
               if (data === YT.PlayerState.PLAYING) {
+                setPaused(false);
                 setStatus((s) => (s === "sound" ? "sound" : "playing"));
+              } else if (data === YT.PlayerState.PAUSED) {
+                setPaused(true);
               }
             },
             onError: () => setStatus((s) => (s === "sound" ? s : "blocked")),
@@ -132,6 +137,19 @@ export function HeroVsl() {
   function muteSound() {
     playerRef.current?.mute?.();
     setStatus("playing");
+  }
+
+  /** Lecture / pause — contrôle indispensable pour interrompre le film. */
+  function togglePlay() {
+    const player = playerRef.current;
+    if (!player) return;
+    if (paused) {
+      player.playVideo();
+      setPaused(false);
+    } else {
+      player.pauseVideo();
+      setPaused(true);
+    }
   }
 
   /** Relance depuis le début (avec le son actif). */
@@ -180,8 +198,11 @@ export function HeroVsl() {
         }}
       />
 
-      {/* Repères cinématographiques discrets. */}
-      <div className="pointer-events-none absolute inset-0 z-20">
+      {/* Repères cinématographiques discrets — estompés dès que la lecture démarre
+          (laissent la place aux vrais contrôles). */}
+      <div
+        className={`pointer-events-none absolute inset-0 z-20 transition-opacity duration-500 ${started ? "opacity-0" : "opacity-100"}`}
+      >
         <span className="absolute left-4 top-4 hidden font-signature text-[0.62rem] uppercase tracking-[0.28em] text-ivory/70 sm:block">
           Scene 01 · Film de présentation
         </span>
@@ -192,6 +213,29 @@ export function HeroVsl() {
           00:00 — VSL
         </span>
       </div>
+
+      {/* Contrôle Lecture / Pause — toujours accessible une fois la vidéo lancée. */}
+      {started ? (
+        <div className="absolute bottom-4 left-4 z-30">
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={paused ? "Lire la vidéo" : "Mettre en pause"}
+            className="inline-flex size-10 items-center justify-center border border-ivory/40 bg-onyx/50 text-ivory backdrop-blur-sm transition-colors hover:border-ivory hover:bg-onyx/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+          >
+            {paused ? (
+              <svg viewBox="0 0 24 24" className="ml-0.5 size-4" fill="currentColor" aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden="true">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+              </svg>
+            )}
+          </button>
+        </div>
+      ) : null}
 
       {/* Bouton « Activer le son » (lecture muette en cours). */}
       {shouldShowSoundButton(status) ? (

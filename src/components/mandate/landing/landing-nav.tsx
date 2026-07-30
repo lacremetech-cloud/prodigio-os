@@ -1,30 +1,27 @@
-import Link from "next/link";
 import { LandingCta } from "@/components/ui/landing-cta";
+import { ProdigioLogo } from "@/components/ui/prodigio-logo";
 import { ANALYSE_ROUTE } from "@/lib/routes";
-import { hero, CTA_NAV } from "./copy";
+import { hero, CTA_NAV, CTA_NAV_SHORT } from "./copy";
 
 /**
- * Navigation très discrète en surimpression sur la hero sombre : signature
- * Prodigio à gauche, CTA d'éligibilité à droite (bouton net, reflet au survol).
+ * Navigation très discrète en surimpression sur la hero sombre : logo Prodigio à
+ * gauche, CTA d'éligibilité à droite. Le CTA est **compact sur mobile** (libellé
+ * court, sans le monogramme superflu) pour ne pas encombrer l'écran ; il retrouve
+ * sa taille et son libellé complet dès `sm`.
  */
 export function LandingNav() {
   return (
-    <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-6 pt-6 sm:px-10 sm:pt-8 lg:px-16">
-      <Link href="/proprietaire" className="group flex flex-col leading-none">
-        <span className="font-signature text-sm font-semibold tracking-[0.3em] text-ivory">
-          {hero.brand}
-        </span>
-        <span className="mt-1 font-signature text-[0.62rem] uppercase tracking-[0.28em] text-ivory/70">
-          {hero.tagline}
-        </span>
-      </Link>
+    <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-5 pt-5 sm:px-10 sm:pt-8 lg:px-16">
+      <ProdigioLogo tagline={hero.tagline} />
       <LandingCta
         href={ANALYSE_ROUTE}
         tone="ghost-dark"
         size="lg"
-        className="!min-h-[2.9rem] !px-6 !py-3 text-xs sm:text-sm"
+        className="!min-h-[2.5rem] !gap-1.5 !px-3.5 !py-2 text-[0.72rem] tracking-normal sm:!min-h-[2.9rem] sm:!gap-3 sm:!px-6 sm:!py-3 sm:text-sm"
       >
-        {CTA_NAV}
+        {/* Libellé court sur mobile, complet à partir de sm. */}
+        <span className="sm:hidden">{CTA_NAV_SHORT}</span>
+        <span className="hidden sm:inline">{CTA_NAV}</span>
       </LandingCta>
     </header>
   );
