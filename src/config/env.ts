@@ -71,6 +71,32 @@ const envSchema = z.object({
   // échouer le build sur une valeur inattendue : la forme https est contrôlée à
   // l'envoi (voir `isSlackConfigured`).
   SLACK_MANDATES_WEBHOOK_URL: z.string().min(1).optional(),
+
+  // --- Google Calendar (planification des rendez-vous d'estimation) ---
+  // Identifiants OAuth du projet Google Cloud. Utilisés EXCLUSIVEMENT côté
+  // serveur (construction de l'URL de consentement, échange du code, rafraîchi-
+  // ssement et révocation des jetons). STRICTEMENT serveur :
+  //   - JAMAIS préfixés `NEXT_PUBLIC_` (jamais inclus dans le bundle navigateur) ;
+  //   - JAMAIS renvoyés au client, JAMAIS journalisés.
+  // Le client_id n'est pas un secret au sens strict, mais reste côté serveur par
+  // cohérence (le navigateur n'en a jamais besoin : la redirection est amorcée
+  // par un Route Handler). Toutes optionnelles : sans elles, la connexion
+  // Google Calendar est simplement « non configurée » (voir
+  // `isGoogleCalendarConfigured`) et l'UI l'indique proprement.
+  GOOGLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
+  // URI de redirection OAuth. Optionnelle : dérivée de `canonicalSiteUrl()` +
+  // `/api/calendar/google/callback` lorsqu'elle est absente. À déclarer telle
+  // quelle dans la console Google Cloud (« Authorized redirect URIs »).
+  GOOGLE_OAUTH_REDIRECT_URI: z.url().optional(),
+
+  // Clé de CHIFFREMENT au repos des jetons Google (access + refresh). 32 octets
+  // encodés en base64 (openssl rand -base64 32). STRICTEMENT serveur :
+  //   - JAMAIS préfixée `NEXT_PUBLIC_` ; JAMAIS renvoyée au client ; JAMAIS journalisée.
+  // Sans elle, AUCUN jeton ne peut être stocké ni déchiffré : la connexion
+  // Google Calendar est désactivée proprement (jamais de jeton en clair). Voir
+  // `isCalendarEncryptionConfigured` et `src/modules/calendar/google/crypto.ts`.
+  CALENDAR_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -230,6 +256,64 @@ export function canonicalSiteUrl(
   source: Pick<Env, "NEXT_PUBLIC_SITE_URL" | "NODE_ENV"> = env,
 ): string {
   return mandateCrmBaseUrl(source);
+}
+
+/**
+ * URI de redirection OAuth Google effective : valeur explicite si fournie, sinon
+ * dérivée du domaine canonique + `/api/calendar/google/callback`. À déclarer à
+ * l'identique dans la console Google Cloud. Ne lit aucun secret.
+ */
+export function googleOAuthRedirectUri(
+  source: Pick<
+    Env,
+    "GOOGLE_OAUTH_REDIRECT_URI" | "NEXT_PUBLIC_SITE_URL" | "NODE_ENV"
+  > = env,
+): string {
+  const explicit = source.GOOGLE_OAUTH_REDIRECT_URI;
+  if (typeof explicit === "string" && /^https?:\/\/\S+$/i.test(explicit.trim())) {
+    return explicit.trim();
+  }
+  return `${canonicalSiteUrl(source)}/api/calendar/google/callback`;
+}
+
+/**
+ * Indique si l'intégration Google Calendar est configurée : identifiants OAuth
+ * (client id + secret) **et** clé de chiffrement des jetons présents. Ne révèle
+ * jamais les valeurs — ne lit qu'une présence. Sans cela, la connexion Google
+ * Calendar reste « non configurée » (aucun jeton stocké, aucun appel OAuth).
+ */
+export function isGoogleCalendarConfigured(
+  source: Pick<
+    Env,
+    | "GOOGLE_OAUTH_CLIENT_ID"
+    | "GOOGLE_OAUTH_CLIENT_SECRET"
+    | "CALENDAR_TOKEN_ENCRYPTION_KEY"
+  > = env,
+): boolean {
+  return (
+    typeof source.GOOGLE_OAUTH_CLIENT_ID === "string" &&
+    source.GOOGLE_OAUTH_CLIENT_ID.length > 0 &&
+    typeof source.GOOGLE_OAUTH_CLIENT_SECRET === "string" &&
+    source.GOOGLE_OAUTH_CLIENT_SECRET.length > 0 &&
+    isCalendarEncryptionConfigured(source)
+  );
+}
+
+/**
+ * Indique si la clé de chiffrement des jetons est présente et de longueur
+ * valide (32 octets une fois décodée en base64). Ne révèle jamais la valeur.
+ * Une clé mal dimensionnée est traitée comme absente (aucun chiffrement à vide).
+ */
+export function isCalendarEncryptionConfigured(
+  source: Pick<Env, "CALENDAR_TOKEN_ENCRYPTION_KEY"> = env,
+): boolean {
+  const key = source.CALENDAR_TOKEN_ENCRYPTION_KEY;
+  if (typeof key !== "string" || key.length === 0) return false;
+  try {
+    return Buffer.from(key, "base64").length === 32;
+  } catch {
+    return false;
+  }
 }
 
 /**

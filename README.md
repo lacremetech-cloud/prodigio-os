@@ -141,6 +141,12 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
 - [docs/11-PUBLIC-HOME.md](docs/11-PUBLIC-HOME.md) — Page d'accueil publique
   (`/`) : rôle, structure, réutilisation du design system, attribution, SEO,
   et note sur le futur lanceur privé dans `/crm`.
+- [docs/12-USERS-AND-ACCESS.md](docs/12-USERS-AND-ACCESS.md) — Utilisateurs,
+  invitations, rôles et accès V1.
+- [docs/13-CALENDAR-ESTIMATIONS.md](docs/13-CALENDAR-ESTIMATIONS.md) —
+  Planification des estimations & Google Calendar V1 : OAuth par utilisateur,
+  chiffrement des jetons, disponibilités, cohérence à deux enregistrements,
+  matrice des droits, recette réelle.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

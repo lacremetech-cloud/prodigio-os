@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   ASSIGNABLE_ROLES,
+  canConnectCalendar,
   canDecideSegment,
+  canManageAppointments,
   canManageMembers,
   canOperate,
+  canPlanEstimation,
   canViewAudit,
   canViewContactDetails,
   hasCrmAccess,
@@ -69,6 +72,28 @@ describe("rôles CRM", () => {
     expect(isAssignableRole("partenaire_lecture")).toBe(false);
     expect(isAssignableRole("role_inconnu")).toBe(false);
     expect(ASSIGNABLE_ROLES).not.toContain("partenaire_lecture");
+  });
+
+  it("canConnectCalendar : admin / manager / agent (pas le setter)", () => {
+    expect(canConnectCalendar(["administrateur"])).toBe(true);
+    expect(canConnectCalendar(["manager"])).toBe(true);
+    expect(canConnectCalendar(["agent_immobilier"])).toBe(true);
+    expect(canConnectCalendar(["setter"])).toBe(false);
+    expect(canConnectCalendar(["partenaire_lecture"])).toBe(false);
+  });
+
+  it("canPlanEstimation : admin / manager / setter", () => {
+    expect(canPlanEstimation(["setter"])).toBe(true);
+    expect(canPlanEstimation(["manager"])).toBe(true);
+    expect(canPlanEstimation(["agent_immobilier"])).toBe(false);
+    expect(canPlanEstimation(["partenaire_lecture"])).toBe(false);
+  });
+
+  it("canManageAppointments : admin / manager uniquement", () => {
+    expect(canManageAppointments(["administrateur"])).toBe(true);
+    expect(canManageAppointments(["manager"])).toBe(true);
+    expect(canManageAppointments(["setter"])).toBe(false);
+    expect(canManageAppointments(["agent_immobilier"])).toBe(false);
   });
 
   it("roleHome : accès → /crm, sans accès → /acces (jamais de boucle /connexion)", () => {

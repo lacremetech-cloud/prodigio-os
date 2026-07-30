@@ -99,6 +99,21 @@ export default async function SettingsPage() {
         </section>
       ) : null}
 
+      <section className="crm-panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
+            Google Calendar
+          </h2>
+          <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
+            Connectez votre agenda pour planifier les estimations à partir de vos disponibilités
+            réelles. Les jetons restent chiffrés côté serveur.
+          </p>
+        </div>
+        <Link href="/crm/parametres/calendrier" className="crm-btn shrink-0">
+          Gérer mon calendrier
+        </Link>
+      </section>
+
       <section className="crm-panel p-5">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
           Sécurité

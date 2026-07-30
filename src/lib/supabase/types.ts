@@ -228,6 +228,84 @@ export type MyPendingInvitationRow = {
   status: "en_attente" | "acceptee" | "revoquee" | "expiree";
 };
 
+// --- Planification des estimations & Google Calendar (V1) --------------------
+
+export type CalendarConnectionRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  user_id: string;
+  provider: "google";
+  google_account_email: string | null;
+  google_calendar_id: string | null;
+  google_calendar_summary: string | null;
+  scope: string | null;
+  status: "connecte" | "deconnecte" | "erreur" | "revoque";
+  last_error: string | null;
+  connected_at: string | null;
+  last_synced_at: string | null;
+  metadata: Json | null;
+};
+
+/**
+ * Jetons Google CHIFFRÉS au repos. Lue / écrite UNIQUEMENT côté serveur via le
+ * client admin (rôle de service) — jamais exposée au navigateur ni sous RLS.
+ */
+export type CalendarCredentialRow = {
+  connection_id: string;
+  updated_at: string;
+  access_token_encrypted: string | null;
+  refresh_token_encrypted: string | null;
+  token_type: string | null;
+  scope: string | null;
+  access_token_expires_at: string | null;
+};
+
+export type EstimationAppointmentStatus =
+  | "planifie"
+  | "confirme"
+  | "realise"
+  | "annule"
+  | "absent"
+  | "a_replanifier";
+
+export type EstimationAppointmentRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  opportunity_id: string;
+  agent_user_id: string;
+  created_by_user_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  address: string | null;
+  owner_contact_id: string | null;
+  owner_email: string | null;
+  owner_name: string | null;
+  status: EstimationAppointmentStatus;
+  google_calendar_id: string | null;
+  google_event_id: string | null;
+  google_html_link: string | null;
+  idempotency_key: string;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  internal_notes: string | null;
+  metadata: Json | null;
+};
+
+/** Ligne renvoyée par `calendar_list_bookable_agents`. */
+export type BookableAgentRow = {
+  user_id: string;
+  email: string | null;
+  role: string;
+  calendar_id: string | null;
+  calendar_summary: string | null;
+  status: string;
+};
+
 export type OpportunityAssignmentRow = {
   id: string;
   created_at: string;
@@ -324,6 +402,9 @@ export interface Database {
       tasks: WithMutations<TaskRow>;
       audit_events: WithMutations<AuditEventRow>;
       organization_invitations: WithMutations<OrganizationInvitationRow>;
+      calendar_connections: WithMutations<CalendarConnectionRow>;
+      calendar_credentials: WithMutations<CalendarCredentialRow>;
+      estimation_appointments: WithMutations<EstimationAppointmentRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -445,6 +526,75 @@ export interface Database {
       crm_list_invitations: {
         Args: Record<string, never>;
         Returns: InvitationListRow[];
+      };
+      // --- V1 planification des estimations & Google Calendar ---
+      calendar_can_plan: { Args: Record<string, never>; Returns: boolean };
+      calendar_can_connect: { Args: Record<string, never>; Returns: boolean };
+      calendar_can_manage: { Args: Record<string, never>; Returns: boolean };
+      crm_current_operator_org: { Args: Record<string, never>; Returns: string | null };
+      calendar_upsert_connection: {
+        Args: {
+          p_account_email: string;
+          p_scope?: string | null;
+          p_calendar_id?: string | null;
+          p_calendar_summary?: string | null;
+        };
+        Returns: Json;
+      };
+      calendar_select_estimation_calendar: {
+        Args: { p_calendar_id: string; p_calendar_summary?: string | null };
+        Returns: Json;
+      };
+      calendar_mark_connection_state: {
+        Args: { p_user_id: string; p_status: string; p_error?: string | null };
+        Returns: Json;
+      };
+      calendar_disconnect: { Args: Record<string, never>; Returns: Json };
+      calendar_list_bookable_agents: {
+        Args: Record<string, never>;
+        Returns: BookableAgentRow[];
+      };
+      crm_reserve_estimation_appointment: {
+        Args: {
+          p_idempotency_key: string;
+          p_opportunity_id: string;
+          p_agent_user_id: string;
+          p_starts_at: string;
+          p_ends_at: string;
+          p_timezone?: string;
+          p_address?: string | null;
+          p_owner_contact_id?: string | null;
+          p_owner_email?: string | null;
+          p_owner_name?: string | null;
+          p_calendar_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_confirm_estimation_appointment: {
+        Args: {
+          p_id: string;
+          p_google_event_id: string;
+          p_google_calendar_id?: string | null;
+          p_html_link?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_discard_pending_appointment: {
+        Args: { p_id: string };
+        Returns: Json;
+      };
+      crm_reschedule_estimation_appointment: {
+        Args: { p_id: string; p_starts_at: string; p_ends_at: string };
+        Returns: Json;
+      };
+      crm_cancel_estimation_appointment: {
+        Args: { p_id: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      crm_set_appointment_result: {
+        Args: { p_id: string; p_status: string; p_notes?: string | null };
+        Returns: Json;
       };
     };
     Enums: Record<string, never>;

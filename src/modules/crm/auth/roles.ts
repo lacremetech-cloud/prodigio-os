@@ -111,6 +111,32 @@ export function canManageMembers(roles: readonly string[]): boolean {
   return hasAnyRole(roles, ["administrateur"]);
 }
 
+/**
+ * Peut connecter son propre calendrier Google (administrateur / manager /
+ * agent_immobilier). Le setter n'a pas besoin de connecter le sien : il consulte
+ * les disponibilités des agents. Miroir UI de `calendar_can_connect()` en base.
+ */
+export function canConnectCalendar(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur", "manager", "agent_immobilier"]);
+}
+
+/**
+ * Peut planifier un rendez-vous d'estimation (administrateur / manager / setter).
+ * Miroir UI de `calendar_can_plan()` en base — la RLS et les fonctions SECURITY
+ * DEFINER restent l'autorité.
+ */
+export function canPlanEstimation(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur", "manager", "setter"]);
+}
+
+/**
+ * Peut modifier / reporter / annuler un rendez-vous (administrateur / manager).
+ * Miroir UI de `calendar_can_manage()` en base.
+ */
+export function canManageAppointments(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur", "manager"]);
+}
+
 /** Le rôle « le plus fort » détenu, pour l'affichage (ordre décroissant). */
 export function primaryRole(roles: readonly string[]): CrmRole | null {
   for (const r of CRM_ROLES) {

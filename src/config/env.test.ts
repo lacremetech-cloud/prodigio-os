@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   canonicalSiteUrl,
+  googleOAuthRedirectUri,
+  isCalendarEncryptionConfigured,
+  isGoogleCalendarConfigured,
   isSupabaseAdminConfigured,
   isTurnstileConfigured,
   isTurnstileProductionSafe,
@@ -142,6 +145,66 @@ describe("Supabase Admin (invitations)", () => {
         SUPABASE_SECRET_KEY: "sb_secret_x",
       } as never),
     ).toBe(true);
+  });
+});
+
+describe("Google Calendar (planification des estimations)", () => {
+  // 32 octets encodés base64 (openssl rand -base64 32) — factice, pour les tests.
+  const KEY32 = Buffer.alloc(32, 7).toString("base64");
+
+  it("aucune variable Google n'est préfixée NEXT_PUBLIC_ (jamais dans le bundle client)", () => {
+    const shape = parseEnv({
+      GOOGLE_OAUTH_CLIENT_ID: "id",
+      GOOGLE_OAUTH_CLIENT_SECRET: "secret",
+      CALENDAR_TOKEN_ENCRYPTION_KEY: KEY32,
+    }) as Record<string, unknown>;
+    expect("NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID" in shape).toBe(false);
+    expect("NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_SECRET" in shape).toBe(false);
+    expect("NEXT_PUBLIC_CALENDAR_TOKEN_ENCRYPTION_KEY" in shape).toBe(false);
+    expect(shape.GOOGLE_OAUTH_CLIENT_SECRET).toBe("secret");
+  });
+
+  it("isCalendarEncryptionConfigured exige une clé de 32 octets (base64)", () => {
+    expect(isCalendarEncryptionConfigured({} as never)).toBe(false);
+    expect(
+      isCalendarEncryptionConfigured({ CALENDAR_TOKEN_ENCRYPTION_KEY: "trop-court" }),
+    ).toBe(false);
+    expect(
+      isCalendarEncryptionConfigured({
+        CALENDAR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(16, 1).toString("base64"),
+      }),
+    ).toBe(false);
+    expect(
+      isCalendarEncryptionConfigured({ CALENDAR_TOKEN_ENCRYPTION_KEY: KEY32 }),
+    ).toBe(true);
+  });
+
+  it("isGoogleCalendarConfigured exige client id, secret ET clé de chiffrement", () => {
+    expect(isGoogleCalendarConfigured({} as never)).toBe(false);
+    expect(
+      isGoogleCalendarConfigured({
+        GOOGLE_OAUTH_CLIENT_ID: "id",
+        GOOGLE_OAUTH_CLIENT_SECRET: "secret",
+      } as never),
+    ).toBe(false);
+    expect(
+      isGoogleCalendarConfigured({
+        GOOGLE_OAUTH_CLIENT_ID: "id",
+        GOOGLE_OAUTH_CLIENT_SECRET: "secret",
+        CALENDAR_TOKEN_ENCRYPTION_KEY: KEY32,
+      }),
+    ).toBe(true);
+  });
+
+  it("googleOAuthRedirectUri : valeur explicite prioritaire, sinon dérivée du domaine", () => {
+    expect(
+      googleOAuthRedirectUri({
+        GOOGLE_OAUTH_REDIRECT_URI: "https://x.fr/api/calendar/google/callback",
+      } as never),
+    ).toBe("https://x.fr/api/calendar/google/callback");
+    expect(
+      googleOAuthRedirectUri({ NODE_ENV: "production" } as never),
+    ).toBe("https://go.prodigio.fr/api/calendar/google/callback");
   });
 });
 
