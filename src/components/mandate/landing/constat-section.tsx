@@ -1,22 +1,52 @@
 import Image from "next/image";
-import { BeforeAfterSlider } from "@/components/ui/before-after-slider";
 import { Reveal } from "@/components/ui/reveal";
-import { media } from "@/lib/media";
+import { media, type MediaAsset } from "@/lib/media";
 import { SectionMarker } from "./section-marker";
 import { constat, ecrin } from "./copy";
 
-const galleryMedia = {
-  ecrinIdentite: media.ecrinIdentite,
-  ecrinBrochureCover: media.ecrinBrochureCover,
-  ecrinPublicites: media.ecrinPublicites,
-} as const;
+/** Cadre d'illustration (image complète, jamais recadrée : on lit tous les détails). */
+function Shot({
+  asset,
+  caption,
+  tone = "light",
+}: {
+  asset: MediaAsset;
+  caption?: string;
+  tone?: "light" | "gold";
+}) {
+  return (
+    <figure className="overflow-hidden border border-border bg-surface shadow-[var(--shadow-md)]">
+      <Image
+        src={asset.src}
+        alt={asset.alt}
+        width={asset.width}
+        height={asset.height}
+        sizes="(max-width: 1024px) 100vw, 48vw"
+        className="h-auto w-full"
+      />
+      {caption ? (
+        <figcaption
+          className={`px-4 py-2.5 font-signature text-[0.64rem] uppercase tracking-[0.2em] ${
+            tone === "gold" ? "text-[color:var(--color-gold)]" : "text-text-secondary"
+          }`}
+        >
+          {caption}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
 
 /**
- * Section 01 — Le constat / L'écrin. Colonne éditoriale + **comparateur
- * interactif** (annonce de portail standard ↔ mise en marché Prodigio), puis une
- * galerie d'illustrations réelles (carte d'identité, brochure, publicités).
+ * Section 01 — Le constat / L'écrin. **Comparaison en deux parties** : à gauche,
+ * les fiches d'agences classiques (complètes : prix, descriptif, vignettes —
+ * marques neutralisées) montrant un format identique partout ; à droite, l'écrin
+ * Prodigio (site dédié, carte d'identité, brochure). Aucune image recadrée : on
+ * voit vraiment ce qui distingue les deux approches.
  */
 export function ConstatSection() {
+  const { captions } = ecrin.prodigio;
+
   return (
     <section className="bg-ivory px-6 py-24 text-wood-black sm:px-10 sm:py-32 lg:px-16">
       <div className="mx-auto max-w-6xl">
@@ -36,43 +66,43 @@ export function ConstatSection() {
           </Reveal>
         </div>
 
-        {/* Comparateur interactif */}
-        <Reveal variant="scale" delayMs={120} className="mt-12">
-          <BeforeAfterSlider
-            before={media.ecrinAnnonce}
-            after={media.ecrinProdigio}
-            beforeLabel={ecrin.beforeLabel}
-            afterLabel={ecrin.afterLabel}
-          />
-          <p className="mt-4 flex items-center justify-center gap-2 font-signature text-[0.7rem] uppercase tracking-[0.24em] text-text-secondary">
-            <span aria-hidden="true" className="text-gold">↔</span>
-            {ecrin.hint}
-          </p>
-        </Reveal>
+        <div className="mt-14 grid gap-10 lg:grid-cols-2 lg:gap-8">
+          {/* Partout ailleurs — fiches d'agences classiques */}
+          <Reveal variant="blur">
+            <p className="font-signature text-xs uppercase tracking-[0.28em] text-text-secondary">
+              {ecrin.classique.label}
+            </p>
+            <h3 className="mt-3 font-display text-2xl text-wood-black sm:text-3xl">
+              {ecrin.classique.title}
+            </h3>
+            <p className="mt-4 max-w-md text-pretty leading-relaxed text-text-secondary">
+              {ecrin.classique.text}
+            </p>
+            <div className="mt-7 space-y-5">
+              <Shot asset={media.ecrinAgence1} caption="Agence classique — fiche standard" />
+              <Shot asset={media.ecrinAgence2} caption="Autre agence — même présentation" />
+            </div>
+          </Reveal>
 
-        {/* Galerie d'illustrations réelles */}
-        <div className="mt-14 grid gap-5 sm:grid-cols-3">
-          {ecrin.gallery.map((item, i) => {
-            const asset = galleryMedia[item.key as keyof typeof galleryMedia];
-            return (
-              <Reveal key={item.key} variant="rise" delayMs={i * 90}>
-                <figure className="group overflow-hidden border border-border bg-surface shadow-[var(--shadow-md)]">
-                  <div className="relative aspect-[16/10] w-full overflow-hidden">
-                    <Image
-                      src={asset.src}
-                      alt={asset.alt}
-                      fill
-                      sizes="(max-width: 640px) 100vw, 33vw"
-                      className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                  <figcaption className="px-4 py-3 font-signature text-[0.68rem] uppercase tracking-[0.2em] text-text-secondary">
-                    {item.caption}
-                  </figcaption>
-                </figure>
-              </Reveal>
-            );
-          })}
+          {/* Avec Prodigio — écrin dédié */}
+          <Reveal variant="rise" delayMs={140}>
+            <p className="font-signature text-xs uppercase tracking-[0.28em] text-[color:var(--color-gold)]">
+              {ecrin.prodigio.label}
+            </p>
+            <h3 className="mt-3 font-display text-2xl text-wood-black sm:text-3xl">
+              {ecrin.prodigio.title}
+            </h3>
+            <p className="mt-4 max-w-md text-pretty leading-relaxed text-text-secondary">
+              {ecrin.prodigio.text}
+            </p>
+            <div className="mt-7 space-y-5">
+              <Shot asset={media.ecrinProdigio} caption={captions.ecrinProdigio} tone="gold" />
+              <div className="grid grid-cols-2 gap-5">
+                <Shot asset={media.ecrinIdentite} caption={captions.ecrinIdentite} tone="gold" />
+                <Shot asset={media.ecrinBrochureCover} caption={captions.ecrinBrochureCover} tone="gold" />
+              </div>
+            </div>
+          </Reveal>
         </div>
       </div>
     </section>
