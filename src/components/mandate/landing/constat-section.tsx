@@ -1,18 +1,26 @@
+import Image from "next/image";
+import { BeforeAfterSlider } from "@/components/ui/before-after-slider";
 import { Reveal } from "@/components/ui/reveal";
+import { media } from "@/lib/media";
 import { SectionMarker } from "./section-marker";
-import { constat } from "./copy";
+import { constat, ecrin } from "./copy";
+
+const galleryMedia = {
+  ecrinIdentite: media.ecrinIdentite,
+  ecrinBrochureCover: media.ecrinBrochureCover,
+  ecrinPublicites: media.ecrinPublicites,
+} as const;
 
 /**
- * Section 01 — Le constat (« Vos biens méritent un meilleur écrin »). Colonne
- * éditoriale + reconstitution volontairement générique d'une « annonce standard »
- * (animée) : elle montre comment un bien d'exception se retrouve présenté comme
- * n'importe quel autre.
+ * Section 01 — Le constat / L'écrin. Colonne éditoriale + **comparateur
+ * interactif** (annonce de portail standard ↔ mise en marché Prodigio), puis une
+ * galerie d'illustrations réelles (carte d'identité, brochure, publicités).
  */
 export function ConstatSection() {
   return (
     <section className="bg-ivory px-6 py-24 text-wood-black sm:px-10 sm:py-32 lg:px-16">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2 lg:gap-20">
-        <div>
+      <div className="mx-auto max-w-6xl">
+        <div className="max-w-2xl">
           <Reveal>
             <SectionMarker index={constat.index} label={constat.kicker} />
           </Reveal>
@@ -21,50 +29,51 @@ export function ConstatSection() {
               {constat.title}
             </h2>
           </Reveal>
-          <Reveal delayMs={200}>
-            <p className="mt-7 max-w-xl text-pretty text-lg leading-relaxed text-text-secondary">
+          <Reveal delayMs={180}>
+            <p className="mt-7 text-pretty text-lg leading-relaxed text-text-secondary">
               {constat.body}
             </p>
           </Reveal>
         </div>
 
-        {/* Reconstitution d'une annonce standard (générique à dessein). */}
-        <Reveal variant="scale" delayMs={140} className="lg:justify-self-end">
-          <figure className="w-full max-w-md rotate-[-1.2deg] border border-border bg-surface shadow-[var(--shadow-lg)] transition-transform duration-500 hover:rotate-0">
-            <div
-              aria-hidden="true"
-              className="flex aspect-[4/3] items-center justify-center bg-ivory-muted"
-            >
-              <span className="font-signature text-xs uppercase tracking-[0.28em] text-text-secondary">
-                Photographie
-              </span>
-            </div>
-            <figcaption className="p-6">
-              <div className="h-3 w-2/3 bg-ivory-muted" aria-hidden="true" />
-              <div className="mt-3 h-2.5 w-full bg-ivory-muted" aria-hidden="true" />
-              <div className="mt-2 h-2.5 w-5/6 bg-ivory-muted" aria-hidden="true" />
-              <ul className="mt-5 flex flex-wrap gap-2">
-                {constat.card.lines.map((line) => (
-                  <li
-                    key={line}
-                    className="border border-border px-3 py-1 text-xs text-text-secondary"
-                  >
-                    {line}
-                  </li>
-                ))}
-              </ul>
-              <div
-                aria-hidden="true"
-                className="mt-6 flex h-11 items-center justify-center border border-border-strong text-xs uppercase tracking-[0.2em] text-text-secondary"
-              >
-                Contacter l&apos;agence
-              </div>
-            </figcaption>
-          </figure>
-          <p className="mt-4 text-center font-signature text-[0.7rem] uppercase tracking-[0.28em] text-text-secondary">
-            {constat.card.label}
+        {/* Comparateur interactif */}
+        <Reveal variant="scale" delayMs={120} className="mt-12">
+          <BeforeAfterSlider
+            before={media.ecrinAnnonce}
+            after={media.ecrinProdigio}
+            beforeLabel={ecrin.beforeLabel}
+            afterLabel={ecrin.afterLabel}
+          />
+          <p className="mt-4 flex items-center justify-center gap-2 font-signature text-[0.7rem] uppercase tracking-[0.24em] text-text-secondary">
+            <span aria-hidden="true" className="text-gold">↔</span>
+            {ecrin.hint}
           </p>
         </Reveal>
+
+        {/* Galerie d'illustrations réelles */}
+        <div className="mt-14 grid gap-5 sm:grid-cols-3">
+          {ecrin.gallery.map((item, i) => {
+            const asset = galleryMedia[item.key as keyof typeof galleryMedia];
+            return (
+              <Reveal key={item.key} variant="rise" delayMs={i * 90}>
+                <figure className="group overflow-hidden border border-border bg-surface shadow-[var(--shadow-md)]">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden">
+                    <Image
+                      src={asset.src}
+                      alt={asset.alt}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 33vw"
+                      className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <figcaption className="px-4 py-3 font-signature text-[0.68rem] uppercase tracking-[0.2em] text-text-secondary">
+                    {item.caption}
+                  </figcaption>
+                </figure>
+              </Reveal>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

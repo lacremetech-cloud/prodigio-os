@@ -1,9 +1,11 @@
+import Image from "next/image";
 import { LandingCta } from "@/components/ui/landing-cta";
 import { Reveal } from "@/components/ui/reveal";
+import { media } from "@/lib/media";
 import { ANALYSE_ROUTE } from "@/lib/routes";
 import { HeroVsl } from "./hero-vsl";
 import { LandingNav } from "./landing-nav";
-import { CTA_PRIMARY, MICROCOPY, hero } from "./copy";
+import { CTA_PRIMARY, CTA_SUB, hero } from "./copy";
 
 /**
  * Hero cinématographique centrée sur la VSL. Entrée en cascade (titre, écrin,
@@ -13,14 +15,26 @@ import { CTA_PRIMARY, MICROCOPY, hero } from "./copy";
 export function Hero() {
   return (
     <section className="grain relative isolate flex min-h-dvh flex-col overflow-hidden bg-onyx text-ivory">
-      {/* Lueurs de lumière subtiles (aucune image chargée sous le texte). */}
+      {/* Fond « ambiant » : version floutée et assombrie de l'écrin, derrière tout
+          le contenu (impression de vidéo d'ambiance, sans coût d'un 2e lecteur). */}
+      <Image
+        src={media.vsl.src}
+        alt=""
+        aria-hidden="true"
+        fill
+        priority
+        sizes="100vw"
+        className="-z-20 scale-110 object-cover opacity-25 blur-2xl"
+      />
+      {/* Lueurs de lumière + assombrissement (lisibilité du texte). */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
           backgroundImage:
-            "radial-gradient(55% 45% at 50% 0%, rgba(203,180,136,0.12) 0%, rgba(12,12,14,0) 62%)," +
-            "radial-gradient(80% 60% at 50% 120%, rgba(154,123,69,0.12) 0%, rgba(12,12,14,0) 60%)",
+            "radial-gradient(55% 45% at 50% 0%, rgba(203,180,136,0.14) 0%, rgba(12,12,14,0) 62%)," +
+            "radial-gradient(80% 60% at 50% 120%, rgba(154,123,69,0.12) 0%, rgba(12,12,14,0) 60%)," +
+            "linear-gradient(180deg, rgba(12,12,14,0.7) 0%, rgba(12,12,14,0.55) 45%, rgba(12,12,14,0.85) 100%)",
         }}
       />
 
@@ -53,11 +67,16 @@ export function Hero() {
               {hero.subtitle}
             </p>
           </Reveal>
-          <Reveal delayMs={240} className="mt-8 flex flex-col items-center gap-3">
-            <LandingCta href={ANALYSE_ROUTE} tone="contrast" size="xl">
+          <Reveal delayMs={240} className="mt-8 flex w-full flex-col items-center gap-3">
+            <LandingCta
+              href={ANALYSE_ROUTE}
+              tone="contrast"
+              size="xl"
+              className="w-full max-w-xl sm:w-auto"
+            >
               {CTA_PRIMARY}
             </LandingCta>
-            <p className="text-sm text-ivory/70">{MICROCOPY}</p>
+            <p className="text-sm tracking-wide text-ivory/70">{CTA_SUB}</p>
           </Reveal>
         </div>
       </div>

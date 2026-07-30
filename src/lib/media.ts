@@ -82,6 +82,44 @@ export const media = {
     height: 672,
     alt: "Résidences contemporaines en bord d'eau, reflets sur un lac calme.",
   },
+
+  // --- Comparaison « écrin » (annonce standard ↔ mise en marché Prodigio) ------
+  ecrinAnnonce: {
+    src: "/images/ecrin/annonce-standard.webp",
+    width: 1600,
+    height: 544,
+    alt: "Annonce d'un portail immobilier standard : galerie de vignettes, grande photo et fiche technique.",
+  },
+  ecrinProdigio: {
+    src: "/images/ecrin/ecrin-prodigio.webp",
+    width: 1400,
+    height: 764,
+    alt: "Mise en marché Prodigio : page dédiée éditoriale plein écran pour un bien d'exception.",
+  },
+  ecrinIdentite: {
+    src: "/images/ecrin/carte-identite.webp",
+    width: 1400,
+    height: 764,
+    alt: "Carte d'identité éditoriale du bien conçue par Prodigio.",
+  },
+  ecrinBrochureCover: {
+    src: "/images/ecrin/brochure-couverture.webp",
+    width: 1400,
+    height: 764,
+    alt: "Couverture d'une brochure confidentielle Prodigio.",
+  },
+  ecrinBrochureInner: {
+    src: "/images/ecrin/brochure-interieur.webp",
+    width: 1400,
+    height: 764,
+    alt: "Pages intérieures d'une brochure confidentielle Prodigio.",
+  },
+  ecrinPublicites: {
+    src: "/images/ecrin/publicites.webp",
+    width: 1400,
+    height: 686,
+    alt: "Déclinaisons publicitaires d'un même bien, adaptées à différents profils d'acheteurs.",
+  },
 } as const satisfies Record<string, MediaAsset>;
 
 export type MediaKey = keyof typeof media;

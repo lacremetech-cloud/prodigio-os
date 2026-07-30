@@ -7,6 +7,7 @@
 export const CTA_PRIMARY = "Tester l'éligibilité de ma propriété";
 export const CTA_NAV = "Tester mon éligibilité";
 export const MICROCOPY = "Analyse confidentielle — environ 1 minute";
+export const CTA_SUB = "1 minute · Confidentiel · Sans engagement";
 
 export const marqueeItems = [
   "Immobilier d'exception",
@@ -52,6 +53,18 @@ export const constat = {
     label: "Annonce standard",
     lines: ["Photographies", "Descriptif", "Caractéristiques", "Formulaire de contact"],
   },
+} as const;
+
+/** Comparaison interactive « annonce standard ↔ écrin Prodigio » + illustrations. */
+export const ecrin = {
+  beforeLabel: "Annonce standard",
+  afterLabel: "Écrin Prodigio",
+  hint: "Glissez pour comparer",
+  gallery: [
+    { key: "ecrinIdentite", caption: "Carte d'identité du bien" },
+    { key: "ecrinBrochureCover", caption: "Brochure confidentielle" },
+    { key: "ecrinPublicites", caption: "≈ 15 publicités par bien" },
+  ],
 } as const;
 
 export const systeme = {

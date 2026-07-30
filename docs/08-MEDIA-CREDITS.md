@@ -46,3 +46,17 @@ tailles responsives.
 
 Les deux autorisent l'usage commercial gratuit sans attribution obligatoire. En
 cas de doute sur une licence, l'image n'a **pas** été retenue.
+
+---
+
+## Comparaison « écrin » (`public/images/ecrin/`)
+
+Illustrations issues des **actifs marketing Prodigio** (récupérés depuis
+`prodigio.fr/systeme`, propriété du projet), converties en WebP.
+
+- `ecrin-prodigio.webp`, `carte-identite.webp`, `brochure-couverture.webp`,
+  `brochure-interieur.webp`, `publicites.webp` — créations **Prodigio**.
+- `annonce-standard.webp` — capture d'une annonce de portail servant d'exemple
+  « standard ». **Marque tierce neutralisée** (en-tête recadré, logo/pastille et
+  filigrane floutés) afin d'éviter toute publicité comparative dénigrante :
+  aucune agence n'est identifiable.
