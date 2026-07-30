@@ -11,6 +11,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // `server-only` est fourni par Next au build ; il n'est pas résoluble sous
+      // Vitest. On l'alias vers un module vide pour pouvoir tester (en les
+      // mockant) les modules serveur qui l'importent.
+      "server-only": fileURLToPath(new URL("./src/test/server-only-stub.ts", import.meta.url)),
     },
   },
   test: {

@@ -4,12 +4,26 @@ import { notFound } from "next/navigation";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import {
   canDecideSegment,
+  canManageAppointments,
   canOperate,
+  canPlanEstimation,
   canViewAudit,
   canViewContactDetails,
   maskContactValue,
 } from "@/modules/crm/auth/roles";
 import { getLeadDetail, memberDisplayName } from "@/modules/crm/data/queries";
+import {
+  getAppointmentsForOpportunity,
+  listBookableAgents,
+} from "@/modules/calendar/queries";
+import {
+  appointmentStatusLabels,
+  appointmentStatusTone,
+} from "@/modules/calendar/labels";
+import { formatAppointmentRange } from "@/modules/calendar/format";
+import { DEFAULT_ESTIMATION_CONFIG } from "@/modules/calendar/config";
+import { EstimationScheduler } from "@/components/crm/calendar/estimation-scheduler";
+import { AppointmentActions } from "@/components/crm/calendar/appointment-actions";
 import { buildTimeline } from "@/modules/crm/timeline";
 import { formatDate, formatDateTime } from "@/modules/crm/format";
 import {
@@ -126,6 +140,16 @@ export default async function LeadDetailPage({
   const isAdmin = session.roles.includes("administrateur");
   const showAudit = canViewAudit(session.roles);
 
+  // Rendez-vous d'estimation + agents réservables (calendrier connecté).
+  const canPlan = canPlanEstimation(session.roles);
+  const canManageRdv = canManageAppointments(session.roles);
+  const isAgent = session.roles.includes("agent_immobilier");
+  const [appointments, bookableAgents] = await Promise.all([
+    getAppointmentsForOpportunity(id),
+    canPlan ? listBookableAgents() : Promise.resolve([]),
+  ]);
+  const activeAppointments = appointments.filter((a) => a.status !== "annule");
+
   const primary = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
   const displayName = primary ? primary.name : "Dossier sans contact";
 
@@ -214,6 +238,80 @@ export default async function LeadDetailPage({
               <Info label="Tentatives d’appel" value={attemptCount} />
             </div>
           </Panel>
+
+          {/* Estimation — rendez-vous physique */}
+          {canPlan || appointments.length > 0 ? (
+            <Panel
+              title="Estimation"
+              aside={
+                canPlan ? (
+                  <EstimationScheduler
+                    opportunityId={id}
+                    city={o.location_city}
+                    defaultAddress={[o.location_city, o.location_postal_code]
+                      .filter(Boolean)
+                      .join(" ")}
+                    defaultOwnerEmail={canView ? (primary?.email ?? null) : null}
+                    defaultOwnerName={primary?.name ?? null}
+                    ownerContactId={primary?.id ?? null}
+                    agents={bookableAgents}
+                    timezone={DEFAULT_ESTIMATION_CONFIG.timeZone}
+                    durationMinutes={DEFAULT_ESTIMATION_CONFIG.defaultDurationMinutes}
+                  />
+                ) : undefined
+              }
+            >
+              {appointments.length === 0 ? (
+                <p className="rounded-[10px] border border-dashed border-[var(--crm-line)] px-3 py-6 text-center text-xs text-[var(--crm-text-faint)]">
+                  Aucun rendez-vous d’estimation planifié.
+                  {canPlan ? " Utilisez « Planifier l’estimation » pour réserver un créneau." : ""}
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {(activeAppointments.length > 0 ? activeAppointments : appointments).map((a) => {
+                    const canResult =
+                      canManageRdv || (isAgent && a.agent_user_id === session.userId);
+                    return (
+                      <li
+                        key={a.id}
+                        className="rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] p-4"
+                      >
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-[var(--crm-text)]">
+                              {formatAppointmentRange(a.starts_at, a.ends_at, a.timezone)}
+                            </p>
+                            <p className="text-xs text-[var(--crm-text-faint)]">
+                              Agent : {memberDisplayName(a.agent_user_id, members)}
+                              {a.address ? ` · ${a.address}` : ""}
+                            </p>
+                          </div>
+                          <Chip variant={appointmentStatusTone[a.status]}>
+                            {appointmentStatusLabels[a.status]}
+                          </Chip>
+                        </div>
+                        {a.cancel_reason ? (
+                          <p className="mb-2 text-xs text-[var(--crm-text-dim)]">
+                            Motif : {a.cancel_reason}
+                          </p>
+                        ) : null}
+                        <AppointmentActions
+                          appointmentId={a.id}
+                          opportunityId={id}
+                          status={a.status}
+                          googleHtmlLink={a.google_html_link}
+                          startsAt={a.starts_at}
+                          endsAt={a.ends_at}
+                          canManage={canManageRdv}
+                          canResult={canResult}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Panel>
+          ) : null}
 
           {/* Bien candidat */}
           <Panel title="Bien candidat">
