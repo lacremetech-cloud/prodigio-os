@@ -160,6 +160,74 @@ export type OrganizationMembershipRow = {
   status: "actif" | "suspendu";
 }
 
+export type CrmRoleToken =
+  | "administrateur"
+  | "manager"
+  | "setter"
+  | "agent_immobilier"
+  | "partenaire_lecture";
+
+export type OrganizationInvitationRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: CrmRoleToken;
+  status: "en_attente" | "acceptee" | "revoquee";
+  invited_by: string | null;
+  expires_at: string;
+  sent_at: string | null;
+  accepted_at: string | null;
+  accepted_by: string | null;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  auth_user_id: string | null;
+  metadata: Json | null;
+};
+
+/** Ligne renvoyée par `crm_list_team` (annuaire enrichi, admin only). */
+export type TeamMemberRow = {
+  user_id: string;
+  email: string | null;
+  role: CrmRoleToken;
+  status: "actif" | "suspendu";
+  organization_id: string;
+  member_since: string;
+  last_sign_in_at: string | null;
+};
+
+/** Ligne renvoyée par `crm_list_invitations` (statut effectif dérivé). */
+export type InvitationListRow = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: CrmRoleToken;
+  status: "en_attente" | "acceptee" | "revoquee" | "expiree";
+  organization_id: string;
+  created_at: string;
+  expires_at: string;
+  sent_at: string | null;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  invited_by: string | null;
+};
+
+/** Ligne renvoyée par `crm_my_pending_invitation` (écran d'acceptation). */
+export type MyPendingInvitationRow = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: CrmRoleToken;
+  organization_name: string;
+  expires_at: string;
+  status: "en_attente" | "acceptee" | "revoquee" | "expiree";
+};
+
 export type OpportunityAssignmentRow = {
   id: string;
   created_at: string;
@@ -206,7 +274,7 @@ export type AuditEventRow = {
   id: string;
   created_at: string;
   actor_user_id: string | null;
-  entity_type: "opportunity" | "contact" | "membership" | "organization";
+  entity_type: "opportunity" | "contact" | "membership" | "organization" | "invitation";
   entity_id: string;
   event_type:
     | "creation"
@@ -215,7 +283,14 @@ export type AuditEventRow = {
     | "changement_affectation"
     | "changement_permission"
     | "resolution_doublon"
-    | "resultat_commercial";
+    | "resultat_commercial"
+    | "invitation_creee"
+    | "invitation_renvoyee"
+    | "invitation_revoquee"
+    | "invitation_acceptee"
+    | "changement_role"
+    | "activation_membre"
+    | "desactivation_membre";
   old_value: Json | null;
   new_value: Json | null;
   metadata: Json | null;
@@ -248,6 +323,7 @@ export interface Database {
       activities: WithMutations<ActivityRow>;
       tasks: WithMutations<TaskRow>;
       audit_events: WithMutations<AuditEventRow>;
+      organization_invitations: WithMutations<OrganizationInvitationRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -318,6 +394,57 @@ export interface Database {
       crm_invite_member: {
         Args: { p_email: string; p_role: string; p_organization_slug?: string };
         Returns: Json;
+      };
+      // --- V1 utilisateurs & accès ---
+      crm_is_operator: { Args: Record<string, never>; Returns: boolean };
+      crm_role_is_assignable: { Args: { p_role: string }; Returns: boolean };
+      crm_assigned_opportunity_ids: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+      crm_create_invitation: {
+        Args: {
+          p_email: string;
+          p_first_name: string | null;
+          p_last_name: string | null;
+          p_role: string;
+          p_organization_slug?: string;
+          p_ttl_days?: number;
+        };
+        Returns: Json;
+      };
+      crm_resend_invitation: {
+        Args: { p_invitation_id: string; p_ttl_days?: number };
+        Returns: Json;
+      };
+      crm_mark_invitation_sent: {
+        Args: { p_invitation_id: string; p_auth_user_id?: string | null };
+        Returns: Json;
+      };
+      crm_revoke_invitation: {
+        Args: { p_invitation_id: string };
+        Returns: Json;
+      };
+      crm_accept_invitation: { Args: Record<string, never>; Returns: Json };
+      crm_my_pending_invitation: {
+        Args: Record<string, never>;
+        Returns: MyPendingInvitationRow[];
+      };
+      crm_change_member_role: {
+        Args: { p_user_id: string; p_role: string; p_organization_slug?: string };
+        Returns: Json;
+      };
+      crm_set_member_status: {
+        Args: { p_user_id: string; p_status: string; p_organization_slug?: string };
+        Returns: Json;
+      };
+      crm_list_team: {
+        Args: Record<string, never>;
+        Returns: TeamMemberRow[];
+      };
+      crm_list_invitations: {
+        Args: Record<string, never>;
+        Returns: InvitationListRow[];
       };
     };
     Enums: Record<string, never>;

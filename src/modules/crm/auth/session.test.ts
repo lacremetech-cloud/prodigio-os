@@ -40,11 +40,13 @@ describe("requireCrmSession", () => {
     );
   });
 
-  it("redirige un utilisateur authentifié sans rôle/organisation", async () => {
+  it("redirige un utilisateur authentifié sans rôle/organisation vers /acces", async () => {
+    // Distinct de /connexion : l'utilisateur EST connecté (évite la boucle de
+    // redirection avec le middleware). Écran « Accès non autorisé ».
     createSupabaseServerClient.mockResolvedValue(
       fakeClient({ id: "u1", email: "sans-role@prodigio.fr" }, []),
     );
-    await expect(requireCrmSession()).rejects.toThrow("REDIRECT:/connexion?error=acces");
+    await expect(requireCrmSession()).rejects.toThrow("REDIRECT:/acces");
   });
 
   it("autorise un utilisateur disposant d'un rôle actif", async () => {

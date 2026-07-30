@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canManageMembers } from "@/modules/crm/auth/roles";
 import { getMembersMap } from "@/modules/crm/data/queries";
@@ -82,27 +83,19 @@ export default async function SettingsPage() {
       </section>
 
       {isAdmin ? (
-        <section className="crm-panel p-5">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
-            Inviter un membre
-          </h2>
-          <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-[var(--crm-text-dim)]">
-            <li>
-              Créer l’accès dans Supabase → Authentication → Users (invitation par e-mail ou
-              création avec mot de passe).
-            </li>
-            <li>
-              Attribuer le rôle via la fonction sécurisée{" "}
-              <code className="rounded bg-[var(--crm-panel-2)] px-1.5 py-0.5 text-[var(--crm-gold)]">
-                crm_invite_member(e-mail, rôle)
-              </code>{" "}
-              (réservée aux administrateurs).
-            </li>
-          </ol>
-          <p className="mt-3 text-[11px] text-[var(--crm-text-faint)]">
-            La création de comptes et l’attribution des rôles sont volontairement séparées : aucun
-            compte n’est créé silencieusement. Voir la documentation CRM.
-          </p>
+        <section className="crm-panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
+              Équipe &amp; accès
+            </h2>
+            <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
+              Inviter des membres, gérer les rôles, activer ou désactiver un accès — sans jamais
+              ouvrir Supabase.
+            </p>
+          </div>
+          <Link href="/crm/parametres/equipe" className="crm-btn crm-btn--gold shrink-0">
+            Gérer l’équipe
+          </Link>
         </section>
       ) : null}
 
