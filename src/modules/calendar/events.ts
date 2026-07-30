@@ -1,13 +1,14 @@
 /**
- * Point d'extension métier des rendez-vous d'estimation.
+ * Point d'extension métier des rendez-vous d'estimation (canaux FUTURS).
  *
- * V1 : l'invitation Google Calendar sert de confirmation e-mail au propriétaire.
- * Aucune notification externe supplémentaire (ni Twilio/SMS/WhatsApp, ni Slack)
- * n'est déclenchée ici — c'est le périmètre d'une mission ultérieure.
+ * Les **alertes Slack** des rendez-vous (planifié / reporté / annulé) sont
+ * désormais câblées de façon explicite et fiable dans le module de réservation
+ * (`booking.ts` → `notifications/`), aux points RÉELLEMENT confirmés et sans
+ * doublon — indépendamment de ce registre.
  *
- * Ce module fournit le SEUL point d'ancrage `estimation_appointment_created`
- * pour brancher plus tard ces canaux (SMS de confirmation, rappels J-1 / H-2,
- * notification Slack interne) SANS réécrire le module de réservation : il suffira
+ * Ce module reste le point d'ancrage `estimation_appointment_created` pour
+ * brancher plus tard les canaux non encore développés (SMS de confirmation,
+ * rappels J-1 / H-2, WhatsApp) SANS réécrire la réservation : il suffira
  * d'enregistrer un gestionnaire ci-dessous. En l'état, l'émission est un no-op
  * volontaire (aucun effet de bord, aucune donnée personnelle journalisée).
  */

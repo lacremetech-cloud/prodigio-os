@@ -72,6 +72,16 @@ const envSchema = z.object({
   // l'envoi (voir `isSlackConfigured`).
   SLACK_MANDATES_WEBHOOK_URL: z.string().min(1).optional(),
 
+  // --- Slack (alertes des rendez-vous d'estimation) ---
+  // URL de webhook entrant Slack du canal privé `#alertes-rdv-estimations`.
+  // STRICTEMENT côté serveur : jamais préfixée `NEXT_PUBLIC_`, jamais renvoyée au
+  // client, jamais journalisée, jamais dans Git ni le bundle. Présente en
+  // PRODUCTION uniquement (Vercel). Absente en preview/dev → alertes désactivées
+  // proprement (le rendez-vous fonctionne normalement, aucun appel Slack). Non
+  // validée en `z.url()` pour ne jamais faire échouer le build ; la forme https
+  // est contrôlée à l'envoi (voir `isEstimationSlackConfigured`).
+  SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL: z.string().min(1).optional(),
+
   // --- Google Calendar (planification des rendez-vous d'estimation) ---
   // Identifiants OAuth du projet Google Cloud. Utilisés EXCLUSIVEMENT côté
   // serveur (construction de l'URL de consentement, échange du code, rafraîchi-
@@ -226,6 +236,18 @@ export function isSlackConfigured(
   source: Pick<Env, "SLACK_MANDATES_WEBHOOK_URL"> = env,
 ): boolean {
   const url = source.SLACK_MANDATES_WEBHOOK_URL;
+  return typeof url === "string" && /^https:\/\/\S+$/i.test(url.trim());
+}
+
+/**
+ * Indique si les alertes Slack des rendez-vous d'estimation sont configurées
+ * (webhook présent et de forme `https://`). Ne révèle jamais la valeur. Absent
+ * (preview/dev) ⇒ alertes désactivées proprement, sans jamais bloquer un rendez-vous.
+ */
+export function isEstimationSlackConfigured(
+  source: Pick<Env, "SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL"> = env,
+): boolean {
+  const url = source.SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL;
   return typeof url === "string" && /^https:\/\/\S+$/i.test(url.trim());
 }
 
