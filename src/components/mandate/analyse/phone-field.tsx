@@ -143,10 +143,10 @@ export function PhoneField({
       </label>
 
       <div
-        className={`mt-2 flex items-stretch transition-colors ${
+        className={`mt-2 flex min-h-[3.25rem] items-stretch overflow-hidden rounded-[var(--radius-md)] border bg-surface shadow-[var(--shadow-sm)] transition-shadow ${
           error
-            ? "border-b-2 border-[color:var(--color-danger-on-dark)]"
-            : "border-b border-[color:var(--color-border-strong-dark)] focus-within:border-[color:var(--color-focus)]"
+            ? "border-[color:var(--color-danger-on-light)] focus-within:ring-2 focus-within:ring-[color:var(--color-danger-on-light)]"
+            : "border-[color:var(--color-border)] focus-within:border-[color:var(--color-gold-soft)] focus-within:ring-2 focus-within:ring-[color:var(--color-gold-soft)]"
         }`}
       >
         {/* Sélecteur de pays */}
@@ -156,18 +156,18 @@ export function PhoneField({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={`Pays : ${selected.name} (+${selected.dialCode}). Modifier le pays.`}
-          className="flex shrink-0 items-center gap-2 py-2.5 pr-3 text-lg text-text-on-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
+          className="flex shrink-0 items-center gap-2 py-2.5 pl-4 pr-3 text-lg text-wood-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
         >
           <span aria-hidden="true" className="text-xl leading-none">
             {selected.flag}
           </span>
-          <span className="tabular-nums text-text-on-dark">
+          <span className="tabular-nums text-wood-black">
             +{selected.dialCode}
           </span>
           <svg
             aria-hidden="true"
             viewBox="0 0 20 20"
-            className={`size-4 text-text-on-dark-muted transition-transform ${open ? "rotate-180" : ""}`}
+            className={`size-4 text-text-secondary transition-transform ${open ? "rotate-180" : ""}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="1.6"
@@ -177,10 +177,7 @@ export function PhoneField({
         </button>
 
         {/* Séparateur fin */}
-        <span
-          aria-hidden="true"
-          className="my-2 w-px bg-[color:var(--color-border-strong-dark)]"
-        />
+        <span aria-hidden="true" className="my-2 w-px bg-[color:var(--color-border)]" />
 
         {/* Numéro */}
         <input
@@ -196,7 +193,7 @@ export function PhoneField({
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           placeholder="06 25 77 35 92"
-          className="ml-3 w-full border-0 bg-transparent py-2.5 text-lg text-text-on-dark placeholder:text-text-on-dark/30 focus:outline-none focus:ring-0"
+          className="ml-3 w-full border-0 bg-transparent py-2.5 pr-4 text-lg text-wood-black placeholder:text-text-secondary/50 focus:outline-none focus:ring-0"
         />
       </div>
 
@@ -208,8 +205,8 @@ export function PhoneField({
 
       {/* Liste déroulante des pays */}
       {open ? (
-        <div className="absolute left-0 right-0 z-30 mt-2 max-h-80 overflow-hidden border border-[color:var(--color-border-strong-dark)] bg-[color:var(--color-onyx-soft)] shadow-[var(--shadow-lg)]">
-          <div className="border-b border-[color:var(--color-border-dark)] p-2">
+        <div className="absolute left-0 right-0 z-30 mt-2 max-h-80 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-border)] bg-surface text-wood-black shadow-[var(--shadow-lg)]">
+          <div className="border-b border-[color:var(--color-border)] p-2">
             <input
               ref={searchRef}
               type="text"
@@ -218,12 +215,12 @@ export function PhoneField({
               onKeyDown={onSearchKeyDown}
               placeholder="Rechercher un pays ou un indicatif…"
               aria-label="Rechercher un pays"
-              className="w-full bg-transparent px-3 py-2 text-sm text-text-on-dark placeholder:text-text-on-dark/40 focus:outline-none"
+              className="w-full bg-transparent px-3 py-2 text-sm text-wood-black placeholder:text-text-secondary/60 focus:outline-none"
             />
           </div>
           <ul role="listbox" aria-label="Pays" className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-text-on-dark-muted">
+              <li className="px-4 py-3 text-sm text-text-secondary">
                 Aucun pays trouvé.
               </li>
             ) : (
@@ -234,15 +231,15 @@ export function PhoneField({
                     <button
                       type="button"
                       onClick={() => selectCountry(c.iso)}
-                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/5 focus-visible:bg-white/5 focus-visible:outline-none ${
-                        isActive ? "text-text-on-dark" : "text-text-on-dark/90"
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-ivory-muted focus-visible:bg-ivory-muted focus-visible:outline-none ${
+                        isActive ? "bg-ivory-muted text-wood-black" : "text-wood-black/90"
                       }`}
                     >
                       <span aria-hidden="true" className="text-lg leading-none">
                         {c.flag}
                       </span>
                       <span className="flex-1 truncate">{c.name}</span>
-                      <span className="tabular-nums text-text-on-dark-muted">
+                      <span className="tabular-nums text-text-secondary">
                         +{c.dialCode}
                       </span>
                     </button>

@@ -14,8 +14,8 @@ interface OptionListProps<T extends string> {
 }
 
 /**
- * Liste d'options à choix unique, élégante et sobre. Chaque option est un bouton
- * accessible (aria-pressed) ; l'option retenue porte un accent or discret.
+ * Liste d'options à choix unique — cartes **solides et généreuses**. La sélection
+ * provoque un léger **soulèvement**, une **bordure dorée** et une **coche animée**.
  */
 export function OptionList<T extends string>({
   options,
@@ -26,7 +26,7 @@ export function OptionList<T extends string>({
 }: OptionListProps<T>) {
   return (
     <div>
-      <div role="group" aria-label={ariaLabel} className="flex flex-col gap-3">
+      <div role="group" aria-label={ariaLabel} className="flex flex-col gap-3.5">
         {options.map((option) => {
           const isSelected = selected === option.value;
           return (
@@ -35,32 +35,30 @@ export function OptionList<T extends string>({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(option.value)}
-              className={`group flex min-h-[3.25rem] items-center justify-between gap-4 border px-5 py-4 text-left transition-colors duration-200 ${
+              className={`group flex min-h-[3.75rem] items-center justify-between gap-4 border bg-[color:var(--color-onyx-soft)] px-6 py-4 text-left transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
                 isSelected
-                  ? "border-2 border-text-on-dark bg-[color:var(--color-onyx-soft)] text-text-on-dark"
-                  : "border border-[color:var(--color-border-strong-dark)] text-text-on-dark/90 hover:border-text-on-dark hover:bg-[color:var(--color-onyx-soft)]"
+                  ? "-translate-y-0.5 border-2 border-[color:var(--color-gold)] shadow-[0_16px_40px_-18px_rgba(154,123,69,0.7)]"
+                  : "border-[color:var(--color-border-strong-dark)] hover:-translate-y-0.5 hover:border-text-on-dark hover:shadow-[var(--shadow-lg)]"
               }`}
             >
-              <span className="text-base sm:text-lg">{option.label}</span>
+              <span className="text-base text-text-on-dark sm:text-lg">{option.label}</span>
               <span
+                key={isSelected ? "on" : "off"}
                 aria-hidden="true"
-                className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                className={`flex size-6 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
                   isSelected
-                    ? "border-gold bg-gold text-white"
-                    : "border-[color:var(--color-border-strong-dark)] text-transparent group-hover:border-text-on-dark"
+                    ? "animate-check-pop border-gold bg-gold text-white"
+                    : "scale-90 border-[color:var(--color-border-strong-dark)] text-transparent group-hover:border-text-on-dark"
                 }`}
               >
-                <span className="text-[0.7rem]">✓</span>
+                <span className="text-xs">✓</span>
               </span>
             </button>
           );
         })}
       </div>
       {error ? (
-        <p
-          className="mt-4 text-sm text-[color:var(--color-danger-on-dark)]"
-          role="alert"
-        >
+        <p className="mt-4 text-sm text-[color:var(--color-danger-on-dark)]" role="alert">
           {error}
         </p>
       ) : null}

@@ -127,9 +127,12 @@ export function AnalyseExperience() {
           </div>
         ) : null}
 
-        {/* Contenu */}
-        <main className="flex flex-1 items-center px-6 py-12 sm:px-10 lg:px-14">
-          <div className="w-full" key={m.step}>
+        {/* Contenu — transition directionnelle selon le sens de navigation. */}
+        <main className="flex flex-1 items-center overflow-hidden px-6 py-12 sm:px-10 lg:px-14">
+          <div
+            className={`w-full ${m.direction === -1 ? "animate-step-back" : "animate-step-fwd"}`}
+            key={m.step}
+          >
             {m.step === INTRO_STEP ? <IntroScreen onStart={m.start} /> : null}
 
             {m.step === 1 ? (
