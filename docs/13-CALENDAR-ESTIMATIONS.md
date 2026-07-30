@@ -228,12 +228,15 @@ transmis.
 
 ## 9. Notifications (V1 et suite)
 
-- **V1** : l'**invitation Google Calendar** sert de confirmation e-mail au
-  propriétaire. Aucune intégration Twilio / SMS / WhatsApp / Slack.
-- **Seam** : `emitEstimationAppointmentCreated()` (`events.ts`) est le **point
-  d'ancrage** unique pour brancher, dans une mission ultérieure, SMS de
-  confirmation, rappels J-1 / H-2 et notification Slack interne — **sans réécrire**
-  le module de réservation (il suffira d'enregistrer un gestionnaire).
+- **Propriétaire** : l'**invitation Google Calendar** sert de confirmation
+  e-mail. Aucune intégration Twilio / SMS / WhatsApp.
+- **Slack interne** : les alertes des rendez-vous (planifié / reporté / annulé)
+  vers le canal `#alertes-rdv-estimations` sont livrées — voir
+  [14-SLACK-ESTIMATION-ALERTS.md](14-SLACK-ESTIMATION-ALERTS.md).
+- **Seam** : `emitEstimationAppointmentCreated()` (`events.ts`) reste le point
+  d'ancrage pour brancher, dans une mission ultérieure, les canaux non encore
+  développés (SMS de confirmation, rappels J-1 / H-2, WhatsApp) — **sans réécrire**
+  le module de réservation.
 
 ---
 

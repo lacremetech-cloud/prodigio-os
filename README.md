@@ -147,6 +147,10 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   Planification des estimations & Google Calendar V1 : OAuth par utilisateur,
   chiffrement des jetons, disponibilités, cohérence à deux enregistrements,
   matrice des droits, recette réelle.
+- [docs/14-SLACK-ESTIMATION-ALERTS.md](docs/14-SLACK-ESTIMATION-ALERTS.md) —
+  Alertes Slack des rendez-vous d'estimation V1 : déclencheurs (planifié /
+  reporté / annulé), anti-doublon, contenu des messages, comportement en panne,
+  variable serveur, limite Google direct, recette.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

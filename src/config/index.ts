@@ -10,6 +10,7 @@ export {
   isTurnstileTestSiteKey,
   isTurnstileTestSecretKey,
   isSlackConfigured,
+  isEstimationSlackConfigured,
   isGoogleCalendarConfigured,
   isCalendarEncryptionConfigured,
   googleOAuthRedirectUri,

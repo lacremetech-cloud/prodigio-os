@@ -30,6 +30,30 @@ import { getFreshAccessToken, CalendarReconnectRequiredError } from "./google/cr
 import { deleteEvent, insertEvent, patchEvent, queryFreeBusy } from "./google/client";
 import { GoogleApiError } from "./google/errors";
 import { emitEstimationAppointmentCreated } from "./events";
+import { scheduleEstimationAlert } from "./notifications/schedule";
+import type { AlertTrigger } from "./notifications/collect";
+
+/**
+ * Déclencheur d'alerte injectable (Slack). Défaut : planification différée.
+ * Injecté dans les tests pour vérifier l'anti-doublon sans appeler Slack.
+ */
+export interface BookingDeps {
+  onAlert?: (trigger: AlertTrigger) => void | Promise<void>;
+}
+
+/** Identifiant de l'utilisateur courant (acteur de l'action), ou null. */
+async function currentActorId(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+): Promise<string | null> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function getAgentConnection(
   agentUserId: string,
@@ -142,9 +166,11 @@ function eventTitle(city: string | null, ownerName: string | null): string {
 /** Réserve et crée un rendez-vous d'estimation (idempotent, avec compensation). */
 export async function bookEstimation(
   input: BookEstimationInput,
+  deps: BookingDeps = {},
 ): Promise<BookEstimationResult> {
   const supabase = await createSupabaseServerClient();
   const config = resolveSchedulingConfig();
+  const onAlert = deps.onAlert ?? ((t: AlertTrigger) => scheduleEstimationAlert(supabase, t));
 
   // 1. Réservation idempotente (claim atomique).
   const { data: reserveData, error: reserveError } = await supabase.rpc(
@@ -293,7 +319,10 @@ export async function bookEstimation(
     return { ok: false, code: "conflict", error: "Enregistrement Prodigio impossible. L'événement Google a été annulé." };
   }
 
-  // Événement métier (seam pour SMS/WhatsApp/Slack — no-op en V1).
+  // Événement métier (seam pour SMS/WhatsApp — no-op). Le rendez-vous est
+  // désormais RÉELLEMENT enregistré (CRM + Google, sans compensation) : c'est le
+  // point UNIQUE d'alerte « planifié ». Un double-clic / rejeu sort plus haut
+  // (reserve.created = false) sans jamais atteindre ce point.
   await emitEstimationAppointmentCreated({
     appointmentId,
     opportunityId: input.opportunityId,
@@ -305,6 +334,16 @@ export async function bookEstimation(
     ownerName: input.ownerName,
     ownerInvited: Boolean(input.ownerEmail),
   });
+
+  try {
+    await onAlert({
+      kind: "created",
+      appointmentId,
+      actorUserId: await currentActorId(supabase),
+    });
+  } catch {
+    // Alerte best-effort : n'affecte jamais le rendez-vous déjà enregistré.
+  }
 
   return { ok: true, appointmentId, htmlLink: event.htmlLink };
 }
@@ -335,11 +374,21 @@ export async function rescheduleEstimation(
   appointmentId: string,
   startsAt: string,
   endsAt: string,
+  deps: BookingDeps = {},
 ): Promise<ManageResult> {
   const supabase = await createSupabaseServerClient();
   const config = resolveSchedulingConfig();
+  const onAlert = deps.onAlert ?? ((t: AlertTrigger) => scheduleEstimationAlert(supabase, t));
   const appt = await getAppointment(appointmentId);
   if (!appt) return { ok: false, code: "not_found", error: "Rendez-vous introuvable." };
+
+  // Ancien créneau (pour l'alerte) + détection d'un VRAI changement (anti-doublon :
+  // un report sans changement d'horaire ne déclenche aucune alerte).
+  const oldStartsAt = appt.starts_at;
+  const oldEndsAt = appt.ends_at;
+  const sameSlot =
+    new Date(oldStartsAt).getTime() === new Date(startsAt).getTime() &&
+    new Date(oldEndsAt).getTime() === new Date(endsAt).getTime();
 
   const connection = await getAgentConnection(appt.agent_user_id);
   const calendarId = appt.google_calendar_id ?? connection?.google_calendar_id ?? "primary";
@@ -404,6 +453,22 @@ export async function rescheduleEstimation(
     const code = error.code === "42501" ? "denied" : "unknown";
     return { ok: false, code, error: error.message || "Report impossible." };
   }
+
+  // Alerte « reporté » UNIQUEMENT si le créneau a réellement changé.
+  if (!sameSlot) {
+    try {
+      await onAlert({
+        kind: "rescheduled",
+        appointmentId,
+        actorUserId: await currentActorId(supabase),
+        oldStartsAt,
+        oldEndsAt,
+      });
+    } catch {
+      // best-effort
+    }
+  }
+
   return { ok: true };
 }
 
@@ -414,10 +479,16 @@ export async function rescheduleEstimation(
 export async function cancelEstimation(
   appointmentId: string,
   reason: string | null,
+  deps: BookingDeps = {},
 ): Promise<ManageResult> {
   const supabase = await createSupabaseServerClient();
+  const onAlert = deps.onAlert ?? ((t: AlertTrigger) => scheduleEstimationAlert(supabase, t));
   const appt = await getAppointment(appointmentId);
   if (!appt) return { ok: false, code: "not_found", error: "Rendez-vous introuvable." };
+
+  // Anti-doublon : une seconde annulation d'un rendez-vous DÉJÀ annulé ne
+  // déclenche aucune alerte (aucune transition métier réelle).
+  const wasActive = appt.status !== "annule";
 
   const { error } = await supabase.rpc("crm_cancel_estimation_appointment", {
     p_id: appointmentId,
@@ -426,6 +497,19 @@ export async function cancelEstimation(
   if (error) {
     const code = error.code === "42501" ? "denied" : "unknown";
     return { ok: false, code, error: error.message || "Annulation impossible." };
+  }
+
+  // Alerte « annulé » UNIQUEMENT pour une annulation réelle (transition active → annulé).
+  if (wasActive) {
+    try {
+      await onAlert({
+        kind: "cancelled",
+        appointmentId,
+        actorUserId: await currentActorId(supabase),
+      });
+    } catch {
+      // best-effort
+    }
   }
 
   // Best-effort : supprimer l'événement Google (ne remet pas en cause l'annulation).

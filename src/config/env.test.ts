@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  isEstimationSlackConfigured,
   canonicalSiteUrl,
   googleOAuthRedirectUri,
   isCalendarEncryptionConfigured,
@@ -205,6 +206,35 @@ describe("Google Calendar (planification des estimations)", () => {
     expect(
       googleOAuthRedirectUri({ NODE_ENV: "production" } as never),
     ).toBe("https://go.prodigio.fr/api/calendar/google/callback");
+  });
+});
+
+describe("Slack — alertes des rendez-vous d'estimation", () => {
+  it("le webhook n'est JAMAIS préfixé NEXT_PUBLIC_ (jamais dans le bundle client)", () => {
+    const shape = parseEnv({
+      SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL: "https://hooks.slack.com/services/xxx",
+    }) as Record<string, unknown>;
+    expect("NEXT_PUBLIC_SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL" in shape).toBe(false);
+    expect(shape.SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL).toBe(
+      "https://hooks.slack.com/services/xxx",
+    );
+  });
+
+  it("isEstimationSlackConfigured exige un webhook https présent", () => {
+    expect(isEstimationSlackConfigured({} as never)).toBe(false);
+    expect(
+      isEstimationSlackConfigured({ SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL: "" } as never),
+    ).toBe(false);
+    expect(
+      isEstimationSlackConfigured({
+        SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL: "http://insecure.example",
+      }),
+    ).toBe(false);
+    expect(
+      isEstimationSlackConfigured({
+        SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL: "https://hooks.slack.com/services/xxx",
+      }),
+    ).toBe(true);
   });
 });
 
