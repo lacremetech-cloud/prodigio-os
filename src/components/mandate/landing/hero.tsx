@@ -44,11 +44,18 @@ export function Hero() {
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-12 pt-24 sm:px-10 sm:pt-28 lg:px-8">
         {/* Accroche + titre */}
         <div className="mx-auto max-w-3xl text-center">
-          <Reveal>
-            <p className="eyebrow text-gold-soft">{hero.eyebrow}</p>
+          <Reveal className="flex justify-center">
+            {/* Badge « brillant » — un reflet balaie le cartouche. Espacement
+                resserré sur mobile pour tenir sur une ligne. */}
+            <span className="badge-shine inline-flex max-w-full items-center gap-2 rounded-full border border-[color:var(--color-gold)]/35 bg-[color:var(--color-gold)]/[0.08] px-3.5 py-1.5 sm:px-4">
+              <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-gold-soft" />
+              <span className="whitespace-nowrap font-signature text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-gold-soft min-[420px]:text-[0.66rem] min-[420px]:tracking-[0.16em] sm:text-[0.72rem] sm:tracking-[0.2em]">
+                {hero.badge}
+              </span>
+            </span>
           </Reveal>
           <Reveal variant="rise" delayMs={90}>
-            <h1 className="mt-5 text-balance text-[2.65rem] leading-[1.04] text-ivory sm:text-6xl lg:text-[4.5rem]">
+            <h1 className="mt-6 text-balance text-[1.95rem] leading-[1.06] text-ivory min-[420px]:text-[2.3rem] sm:text-6xl sm:leading-[1.04] lg:text-[4.5rem]">
               {hero.titleLine1}
               <br />
               {hero.titleLine2}
@@ -56,8 +63,31 @@ export function Hero() {
           </Reveal>
         </div>
 
+        {/* Annotation manuscrite pointant la VSL. */}
+        <Reveal delayMs={180} className="mx-auto mt-7 flex w-full max-w-4xl justify-center sm:mt-9 sm:justify-end sm:pr-6">
+          <span className="flex items-end gap-2 text-gold-soft">
+            <span className="font-display text-lg italic leading-tight sm:text-xl">
+              {hero.vslNote}
+            </span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 48 44"
+              className="h-8 w-9 shrink-0 -scale-x-100"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {/* Flèche courbe pointant vers le bas (la vidéo). */}
+              <path d="M6 6c10 4 18 14 20 30" />
+              <path d="M16 30l10 8 4-11" />
+            </svg>
+          </span>
+        </Reveal>
+
         {/* Écrin VSL — pièce maîtresse (grandit légèrement au défilement) */}
-        <Reveal variant="scale" delayMs={220} className="mx-auto mt-8 w-full max-w-4xl sm:mt-10">
+        <Reveal variant="scale" delayMs={240} className="mx-auto mt-3 w-full max-w-4xl sm:mt-4">
           <ScrollScale to={1.1}>
             <HeroVsl />
           </ScrollScale>
@@ -71,14 +101,22 @@ export function Hero() {
             </p>
           </Reveal>
           <Reveal delayMs={240} className="mt-8 flex w-full flex-col items-center gap-3">
-            <LandingCta
-              href={ANALYSE_ROUTE}
-              tone="contrast"
-              size="xl"
-              className="w-full max-w-xl sm:w-auto"
-            >
-              {CTA_PRIMARY}
-            </LandingCta>
+            {/* Halo doré doux et pulsé derrière le CTA — le rend plus « premium »
+                et attire l'œil, sans alourdir le bouton clair. */}
+            <div className="relative w-full max-w-xl sm:w-auto">
+              <span
+                aria-hidden="true"
+                className="animate-glow pointer-events-none absolute -inset-3 -z-10 rounded-full bg-[radial-gradient(60%_60%_at_50%_50%,rgba(203,180,136,0.5)_0%,rgba(203,180,136,0)_70%)] blur-xl"
+              />
+              <LandingCta
+                href={ANALYSE_ROUTE}
+                tone="contrast"
+                size="xl"
+                className="w-full sm:w-auto"
+              >
+                {CTA_PRIMARY}
+              </LandingCta>
+            </div>
             <p className="text-sm tracking-wide text-ivory/70">{CTA_SUB}</p>
           </Reveal>
         </div>

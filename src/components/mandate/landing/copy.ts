@@ -20,7 +20,7 @@ export const marqueeItems = [
 export const hero = {
   brand: "PRODIGIO",
   tagline: "Immobilier d'exception",
-  eyebrow: "Immobilier d'exception — Mise en marché active",
+  badge: "Système avancé pour bien d'exception",
   titleLine1: "Votre propriété mérite",
   titleLine2: "plus qu'une annonce.",
   subtitle:
@@ -28,6 +28,7 @@ export const hero = {
     "déploie une stratégie active pour aller chercher ses futurs acquéreurs, en " +
     "France comme à l'étranger.",
   scrollCue: "Découvrir le système",
+  vslNote: "En moins de 5 min, on vous explique tout.",
 } as const;
 
 /** Moment signature — la phrase que le client aime. */
