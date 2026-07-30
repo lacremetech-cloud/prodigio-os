@@ -7,14 +7,25 @@ mandats portés par une agence partenaire habilitée.
 
 ## Statut actuel
 
-**Première tranche verticale livrée : capture des demandes de mandat.**
+**Tranches verticales livrées : (1) capture des demandes de mandat, (2) CRM
+interne Mandats V1.**
+
 Parcours public complet — publicité → **landing propriétaire** (`/proprietaire`)
 → présentation vidéo (emplacement VSL) → **analyse confidentielle d'éligibilité**
 (`/proprietaire/analyse`) → **soumission Supabase** → confirmation.
 
+**CRM interne** (authentifié, `/connexion` + `/crm/*`) : les données du funnel
+deviennent réellement exploitables par l'équipe — vue d'ensemble (indicateurs +
+priorités du jour), boîte de réception filtrable, pipeline Kanban, fiche complète
+d'un dossier, tâches et setting (affectation, activités, prochaines actions,
+stade, segment, résultat commercial). Sécurisé par **Supabase Auth + RLS** ;
+écritures via fonctions `SECURITY DEFINER` auditées ; **aucune** clé
+`service_role` côté navigateur ni dans le dépôt. Guide :
+[docs/09-CRM-GUIDE.md](docs/09-CRM-GUIDE.md).
+
 Le socle (Next.js App Router, TypeScript strict, Tailwind CSS, ESLint, Vitest,
-Zod) reste en place. Le **CRM**, l'**authentification** et les autres modules
-métier ne sont **pas** encore développés (voir
+Zod) reste en place. Le **portail propriétaire**, le **CRM Acquéreurs** et les
+autres modules métier ne sont **pas** encore développés (voir
 [docs/02-MVP-SCOPE.md](docs/02-MVP-SCOPE.md)).
 
 **Supabase est intégré et la migration est DÉPLOYÉE** sur le projet `prodigio-os`
@@ -69,23 +80,29 @@ Monolithe modulaire (modules métier séparés, sans surdimensionnement) :
 
 ```
 src/
+  middleware.ts       # protège /crm/* + rafraîchit la session (Supabase Auth)
   app/
     proprietaire/     # landing propriétaire + /analyse (parcours public)
+    connexion/        # page de connexion interne
+    crm/              # CRM interne : vue d'ensemble, mandats, pipeline, fiche, tâches
     api/health/       # sonde de disponibilité
   components/
     ui/               # primitives d'interface accessibles (CTA, reveal…)
     mandate/          # sections landing + expérience d'analyse immersive
+    crm/              # interface CRM (shell, listes, fiche, actions)
   config/             # validation de configuration (Zod), extensible
   lib/
     media.ts          # manifeste des visuels (dimensions, alt, crédits)
-    supabase/         # clients Supabase (navigateur / serveur) + types
+    supabase/         # clients Supabase (navigateur / serveur / middleware) + types
   modules/
     mandates/funnel/  # domaine capture : schémas Zod, normalisation,
                       # attribution, idempotence, payload, action serveur
+    crm/              # domaine CRM : auth/rôles, données, mutations, leads, timeline
     shared/           # éléments partagés entre modules
 public/images/mandate/ # visuels premium optimisés (WebP)
-supabase/migrations/   # migrations SQL versionnées
+supabase/migrations/   # migrations SQL versionnées (funnel + CRM)
 docs/                  # documentation fondatrice (voir ci-dessous)
+docs/assets/crm/       # captures desktop/mobile du CRM (PII réelle masquée)
 ```
 
 Design system : variables CSS (palette ivoire / noir bois / or vieilli, fond
@@ -104,8 +121,10 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
 - [docs/05-OPEN-QUESTIONS.md](docs/05-OPEN-QUESTIONS.md) — Questions ouvertes.
 - [docs/06-ACCESS-MODEL.md](docs/06-ACCESS-MODEL.md) — Modèle d'accès (rôles,
   organisations, frontières).
-- [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md) — Application de la
-  migration, variables, RLS, prérequis de production.
+- [docs/07-SUPABASE-SETUP.md](docs/07-SUPABASE-SETUP.md) — Application des
+  migrations (funnel + CRM), variables, RLS, prérequis de production.
+- [docs/09-CRM-GUIDE.md](docs/09-CRM-GUIDE.md) — CRM interne Mandats V1 : premier
+  administrateur, invitation, usage, rôles, vérification de sécurité, reports.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

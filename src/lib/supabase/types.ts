@@ -1,11 +1,13 @@
 /**
- * Types Supabase (écrits à la main, alignés sur la migration
- * `supabase/migrations/20260729120000_mandate_funnel_capture.sql`).
+ * Types Supabase (écrits à la main, alignés sur les migrations
+ * `supabase/migrations/*.sql`).
  *
- * Volontairement focalisés sur la tranche « capture » : le public n'interagit
- * qu'avec la fonction contrôlée `submit_mandate_funnel`. Les tables ne sont pas
- * lisibles publiquement (RLS) ; leurs types servent la lisibilité et une future
- * génération automatique pourra les remplacer.
+ * - Le funnel public n'interagit qu'avec la fonction `submit_mandate_funnel`.
+ * - Le CRM interne (authentifié) lit les tables sous RLS et écrit UNIQUEMENT via
+ *   les fonctions `crm_*` (SECURITY DEFINER). Aucune écriture directe de table.
+ *
+ * Une génération automatique (`supabase gen types`) pourra remplacer ce fichier ;
+ * il reste ici la source de vérité typée du back-office.
  */
 
 export type Json =
@@ -18,22 +20,296 @@ export type Json =
 
 /**
  * Résultat renvoyé par la fonction SQL `submit_mandate_funnel`.
- *
- * Volontairement NEUTRE : un simple accusé de réception. Aucune donnée
- * personnelle, aucun identifiant réutilisable, et aucune information révélant si
- * le contact existait déjà (pas d'oracle d'énumération via la clé publiable).
+ * Volontairement NEUTRE : un simple accusé de réception (aucune donnée).
  */
 export interface SubmitMandateFunnelResult {
   accepted: boolean;
 }
 
+// --- Lignes des tables lues par le CRM (sous RLS) ----------------------------
+
+export type ContactRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  kind: "personne_physique" | "personne_morale";
+  first_name: string | null;
+  last_name: string | null;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  preferred_channel: "telephone" | "email" | "indifferent" | null;
+  status: string;
+}
+
+export type OpportunityRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  pipeline_stage: string;
+  segment: string;
+  processing_status: "non_affecte" | "affecte" | "clos";
+  source: string;
+  property_type: string | null;
+  location_city: string | null;
+  location_postal_code: string | null;
+  location_country: string | null;
+  estimated_value_band: string | null;
+  sale_horizon: string | null;
+  mandate_situation: string | null;
+  loss_reason: string | null;
+  recommended_priority: string | null;
+  compatibility_score: number | null;
+  maturity_score: number | null;
+  score_version: string | null;
+  outcome: string | null;
+  outcome_reason: string | null;
+  outcome_recorded_by: string | null;
+  outcome_recorded_at: string | null;
+  segment_decided_by: string | null;
+  segment_decided_at: string | null;
+  segment_decision_reason: string | null;
+  segment_is_derogation: boolean;
+}
+
+export type FunnelSubmissionRow = {
+  id: string;
+  created_at: string;
+  funnel_key: string;
+  funnel_version: string;
+  landing: string | null;
+  variant: string | null;
+  property_type: string | null;
+  location_city: string | null;
+  location_postal_code: string | null;
+  location_country: string | null;
+  estimated_value_band: string | null;
+  sale_horizon: string | null;
+  mandate_situation: string | null;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  contact_preference: string | null;
+  contact_recall_preference: string | null;
+  consent_given: boolean;
+  consent_notice_version: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_term: string | null;
+  utm_content: string | null;
+  fbclid: string | null;
+  gclid: string | null;
+  origin_url: string | null;
+  referrer: string | null;
+  first_touch: Json | null;
+  last_touch: Json | null;
+  processing_status: string;
+  resolution: string | null;
+  contact_id: string | null;
+  opportunity_id: string | null;
+  compatibility_score: number | null;
+  maturity_score: number | null;
+  operational_priority: string | null;
+  public_appreciation: string | null;
+  score_version: string | null;
+  score_breakdown: Json | null;
+  normalized_answers: Json | null;
+  raw_answers: Json | null;
+}
+
+export type OpportunityContactRow = {
+  id: string;
+  created_at: string;
+  opportunity_id: string;
+  contact_id: string;
+  role: string;
+  is_primary: boolean;
+}
+
+export type OrganizationRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  slug: string;
+  name: string;
+  kind: "operateur_prodigio" | "agence_partenaire";
+  status: "actif" | "suspendu";
+}
+
+export type OrganizationMembershipRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  organization_id: string;
+  role:
+    | "administrateur"
+    | "manager"
+    | "setter"
+    | "agent_immobilier"
+    | "partenaire_lecture";
+  status: "actif" | "suspendu";
+}
+
+export type OpportunityAssignmentRow = {
+  id: string;
+  created_at: string;
+  opportunity_id: string;
+  user_id: string;
+  responsibility: "setter" | "manager" | "agent_immobilier" | "responsable_marketing";
+  assigned_by: string | null;
+}
+
+export type ActivityRow = {
+  id: string;
+  created_at: string;
+  occurred_at: string;
+  opportunity_id: string;
+  contact_id: string | null;
+  author_user_id: string | null;
+  type: "appel" | "tentative_appel" | "email" | "sms_whatsapp" | "rendez_vous" | "note" | "autre";
+  outcome:
+    | "sans_reponse"
+    | "message_laisse"
+    | "rappel_demande"
+    | "contact_etabli"
+    | "mauvais_numero"
+    | null;
+  body: string | null;
+  metadata: Json | null;
+}
+
+export type TaskRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  opportunity_id: string;
+  author_user_id: string | null;
+  assignee_user_id: string | null;
+  title: string;
+  kind: "rappel" | "tache";
+  status: "a_faire" | "fait" | "annule";
+  due_at: string | null;
+  completed_at: string | null;
+}
+
+export type AuditEventRow = {
+  id: string;
+  created_at: string;
+  actor_user_id: string | null;
+  entity_type: "opportunity" | "contact" | "membership" | "organization";
+  entity_id: string;
+  event_type:
+    | "creation"
+    | "changement_stade"
+    | "changement_segment"
+    | "changement_affectation"
+    | "changement_permission"
+    | "resolution_doublon"
+    | "resultat_commercial";
+  old_value: Json | null;
+  new_value: Json | null;
+  metadata: Json | null;
+}
+
+type WithMutations<Row> = {
+  Row: Row;
+  Insert: Partial<Row>;
+  Update: Partial<Row>;
+  Relationships: [];
+};
+
 export interface Database {
   public: {
-    Tables: Record<string, never>;
+    Tables: {
+      contacts: WithMutations<ContactRow>;
+      opportunities: WithMutations<OpportunityRow>;
+      funnel_submissions: WithMutations<FunnelSubmissionRow>;
+      opportunity_contacts: WithMutations<OpportunityContactRow>;
+      organizations: WithMutations<OrganizationRow>;
+      organization_memberships: WithMutations<OrganizationMembershipRow>;
+      opportunity_organizations: WithMutations<{
+        id: string;
+        created_at: string;
+        opportunity_id: string;
+        organization_id: string;
+        function: string;
+      }>;
+      opportunity_assignments: WithMutations<OpportunityAssignmentRow>;
+      activities: WithMutations<ActivityRow>;
+      tasks: WithMutations<TaskRow>;
+      audit_events: WithMutations<AuditEventRow>;
+    };
     Views: Record<string, never>;
     Functions: {
-      submit_mandate_funnel: {
-        Args: { payload: Json };
+      submit_mandate_funnel: { Args: { payload: Json }; Returns: Json };
+      crm_active_roles: { Args: Record<string, never>; Returns: string[] };
+      crm_has_access: { Args: Record<string, never>; Returns: boolean };
+      crm_list_members: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string | null;
+          role: string;
+          organization_id: string;
+          status: string;
+        }[];
+      };
+      crm_assign_opportunity: {
+        Args: { p_opportunity_id: string; p_user_id: string; p_responsibility?: string };
+        Returns: Json;
+      };
+      crm_self_assign: {
+        Args: { p_opportunity_id: string; p_responsibility?: string };
+        Returns: Json;
+      };
+      crm_change_stage: {
+        Args: { p_opportunity_id: string; p_stage: string; p_note?: string | null };
+        Returns: Json;
+      };
+      crm_log_activity: {
+        Args: {
+          p_opportunity_id: string;
+          p_type: string;
+          p_outcome?: string | null;
+          p_body?: string | null;
+          p_contact_id?: string | null;
+          p_occurred_at?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_create_task: {
+        Args: {
+          p_opportunity_id: string;
+          p_title: string;
+          p_kind?: string;
+          p_due_at?: string | null;
+          p_assignee_user_id?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_set_task_status: {
+        Args: { p_task_id: string; p_status: string };
+        Returns: Json;
+      };
+      crm_decide_segment: {
+        Args: {
+          p_opportunity_id: string;
+          p_segment: string;
+          p_reason?: string | null;
+          p_is_derogation?: boolean;
+        };
+        Returns: Json;
+      };
+      crm_record_outcome: {
+        Args: { p_opportunity_id: string; p_outcome: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      crm_bootstrap_first_admin: { Args: { p_email: string }; Returns: Json };
+      crm_invite_member: {
+        Args: { p_email: string; p_role: string; p_organization_slug?: string };
         Returns: Json;
       };
     };

@@ -1,0 +1,287 @@
+/*
+ * Prodigio OS — CRM interne : couche de style dédiée (premium, sombre, dorée).
+ *
+ * Direction : noir profond (--color-onyx), surfaces #101015 / onyx-soft, blanc
+ * cassé lisible, touches dorées discrètes. Composants PLEINS (aucun champ
+ * transparent difficile à lire), contrastes forts, animations rapides.
+ *
+ * S'appuie sur les tokens de design de globals.css (source de vérité couleurs).
+ */
+
+:root {
+  --crm-bg: #0b0b0d;
+  --crm-panel: #101015;
+  --crm-panel-2: #16161c;
+  --crm-elevated: #1b1c22;
+  --crm-line: #26272c;
+  --crm-line-soft: #1e1f24;
+  --crm-text: #f4f3f1;
+  --crm-text-dim: #b4b7be;
+  --crm-text-faint: #7c7f87;
+  --crm-gold: #cbb488;
+  --crm-gold-strong: #9a7b45;
+}
+
+/* ------------------------------------------------------------------ Layout */
+.crm-root {
+  min-height: 100dvh;
+  background: var(--crm-bg);
+  color: var(--crm-text);
+  font-family: var(--font-sans);
+}
+
+.crm-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--crm-line) transparent;
+}
+.crm-scroll::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.crm-scroll::-webkit-scrollbar-thumb {
+  background: var(--crm-line);
+  border-radius: 999px;
+}
+.crm-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------ Panels */
+.crm-panel {
+  background: var(--crm-panel);
+  border: 1px solid var(--crm-line);
+  border-radius: 14px;
+}
+.crm-panel-2 {
+  background: var(--crm-panel-2);
+  border: 1px solid var(--crm-line-soft);
+  border-radius: 12px;
+}
+
+/* --------------------------------------------------------------- Typography */
+.crm-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--crm-gold);
+}
+.crm-display {
+  font-family: var(--font-display);
+}
+
+/* -------------------------------------------------------------------- Chips */
+.crm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2);
+  color: var(--crm-text-dim);
+  white-space: nowrap;
+}
+.crm-chip--gold {
+  border-color: rgba(203, 180, 136, 0.4);
+  background: rgba(203, 180, 136, 0.12);
+  color: var(--crm-gold);
+}
+.crm-chip--danger {
+  border-color: rgba(240, 165, 140, 0.35);
+  background: rgba(240, 165, 140, 0.1);
+  color: var(--color-danger-on-dark);
+}
+.crm-chip--ok {
+  border-color: rgba(120, 190, 150, 0.35);
+  background: rgba(120, 190, 150, 0.12);
+  color: #9fe0b6;
+}
+.crm-chip--dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* ------------------------------------------------------------------ Buttons */
+.crm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-elevated);
+  color: var(--crm-text);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease,
+    transform 120ms ease;
+}
+.crm-btn:hover {
+  background: #23242b;
+  border-color: #34353c;
+}
+.crm-btn:active {
+  transform: translateY(1px);
+}
+.crm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.crm-btn--gold {
+  background: var(--crm-gold);
+  border-color: var(--crm-gold);
+  color: #1a1406;
+}
+.crm-btn--gold:hover {
+  background: #d8c39c;
+  border-color: #d8c39c;
+}
+.crm-btn--ghost {
+  background: transparent;
+}
+.crm-btn--sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------------- Inputs */
+.crm-input,
+.crm-select,
+.crm-textarea {
+  width: 100%;
+  background: var(--crm-panel-2);
+  border: 1px solid var(--crm-line);
+  border-radius: 9px;
+  color: var(--crm-text);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+.crm-input:focus,
+.crm-select:focus,
+.crm-textarea:focus {
+  border-color: var(--crm-gold-strong);
+}
+.crm-input::placeholder,
+.crm-textarea::placeholder {
+  color: var(--crm-text-faint);
+}
+.crm-select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--crm-text-dim) 50%),
+    linear-gradient(135deg, var(--crm-text-dim) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 17px, calc(100% - 13px) 17px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+.crm-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--crm-text-faint);
+}
+
+/* -------------------------------------------------------------- Score meter */
+.crm-meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--crm-line);
+  overflow: hidden;
+}
+.crm-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--crm-gold-strong), var(--crm-gold));
+}
+
+/* ---------------------------------------------------------------- Aging dot */
+.crm-aging--frais {
+  color: #9fe0b6;
+}
+.crm-aging--tiede {
+  color: var(--crm-gold);
+}
+.crm-aging--chaud {
+  color: var(--color-danger-on-dark);
+}
+
+/* ----------------------------------------------------------------- Kanban */
+.crm-kanban {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.crm-kanban-col {
+  flex: 0 0 288px;
+  width: 288px;
+}
+
+/* -------------------------------------------------------------- Animations */
+@keyframes crm-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.crm-fade-in {
+  animation: crm-fade-in 200ms ease both;
+}
+@keyframes crm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.crm-spin {
+  animation: crm-spin 0.7s linear infinite;
+}
+
+/* -------------------------------------------------------- Timeline markers */
+.crm-timeline {
+  position: relative;
+  padding-left: 20px;
+}
+.crm-timeline::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--crm-line);
+}
+.crm-timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  border: 2px solid var(--crm-bg);
+  background: var(--crm-gold-strong);
+}
+
+/* Focus visible cohérent et accessible partout dans le CRM. */
+.crm-root :where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--crm-gold-strong);
+  outline-offset: 2px;
+}

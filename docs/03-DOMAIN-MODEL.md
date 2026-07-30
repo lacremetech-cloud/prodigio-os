@@ -394,3 +394,33 @@ Fichier rattaché au dossier.
 > vente, et distinctement HT / TTC pour les honoraires) est **à confirmer** — voir
 > [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md). Modèle d'accès et frontières
 > organisationnelles : [06-ACCESS-MODEL.md](06-ACCESS-MODEL.md).
+
+---
+
+## Implémentation — CRM Mandats V1 (mise en correspondance)
+
+La tranche **CRM interne V1** matérialise une partie de ce modèle en tables
+PostgreSQL (migration `supabase/migrations/20260730120000_crm_internal_v1.sql`),
+**sans dupliquer** les objets déjà créés par la capture (`contacts`,
+`opportunities`, `funnel_submissions`, `opportunity_contacts`, `privacy_records`) :
+
+| Objet du modèle | Table |
+|---|---|
+| Organisation | `organizations` |
+| OrganizationMembership | `organization_memberships` |
+| OpportunityOrganization | `opportunity_organizations` |
+| OpportunityAssignment | `opportunity_assignments` |
+| Activité (métier) | `activities` |
+| Tâche | `tasks` |
+| AuditEvent | `audit_events` |
+| OpportunityOutcome | colonnes `outcome*` sur `opportunities` |
+| Décision de segment | colonnes `segment_decided_*` / `segment_is_derogation` |
+
+- La **Note** est représentée en V1 comme une **activité de type `note`** (timeline
+  unifiée) ; l'objet Note distinct pourra être introduit si un rattachement
+  Contact seul devient nécessaire.
+- Le **Mandat**, l'**EconomicRuleSet**, le **Rendez-vous** en tant qu'objet dédié
+  et le **Document** ne sont **pas** matérialisés en V1 (hors périmètre de la
+  tranche) — l'architecture reste prête à les accueillir.
+- Distinctions préservées en base : **Stade ≠ Segment**, **Activité ≠ AuditEvent**,
+  recommandation du scoring ≠ **décision de segment humaine** (tracée).
