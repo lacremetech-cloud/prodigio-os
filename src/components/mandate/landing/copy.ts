@@ -6,7 +6,6 @@
 
 export const CTA_PRIMARY = "Tester l'éligibilité de ma propriété";
 export const CTA_NAV = "Tester mon éligibilité";
-export const CTA_NAV_SHORT = "Tester";
 export const MICROCOPY = "Analyse confidentielle — environ 1 minute";
 export const CTA_SUB = "1 minute · Confidentiel · Sans engagement";
 
@@ -21,7 +20,7 @@ export const marqueeItems = [
 export const hero = {
   brand: "PRODIGIO",
   tagline: "Immobilier d'exception",
-  eyebrow: "Immobilier d'exception — Mise en marché active",
+  badge: "Système avancé",
   titleLine1: "Votre propriété mérite",
   titleLine2: "plus qu'une annonce.",
   subtitle:
