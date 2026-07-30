@@ -1,59 +1,75 @@
-import { CtaLink } from "@/components/ui/cta-link";
+import { LandingCta } from "@/components/ui/landing-cta";
+import { Reveal } from "@/components/ui/reveal";
 import { ANALYSE_ROUTE } from "@/lib/routes";
 import { HeroVsl } from "./hero-vsl";
 import { LandingNav } from "./landing-nav";
 import { CTA_PRIMARY, MICROCOPY, hero } from "./copy";
 
 /**
- * Hero cinématographique, centrée sur la VSL — pièce maîtresse visible dès
- * l'arrivée. Fond noir profond, grande typographie éditoriale, respirations,
- * repères de production discrets. La vidéo domine la composition (elle n'est
- * jamais reléguée dans une colonne à côté d'un pavé de texte).
+ * Hero cinématographique centrée sur la VSL. Entrée en cascade (titre, écrin,
+ * CTA), grain filmique, lueurs dorées, grand CTA très visible, et indice de
+ * défilement. La vidéo domine la composition.
  */
 export function Hero() {
   return (
-    <section className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-onyx text-ivory">
-      {/* Halos de lumière très subtils (aucune image chargée sous le texte). */}
+    <section className="grain relative isolate flex min-h-dvh flex-col overflow-hidden bg-onyx text-ivory">
+      {/* Lueurs de lumière subtiles (aucune image chargée sous le texte). */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
           backgroundImage:
-            "radial-gradient(60% 50% at 50% 0%, rgba(203,180,136,0.10) 0%, rgba(12,12,14,0) 60%)," +
-            "radial-gradient(80% 60% at 50% 120%, rgba(154,123,69,0.10) 0%, rgba(12,12,14,0) 60%)",
+            "radial-gradient(55% 45% at 50% 0%, rgba(203,180,136,0.12) 0%, rgba(12,12,14,0) 62%)," +
+            "radial-gradient(80% 60% at 50% 120%, rgba(154,123,69,0.12) 0%, rgba(12,12,14,0) 60%)",
         }}
       />
 
       <LandingNav />
 
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-10 pt-24 sm:px-10 sm:pt-28 lg:px-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 pb-12 pt-24 sm:px-10 sm:pt-28 lg:px-8">
         {/* Accroche + titre */}
-        <div className="mx-auto max-w-3xl text-center animate-fade-up">
-          <p className="eyebrow text-gold-soft">{hero.eyebrow}</p>
-          <h1 className="mt-5 text-balance text-4xl leading-[1.06] text-ivory sm:text-5xl lg:text-6xl">
-            {hero.titleLine1}
-            <br />
-            {hero.titleLine2}
-          </h1>
+        <div className="mx-auto max-w-3xl text-center">
+          <Reveal>
+            <p className="eyebrow text-gold-soft">{hero.eyebrow}</p>
+          </Reveal>
+          <Reveal variant="rise" delayMs={90}>
+            <h1 className="mt-5 text-balance text-[2.65rem] leading-[1.04] text-ivory sm:text-6xl lg:text-[4.5rem]">
+              {hero.titleLine1}
+              <br />
+              {hero.titleLine2}
+            </h1>
+          </Reveal>
         </div>
 
         {/* Écrin VSL — pièce maîtresse */}
-        <div className="mx-auto mt-8 w-full max-w-4xl animate-fade-up sm:mt-10">
+        <Reveal variant="scale" delayMs={220} className="mx-auto mt-8 w-full max-w-4xl sm:mt-10">
           <HeroVsl />
-        </div>
+        </Reveal>
 
-        {/* Sous-titre + CTA */}
-        <div className="mx-auto mt-8 flex max-w-2xl flex-col items-center text-center animate-fade-up">
-          <p className="text-pretty text-base leading-relaxed text-ivory/85 sm:text-lg">
-            {hero.subtitle}
-          </p>
-          <div className="mt-7 flex flex-col items-center gap-3">
-            <CtaLink href={ANALYSE_ROUTE} variant="contrast">
+        {/* Sous-titre + grand CTA */}
+        <div className="mx-auto mt-8 flex max-w-2xl flex-col items-center text-center">
+          <Reveal delayMs={140}>
+            <p className="text-pretty text-base leading-relaxed text-ivory/85 sm:text-lg">
+              {hero.subtitle}
+            </p>
+          </Reveal>
+          <Reveal delayMs={240} className="mt-8 flex flex-col items-center gap-3">
+            <LandingCta href={ANALYSE_ROUTE} tone="contrast" size="xl">
               {CTA_PRIMARY}
-            </CtaLink>
+            </LandingCta>
             <p className="text-sm text-ivory/70">{MICROCOPY}</p>
-          </div>
+          </Reveal>
         </div>
+      </div>
+
+      {/* Indice de défilement */}
+      <div className="pointer-events-none flex justify-center pb-6">
+        <span className="flex flex-col items-center gap-2 text-[0.68rem] uppercase tracking-[0.28em] text-ivory/45">
+          {hero.scrollCue}
+          <span aria-hidden="true" className="animate-scroll-cue text-gold-soft">
+            ↓
+          </span>
+        </span>
       </div>
     </section>
   );

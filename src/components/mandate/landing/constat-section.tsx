@@ -3,27 +3,34 @@ import { SectionMarker } from "./section-marker";
 import { constat } from "./copy";
 
 /**
- * Section 01 — Le constat. Colonne éditoriale + reconstitution volontairement
- * générique d'une « annonce standard » : elle montre comment un bien
- * d'exception se retrouve présenté comme n'importe quel autre.
+ * Section 01 — Le constat (« Vos biens méritent un meilleur écrin »). Colonne
+ * éditoriale + reconstitution volontairement générique d'une « annonce standard »
+ * (animée) : elle montre comment un bien d'exception se retrouve présenté comme
+ * n'importe quel autre.
  */
 export function ConstatSection() {
   return (
     <section className="bg-ivory px-6 py-24 text-wood-black sm:px-10 sm:py-32 lg:px-16">
       <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2 lg:gap-20">
-        <Reveal>
-          <SectionMarker index={constat.index} label={constat.kicker} />
-          <h2 className="mt-7 text-balance text-3xl leading-[1.14] sm:text-4xl lg:text-[2.75rem]">
-            {constat.title}
-          </h2>
-          <p className="mt-7 max-w-xl text-pretty text-lg leading-relaxed text-text-secondary">
-            {constat.body}
-          </p>
-        </Reveal>
+        <div>
+          <Reveal>
+            <SectionMarker index={constat.index} label={constat.kicker} />
+          </Reveal>
+          <Reveal variant="rise" delayMs={80}>
+            <h2 className="mt-7 text-balance text-3xl leading-[1.12] sm:text-4xl lg:text-[2.9rem]">
+              {constat.title}
+            </h2>
+          </Reveal>
+          <Reveal delayMs={200}>
+            <p className="mt-7 max-w-xl text-pretty text-lg leading-relaxed text-text-secondary">
+              {constat.body}
+            </p>
+          </Reveal>
+        </div>
 
         {/* Reconstitution d'une annonce standard (générique à dessein). */}
-        <Reveal delayMs={120} className="lg:justify-self-end">
-          <figure className="w-full max-w-md border border-border bg-surface shadow-[var(--shadow-md)]">
+        <Reveal variant="scale" delayMs={140} className="lg:justify-self-end">
+          <figure className="w-full max-w-md rotate-[-1.2deg] border border-border bg-surface shadow-[var(--shadow-lg)] transition-transform duration-500 hover:rotate-0">
             <div
               aria-hidden="true"
               className="flex aspect-[4/3] items-center justify-center bg-ivory-muted"

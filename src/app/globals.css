@@ -197,26 +197,127 @@ html.js .reveal {
   opacity: 0;
 }
 html.js .reveal.is-visible {
-  animation: pg-fade-up var(--transition-slow) both;
+  animation: pg-reveal-up 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+/* Variantes de révélation (relief) */
+html.js .reveal.reveal-blur.is-visible {
+  animation: pg-reveal-blur 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+html.js .reveal.reveal-scale.is-visible {
+  animation: pg-reveal-scale 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+html.js .reveal.reveal-rise.is-visible {
+  animation: pg-reveal-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
 }
 
-.animate-fade-up {
-  animation: pg-fade-up var(--transition-slow) both;
+@keyframes pg-reveal-up {
+  from { opacity: 0; transform: translateY(34px); }
+  to { opacity: 1; transform: none; }
 }
-.animate-fade {
-  animation: pg-fade var(--transition-immersive) both;
+@keyframes pg-reveal-blur {
+  from { opacity: 0; transform: translateY(26px); filter: blur(12px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes pg-reveal-scale {
+  from { opacity: 0; transform: scale(0.93); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pg-reveal-rise {
+  from { opacity: 0; transform: translateY(64px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-fade-up { animation: pg-fade-up var(--transition-slow) both; }
+.animate-fade { animation: pg-fade var(--transition-immersive) both; }
+
+/* Bandeau défilant (marquee cinématographique) */
+@keyframes pg-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: pg-marquee 34s linear infinite;
+}
+
+/* Reflet lumineux traversant un bouton (sheen) au survol */
+@keyframes pg-sheen {
+  from { transform: translateX(-140%) skewX(-18deg); }
+  to { transform: translateX(240%) skewX(-18deg); }
+}
+.cta-shine { position: relative; overflow: hidden; }
+.cta-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  transform: translateX(-140%) skewX(-18deg);
+  pointer-events: none;
+}
+.cta-shine:hover::after,
+.cta-shine:focus-visible::after {
+  animation: pg-sheen 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Halo doré pulsant très discret (accents) */
+@keyframes pg-glow {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+.animate-glow { animation: pg-glow 3.6s ease-in-out infinite; }
+
+/* Indice de défilement (hero) */
+@keyframes pg-scroll-cue {
+  0% { transform: translateY(0); opacity: 0.25; }
+  50% { opacity: 1; }
+  100% { transform: translateY(9px); opacity: 0.25; }
+}
+.animate-scroll-cue { animation: pg-scroll-cue 1.8s ease-in-out infinite; }
+
+/* Grain filmique très léger (texture / relief). */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+  html { scroll-behavior: auto; }
   html.js .reveal,
   html.js .reveal.is-visible,
+  html.js .reveal.reveal-blur.is-visible,
+  html.js .reveal.reveal-scale.is-visible,
+  html.js .reveal.reveal-rise.is-visible,
   .animate-fade-up,
   .animate-fade {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
+  }
+  .marquee-track,
+  .animate-glow,
+  .animate-scroll-cue,
+  .cta-shine:hover::after,
+  .cta-shine:focus-visible::after {
+    animation: none !important;
   }
 }

@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { CtaLink } from "@/components/ui/cta-link";
+import { LandingCta } from "@/components/ui/landing-cta";
 import { ANALYSE_ROUTE } from "@/lib/routes";
 import { hero, CTA_NAV } from "./copy";
 
 /**
  * Navigation très discrète en surimpression sur la hero sombre : signature
- * Prodigio à gauche, CTA d'éligibilité à droite. Aucun menu superflu.
+ * Prodigio à gauche, CTA d'éligibilité à droite (bouton net, reflet au survol).
  */
 export function LandingNav() {
   return (
@@ -18,13 +18,14 @@ export function LandingNav() {
           {hero.tagline}
         </span>
       </Link>
-      <CtaLink
+      <LandingCta
         href={ANALYSE_ROUTE}
-        variant="ghost-dark"
-        className="!min-h-[2.6rem] !px-5 !py-2.5 text-xs"
+        tone="ghost-dark"
+        size="lg"
+        className="!min-h-[2.9rem] !px-6 !py-3 text-xs sm:text-sm"
       >
         {CTA_NAV}
-      </CtaLink>
+      </LandingCta>
     </header>
   );
 }

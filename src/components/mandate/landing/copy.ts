@@ -1,12 +1,20 @@
 /**
- * Contenu éditorial de la landing propriétaire (refonte cinématographique).
+ * Contenu éditorial de la landing propriétaire (refonte cinématographique v2).
  * Isolé du contenu du parcours (`analysis`) pour ne pas toucher au quiz.
- * Français ; ton premium, sélectif, sans jargon « startup ».
+ * Ton premium, affirmatif, orienté conversion.
  */
 
 export const CTA_PRIMARY = "Tester l'éligibilité de ma propriété";
 export const CTA_NAV = "Tester mon éligibilité";
 export const MICROCOPY = "Analyse confidentielle — environ 1 minute";
+
+export const marqueeItems = [
+  "Immobilier d'exception",
+  "Mise en marché active",
+  "Créer le coup de cœur",
+  "1 bien · 1 écrin",
+  "En France comme à l'étranger",
+];
 
 export const hero = {
   brand: "PRODIGIO",
@@ -18,16 +26,28 @@ export const hero = {
     "Prodigio transforme chaque bien sélectionné en une marque singulière et " +
     "déploie une stratégie active pour aller chercher ses futurs acquéreurs, en " +
     "France comme à l'étranger.",
+  scrollCue: "Découvrir le système",
+} as const;
+
+/** Moment signature — la phrase que le client aime. */
+export const statement = {
+  kicker: "La différence",
+  line1: "Prodigio ne met pas votre bien en vente.",
+  line2: "Prodigio le vend.",
+  support:
+    "Une méthode active, née du marketing. On ne publie pas une annonce et on " +
+    "ne l'attend pas : nous créons les conditions du coup de cœur, puis nous " +
+    "allons chercher l'acheteur.",
 } as const;
 
 export const constat = {
   index: "01",
   kicker: "Le constat",
-  title:
-    "Même les plus belles demeures finissent encore présentées comme des annonces ordinaires.",
+  title: "Vos biens méritent un meilleur écrin.",
   body:
-    "Un bien d'exception ne devrait pas être noyé dans un catalogue. Il mérite " +
-    "son propre écrin, son propre récit et sa propre stratégie de mise en marché.",
+    "Sur les portails, même une demeure d'exception est présentée comme une " +
+    "annonce ordinaire : quelques photos, un descriptif, un prix, un formulaire. " +
+    "Un bien rare mérite son propre récit et sa propre stratégie de mise en marché.",
   card: {
     label: "Annonce standard",
     lines: ["Photographies", "Descriptif", "Caractéristiques", "Formulaire de contact"],
@@ -39,35 +59,55 @@ export const systeme = {
   kicker: "Le Système Prodigio",
   titleLine1: "Nous n'attendons pas le coup de cœur.",
   titleLine2: "Nous créons les conditions pour qu'il se produise.",
-  steps: [
+  phases: [
     {
-      n: "01",
-      title: "Transformer votre propriété en marque",
-      text: "Film, photographie, narration, identité et site dédié.",
+      n: "I",
+      title: "Comprendre",
+      lead: "L'étude au sniper",
+      text: "Identifier l'acheteur idéal du bien : qui il est, où il vit, ce qui déclenche son intérêt.",
     },
     {
-      n: "02",
-      title: "Aller chercher son futur acquéreur",
-      text: "Campagnes ciblées en France et à l'étranger.",
+      n: "II",
+      title: "Concevoir",
+      lead: "Une marque, pas une fiche",
+      text: "Stratégie, angles de désir et récit sur mesure — le bien devient une identité à part entière.",
     },
     {
-      n: "03",
-      title: "Qualifier avant la visite",
-      text: "Budget, projet, temporalité et intérêt réel.",
+      n: "III",
+      title: "Produire",
+      lead: "Film, image, narration",
+      text: "Captation cinématographique, écrin éditorial et site dédié : 1 bien, 1 univers.",
+    },
+    {
+      n: "IV",
+      title: "Acquérir",
+      lead: "Aller chercher l'acheteur",
+      text: "Campagnes ciblées en France et à l'étranger, puis qualification avant la moindre visite.",
     },
   ],
 } as const;
 
-export const preuve = {
+export const modele = {
   index: "03",
+  kicker: "Le modèle",
+  title: "Nous finançons la visibilité.",
+  emphasis: "Rémunérés au résultat.",
+  text:
+    "Sur les biens éligibles, Prodigio avance les campagnes d'acquisition " +
+    "d'acheteurs. Notre intérêt est simple et aligné sur le vôtre : la vente.",
+} as const;
+
+export const preuve = {
+  index: "04",
   kicker: "La preuve",
   title: "Un cas réel, présenté sans promesse.",
+  intro: "De l'exposition à la signature — l'entonnoir d'une mise en marché active.",
   stats: [
-    { value: "312", label: "demandes générées en 14 jours" },
-    { value: "172", label: "budgets déclarés" },
-    { value: "23", label: "acquéreurs à plus de 1 M€" },
-    { value: "6", label: "visites organisées" },
-    { value: "1", label: "vente" },
+    { value: 312, suffix: "", label: "demandes générées en 14 jours" },
+    { value: 172, suffix: "", label: "budgets déclarés" },
+    { value: 23, suffix: "", label: "acquéreurs à plus de 1 M€" },
+    { value: 6, suffix: "", label: "visites organisées" },
+    { value: 1, suffix: "", label: "vente" },
   ],
   disclaimer:
     "Il s'agit d'un cas réel. Les résultats dépendent du bien, du marché et de " +
@@ -75,11 +115,11 @@ export const preuve = {
 } as const;
 
 export const comparaison = {
-  index: "04",
+  index: "05",
   kicker: "Avant / Avec Prodigio",
   title: "La même propriété, deux trajectoires.",
   before: {
-    label: "Avant",
+    label: "Sans Prodigio",
     items: [
       "Une fiche parmi d'autres",
       "Diffusion passive",
@@ -100,7 +140,7 @@ export const comparaison = {
 } as const;
 
 export const selection = {
-  index: "05",
+  index: "06",
   kicker: "Sélection & confidentialité",
   title: "Nous ne travaillons pas avec toutes les propriétés.",
   text:
@@ -118,7 +158,4 @@ export const finalCta = {
 export const footer = {
   brand: "PRODIGIO",
   tagline: "Immobilier d'exception — mise en marché active",
-  note:
-    "Prodigio est un système de commercialisation active de biens immobiliers " +
-    "d'exception. Les mandats sont portés par une entité immobilière habilitée.",
 } as const;
