@@ -182,18 +182,30 @@ export function ContactFields({
 
       {/* Honeypot (leurre) : masqué visuellement et aux technologies d'assistance.
           Défense PARTIELLE seulement — ne protège pas contre les abus automatisés.
-          Cloudflare Turnstile reste requis avant la mise en production. */}
+          Cloudflare Turnstile reste requis avant la mise en production.
+
+          IMPORTANT : le champ ne doit JAMAIS être rempli par l'autofill du
+          navigateur ni par un gestionnaire de mots de passe (sinon un humain se
+          voit bloqué). D'où : aucun libellé « Société »/company (déclencheur
+          d'autofill), un `name` neutre, `autocomplete="off"` et les marqueurs
+          d'exclusion 1Password (`data-1p-ignore`) / LastPass (`data-lpignore`) /
+          Bitwarden & autres (`data-form-type="other"`). En dernier recours,
+          `validateFunnelAnswers` neutralise côté machine un honeypot malgré tout
+          rempli. */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-        <label>
-          Société (ne pas remplir)
-          <input
-            type="text"
-            tabIndex={-1}
-            autoComplete="off"
-            value={honeypot}
-            onChange={(e) => onHoneypotChange(e.target.value)}
-          />
-        </label>
+        <label htmlFor="contact-extra-field">Ne pas remplir</label>
+        <input
+          id="contact-extra-field"
+          name="contact-extra-field"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-form-type="other"
+          value={honeypot}
+          onChange={(e) => onHoneypotChange(e.target.value)}
+        />
       </div>
     </div>
   );

@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ATTRIBUTION_STORAGE_KEY,
   contactSchema,
-  funnelAnswersSchema,
   generateIdempotencyKey,
   locationSchema,
   submissionRequestSchema,
+  validateFunnelAnswers,
   type ContactPreference,
   type MandateSituation,
   type PropertyType,
@@ -229,7 +229,12 @@ export function useAnalyseMachine(): AnalyseMachine {
 
   const submit = useCallback(
     async (finalDraft: DraftAnswers) => {
-      const answers = funnelAnswersSchema.safeParse({
+      // Validation robuste au honeypot rempli par autofill : si l'unique échec
+      // est le champ leurre `company` (rempli automatiquement par un navigateur
+      // ou un gestionnaire de mots de passe), il est neutralisé et la
+      // soumission se poursuit — un humain ne doit jamais être bloqué par le
+      // piège anti-robot (Turnstile reste la vraie garde, côté serveur).
+      const validation = validateFunnelAnswers({
         propertyType: finalDraft.propertyType,
         location: finalDraft.location,
         valueBand: finalDraft.valueBand,
@@ -239,15 +244,11 @@ export function useAnalyseMachine(): AnalyseMachine {
         company: finalDraft.company,
       });
 
-      if (!answers.success) {
+      if (!validation.ok) {
         // Cartographie précise : une erreur sous CHAQUE champ concerné (plutôt
         // qu'un message générique). Les chemins Zod (« contact.phoneRaw ») sont
         // alignés sur les clés lues par les champs de l'étape.
-        const fieldErrors: Errors = {};
-        for (const issue of answers.error.issues) {
-          const key = issue.path.join(".");
-          if (key && !(key in fieldErrors)) fieldErrors[key] = issue.message;
-        }
+        const fieldErrors: Errors = validation.fieldErrors;
         setErrors(fieldErrors);
         setStatus("error");
         // Aucune erreur silencieuse : on n'omet le message global QUE si au moins
@@ -268,7 +269,7 @@ export function useAnalyseMachine(): AnalyseMachine {
 
       const attribution = readAttribution();
       const request = submissionRequestSchema.safeParse({
-        answers: answers.data,
+        answers: validation.data,
         context: {
           idempotencyKey: idempotencyKeyRef.current,
           originUrl: window.location.href,
