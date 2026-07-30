@@ -6,6 +6,15 @@
  * n'est journalisée ici ; ces fonctions sont pures et testables.
  */
 
+import {
+  isSupportedCountry,
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from "libphonenumber-js";
+
+/** Pays par défaut du funnel (marché français). */
+export const DEFAULT_PHONE_COUNTRY: CountryCode = "FR";
+
 /** Normalise un e-mail : découpe, minuscule, validation basique. Null si invalide. */
 export function normalizeEmail(input: string | null | undefined): string | null {
   if (!input) return null;
@@ -16,52 +25,43 @@ export function normalizeEmail(input: string | null | undefined): string | null 
   return value;
 }
 
+/** Convertit une entrée de pays en `CountryCode` valide, ou le pays par défaut. */
+export function resolvePhoneCountry(
+  country: string | null | undefined,
+): CountryCode {
+  if (typeof country === "string") {
+    const upper = country.toUpperCase();
+    if (isSupportedCountry(upper)) return upper as CountryCode;
+  }
+  return DEFAULT_PHONE_COUNTRY;
+}
+
 /**
- * Normalise un numéro de téléphone, en privilégiant le format français.
- * - Conserve un « + » international s'il est fourni.
- * - « 00 » international → « + ».
- * - Numéro national à 10 chiffres commençant par 0 → « +33 » + reste.
- * Retourne une forme type E.164 simplifiée, ou null si manifestement invalide.
+ * Normalise un numéro de téléphone au format **E.164** (`+33625773592`) via
+ * `libphonenumber-js` (fondé sur libphonenumber de Google). Le pays sélectionné
+ * permet d'interpréter une saisie **nationale** (ex. « 06 25 77 35 92 » avec la
+ * France). Retourne `null` si le numéro n'est pas un numéro **valide** pour le
+ * pays donné (validation réelle, pas seulement une longueur plausible).
  */
-export function normalizePhone(input: string | null | undefined): string | null {
+export function normalizePhone(
+  input: string | null | undefined,
+  country: string | null | undefined = DEFAULT_PHONE_COUNTRY,
+): string | null {
   if (!input) return null;
   const trimmed = input.trim();
   if (trimmed.length === 0) return null;
 
-  const hasPlus = trimmed.startsWith("+");
-  // Ne conserver que les chiffres.
-  let digits = trimmed.replace(/\D/g, "");
-  if (digits.length === 0) return null;
-
-  if (hasPlus) {
-    // Déjà international : « +CC……… ».
-    if (digits.length < 8 || digits.length > 15) return null;
-    return `+${digits}`;
-  }
-
-  // « 00 » → indicatif international.
-  if (digits.startsWith("00")) {
-    digits = digits.slice(2);
-    if (digits.length < 8 || digits.length > 15) return null;
-    return `+${digits}`;
-  }
-
-  // Numéro national français : 10 chiffres commençant par 0.
-  if (digits.length === 10 && digits.startsWith("0")) {
-    return `+33${digits.slice(1)}`;
-  }
-
-  // 9 chiffres sans le 0 initial (ex. « 612345678 ») → suppose la France.
-  if (digits.length === 9 && !digits.startsWith("0")) {
-    return `+33${digits}`;
-  }
-
-  // Autres cas plausibles (numéro étranger saisi sans « + »).
-  if (digits.length >= 8 && digits.length <= 15) {
-    return `+${digits}`;
-  }
-
+  const parsed = parsePhoneNumberFromString(trimmed, resolvePhoneCountry(country));
+  if (parsed && parsed.isValid()) return parsed.number; // format E.164
   return null;
+}
+
+/** Vrai si l'entrée est un numéro **valide** pour le pays donné. */
+export function isValidPhone(
+  input: string | null | undefined,
+  country: string | null | undefined = DEFAULT_PHONE_COUNTRY,
+): boolean {
+  return normalizePhone(input, country) !== null;
 }
 
 /** Nettoie un texte libre court (espaces multiples, bornage de longueur). */

@@ -100,7 +100,8 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
   const contact = answers.contact;
 
   const emailNormalized = normalizeEmail(contact.emailRaw);
-  const phoneNormalized = normalizePhone(contact.phoneRaw);
+  // E.164 calculé selon le pays sélectionné (ex. « 06 25 77 35 92 » + FR).
+  const phoneNormalized = normalizePhone(contact.phoneRaw, contact.phoneCountry);
   const city = normalizeText(answers.location.city, 120);
   const postalCode = normalizePostalCode(answers.location.postalCode);
   const country = normalizeText(answers.location.country ?? "France", 80);
@@ -119,6 +120,7 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
       first_name: contact.firstName,
       last_name: contact.lastName,
       phone: contact.phoneRaw,
+      phone_country: contact.phoneCountry,
       email: contact.emailRaw,
       preference: contact.preference ?? null,
       recall_preference: contact.recallPreference,
@@ -135,6 +137,7 @@ export function buildSubmissionPayload(request: SubmissionRequest): Json {
       first_name: normalizeText(contact.firstName, 80),
       last_name: normalizeText(contact.lastName, 80),
       phone: phoneNormalized,
+      phone_country: contact.phoneCountry,
       email: emailNormalized,
       preference: contact.preference ?? null,
       recall_preference: contact.recallPreference,

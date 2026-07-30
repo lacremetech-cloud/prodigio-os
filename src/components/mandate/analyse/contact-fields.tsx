@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   analysis,
   consent,
@@ -7,6 +8,7 @@ import {
   type RecallPreference,
 } from "@/modules/mandates/funnel";
 import { Field } from "./field";
+import { PhoneField } from "./phone-field";
 import type { DraftAnswers } from "./use-analyse-machine";
 
 interface ContactFieldsProps {
@@ -30,9 +32,21 @@ export function ContactFields({
   onHoneypotChange,
 }: ContactFieldsProps) {
   const t = analysis.steps.contact;
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // Met le focus sur le PREMIER champ invalide dès qu'une erreur apparaît
+  // (après une tentative de soumission) — accessibilité et guidage précis.
+  useEffect(() => {
+    const hasError = Object.keys(errors).some((k) => k.startsWith("contact."));
+    if (!hasError) return;
+    const first = rootRef.current?.querySelector<HTMLElement>(
+      '[aria-invalid="true"]',
+    );
+    first?.focus();
+  }, [errors]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div ref={rootRef} className="flex flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <Field
           label={t.firstNameLabel}
@@ -49,15 +63,16 @@ export function ContactFields({
           error={errors["contact.lastName"]}
           autoComplete="family-name"
         />
-        <Field
-          label={t.phoneLabel}
-          value={value.phoneRaw}
-          onChange={(e) => onChange({ phoneRaw: e.target.value })}
-          error={errors["contact.phoneRaw"]}
-          autoComplete="tel"
-          inputMode="tel"
-          type="tel"
-        />
+        <div className="sm:col-span-2">
+          <PhoneField
+            label={t.phoneLabel}
+            numberValue={value.phoneRaw}
+            country={value.phoneCountry}
+            onNumberChange={(v) => onChange({ phoneRaw: v })}
+            onCountryChange={(iso) => onChange({ phoneCountry: iso })}
+            error={errors["contact.phoneRaw"]}
+          />
+        </div>
         <Field
           label={t.emailLabel}
           value={value.emailRaw}
@@ -66,6 +81,7 @@ export function ContactFields({
           autoComplete="email"
           inputMode="email"
           type="email"
+          className="sm:col-span-2"
         />
       </div>
 
