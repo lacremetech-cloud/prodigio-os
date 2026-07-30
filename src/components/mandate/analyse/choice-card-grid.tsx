@@ -68,10 +68,11 @@ export function ChoiceCardGrid({
                   {label}
                 </span>
                 <span
+                  key={isSelected ? "on" : "off"}
                   aria-hidden="true"
                   className={`mb-1 flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
                     isSelected
-                      ? "border-gold bg-gold text-white"
+                      ? "animate-check-pop border-gold bg-gold text-white"
                       : "border-text-on-dark/70 text-transparent"
                   }`}
                 >

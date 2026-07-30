@@ -43,10 +43,11 @@ export function OptionList<T extends string>({
             >
               <span className="text-base text-text-on-dark sm:text-lg">{option.label}</span>
               <span
+                key={isSelected ? "on" : "off"}
                 aria-hidden="true"
                 className={`flex size-6 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
                   isSelected
-                    ? "scale-100 border-gold bg-gold text-white"
+                    ? "animate-check-pop border-gold bg-gold text-white"
                     : "scale-90 border-[color:var(--color-border-strong-dark)] text-transparent group-hover:border-text-on-dark"
                 }`}
               >

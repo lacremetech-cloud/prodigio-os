@@ -299,6 +299,27 @@ html.js .reveal.reveal-rise.is-visible {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Transitions directionnelles entre les questions du parcours (glissement selon
+   le sens de navigation avant / arrière). */
+@keyframes pg-step-fwd {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pg-step-back {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-step-fwd { animation: pg-step-fwd 380ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-step-back { animation: pg-step-back 380ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Coche de sélection (léger « pop » à l'apparition). */
+@keyframes pg-check-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.animate-check-pop { animation: pg-check-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   html.js .reveal,
@@ -307,7 +328,10 @@ html.js .reveal.reveal-rise.is-visible {
   html.js .reveal.reveal-scale.is-visible,
   html.js .reveal.reveal-rise.is-visible,
   .animate-fade-up,
-  .animate-fade {
+  .animate-fade,
+  .animate-step-fwd,
+  .animate-step-back,
+  .animate-check-pop {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
