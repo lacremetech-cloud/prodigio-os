@@ -125,6 +125,9 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   migrations (funnel + CRM), variables, RLS, prérequis de production.
 - [docs/09-CRM-GUIDE.md](docs/09-CRM-GUIDE.md) — CRM interne Mandats V1 : premier
   administrateur, invitation, usage, rôles, vérification de sécurité, reports.
+- [docs/10-SLACK-ALERTS.md](docs/10-SLACK-ALERTS.md) — Alerte Slack « Nouvelle
+  demande de mandat » : architecture, anti-doublon, panne non bloquante, deep
+  link CRM, données incluses/exclues.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

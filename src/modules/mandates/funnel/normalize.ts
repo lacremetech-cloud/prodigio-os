@@ -64,6 +64,24 @@ export function isValidPhone(
   return normalizePhone(input, country) !== null;
 }
 
+/**
+ * Formatage **international lisible** d'un numéro (`+33 6 25 77 35 92`), avec
+ * indicatif international, pour l'affichage humain (alertes, fiches). Retombe sur
+ * l'E.164 (`+33625773592`) si le formatage détaillé échoue, et sur `null` si le
+ * numéro n'est pas valide. Ne tronque jamais le numéro.
+ */
+export function formatPhoneInternational(
+  input: string | null | undefined,
+  country: string | null | undefined = DEFAULT_PHONE_COUNTRY,
+): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (trimmed.length === 0) return null;
+  const parsed = parsePhoneNumberFromString(trimmed, resolvePhoneCountry(country));
+  if (!parsed || !parsed.isValid()) return null;
+  return parsed.formatInternational() || parsed.number;
+}
+
 /** Nettoie un texte libre court (espaces multiples, bornage de longueur). */
 export function normalizeText(
   input: string | null | undefined,

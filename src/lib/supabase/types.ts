@@ -20,10 +20,17 @@ export type Json =
 
 /**
  * Résultat renvoyé par la fonction SQL `submit_mandate_funnel`.
- * Volontairement NEUTRE : un simple accusé de réception (aucune donnée).
+ *
+ * `accepted` reste l'accusé public neutre. `created` et `opportunity_id` sont
+ * destinés au **serveur uniquement** (déclenchement d'une alerte Slack sans
+ * doublon) : l'action Next ne les renvoie JAMAIS au navigateur. `created=true`
+ * uniquement pour l'appel qui a réellement inséré la soumission ; `opportunity_id`
+ * présent seulement dans ce cas. La neutralité (existence de contact) est préservée.
  */
 export interface SubmitMandateFunnelResult {
   accepted: boolean;
+  created?: boolean;
+  opportunity_id?: string | null;
 }
 
 // --- Lignes des tables lues par le CRM (sous RLS) ----------------------------

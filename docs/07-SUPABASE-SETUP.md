@@ -542,3 +542,30 @@ cette mission ont été supprimées. **Premier administrateur réel** créé à 
 demande du propriétaire (`agence@indescale.com`, rôle `administrateur`).
 
 Guide d'utilisation, rôles et bootstrap : [09-CRM-GUIDE.md](09-CRM-GUIDE.md).
+
+---
+
+## 10. RPC `submit_mandate_funnel` — retour enrichi (alerte Slack)
+
+Migration **additive** `20260730180000_mandate_funnel_return_ids` (appliquée sur
+`wmhrpweefutwldbhllhg`). `CREATE OR REPLACE` de `submit_mandate_funnel` avec un
+**corps identique** à la version déployée — **seules** les deux instructions
+`return` changent :
+
+- nouvelle demande réellement enregistrée →
+  `{ accepted:true, created:true, opportunity_id:<uuid> }` ;
+- rejeu idempotent (même clé) → `{ accepted:true, created:false }`.
+
+Ces champs `created` / `opportunity_id` sont destinés au **serveur uniquement**
+(déclenchement d'une **alerte Slack sans doublon** — voir
+[10-SLACK-ALERTS.md](10-SLACK-ALERTS.md)) : l'action Next ne les renvoie **jamais**
+au navigateur. La **neutralité** publique est préservée (`created` reflète la
+fraîcheur de la clé d'idempotence, jamais l'existence d'un contact ;
+`opportunity_id` est un UUID qui n'ouvre aucun accès sans authentification). RLS,
+GRANT (`anon`/`authenticated` conservés par `CREATE OR REPLACE`), scoring,
+dédoublonnage, preuve RGPD et idempotence **inchangés**.
+
+Vérification (transaction annulée, aucune donnée persistée) : nouvelle demande →
+`created:true` + `opportunity_id` + 5 objets créés (dont rattachement org
+opérateur) ; rejeu même clé → `created:false` ; `anon`/`authenticated` conservent
+l'`EXECUTE`.

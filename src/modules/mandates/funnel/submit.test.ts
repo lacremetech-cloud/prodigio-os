@@ -13,12 +13,28 @@ const h = vi.hoisted(() => ({
   rpc: vi.fn(),
   createClient: vi.fn(),
   verify: vi.fn(),
+  notify: vi.fn(),
   flags: { supabase: true, turnstile: true, prodSafe: true },
   env: {
     NODE_ENV: "test" as string,
     TURNSTILE_SECRET_KEY: "server-secret" as string | undefined,
     TURNSTILE_EXPECTED_HOSTNAME: undefined as string | undefined,
   },
+}));
+
+// `after` exécute son callback immédiatement dans les tests (le vrai `after`
+// diffère l'exécution après la réponse). L'alerte Slack est entièrement mockée :
+// AUCUN webhook réel n'est jamais appelé.
+vi.mock("next/server", () => ({
+  after: (cb: () => unknown) => {
+    // Exécute le callback (appel synchrone du notifieur) et neutralise toute
+    // rejection (le vrai notifieur ne lève jamais ; l'alerte reste non bloquante).
+    void Promise.resolve(cb()).catch(() => {});
+  },
+}));
+
+vi.mock("../notifications", () => ({
+  notifyNewMandateSubmission: h.notify,
 }));
 
 vi.mock("@/config", async (importOriginal) => {
@@ -82,8 +98,17 @@ beforeEach(() => {
   h.env.TURNSTILE_SECRET_KEY = "server-secret";
   h.env.TURNSTILE_EXPECTED_HOSTNAME = undefined;
   h.createClient.mockResolvedValue({ rpc: h.rpc });
-  h.rpc.mockResolvedValue({ data: { accepted: true }, error: null });
+  // Par défaut : nouvelle demande réellement enregistrée (created=true + id).
+  h.rpc.mockResolvedValue({
+    data: {
+      accepted: true,
+      created: true,
+      opportunity_id: "7c0bb596-5f16-42cb-8327-eabf5e36bd59",
+    },
+    error: null,
+  });
   h.verify.mockResolvedValue({ ok: true, hostname: null, action: "mandate_submission" });
+  h.notify.mockResolvedValue({ status: "sent", attempts: 1 });
 });
 
 describe("submitMandateFunnelAction — Turnstile gate", () => {
@@ -211,5 +236,76 @@ describe("submitMandateFunnelAction — Turnstile gate", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("error");
     expect(h.rpc).toHaveBeenCalledOnce();
+  });
+});
+
+describe("submitMandateFunnelAction — alerte Slack", () => {
+  it("déclenche UNE alerte pour une nouvelle demande (created=true) sans fuiter l'id au client", async () => {
+    const result = await submitMandateFunnelAction(validInput());
+
+    expect(result.ok).toBe(true);
+    expect(h.notify).toHaveBeenCalledOnce();
+    expect(h.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        opportunityId: "7c0bb596-5f16-42cb-8327-eabf5e36bd59",
+        request: expect.any(Object),
+        score: expect.any(Object),
+      }),
+    );
+    // Le client ne reçoit JAMAIS l'opportunity_id ni created.
+    expect(result).not.toHaveProperty("opportunity_id");
+    expect(JSON.stringify(result)).not.toContain("7c0bb596");
+  });
+
+  it("NE déclenche AUCUNE alerte sur un rejeu idempotent (created=false)", async () => {
+    h.rpc.mockResolvedValue({ data: { accepted: true, created: false }, error: null });
+
+    const result = await submitMandateFunnelAction(validInput());
+
+    expect(result.ok).toBe(true);
+    expect(h.notify).not.toHaveBeenCalled();
+  });
+
+  it("NE déclenche AUCUNE alerte si la réponse n'expose pas created (compat/neutre)", async () => {
+    h.rpc.mockResolvedValue({ data: { accepted: true }, error: null });
+
+    const result = await submitMandateFunnelAction(validInput());
+
+    expect(result.ok).toBe(true);
+    expect(h.notify).not.toHaveBeenCalled();
+  });
+
+  it("NE déclenche AUCUNE alerte si Turnstile échoue", async () => {
+    h.verify.mockResolvedValue({ ok: false, reason: "invalid-token" });
+
+    await submitMandateFunnelAction(validInput());
+
+    expect(h.rpc).not.toHaveBeenCalled();
+    expect(h.notify).not.toHaveBeenCalled();
+  });
+
+  it("double soumission (même clé) : une seule alerte au total", async () => {
+    h.rpc
+      .mockResolvedValueOnce({
+        data: { accepted: true, created: true, opportunity_id: "opp-A" },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: { accepted: true, created: false }, error: null });
+
+    const r1 = await submitMandateFunnelAction(validInput());
+    const r2 = await submitMandateFunnelAction(validInput());
+
+    expect(r1.ok).toBe(true);
+    expect(r2.ok).toBe(true);
+    expect(h.notify).toHaveBeenCalledOnce();
+  });
+
+  it("une panne Slack n'affecte pas la soumission (non bloquant)", async () => {
+    h.notify.mockRejectedValue(new Error("slack down"));
+
+    const result = await submitMandateFunnelAction(validInput());
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.appreciation).toBeTypeOf("string");
   });
 });

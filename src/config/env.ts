@@ -50,6 +50,16 @@ const envSchema = z.object({
   // Hostname attendu dans la réponse de siteverify. Obligatoire de fait en
   // production (contrôle d'origine) ; facultatif hors production.
   TURNSTILE_EXPECTED_HOSTNAME: z.string().min(1).optional(),
+
+  // --- Slack (alerte opérationnelle des nouvelles demandes de mandat) ---
+  // URL de webhook entrant Slack (https://hooks.slack.com/…), STRICTEMENT côté
+  // serveur : jamais préfixée `NEXT_PUBLIC_`, jamais renvoyée au client, jamais
+  // journalisée. Présente en PRODUCTION uniquement (ajoutée manuellement dans
+  // Vercel). Absente en preview/dev → notifications désactivées proprement (le
+  // funnel fonctionne normalement). Non validée en `z.url()` pour ne JAMAIS faire
+  // échouer le build sur une valeur inattendue : la forme https est contrôlée à
+  // l'envoi (voir `isSlackConfigured`).
+  SLACK_MANDATES_WEBHOOK_URL: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -151,4 +161,34 @@ export function isTurnstileProductionSafe(
   if (isTurnstileTestSiteKey(source.NEXT_PUBLIC_TURNSTILE_SITE_KEY)) return false;
   if (isTurnstileTestSecretKey(source.TURNSTILE_SECRET_KEY)) return false;
   return true;
+}
+
+/**
+ * Indique si les notifications Slack sont configurées (webhook présent et de
+ * forme `https://`). Ne révèle jamais la valeur — ne lit qu'une présence/forme.
+ * Absent (preview/dev) ⇒ notifications désactivées proprement.
+ */
+export function isSlackConfigured(
+  source: Pick<Env, "SLACK_MANDATES_WEBHOOK_URL"> = env,
+): boolean {
+  const url = source.SLACK_MANDATES_WEBHOOK_URL;
+  return typeof url === "string" && /^https:\/\/\S+$/i.test(url.trim());
+}
+
+/**
+ * Base d'URL publique utilisée pour les **deep links CRM** (Slack, e-mails…).
+ * Priorité à `NEXT_PUBLIC_SITE_URL` s'il est renseigné ; sinon domaine canonique
+ * de production (`https://go.prodigio.fr`) en production, `http://localhost:3000`
+ * hors production. Ne code aucun paramètre métier : uniquement l'hôte de déploiement.
+ */
+export function mandateCrmBaseUrl(
+  source: Pick<Env, "NEXT_PUBLIC_SITE_URL" | "NODE_ENV"> = env,
+): string {
+  const explicit = source.NEXT_PUBLIC_SITE_URL;
+  if (typeof explicit === "string" && /^https?:\/\/\S+$/i.test(explicit.trim())) {
+    return explicit.trim().replace(/\/+$/, "");
+  }
+  return source.NODE_ENV === "production"
+    ? "https://go.prodigio.fr"
+    : "http://localhost:3000";
 }
