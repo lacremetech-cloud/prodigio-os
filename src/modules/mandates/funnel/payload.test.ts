@@ -22,8 +22,17 @@ interface PayloadShape {
   last_touch: unknown;
   consent_proof: { given: boolean; notice_version: string };
   contact_recall_preference: string;
-  raw_answers: { contact: { phone: string; email: string; recall_preference: string } };
-  normalized_answers: { contact: { phone: string | null; email: string | null } };
+  raw_answers: {
+    contact: {
+      phone: string;
+      phone_country: string;
+      email: string;
+      recall_preference: string;
+    };
+  };
+  normalized_answers: {
+    contact: { phone: string | null; phone_country: string; email: string | null };
+  };
 }
 
 function buildRequest(overrides?: {
@@ -91,11 +100,17 @@ describe("buildSubmissionPayload", () => {
     expect(p.contact_phone_raw).toBe("06 12 34 56 78");
     expect(p.contact_email_raw).toBe("Jean.Dupont@Example.com");
     expect(p.raw_answers.contact.phone).toBe("06 12 34 56 78");
-    // Normalisé pour dédoublonnage
+    // Normalisé E.164 pour dédoublonnage
     expect(p.contact_phone).toBe("+33612345678");
     expect(p.contact_email).toBe("jean.dupont@example.com");
     expect(p.normalized_answers.contact.phone).toBe("+33612345678");
     expect(p.normalized_answers.contact.email).toBe("jean.dupont@example.com");
+  });
+
+  it("capture le pays du téléphone (défaut FR) dans les réponses", () => {
+    const p = buildSubmissionPayload(buildRequest()) as unknown as PayloadShape;
+    expect(p.raw_answers.contact.phone_country).toBe("FR");
+    expect(p.normalized_answers.contact.phone_country).toBe("FR");
   });
 
   it("enregistre le consentement et sa version de notice", () => {

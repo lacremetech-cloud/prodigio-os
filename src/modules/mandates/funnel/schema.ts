@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeEmail, normalizePhone } from "./normalize";
+import { DEFAULT_PHONE_COUNTRY, isValidPhone, normalizeEmail } from "./normalize";
 
 /**
  * Schémas de validation et de normalisation du funnel Mandats.
@@ -89,65 +89,78 @@ export const saleHorizonSchema = z.enum(SALE_HORIZONS);
 export const mandateSituationSchema = z.enum(MANDATE_SITUATIONS);
 
 /**
- * Étape coordonnées. Le téléphone et l'e-mail sont normalisés à la volée ;
- * `transform` renvoie à la fois la valeur brute et normalisée pour conserver la
- * saisie originale (RGPD / preuve) tout en dédoublonnant sur la valeur propre.
+ * Étape coordonnées.
+ *
+ * La **validité** du téléphone (selon le pays choisi) et de l'e-mail est
+ * contrôlée **ici même** (superRefine) — et donc **dès l'étape 6** — afin
+ * d'afficher une **erreur précise sous chaque champ** plutôt qu'un message
+ * générique à la soumission finale. `phoneRaw` conserve la saisie originale
+ * (preuve / RGPD) ; la valeur E.164 est calculée à part (voir `payload.ts`).
  */
-export const contactSchema = z.object({
-  firstName: z.string().trim().min(1, "Merci d'indiquer votre prénom.").max(80),
-  lastName: z.string().trim().min(1, "Merci d'indiquer votre nom.").max(80),
-  phoneRaw: z
-    .string()
-    .trim()
-    .min(1, "Merci d'indiquer un numéro de téléphone.")
-    .max(40),
-  emailRaw: z
-    .string()
-    .trim()
-    .min(1, "Merci d'indiquer un e-mail.")
-    .max(180),
-  preference: z.enum(CONTACT_PREFERENCES).optional(),
-  recallPreference: z.enum(RECALL_PREFERENCES, {
-    message: "Merci d'indiquer un moment de rappel.",
-  }),
-  consent: z.literal(true, {
-    message: "Votre accord est nécessaire pour que nous puissions vous recontacter.",
-  }),
-});
-
-/**
- * Réponses complètes de l'analyse. Le honeypot (`company`) doit rester vide :
- * une valeur non vide signale un robot. Il n'est jamais montré à l'utilisateur.
- */
-export const funnelAnswersSchema = z
+export const contactSchema = z
   .object({
-    propertyType: propertyTypeSchema,
-    location: locationSchema,
-    valueBand: valueBandSchema,
-    saleHorizon: saleHorizonSchema,
-    mandateSituation: mandateSituationSchema,
-    contact: contactSchema,
-    // Anti-spam : champ leurre, doit être vide.
-    company: z.string().max(0, "Champ invalide.").optional().default(""),
+    firstName: z.string().trim().min(1, "Merci d'indiquer votre prénom.").max(80),
+    lastName: z.string().trim().min(1, "Merci d'indiquer votre nom.").max(80),
+    phoneRaw: z
+      .string()
+      .trim()
+      .min(1, "Merci d'indiquer un numéro de téléphone.")
+      .max(40),
+    // Pays sélectionné dans le champ téléphone (ISO 3166-1 alpha-2). Défaut FR ;
+    // un code inconnu retombe sur FR côté normalisation.
+    phoneCountry: z
+      .string()
+      .trim()
+      .min(2)
+      .max(2)
+      .transform((c) => c.toUpperCase())
+      .default(DEFAULT_PHONE_COUNTRY),
+    emailRaw: z
+      .string()
+      .trim()
+      .min(1, "Merci d'indiquer un e-mail.")
+      .max(180),
+    preference: z.enum(CONTACT_PREFERENCES).optional(),
+    recallPreference: z.enum(RECALL_PREFERENCES, {
+      message: "Merci d'indiquer un moment de rappel.",
+    }),
+    consent: z.literal(true, {
+      message: "Votre accord est nécessaire pour que nous puissions vous recontacter.",
+    }),
   })
   .superRefine((data, ctx) => {
-    const phone = normalizePhone(data.contact.phoneRaw);
-    if (!phone) {
+    if (!isValidPhone(data.phoneRaw, data.phoneCountry)) {
       ctx.addIssue({
         code: "custom",
-        path: ["contact", "phoneRaw"],
-        message: "Ce numéro de téléphone ne semble pas valide.",
+        path: ["phoneRaw"],
+        message:
+          "Ce numéro ne semble pas valide. Vérifiez le pays et le numéro saisi.",
       });
     }
-    const email = normalizeEmail(data.contact.emailRaw);
-    if (!email) {
+    if (!normalizeEmail(data.emailRaw)) {
       ctx.addIssue({
         code: "custom",
-        path: ["contact", "emailRaw"],
+        path: ["emailRaw"],
         message: "Cet e-mail ne semble pas valide.",
       });
     }
   });
+
+/**
+ * Réponses complètes de l'analyse. Le honeypot (`company`) doit rester vide :
+ * une valeur non vide signale un robot. Il n'est jamais montré à l'utilisateur.
+ * La validité téléphone/e-mail est portée par `contactSchema` (ci-dessus).
+ */
+export const funnelAnswersSchema = z.object({
+  propertyType: propertyTypeSchema,
+  location: locationSchema,
+  valueBand: valueBandSchema,
+  saleHorizon: saleHorizonSchema,
+  mandateSituation: mandateSituationSchema,
+  contact: contactSchema,
+  // Anti-spam : champ leurre, doit être vide.
+  company: z.string().max(0, "Champ invalide.").optional().default(""),
+});
 
 export type FunnelAnswers = z.infer<typeof funnelAnswersSchema>;
 

@@ -30,6 +30,7 @@ export interface DraftAnswers {
     firstName: string;
     lastName: string;
     phoneRaw: string;
+    phoneCountry: string; // ISO 3166-1 alpha-2 (défaut « FR »)
     emailRaw: string;
     preference?: ContactPreference;
     recallPreference?: RecallPreference;
@@ -55,6 +56,7 @@ function emptyDraft(): DraftAnswers {
       firstName: "",
       lastName: "",
       phoneRaw: "",
+      phoneCountry: "FR",
       emailRaw: "",
       consent: false,
     },
@@ -238,8 +240,22 @@ export function useAnalyseMachine(): AnalyseMachine {
       });
 
       if (!answers.success) {
+        // Cartographie précise : une erreur sous CHAQUE champ concerné (plutôt
+        // qu'un message générique). Les chemins Zod (« contact.phoneRaw ») sont
+        // alignés sur les clés lues par les champs de l'étape.
+        const fieldErrors: Errors = {};
+        for (const issue of answers.error.issues) {
+          const key = issue.path.join(".");
+          if (key && !(key in fieldErrors)) fieldErrors[key] = issue.message;
+        }
+        setErrors(fieldErrors);
         setStatus("error");
-        setErrorMessage("Merci de vérifier les informations saisies.");
+        // Message global neutre uniquement si aucun champ précis n'a pu être ciblé.
+        setErrorMessage(
+          Object.keys(fieldErrors).length > 0
+            ? null
+            : "Merci de vérifier les informations saisies.",
+        );
         return;
       }
 
