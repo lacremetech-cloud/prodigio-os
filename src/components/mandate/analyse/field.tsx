@@ -8,8 +8,9 @@ interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
 }
 
 /**
- * Champ de saisie sur fond immersif sombre : libellé au-dessus, ligne fine qui
- * s'illumine au focus, message d'erreur accessible (lié via aria-describedby).
+ * Champ de saisie **plein** (surface ivoire, texte encre) — jamais transparent :
+ * lisibilité maximale, aspect « dossier ». Libellé au-dessus, message d'erreur
+ * accessible (lié via aria-describedby).
  */
 export function Field({ label, error, className = "", ...props }: FieldProps) {
   const id = useId();
@@ -27,18 +28,15 @@ export function Field({ label, error, className = "", ...props }: FieldProps) {
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={`mt-2 w-full border-0 border-b bg-transparent px-0 py-2.5 text-lg text-text-on-dark placeholder:text-text-on-dark/30 focus:outline-none focus:ring-0 ${
+        className={`mt-2 min-h-[3.25rem] w-full rounded-[var(--radius-md)] border bg-surface px-4 py-3 text-base text-wood-black shadow-[var(--shadow-sm)] transition-shadow placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 ${
           error
-            ? "border-b-2 border-[color:var(--color-danger-on-dark)]"
-            : "border-[color:var(--color-border-strong-dark)] focus:border-[color:var(--color-focus)]"
-        } transition-colors`}
+            ? "border-[color:var(--color-danger-on-light)] focus:ring-[color:var(--color-danger-on-light)]"
+            : "border-[color:var(--color-border)] focus:border-[color:var(--color-gold-soft)] focus:ring-[color:var(--color-gold-soft)]"
+        }`}
         {...props}
       />
       {error ? (
-        <p
-          id={errorId}
-          className="mt-2 text-sm text-[color:var(--color-danger-on-dark)]"
-        >
+        <p id={errorId} className="mt-2 text-sm text-[color:var(--color-danger-on-dark)]">
           {error}
         </p>
       ) : null}

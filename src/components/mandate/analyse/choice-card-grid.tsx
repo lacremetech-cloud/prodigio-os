@@ -42,8 +42,8 @@ export function ChoiceCardGrid({
               onClick={() => onSelect(value)}
               className={`group relative aspect-[4/3] overflow-hidden text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
                 isSelected
-                  ? "border-2 border-text-on-dark"
-                  : "border border-[color:var(--color-border-strong-dark)] hover:border-text-on-dark"
+                  ? "-translate-y-1 border-2 border-[color:var(--color-gold)] shadow-[0_22px_50px_-20px_rgba(154,123,69,0.8)]"
+                  : "border border-[color:var(--color-border-strong-dark)] hover:-translate-y-1 hover:border-text-on-dark hover:shadow-[var(--shadow-lg)]"
               }`}
             >
               <Image
