@@ -1,7 +1,7 @@
 import { LandingCta } from "@/components/ui/landing-cta";
 import { ProdigioLogo } from "@/components/ui/prodigio-logo";
 import { ANALYSE_ROUTE } from "@/lib/routes";
-import { hero, CTA_NAV, CTA_NAV_SHORT } from "./copy";
+import { CTA_NAV, CTA_NAV_SHORT } from "./copy";
 
 /**
  * Navigation très discrète en surimpression sur la hero sombre : logo Prodigio à
@@ -12,7 +12,7 @@ import { hero, CTA_NAV, CTA_NAV_SHORT } from "./copy";
 export function LandingNav() {
   return (
     <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 px-5 pt-5 sm:px-10 sm:pt-8 lg:px-16">
-      <ProdigioLogo tagline={hero.tagline} />
+      <ProdigioLogo priority />
       <LandingCta
         href={ANALYSE_ROUTE}
         tone="ghost-dark"
