@@ -7,6 +7,8 @@ import { Chip } from "@/components/crm/ui";
 import { KANBAN_COLUMNS, stageLabels } from "@/modules/crm/labels";
 import { evaluateMove, isProtectedTarget, type KanbanLead } from "@/modules/crm/kanban";
 import { moveLeadStage } from "@/modules/crm/data/mutations";
+import { cssVarRef, stageVisual } from "@/modules/crm/status-visuals";
+import type { CSSProperties } from "react";
 
 /**
  * Kanban glisser-déposer. Le déplacement passe par la mutation serveur existante
@@ -189,12 +191,16 @@ export function KanbanBoard({
           const dropBlocked = isOver && protectedCol;
           return (
             <div key={col} className="crm-kanban-col flex flex-col">
-              <div className="mb-2 flex items-center justify-between px-1">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
-                  {stageLabels[col]}
-                  {protectedCol ? <span title="Colonne pilotée par une action métier dédiée" className="ml-1 text-[var(--crm-text-faint)]">🔒</span> : null}
+              <div
+                className="crm-kanban-head mb-2 flex items-center justify-between gap-2"
+                style={{ ["--col-accent" as keyof CSSProperties]: cssVarRef(stageVisual(col).cssVar) } as CSSProperties}
+              >
+                <h2 className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-[var(--crm-text-dim)]">
+                  <span aria-hidden style={{ color: cssVarRef(stageVisual(col).cssVar) }}>{stageVisual(col).icon}</span>
+                  <span className="crm-ellipsis">{stageLabels[col]}</span>
+                  {protectedCol ? <span title="Colonne pilotée par une action métier dédiée" className="shrink-0 text-[var(--crm-text-faint)]">🔒</span> : null}
                 </h2>
-                <span className="crm-chip tabular-nums">{items.length}</span>
+                <span className="crm-chip tabular-nums shrink-0">{items.length}</span>
               </div>
               <div
                 className={`crm-kanban-dropzone flex min-h-[120px] flex-col gap-2 rounded-[12px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] p-2 ${isOver && !dropBlocked ? "crm-kanban-dropzone--over" : ""} ${dropBlocked ? "crm-kanban-dropzone--blocked" : ""}`}

@@ -1,10 +1,11 @@
+import type { CSSProperties } from "react";
 import {
   appreciationLabels,
   priorityLabels,
   segmentLabels,
-  stageLabels,
 } from "@/modules/crm/labels";
 import { agingLevel, initials, timeSince } from "@/modules/crm/format";
+import { cssVarRef, stageVisual } from "@/modules/crm/status-visuals";
 
 /**
  * Composants de présentation du CRM (server components purs). Aucune logique
@@ -31,15 +32,34 @@ export function Chip({
   return <span className={dot ? `${cls} crm-chip--dot` : cls}>{children}</span>;
 }
 
-function stageVariant(stage: string): "neutral" | "gold" | "danger" | "ok" {
-  if (stage === "nouveau") return "gold";
-  if (stage === "perdu") return "danger";
-  if (stage === "mandat_signe") return "ok";
-  return "neutral";
+/**
+ * Badge de statut piloté par la correspondance CENTRALISÉE (couleur + icône +
+ * libellé). La couleur passe par `--chip-accent` (variable de thème) : cohérent
+ * en clair et en sombre. L'icône garantit que la couleur n'est jamais seule.
+ */
+export function StatusBadge({
+  cssVar,
+  icon,
+  label,
+}: {
+  cssVar: string;
+  icon: string;
+  label: string;
+}) {
+  return (
+    <span
+      className="crm-chip crm-chip--accent"
+      style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(cssVar) } as CSSProperties}
+    >
+      <span aria-hidden>{icon}</span>
+      {label}
+    </span>
+  );
 }
 
 export function StageBadge({ stage }: { stage: string }) {
-  return <Chip variant={stageVariant(stage)}>{stageLabels[stage] ?? stage}</Chip>;
+  const v = stageVisual(stage);
+  return <StatusBadge cssVar={v.cssVar} icon={v.icon} label={v.label} />;
 }
 
 export function SegmentBadge({ segment }: { segment: string }) {

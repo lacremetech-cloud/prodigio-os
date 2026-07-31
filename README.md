@@ -163,6 +163,10 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   Europe/Paris & heure d'été/hiver) et Kanban glisser-déposer (transitions
   protégées, optimisme + rollback, accessibilité clavier, menu alternatif). Sans
   migration.
+- [docs/17-CRM-THEMES-UX.md](docs/17-CRM-THEMES-UX.md) — Thèmes CRM clair / sombre
+  / système (no-flash, sans erreur d'hydratation), tokens sémantiques clair+sombre,
+  couleurs métier centralisées, correction structurelle de la timeline, lisibilité
+  et accessibilité. UI/UX uniquement, sans migration.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
