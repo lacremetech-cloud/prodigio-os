@@ -134,6 +134,12 @@ export default async function OverviewPage() {
       hint: "Dossiers avec contact établi",
     },
     { label: "Rendez-vous planifiés", value: m.appointmentsPlanned },
+    {
+      label: "En attente d’éligibilité",
+      value: m.awaitingEligibility,
+      tone: m.awaitingEligibility > 0 ? "gold" : "neutral",
+      hint: "Estimation réalisée, décision à valider",
+    },
     { label: "Mandats proposés", value: m.mandatesProposed },
     { label: "Mandats signés", value: m.mandatesSigned, tone: "ok" },
   ];

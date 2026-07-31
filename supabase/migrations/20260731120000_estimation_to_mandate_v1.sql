@@ -1089,6 +1089,45 @@ end;
 $$;
 
 -- =============================================================================
+-- 15b. FONCTION — ENREGISTRER UNE ORGANISATION PORTEUSE (agence partenaire).
+--     Administrateur uniquement. Aucune agence codée en dur : le nom et le slug
+--     sont saisis. L'organisation porteuse d'un mandat est TOUJOURS une
+--     `agence_partenaire` (jamais l'opérateur Prodigio).
+-- =============================================================================
+create or replace function public.crm_register_partner_organization(
+  p_name text,
+  p_slug text
+)
+returns jsonb language plpgsql security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_slug text := lower(regexp_replace(btrim(coalesce(p_slug, '')), '[^a-z0-9-]+', '-', 'g'));
+  v_id uuid;
+begin
+  perform public.crm_require_role('administrateur');
+  if nullif(btrim(coalesce(p_name, '')), '') is null then
+    raise exception 'nom de l''organisation requis' using errcode = '22023';
+  end if;
+  if v_slug = '' then
+    raise exception 'identifiant (slug) invalide' using errcode = '22023';
+  end if;
+
+  insert into public.organizations (slug, name, kind, status)
+  values (v_slug, btrim(p_name), 'agence_partenaire', 'actif')
+  on conflict (slug) do update set name = excluded.name
+  returning id into v_id;
+
+  insert into public.audit_events (actor_user_id, entity_type, entity_id, event_type, new_value)
+  values (v_uid, 'organization', v_id, 'creation',
+          jsonb_build_object('kind', 'agence_partenaire', 'slug', v_slug));
+
+  return jsonb_build_object('ok', true, 'id', v_id, 'slug', v_slug);
+end;
+$$;
+
+-- =============================================================================
 -- 16. GRANTS — EXECUTE aux seuls `authenticated`, jamais anon/public.
 -- =============================================================================
 do $$
@@ -1106,12 +1145,31 @@ begin
       'public.crm_record_outcome(uuid, text, text, text)',
       'public.crm_register_document(uuid, text, text, text, text, bigint, uuid)',
       'public.crm_delete_document(uuid)',
-      'public.crm_handoff_create_property(uuid)'
+      'public.crm_handoff_create_property(uuid)',
+      'public.crm_register_partner_organization(text, text)'
     ])
   loop
     execute format('revoke all on function %s from public, anon', fn);
     execute format('grant execute on function %s to authenticated', fn);
   end loop;
+end $$;
+
+-- =============================================================================
+-- 17. STORAGE — bucket PRIVÉ des documents de mandat (garde : ignoré si le schéma
+--     `storage` est absent, p. ex. en validation locale sans Supabase Storage).
+--     Aucun accès public. Le téléversement / la consultation passent EXCLUSIVEMENT
+--     par le rôle de service côté serveur (URL signées courtes), après contrôle de
+--     rôle et d'organisation. Aucune politique d'accès direct `authenticated` :
+--     le bucket reste privé et n'est jamais exposé au navigateur autrement que via
+--     une URL signée éphémère.
+-- =============================================================================
+do $$
+begin
+  if to_regclass('storage.buckets') is not null then
+    insert into storage.buckets (id, name, public)
+    values ('mandate-documents', 'mandate-documents', false)
+    on conflict (id) do update set public = false;
+  end if;
 end $$;
 
 commit;

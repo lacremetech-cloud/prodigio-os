@@ -99,6 +99,24 @@ export default async function SettingsPage() {
         </section>
       ) : null}
 
+      {isAdmin ? (
+        <section className="crm-panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
+              Règles économiques &amp; organisations porteuses
+            </h2>
+            <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
+              Versionner les conditions économiques (par partenaire / segment, date d’effet,
+              historique) et enregistrer les agences habilitées à porter les mandats. Aucune valeur
+              n’est codée en dur.
+            </p>
+          </div>
+          <Link href="/crm/parametres/regles-economiques" className="crm-btn crm-btn--gold shrink-0">
+            Configurer
+          </Link>
+        </section>
+      ) : null}
+
       <section className="crm-panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
