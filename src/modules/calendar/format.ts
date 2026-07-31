@@ -55,6 +55,62 @@ export function formatAppointmentRange(
   return `${formatAppointmentDateTime(startIso, timeZone)} – ${formatSlotTime(endIso, timeZone)}`;
 }
 
+/**
+ * Formatte une clé de journée civile `YYYY-MM-DD` (indépendante du fuseau) en
+ * libellé. On construit un instant à midi UTC et on rend en UTC pour éviter tout
+ * décalage de jour, quel que soit le fuseau du serveur.
+ */
+function dayKeyToUtcNoon(dayKey: string): Date | null {
+  const [y, m, d] = dayKey.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+}
+
+/** « lundi 4 août 2026 ». */
+export function formatDayKeyLong(dayKey: string): string {
+  const d = dayKeyToUtcNoon(dayKey);
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/** « lun. 4 ». */
+export function formatDayKeyShort(dayKey: string): string {
+  const d = dayKeyToUtcNoon(dayKey);
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/** « 4 » (numéro du jour seul). */
+export function formatDayKeyNum(dayKey: string): string {
+  const d = dayKeyToUtcNoon(dayKey);
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", timeZone: "UTC" }).format(d);
+}
+
+/** « août 2026 ». */
+export function formatMonthYear(dayKey: string): string {
+  const d = dayKeyToUtcNoon(dayKey);
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/** Libellés courts des jours de semaine (lundi → dimanche). */
+export const WEEKDAY_SHORT_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
 /** Clé de journée `YYYY-MM-DD` dans le fuseau (pour regrouper « aujourd'hui »). */
 export function zonedDayKey(iso: string, timeZone: string = DEFAULT_TZ): string {
   const d = new Date(iso);
