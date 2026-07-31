@@ -86,3 +86,36 @@ describe("buildTimeline", () => {
     expect(e?.body).toBe("Nouveau → Contacté");
   });
 });
+
+
+describe("buildTimeline — type visuel (kind) par événement", () => {
+  const nameFor = () => "Membre";
+  it("assigne le bon kind aux activités", () => {
+    const [appel] = buildTimeline({ activities: [activity({ type: "appel" })], auditEvents: [], tasks: [], nameFor });
+    expect(appel?.kind).toBe("appel");
+    const [rdv] = buildTimeline({ activities: [activity({ id: "a2", type: "rendez_vous" })], auditEvents: [], tasks: [], nameFor });
+    expect(rdv?.kind).toBe("rendez_vous");
+  });
+
+  it("assigne le bon kind aux événements d'audit du cycle mandat", () => {
+    const kinds = (evt: string) =>
+      buildTimeline({
+        activities: [],
+        auditEvents: [audit({ id: evt, event_type: evt as AuditEventRow["event_type"] })],
+        tasks: [],
+        nameFor,
+      })[0]?.kind;
+    expect(kinds("changement_stade")).toBe("stade");
+    expect(kinds("changement_segment")).toBe("segment");
+    expect(kinds("resultat_commercial")).toBe("resultat");
+    expect(kinds("decision_eligibilite")).toBe("eligibilite");
+    expect(kinds("mandat_signe")).toBe("mandat");
+    expect(kinds("document_ajoute")).toBe("document");
+    expect(kinds("estimation_realisee")).toBe("estimation");
+  });
+
+  it("assigne le kind « tache » aux tâches", () => {
+    const [t] = buildTimeline({ activities: [], auditEvents: [], tasks: [task({})], nameFor });
+    expect(t?.kind).toBe("tache");
+  });
+});

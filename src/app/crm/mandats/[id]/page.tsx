@@ -88,6 +88,7 @@ import {
   StageBadge,
 } from "@/components/crm/ui";
 import { CopyableValue } from "@/components/crm/copyable";
+import { Timeline } from "@/components/crm/timeline";
 import type { Json } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Dossier" };
@@ -695,22 +696,7 @@ export default async function LeadDetailPage({
                 Aucune activité pour l’instant. Enregistrez un appel ou une note ci-contre.
               </p>
             ) : (
-              <div className="crm-timeline flex flex-col gap-4">
-                {timeline.map((e) => (
-                  <div key={e.key} className="relative">
-                    <span className="crm-timeline-dot" aria-hidden />
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="text-sm font-medium text-[var(--crm-text)]">{e.title}</span>
-                      <span className="text-[11px] text-[var(--crm-text-faint)]">
-                        {formatDateTime(e.at)}
-                        {e.author ? ` · ${e.author}` : ""}
-                        {e.source === "audit" ? " · audit" : ""}
-                      </span>
-                    </div>
-                    {e.body ? <p className="mt-0.5 text-xs text-[var(--crm-text-dim)]">{e.body}</p> : null}
-                  </div>
-                ))}
-              </div>
+              <Timeline entries={timeline} />
             )}
           </Panel>
 

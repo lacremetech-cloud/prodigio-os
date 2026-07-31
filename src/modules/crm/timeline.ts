@@ -18,14 +18,48 @@ import {
 
 export type TimelineSource = "activity" | "audit" | "task";
 
+import type { TimelineKind } from "./status-visuals";
+
 export interface TimelineEntry {
   key: string;
   at: string;
   source: TimelineSource;
+  kind: TimelineKind;
   title: string;
   body: string | null;
   author: string | null;
   tone: "neutral" | "gold" | "danger" | "ok";
+}
+
+/** Type visuel d'une activité métier (icône/couleur de la timeline). */
+function activityKind(type: string): TimelineKind {
+  switch (type) {
+    case "appel":
+    case "tentative_appel":
+      return "appel";
+    case "email":
+    case "sms_whatsapp":
+      return "email";
+    case "rendez_vous":
+      return "rendez_vous";
+    case "note":
+      return "note";
+    default:
+      return "note";
+  }
+}
+
+/** Type visuel d'un événement d'audit. */
+function auditKind(eventType: string): TimelineKind {
+  if (eventType === "changement_stade") return "stade";
+  if (eventType === "changement_segment") return "segment";
+  if (eventType === "changement_affectation") return "affectation";
+  if (eventType === "resultat_commercial") return "resultat";
+  if (eventType.startsWith("estimation")) return "estimation";
+  if (eventType === "decision_eligibilite") return "eligibilite";
+  if (eventType.startsWith("mandat")) return "mandat";
+  if (eventType.startsWith("document")) return "document";
+  return "audit";
 }
 
 function jsonField(value: unknown, key: string): string | null {
@@ -53,6 +87,7 @@ export function buildTimeline(input: TimelineInput): TimelineEntry[] {
       key: `activity-${a.id}`,
       at: a.occurred_at,
       source: "activity",
+      kind: activityKind(a.type),
       title: outcomeLabel ? `${typeLabel} — ${outcomeLabel}` : typeLabel,
       body: a.body,
       author: input.nameFor(a.author_user_id),
@@ -82,6 +117,7 @@ export function buildTimeline(input: TimelineInput): TimelineEntry[] {
       key: `audit-${e.id}`,
       at: e.created_at,
       source: "audit",
+      kind: auditKind(e.event_type),
       title: evLabel,
       body,
       author: input.nameFor(e.actor_user_id),
@@ -97,6 +133,7 @@ export function buildTimeline(input: TimelineInput): TimelineEntry[] {
       key: `task-${t.id}`,
       at: t.created_at,
       source: "task",
+      kind: "tache",
       title: `${kindLabel} : ${t.title}`,
       body: `${statusLabel}${t.due_at ? ` · échéance ${t.due_at.slice(0, 16).replace("T", " ")}` : ""}`,
       author: input.nameFor(t.author_user_id),

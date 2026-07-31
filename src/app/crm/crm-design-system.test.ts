@@ -60,3 +60,30 @@ describe("design system CRM — robustesse au contenu", () => {
     expect(ellipsis).toMatch(/min-width:\s*0/);
   });
 });
+describe("thème & timeline (V1.2)", () => {
+  it("la timeline est en GRILLE (colonne marqueur + minmax(0,1fr)), le point n'est plus en position absolue", () => {
+    const item = block(".crm-tl-item {");
+    expect(item).toMatch(/display:\s*grid/);
+    expect(item).toMatch(/minmax\(0,\s*1fr\)/);
+    const dot = block(".crm-tl-dot {");
+    expect(dot).not.toMatch(/position:\s*absolute/);
+  });
+
+  it("les tokens sémantiques existent en variantes sombre ET claire", () => {
+    // Défaut sombre.
+    expect(css).toMatch(/--crm-info:/);
+    expect(css).toMatch(/--crm-success:/);
+    expect(css).toMatch(/--crm-warning:/);
+    expect(css).toMatch(/--crm-danger:/);
+    // Bloc clair présent et redéfinissant le canvas.
+    const light = block('.crm-root[data-crm-theme="light"] {');
+    expect(light).toMatch(/--crm-bg:/);
+    expect(light).toMatch(/color-scheme:\s*light/);
+  });
+
+  it("les couleurs de statut du pipeline sont centralisées en variables CSS", () => {
+    for (const t of ["nouveau", "signe", "perdu", "proposition", "eligibilite"]) {
+      expect(css).toContain(`--crm-st-${t}:`);
+    }
+  });
+});

@@ -5,6 +5,7 @@ import { canManageMembers } from "@/modules/crm/auth/roles";
 import { getMembersMap } from "@/modules/crm/data/queries";
 import { roleLabels } from "@/modules/crm/labels";
 import { Avatar, Chip } from "@/components/crm/ui";
+import { ThemeToggle } from "@/components/crm/theme/theme-toggle";
 import type { CrmRole } from "@/modules/crm/auth/roles";
 
 export const metadata: Metadata = { title: "Paramètres" };
@@ -23,6 +24,16 @@ export default async function SettingsPage() {
           Équipe, rôles et sécurité de l’espace interne.
         </p>
       </header>
+
+      <section className="crm-panel p-5">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
+          Apparence
+        </h2>
+        <p className="mb-4 text-sm text-[var(--crm-text-dim)]">
+          Choisissez le thème de l’espace interne. La préférence est enregistrée sur cet appareil.
+        </p>
+        <ThemeToggle />
+      </section>
 
       <section className="crm-panel p-5">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">

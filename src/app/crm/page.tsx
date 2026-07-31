@@ -22,27 +22,29 @@ interface Kpi {
   label: string;
   value: number | string;
   hint?: string;
-  tone?: "neutral" | "gold" | "danger" | "ok";
+  accent: string; // variable CSS d'accent (thème-adaptative)
+  icon: string;
+  critical?: boolean; // met en avant un état critique (>0)
   soon?: boolean;
 }
 
 function KpiCard({ kpi }: { kpi: Kpi }) {
+  const accent = kpi.critical ? "var(--crm-danger)" : `var(${kpi.accent})`;
   return (
-    <div className="crm-panel flex flex-col gap-1 p-4 crm-fade-in">
-      <span className="text-xs text-[var(--crm-text-faint)]">{kpi.label}</span>
+    <div
+      className="crm-panel crm-kpi flex flex-col gap-1 p-4 crm-fade-in"
+      style={{ ["--kpi-accent" as keyof React.CSSProperties]: accent } as React.CSSProperties}
+    >
+      <span className="flex items-center gap-2 text-xs text-[var(--crm-text-dim)]">
+        <span className="crm-kpi__icon text-sm" aria-hidden>{kpi.icon}</span>
+        <span className="crm-wrap">{kpi.label}</span>
+      </span>
       {kpi.soon ? (
         <span className="mt-1 text-sm text-[var(--crm-text-faint)]">Bientôt disponible</span>
       ) : (
         <span
-          className={`text-2xl font-semibold tabular-nums ${
-            kpi.tone === "gold"
-              ? "text-[var(--crm-gold)]"
-              : kpi.tone === "danger"
-                ? "text-[var(--color-danger-on-dark)]"
-                : kpi.tone === "ok"
-                  ? "text-[#9fe0b6]"
-                  : "text-[var(--crm-text)]"
-          }`}
+          className="text-2xl font-semibold tabular-nums"
+          style={{ color: kpi.critical && Number(kpi.value) > 0 ? "var(--crm-danger)" : "var(--crm-text)" }}
         >
           {kpi.value}
         </span>
@@ -122,26 +124,29 @@ export default async function OverviewPage() {
   const m = computeOverviewMetrics(leads, contactedOpportunityIds);
 
   const kpis: Kpi[] = [
-    { label: "Nouveaux aujourd’hui", value: m.newToday, tone: "gold" },
-    { label: "Nouveaux (7 jours)", value: m.newLast7Days },
-    { label: "Non affectés", value: m.unassigned, tone: m.unassigned > 0 ? "danger" : "neutral" },
-    { label: "À rappeler aujourd’hui", value: m.toRecallToday, tone: m.toRecallToday > 0 ? "gold" : "neutral" },
-    { label: "Tâches en retard", value: m.overdueTasks, tone: m.overdueTasks > 0 ? "danger" : "neutral" },
-    { label: "Fort potentiel", value: m.highPotential, tone: "ok" },
+    { label: "Nouveaux aujourd’hui", value: m.newToday, accent: "--crm-st-nouveau", icon: "✦" },
+    { label: "Nouveaux (7 jours)", value: m.newLast7Days, accent: "--crm-info", icon: "▤" },
+    { label: "Non affectés", value: m.unassigned, accent: "--crm-warning", icon: "⚠", critical: m.unassigned > 0 },
+    { label: "À rappeler aujourd’hui", value: m.toRecallToday, accent: "--crm-warning", icon: "☎" },
+    { label: "Tâches en retard", value: m.overdueTasks, accent: "--crm-danger", icon: "!", critical: m.overdueTasks > 0 },
+    { label: "Fort potentiel", value: m.highPotential, accent: "--crm-success", icon: "★" },
     {
       label: "Taux de contact",
       value: m.contactRate == null ? "—" : `${m.contactRate}%`,
+      accent: "--crm-st-contact",
+      icon: "◗",
       hint: "Dossiers avec contact établi",
     },
-    { label: "Rendez-vous planifiés", value: m.appointmentsPlanned },
+    { label: "Rendez-vous planifiés", value: m.appointmentsPlanned, accent: "--crm-st-rdv_planifie", icon: "◷" },
     {
       label: "En attente d’éligibilité",
       value: m.awaitingEligibility,
-      tone: m.awaitingEligibility > 0 ? "gold" : "neutral",
+      accent: "--crm-st-eligibilite",
+      icon: "⚖",
       hint: "Estimation réalisée, décision à valider",
     },
-    { label: "Mandats proposés", value: m.mandatesProposed },
-    { label: "Mandats signés", value: m.mandatesSigned, tone: "ok" },
+    { label: "Mandats proposés", value: m.mandatesProposed, accent: "--crm-st-proposition", icon: "✎" },
+    { label: "Mandats signés", value: m.mandatesSigned, accent: "--crm-st-signe", icon: "✔" },
   ];
 
   const newUntreated = leads.filter((l) => l.stage === "nouveau" && isUnassigned(l));

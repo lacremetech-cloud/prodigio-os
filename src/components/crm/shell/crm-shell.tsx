@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/modules/crm/auth/actions";
 import { roleLabels } from "@/modules/crm/labels";
 import type { CrmRole } from "@/modules/crm/auth/roles";
 import { Avatar } from "@/components/crm/ui";
+import { ThemeProvider } from "@/components/crm/theme/theme-provider";
+import {
+  resolveTheme,
+  themeNoFlashScript,
+  type ThemePreference,
+} from "@/components/crm/theme/theme";
 
 interface NavItem {
   href: string;
@@ -107,19 +113,33 @@ function GlobalSearch() {
 export function CrmShell({
   email,
   roles,
+  themePreference,
   children,
 }: {
   email: string | null;
   roles: string[];
+  themePreference: ThemePreference;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const rootRef = useRef<HTMLDivElement>(null);
   const primary = roles.find((r) => r in roleLabels) as CrmRole | undefined;
   const name = email ?? "Utilisateur";
+  // Thème rendu côté serveur (le script en ligne corrige « système » avant paint).
+  const ssrTheme = resolveTheme(themePreference, null);
 
   return (
-    <div className="crm-root flex min-h-dvh">
+    <div
+      ref={rootRef}
+      className="crm-root flex min-h-dvh"
+      data-crm-theme={ssrTheme}
+      style={{ colorScheme: ssrTheme }}
+      suppressHydrationWarning
+    >
+      {/* Anti-flash : applique le thème (dont « système ») avant le premier paint. */}
+      <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript() }} />
+      <ThemeProvider initialPreference={themePreference} rootRef={rootRef}>
       {/* Sidebar desktop */}
       <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[var(--crm-line)] bg-[var(--crm-panel)] p-4 lg:flex">
         <div className="px-2 py-2">
@@ -153,7 +173,7 @@ export function CrmShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[var(--crm-line)] bg-[rgba(11,11,13,0.85)] px-4 backdrop-blur">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[var(--crm-line)] bg-[var(--crm-topbar)] px-4 backdrop-blur">
           <button
             aria-label="Ouvrir le menu"
             className="crm-btn crm-btn--ghost crm-btn--sm lg:hidden"
@@ -187,6 +207,7 @@ export function CrmShell({
           {children}
         </main>
       </div>
+      </ThemeProvider>
     </div>
   );
 }

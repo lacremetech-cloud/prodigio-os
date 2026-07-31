@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Chip } from "@/components/crm/ui";
-import {
-  appointmentStatusLabels,
-  appointmentStatusTone,
-} from "@/modules/calendar/labels";
+import { StatusBadge } from "@/components/crm/ui";
+import { appointmentVisual, cssVarRef } from "@/modules/crm/status-visuals";
+import { appointmentStatusLabels } from "@/modules/calendar/labels";
 import {
   cancelAppointmentAction,
   rescheduleAppointmentAction,
@@ -37,14 +35,23 @@ import {
   type AgendaView,
 } from "@/modules/calendar/agenda";
 
-const STATUS_ICON: Record<string, string> = {
-  planifie: "◷",
-  confirme: "✓",
-  realise: "◆",
-  a_replanifier: "↻",
-  annule: "✕",
-  absent: "⚠",
-};
+/** Légende discrète des statuts (couleur + icône + libellé). */
+function AgendaLegend() {
+  const statuses = ["planifie", "confirme", "realise", "a_replanifier", "annule", "absent"];
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--crm-text-faint)]">
+      {statuses.map((s) => {
+        const v = appointmentVisual(s);
+        return (
+          <span key={s} className="inline-flex items-center gap-1">
+            <span aria-hidden style={{ color: cssVarRef(v.cssVar) }}>{v.icon}</span>
+            {appointmentStatusLabels[s as keyof typeof appointmentStatusLabels] ?? s}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 export interface AgentOption {
   userId: string;
@@ -187,6 +194,8 @@ export function Agenda({
           </div>
         </div>
       </div>
+
+      <AgendaLegend />
 
       {/* Contenu */}
       {filtered.length === 0 ? (
@@ -375,15 +384,16 @@ function EventChip({
   onSelect: (id: string) => void;
   compact?: boolean;
 }) {
-  const tone = appointmentStatusTone[event.status as keyof typeof appointmentStatusTone] ?? "neutral";
+  const v = appointmentVisual(event.status);
   return (
     <button
       type="button"
       onClick={() => onSelect(event.id)}
-      className={`crm-agenda-chip crm-agenda-chip--${tone}`}
+      className="crm-agenda-chip"
+      style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(v.cssVar) } as CSSProperties}
       title={`${formatSlotTime(event.startsAt, event.timezone)} · ${event.contactLabel}${event.city ? ` · ${event.city}` : ""} · ${appointmentStatusLabels[event.status as keyof typeof appointmentStatusLabels] ?? event.status}`}
     >
-      <span aria-hidden className="shrink-0">{STATUS_ICON[event.status] ?? "•"}</span>
+      <span aria-hidden className="shrink-0">{v.icon}</span>
       <span className="tabular-nums shrink-0">{formatSlotTime(event.startsAt, event.timezone)}</span>
       <span className="crm-ellipsis">{event.contactLabel}</span>
       {!compact && event.city ? <span className="crm-ellipsis text-[var(--crm-text-faint)]">· {event.city}</span> : null}
@@ -392,13 +402,14 @@ function EventChip({
 }
 
 function EventBlock({ event, onSelect }: { event: AgendaEvent; onSelect: (id: string) => void }) {
-  const tone = appointmentStatusTone[event.status as keyof typeof appointmentStatusTone] ?? "neutral";
+  const v = appointmentVisual(event.status);
   const mins = durationMinutes(event.startsAt, event.endsAt);
   return (
     <button
       type="button"
       onClick={() => onSelect(event.id)}
       className="flex w-full items-start justify-between gap-3 rounded-[12px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] px-4 py-3 text-left transition-colors hover:border-[var(--crm-line)] hover:bg-[var(--crm-panel-2)]"
+      style={{ borderInlineStartWidth: "3px", borderInlineStartColor: cssVarRef(v.cssVar) }}
     >
       <div className="min-w-0">
         <p className="crm-wrap text-sm font-medium text-[var(--crm-text)]">
@@ -410,10 +421,11 @@ function EventBlock({ event, onSelect }: { event: AgendaEvent; onSelect: (id: st
           {[event.city, event.agentName, "Estimation"].filter(Boolean).join(" · ")}
         </p>
       </div>
-      <Chip variant={tone}>
-        <span aria-hidden className="mr-1">{STATUS_ICON[event.status] ?? "•"}</span>
-        {appointmentStatusLabels[event.status as keyof typeof appointmentStatusLabels] ?? event.status}
-      </Chip>
+      <StatusBadge
+        cssVar={v.cssVar}
+        icon={v.icon}
+        label={appointmentStatusLabels[event.status as keyof typeof appointmentStatusLabels] ?? event.status}
+      />
     </button>
   );
 }
@@ -475,7 +487,16 @@ function EventDrawer({
 
         <div className="flex flex-col gap-3">
           <Row label="Créneau" value={`${formatSlotTime(event.startsAt, event.timezone)} – ${formatSlotTime(event.endsAt, event.timezone)} (${durationMinutes(event.startsAt, event.endsAt)} min)`} />
-          <Row label="Statut" value={<Chip variant={appointmentStatusTone[event.status as keyof typeof appointmentStatusTone] ?? "neutral"}>{appointmentStatusLabels[event.status as keyof typeof appointmentStatusLabels] ?? event.status}</Chip>} />
+          <Row
+            label="Statut"
+            value={
+              <StatusBadge
+                cssVar={appointmentVisual(event.status).cssVar}
+                icon={appointmentVisual(event.status).icon}
+                label={appointmentStatusLabels[event.status as keyof typeof appointmentStatusLabels] ?? event.status}
+              />
+            }
+          />
           <Row label="Agent" value={event.agentName} />
           <Row label="Ville" value={event.city ?? "—"} />
           <Row label="Adresse" value={event.address ?? "—"} />

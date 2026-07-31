@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import "./crm.css";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { CrmShell } from "@/components/crm/shell/crm-shell";
+import { normalizePreference, THEME_COOKIE } from "@/components/crm/theme/theme";
 
 export const metadata: Metadata = {
   title: { default: "CRM Mandats", template: "%s — CRM Prodigio" },
@@ -19,8 +21,10 @@ export default async function CrmLayout({
   children: React.ReactNode;
 }) {
   const session = await requireCrmSession();
+  const cookieStore = await cookies();
+  const themePreference = normalizePreference(cookieStore.get(THEME_COOKIE)?.value);
   return (
-    <CrmShell email={session.email} roles={session.roles}>
+    <CrmShell email={session.email} roles={session.roles} themePreference={themePreference}>
       {children}
     </CrmShell>
   );

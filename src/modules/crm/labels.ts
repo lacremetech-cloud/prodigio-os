@@ -156,6 +156,25 @@ export const auditEventLabels: Record<string, string> = {
   changement_permission: "Changement de permission",
   resolution_doublon: "Résolution de doublon",
   resultat_commercial: "Résultat commercial",
+  // Cycle estimation → mandat → bien
+  estimation_realisee: "Estimation réalisée",
+  decision_eligibilite: "Décision d'éligibilité",
+  regle_economique_maj: "Règle économique",
+  mandat_brouillon: "Mandat — brouillon",
+  mandat_propose: "Mandat proposé",
+  mandat_signe: "Mandat signé",
+  mandat_refuse: "Mandat refusé",
+  mandat_expire: "Mandat expiré",
+  mandat_annule: "Mandat annulé",
+  document_ajoute: "Document ajouté",
+  document_remplace: "Document remplacé",
+  document_supprime: "Document supprimé",
+  bien_cree: "Bien créé",
+  // Rendez-vous d'estimation
+  estimation_planifiee: "Estimation planifiée",
+  estimation_replanifiee: "Estimation reportée",
+  estimation_annulee: "Estimation annulée",
+  estimation_resultat: "Résultat de rendez-vous",
 };
 
 export const auditEntityLabels: Record<string, string> = {
