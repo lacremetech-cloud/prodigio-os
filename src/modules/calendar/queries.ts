@@ -42,6 +42,8 @@ export interface AppointmentWithContext {
   agentName: string;
   city: string | null;
   contactLabel: string;
+  ownerEmail: string | null;
+  ownerPhone: string | null;
 }
 
 /**
@@ -78,8 +80,10 @@ export async function listAppointments(): Promise<AppointmentWithContext[]> {
     }
   }
 
+  const contactByOppId = (oppId: string) => primaryContactByOpp.get(oppId) ?? null;
+
   return ((appointments ?? []) as EstimationAppointmentRow[]).map((a) => {
-    const contact = primaryContactByOpp.get(a.opportunity_id) ?? null;
+    const contact = contactByOppId(a.opportunity_id);
     const contactLabel =
       a.owner_name ??
       (contact
@@ -90,6 +94,8 @@ export async function listAppointments(): Promise<AppointmentWithContext[]> {
       agentName: memberDisplayName(a.agent_user_id, members),
       city: cityByOpp.get(a.opportunity_id) ?? null,
       contactLabel,
+      ownerEmail: a.owner_email ?? contact?.email ?? null,
+      ownerPhone: contact?.phone ?? null,
     };
   });
 }

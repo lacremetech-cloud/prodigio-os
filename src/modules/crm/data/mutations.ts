@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "../auth/session";
+import { evaluateMove } from "../kanban";
 
 /**
  * Actions serveur de MUTATION du CRM. Elles délèguent aux fonctions SQL
@@ -95,6 +96,39 @@ export async function changeStage(
     "crm_change_stage",
     { p_opportunity_id: opportunityId, p_stage: stage, p_note: note ?? null },
     opportunityId,
+  );
+}
+
+/**
+ * Déplacement d'une carte du Kanban : ré-applique la règle de progression
+ * (cibles protégées refusées) AVANT d'appeler la mutation serveur. Défense en
+ * profondeur : la base re-vérifie le rôle, et cette garde empêche qu'un
+ * glisser-déposer force un statut « proposé / signé / perdu » sans passer par les
+ * fonctions dédiées. Renvoie `requiresAction` pour que le client oriente vers la
+ * bonne action métier.
+ */
+export interface MoveStageResult extends ActionResult {
+  requiresAction?: "mandat" | "resultat";
+}
+
+export async function moveLeadStage(input: {
+  opportunityId: string;
+  fromStage: string;
+  toStage: string;
+}): Promise<MoveStageResult> {
+  const evaluation = evaluateMove(input.fromStage, input.toStage);
+  if (evaluation.noop) return { ok: true };
+  if (!evaluation.allowed) {
+    return {
+      ok: false,
+      error: evaluation.reason ?? "Déplacement non autorisé.",
+      requiresAction: evaluation.requiresAction,
+    };
+  }
+  return callRpc(
+    "crm_change_stage",
+    { p_opportunity_id: input.opportunityId, p_stage: input.toStage, p_note: null },
+    input.opportunityId,
   );
 }
 

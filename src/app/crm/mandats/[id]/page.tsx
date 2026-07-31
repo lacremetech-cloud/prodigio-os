@@ -87,6 +87,7 @@ import {
   SegmentBadge,
   StageBadge,
 } from "@/components/crm/ui";
+import { CopyableValue } from "@/components/crm/copyable";
 import type { Json } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Dossier" };
@@ -262,11 +263,31 @@ export default async function LeadDetailPage({
               <Info label="Contact principal" value={displayName} />
               <Info
                 label="Téléphone"
-                value={primary ? maskContactValue(primary.phone, canView) ?? "—" : "—"}
+                value={
+                  primary && primary.phone ? (
+                    <CopyableValue
+                      value={maskContactValue(primary.phone, canView) ?? "—"}
+                      copyable={canView ? primary.phone : null}
+                      href={canView ? `tel:${primary.phone}` : undefined}
+                    />
+                  ) : (
+                    "—"
+                  )
+                }
               />
               <Info
                 label="E-mail"
-                value={primary ? maskContactValue(primary.email, canView) ?? "—" : "—"}
+                value={
+                  primary && primary.email ? (
+                    <CopyableValue
+                      value={maskContactValue(primary.email, canView) ?? "—"}
+                      copyable={canView ? primary.email : null}
+                      href={canView ? `mailto:${primary.email}` : undefined}
+                    />
+                  ) : (
+                    "—"
+                  )
+                }
               />
               <Info label="Stade" value={stageLabels[o.pipeline_stage] ?? o.pipeline_stage} />
               <Info label="Segment" value={<SegmentBadge segment={o.segment} />} />

@@ -340,3 +340,177 @@
   outline: 2px solid var(--crm-gold-strong);
   outline-offset: 2px;
 }
+
+/* ============================================================= Onglets (tabs) */
+.crm-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--crm-line-soft);
+  border-radius: 12px;
+  background: var(--crm-panel);
+  max-width: 100%;
+  overflow-x: auto;
+}
+.crm-tab {
+  min-height: 2rem;
+  padding: 0 14px;
+  border-radius: 9px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--crm-text-dim);
+  white-space: nowrap;
+  transition: background 150ms ease, color 150ms ease;
+}
+.crm-tab:hover {
+  color: var(--crm-text);
+}
+.crm-tab--active {
+  background: var(--crm-elevated);
+  color: var(--crm-gold);
+}
+
+/* ================================================================== Agenda */
+.crm-agenda-week {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(180px, 1fr);
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+@media (max-width: 640px) {
+  .crm-agenda-week {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+  }
+}
+.crm-agenda-daycol {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--crm-line-soft);
+  border-radius: 12px;
+  background: var(--crm-panel);
+  padding: 8px;
+}
+.crm-agenda-dayhead {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid var(--crm-line-soft);
+}
+.crm-agenda-dayhead--today {
+  border-bottom-color: var(--crm-gold);
+}
+
+.crm-agenda-month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.crm-agenda-cell {
+  min-width: 0;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--crm-line-soft);
+  border-radius: 10px;
+  background: var(--crm-panel);
+  padding: 6px;
+}
+.crm-agenda-cell--out {
+  opacity: 0.5;
+}
+.crm-agenda-cell--today {
+  border-color: var(--crm-gold);
+}
+
+.crm-agenda-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
+  padding: 3px 7px;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  text-align: left;
+  border: 1px solid var(--crm-line-soft);
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  transition: border-color 150ms ease, background 150ms ease;
+}
+.crm-agenda-chip:hover {
+  border-color: var(--crm-line);
+}
+.crm-agenda-chip--gold {
+  border-left: 3px solid var(--crm-gold);
+}
+.crm-agenda-chip--ok {
+  border-left: 3px solid #4f9d69;
+}
+.crm-agenda-chip--danger {
+  border-left: 3px solid var(--color-danger-on-dark, #d98a8a);
+}
+.crm-agenda-chip--neutral {
+  border-left: 3px solid var(--crm-line);
+}
+
+/* ======================================================= Panneau latéral */
+.crm-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.5);
+  animation: crm-fade-in 150ms ease both;
+}
+.crm-drawer {
+  width: min(440px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--crm-bg);
+  border-left: 1px solid var(--crm-line);
+  padding: 20px;
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4);
+}
+@media (max-width: 480px) {
+  .crm-drawer {
+    width: 100%;
+    border-left: none;
+  }
+}
+
+/* ============================================== Kanban glisser-déposer */
+.crm-kanban-dropzone {
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.crm-kanban-dropzone--over {
+  border-color: var(--crm-gold) !important;
+  background: color-mix(in srgb, var(--crm-gold) 8%, var(--crm-panel));
+  box-shadow: inset 0 0 0 1px var(--crm-gold);
+}
+.crm-kanban-dropzone--blocked {
+  border-color: var(--color-danger-on-dark, #d98a8a) !important;
+  background: color-mix(in srgb, #d98a8a 8%, var(--crm-panel));
+}
+.crm-kanban-card {
+  cursor: grab;
+}
+.crm-kanban-card--dragging {
+  opacity: 0.45;
+}
+.crm-kanban-card--saving {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.crm-kanban-grip {
+  cursor: grab;
+  color: var(--crm-text-faint);
+  touch-action: none;
+}

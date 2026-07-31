@@ -1,62 +1,14 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canOperate, canViewContactDetails, maskContactValue } from "@/modules/crm/auth/roles";
 import { loadLeadBundle } from "@/modules/crm/data/queries";
-import type { Lead } from "@/modules/crm/leads";
 import { isHighPotential, isOverdue } from "@/modules/crm/leads";
 import { contactName } from "@/modules/crm/format";
-import { KANBAN_COLUMNS, propertyLabel, stageLabels, valueBandLabel } from "@/modules/crm/labels";
-import { StageControl } from "@/components/crm/lead-actions";
-import { Chip } from "@/components/crm/ui";
+import { propertyLabel, valueBandLabel } from "@/modules/crm/labels";
+import type { KanbanLead } from "@/modules/crm/kanban";
+import { KanbanBoard } from "@/components/crm/pipeline/kanban-board";
 
 export const metadata: Metadata = { title: "Pipeline" };
-
-function KanbanCard({
-  lead,
-  canView,
-  canMove,
-}: {
-  lead: Lead;
-  canView: boolean;
-  canMove: boolean;
-}) {
-  const name = contactName(lead.contactFirstName, lead.contactLastName);
-  return (
-    <div className="crm-panel-2 flex flex-col gap-2 p-3">
-      <Link href={`/crm/mandats/${lead.opportunityId}`} className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]" title={name}>{name}</span>
-          {isHighPotential(lead) ? <Chip variant="gold">★</Chip> : null}
-        </div>
-        <p
-          className="crm-ellipsis mt-1 text-xs text-[var(--crm-text-faint)]"
-          title={`${propertyLabel(lead.propertyType) ?? "Type inconnu"}${lead.city ? ` · ${lead.city}` : ""}`}
-        >
-          {propertyLabel(lead.propertyType) ?? "Type inconnu"}
-          {lead.city ? ` · ${lead.city}` : ""}
-        </p>
-        <p className="crm-ellipsis mt-0.5 text-xs text-[var(--crm-text-faint)]">
-          {valueBandLabel(lead.valueBand) ?? "Valeur à estimer"}
-        </p>
-      </Link>
-      <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--crm-text-dim)]">
-        <span className="tabular-nums">C {lead.compatibilityScore ?? "—"}</span>
-        <span className="tabular-nums">M {lead.maturityScore ?? "—"}</span>
-        {lead.assignees.length === 0 ? <Chip variant="danger">Non affecté</Chip> : null}
-        {isOverdue(lead) ? <Chip variant="danger">En retard</Chip> : null}
-      </div>
-      {canView && lead.contactPhone ? (
-        <p className="text-[11px] text-[var(--crm-text-faint)]">
-          {maskContactValue(lead.contactPhone, canView)}
-        </p>
-      ) : null}
-      {canMove ? (
-        <StageControl opportunityId={lead.opportunityId} stage={lead.stage} />
-      ) : null}
-    </div>
-  );
-}
 
 export default async function PipelinePage() {
   const session = await requireCrmSession("/crm/mandats/pipeline");
@@ -64,18 +16,21 @@ export default async function PipelinePage() {
   const canMove = canOperate(session.roles);
   const { leads } = await loadLeadBundle();
 
-  const byStage = new Map<string, Lead[]>();
-  for (const col of KANBAN_COLUMNS) byStage.set(col, []);
-  // Les stades non affichés en colonne (ex. rendez_vous_realise) sont rattachés
-  // à la colonne la plus proche pour rester lisibles sans perdre le lead.
-  const fallback: Record<string, string> = {
-    rendez_vous_realise: "rendez_vous_planifie",
-    en_attente_de_signature: "proposition_de_mandat",
-  };
-  for (const lead of leads) {
-    const col = byStage.has(lead.stage) ? lead.stage : fallback[lead.stage] ?? "nouveau";
-    byStage.get(col)?.push(lead);
-  }
+  // DTO minimal, coordonnées DÉJÀ masquées selon le rôle (rien de sensible en trop).
+  const cards: KanbanLead[] = leads.map((l) => ({
+    opportunityId: l.opportunityId,
+    stage: l.stage,
+    name: contactName(l.contactFirstName, l.contactLastName),
+    propertyLabel: propertyLabel(l.propertyType) ?? "Type inconnu",
+    city: l.city,
+    valueLabel: valueBandLabel(l.valueBand) ?? "Valeur à estimer",
+    compatibilityScore: l.compatibilityScore,
+    maturityScore: l.maturityScore,
+    highPotential: isHighPotential(l),
+    overdue: isOverdue(l),
+    unassigned: l.assignees.length === 0,
+    phoneMasked: maskContactValue(l.contactPhone, canView),
+  }));
 
   return (
     <div className="flex flex-col gap-5">
@@ -85,42 +40,12 @@ export default async function PipelinePage() {
         <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
           Le stade du pipeline est distinct du segment du bien.{" "}
           {canMove
-            ? "Changez le stade d’un lead directement dans sa carte."
+            ? "Glissez une carte entre les colonnes, ou utilisez le menu « Déplacer vers… » / le clavier. Les colonnes « proposition », « mandat signé » et « perdu » se pilotent depuis le dossier."
             : "Votre rôle est en lecture pour cette vue."}
         </p>
       </header>
 
-      <div className="crm-kanban crm-scroll">
-        {KANBAN_COLUMNS.map((col) => {
-          const items = byStage.get(col) ?? [];
-          return (
-            <div key={col} className="crm-kanban-col flex flex-col">
-              <div className="mb-2 flex items-center justify-between px-1">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
-                  {stageLabels[col]}
-                </h2>
-                <span className="crm-chip tabular-nums">{items.length}</span>
-              </div>
-              <div className="flex min-h-[120px] flex-col gap-2 rounded-[12px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] p-2">
-                {items.length === 0 ? (
-                  <p className="px-2 py-6 text-center text-[11px] text-[var(--crm-text-faint)]">
-                    Vide
-                  </p>
-                ) : (
-                  items.map((lead) => (
-                    <KanbanCard
-                      key={lead.opportunityId}
-                      lead={lead}
-                      canView={canView}
-                      canMove={canMove}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <KanbanBoard leads={cards} canMove={canMove} canView={canView} />
     </div>
   );
 }

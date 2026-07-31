@@ -158,6 +158,11 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   rendu d'estimation, décision d'éligibilité (≠ segment), cycle de vie du mandat
   et snapshot économique versionné, documents en Storage privé (URL signées
   courtes), handoff idempotent du bien, matrice des droits et recette.
+- [docs/16-CRM-AGENDA-KANBAN.md](docs/16-CRM-AGENDA-KANBAN.md) — Agenda CRM visuel
+  (semaine / mois / jour / liste, source `estimation_appointments`, fuseau
+  Europe/Paris & heure d'été/hiver) et Kanban glisser-déposer (transitions
+  protégées, optimisme + rollback, accessibilité clavier, menu alternatif). Sans
+  migration.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

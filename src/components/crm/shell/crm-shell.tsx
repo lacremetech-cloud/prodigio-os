@@ -19,7 +19,7 @@ const NAV: NavItem[] = [
   { href: "/crm", label: "Vue d’ensemble", icon: "◈", exact: true },
   { href: "/crm/mandats", label: "Leads Mandats", icon: "☰" },
   { href: "/crm/mandats/pipeline", label: "Pipeline", icon: "▤" },
-  { href: "/crm/rendez-vous", label: "Rendez-vous", icon: "◷" },
+  { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
   { href: "/crm/taches", label: "Tâches", icon: "✓" },
   { href: "/crm/parametres", label: "Paramètres", icon: "⚙" },
 ];
