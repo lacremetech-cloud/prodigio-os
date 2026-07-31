@@ -20,6 +20,7 @@ function makeLead(over: Partial<Lead> = {}): Lead {
     segment: over.segment ?? "non_determine",
     processingStatus: over.processingStatus ?? "non_affecte",
     outcome: over.outcome ?? null,
+    eligibilityDecision: over.eligibilityDecision ?? null,
     propertyType: over.propertyType ?? "villa_architecte",
     city: over.city ?? "Annecy",
     postalCode: over.postalCode ?? "74000",
@@ -167,5 +168,22 @@ describe("indicateurs de la vue d'ensemble", () => {
 
   it("taux de contact null si aucun lead", () => {
     expect(computeOverviewMetrics([], new Set(), NOW).contactRate).toBe(null);
+  });
+
+  it("compte les dossiers en attente de décision d'éligibilité (stade + décision, jamais le segment)", () => {
+    const leads = [
+      // Rendez-vous réalisé, aucune décision → en attente.
+      makeLead({ opportunityId: "a", stage: "rendez_vous_realise", eligibilityDecision: null }),
+      // Étude en cours mais « à compléter » → toujours en attente.
+      makeLead({ opportunityId: "b", stage: "estimation_etude_dossier", eligibilityDecision: "a_completer" }),
+      // Décision validée → n'y figure pas.
+      makeLead({ opportunityId: "c", stage: "estimation_etude_dossier", eligibilityDecision: "parcours_premium_prodigio" }),
+      // Rendez-vous seulement planifié → pas encore concerné.
+      makeLead({ opportunityId: "d", stage: "rendez_vous_planifie", eligibilityDecision: null }),
+      // Perdu → exclu même sans décision.
+      makeLead({ opportunityId: "e", stage: "rendez_vous_realise", eligibilityDecision: null, outcome: "perdu_avant_signature" }),
+    ];
+    const m = computeOverviewMetrics(leads, new Set(), NOW);
+    expect(m.awaitingEligibility).toBe(2); // a, b
   });
 });

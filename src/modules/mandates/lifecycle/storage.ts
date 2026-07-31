@@ -1,0 +1,151 @@
+import "server-only";
+
+import { randomUUID } from "node:crypto";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+
+/**
+ * Couche Storage PRIVÉE des documents de mandat.
+ *
+ * Le bucket `mandate-documents` est **privé** (aucun accès public, aucune
+ * politique d'accès direct `authenticated`). Le téléversement, la consultation
+ * et la suppression du FICHIER passent EXCLUSIVEMENT par le rôle de service
+ * (client admin) côté serveur, APRÈS un contrôle de rôle et d'organisation
+ * effectué par l'appelant (action serveur) et re-vérifié en base par les
+ * fonctions `crm_*`. On ne renvoie au navigateur qu'une **URL signée courte** ;
+ * elle n'est JAMAIS stockée durablement en base.
+ *
+ * Aucune PII dans le chemin de stockage : `{opportunityId}/{uuid}.{ext}`.
+ */
+
+export const MANDATE_DOCUMENTS_BUCKET = "mandate-documents";
+
+/** Types de fichiers autorisés (miroir de la contrainte `crm_register_document`). */
+export const ALLOWED_DOCUMENT_MIME: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+};
+
+/** Taille maximale d'un document (15 Mo). Borne défensive, contrôlée serveur. */
+export const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
+
+/** Durée de vie d'une URL signée : courte par conception (60 s). */
+export const SIGNED_URL_TTL_SECONDS = 60;
+
+export interface DocumentValidationOk {
+  ok: true;
+  mime: string;
+  ext: string;
+  size: number;
+  fileName: string;
+}
+export interface DocumentValidationError {
+  ok: false;
+  error: string;
+}
+export type DocumentValidation = DocumentValidationOk | DocumentValidationError;
+
+/**
+ * Assainit un nom de fichier affiché : retire les chemins et les traversées
+ * « .. », neutralise les caractères de contrôle et borne la longueur. Ne sert
+ * qu'à l'affichage — le chemin de stockage réel est toujours un UUID sans PII.
+ */
+export function sanitizeFileName(name: string, fallbackExt: string): string {
+  const base = (name ?? "")
+    // Séparateurs de chemin → espace (aucune arborescence dans le nom affiché).
+    .replace(/[\\/]+/g, " ")
+    // Séquences de points (traversée « .. ») → espace ; un point unique (extension) reste.
+    .replace(/\.{2,}/g, " ")
+    // Caractères de contrôle → espace.
+    .replace(/[\x00-\x1f\x7f]+/g, " ")
+    // Espaces répétés → un seul.
+    .replace(/\s+/g, " ")
+    .trim();
+  const cleaned = base.length > 0 ? base : `document.${fallbackExt}`;
+  return cleaned.slice(0, 200);
+}
+
+/** Valide le type, le poids et le nom d'un fichier avant tout téléversement. */
+export function validateDocument(input: {
+  mime: string;
+  size: number;
+  fileName: string;
+}): DocumentValidation {
+  const ext = ALLOWED_DOCUMENT_MIME[input.mime];
+  if (!ext) {
+    return { ok: false, error: "Type de fichier non autorisé (PDF, JPEG ou PNG uniquement)." };
+  }
+  if (!Number.isFinite(input.size) || input.size <= 0) {
+    return { ok: false, error: "Fichier vide." };
+  }
+  if (input.size > MAX_DOCUMENT_BYTES) {
+    return { ok: false, error: "Fichier trop volumineux (15 Mo maximum)." };
+  }
+  return {
+    ok: true,
+    mime: input.mime,
+    ext,
+    size: input.size,
+    fileName: sanitizeFileName(input.fileName, ext),
+  };
+}
+
+/** Chemin de stockage sans PII : `{opportunityId}/{uuid}.{ext}`. */
+export function buildStoragePath(opportunityId: string, ext: string): string {
+  return `${opportunityId}/${randomUUID()}.${ext}`;
+}
+
+/**
+ * Téléverse le fichier dans le bucket privé (rôle de service). Ne fait AUCUN
+ * contrôle de rôle : l'appelant (action serveur) l'a déjà fait et la métadonnée
+ * est enregistrée via `crm_register_document` (re-contrôle en base).
+ */
+export async function uploadMandateDocumentObject(input: {
+  storagePath: string;
+  bytes: ArrayBuffer | Buffer | Uint8Array;
+  mime: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const admin = getSupabaseAdminClient();
+  const body =
+    input.bytes instanceof Buffer ? input.bytes : Buffer.from(input.bytes as ArrayBuffer);
+  const { error } = await admin.storage
+    .from(MANDATE_DOCUMENTS_BUCKET)
+    .upload(input.storagePath, body, {
+      contentType: input.mime,
+      upsert: false,
+    });
+  if (error) {
+    return { ok: false, error: "Le téléversement du document a échoué." };
+  }
+  return { ok: true };
+}
+
+/**
+ * URL signée COURTE pour consulter un document privé. Générée à la demande,
+ * jamais stockée en base. Renvoie `null` en cas d'échec (aucune fuite).
+ */
+export async function createMandateDocumentSignedUrl(
+  storagePath: string,
+  expiresInSeconds: number = SIGNED_URL_TTL_SECONDS,
+): Promise<string | null> {
+  const admin = getSupabaseAdminClient();
+  const { data, error } = await admin.storage
+    .from(MANDATE_DOCUMENTS_BUCKET)
+    .createSignedUrl(storagePath, Math.max(15, Math.min(expiresInSeconds, 300)));
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
+/**
+ * Supprime le fichier du bucket (best-effort). La métadonnée est déjà marquée
+ * `supprime` par `crm_delete_document` ; l'échec de suppression physique ne doit
+ * pas bloquer l'utilisateur. Ne journalise jamais le contenu du document.
+ */
+export async function removeMandateDocumentObject(storagePath: string): Promise<void> {
+  try {
+    const admin = getSupabaseAdminClient();
+    await admin.storage.from(MANDATE_DOCUMENTS_BUCKET).remove([storagePath]);
+  } catch {
+    // best-effort : la métadonnée fait foi (statut `supprime`).
+  }
+}

@@ -30,6 +30,8 @@ export interface Lead {
   segment: string;
   processingStatus: string;
   outcome: string | null;
+  /** Décision d'éligibilité VALIDÉE (distincte du stade et du segment). */
+  eligibilityDecision: string | null;
 
   // Bien candidat
   propertyType: string | null;
@@ -98,6 +100,20 @@ export function isHighPotential(lead: Lead): boolean {
 
 export function isUnassigned(lead: Lead): boolean {
   return lead.assignees.length === 0;
+}
+
+/**
+ * Dossier en attente d'une décision d'éligibilité : le rendez-vous a été réalisé
+ * (ou l'étude est en cours) mais aucune décision d'éligibilité n'a été validée
+ * (ou elle est « à compléter »). Dérivé du STADE + de la décision — jamais du
+ * segment. Une opportunité perdue ou disqualifiée n'y figure pas.
+ */
+export function isAwaitingEligibility(lead: Lead): boolean {
+  const reached =
+    lead.stage === "rendez_vous_realise" || lead.stage === "estimation_etude_dossier";
+  const decided =
+    lead.eligibilityDecision != null && lead.eligibilityDecision !== "a_completer";
+  return reached && !decided && lead.outcome == null;
 }
 
 export function isNew(lead: Lead): boolean {
@@ -219,6 +235,7 @@ export interface OverviewMetrics {
   highPotential: number;
   contactRate: number | null; // % de leads ayant au moins un contact établi
   appointmentsPlanned: number;
+  awaitingEligibility: number;
   mandatesProposed: number;
   mandatesSigned: number;
   total: number;
@@ -244,6 +261,7 @@ export function computeOverviewMetrics(
   let overdueTasks = 0;
   let highPotential = 0;
   let appointmentsPlanned = 0;
+  let awaitingEligibility = 0;
   let mandatesProposed = 0;
   let mandatesSigned = 0;
 
@@ -258,6 +276,7 @@ export function computeOverviewMetrics(
     if (isOverdue(lead, now)) overdueTasks += 1;
     if (isHighPotential(lead)) highPotential += 1;
     if (lead.stage === "rendez_vous_planifie") appointmentsPlanned += 1;
+    if (isAwaitingEligibility(lead)) awaitingEligibility += 1;
     if (
       lead.stage === "proposition_de_mandat" ||
       lead.stage === "en_attente_de_signature"
@@ -279,6 +298,7 @@ export function computeOverviewMetrics(
     highPotential,
     contactRate,
     appointmentsPlanned,
+    awaitingEligibility,
     mandatesProposed,
     mandatesSigned,
     total,

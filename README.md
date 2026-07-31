@@ -9,7 +9,9 @@ mandats portés par une agence partenaire habilitée.
 
 **Tranches verticales livrées : (1) capture des demandes de mandat, (2) CRM
 interne Mandats V1, (3) alerte Slack « Nouvelle demande de mandat », (4) page
-d'accueil publique.**
+d'accueil publique, (5) planification des estimations (Google Calendar) + alertes
+Slack associées, (6) résultat d'estimation → éligibilité → mandat → passage
+contrôlé vers la Fabrique de biens.**
 
 **Page d'accueil publique** (`/`) — porte d'entrée premium et courte vers
 l'écosystème : signature cinématographique, positionnement en points courts,
@@ -151,6 +153,11 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   Alertes Slack des rendez-vous d'estimation V1 : déclencheurs (planifié /
   reporté / annulé), anti-doublon, contenu des messages, comportement en panne,
   variable serveur, limite Google direct, recette.
+- [docs/15-ESTIMATION-TO-MANDATE.md](docs/15-ESTIMATION-TO-MANDATE.md) —
+  Résultat d'estimation → éligibilité → mandat → Fabrique de biens V1 : compte
+  rendu d'estimation, décision d'éligibilité (≠ segment), cycle de vie du mandat
+  et snapshot économique versionné, documents en Storage privé (URL signées
+  courtes), handoff idempotent du bien, matrice des droits et recette.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

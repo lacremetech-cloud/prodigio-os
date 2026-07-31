@@ -27,6 +27,35 @@ import { AppointmentActions } from "@/components/crm/calendar/appointment-action
 import { buildTimeline } from "@/modules/crm/timeline";
 import { formatDate, formatDateTime } from "@/modules/crm/format";
 import {
+  canAdminEconomicRules,
+  canDecideMandate,
+  canReportEstimation,
+} from "@/modules/crm/auth/roles";
+import {
+  getCurrentMandate,
+  getDocumentsForOpportunity,
+  getEstimationReport,
+  getPropertyForOpportunity,
+  listActiveEconomicRules,
+  listHolderOrganizations,
+} from "@/modules/mandates/lifecycle/queries";
+import { formatCentsToEuros } from "@/modules/mandates/lifecycle/money";
+import {
+  eligibilityDecisionLabels,
+  eligibilityDecisionTone,
+  estimationOutcomeLabels,
+  feeBasisLabels,
+  mandateStatusLabels,
+  mandateStatusTone,
+} from "@/modules/mandates/lifecycle/labels";
+import {
+  DocumentsManager,
+  EligibilityDecisionForm,
+  EstimationReportForm,
+  MandateManager,
+  PropertyHandoff,
+} from "@/components/crm/mandate/lifecycle-actions";
+import {
   contactPreferenceLabels,
   label,
   mandateSituationLabel,
@@ -149,6 +178,32 @@ export default async function LeadDetailPage({
     canPlan ? listBookableAgents() : Promise.resolve([]),
   ]);
   const activeAppointments = appointments.filter((a) => a.status !== "annule");
+
+  // Cycle « estimation → éligibilité → mandat → bien ».
+  const canDecideMdt = canDecideMandate(session.roles);
+  const canReportEst = canReportEstimation(session.roles);
+  const canAdminRules = canAdminEconomicRules(session.roles);
+  const [
+    estimationReport,
+    currentMandate,
+    documents,
+    property,
+    activeRules,
+    holderOptions,
+  ] = await Promise.all([
+    getEstimationReport(id),
+    getCurrentMandate(id),
+    getDocumentsForOpportunity(id),
+    getPropertyForOpportunity(id),
+    canDecideMdt ? listActiveEconomicRules() : Promise.resolve([]),
+    canDecideMdt ? listHolderOrganizations() : Promise.resolve([]),
+  ]);
+  const lastAppointment = activeAppointments[0] ?? appointments[0] ?? null;
+  const handoffGateMet =
+    o.eligibility_decision === "parcours_premium_prodigio" &&
+    currentMandate?.status === "signe" &&
+    !!currentMandate?.holder_organization_id &&
+    !!currentMandate?.signed_document_id;
 
   const primary = contacts.find((c) => c.isPrimary) ?? contacts[0] ?? null;
   const displayName = primary ? primary.name : "Dossier sans contact";
@@ -310,6 +365,174 @@ export default async function LeadDetailPage({
                   })}
                 </ul>
               )}
+            </Panel>
+          ) : null}
+
+          {/* Compte rendu d'estimation */}
+          <Panel title="Résultat d’estimation">
+            {estimationReport ? (
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  <Info
+                    label="Résultat du rendez-vous"
+                    value={estimationOutcomeLabels[estimationReport.outcome] ?? estimationReport.outcome}
+                  />
+                  <Info label="Date d’estimation" value={estimationReport.performed_at ? formatDate(estimationReport.performed_at) : "—"} />
+                  <Info label="Valeur recommandée" value={formatCentsToEuros(estimationReport.value_recommended_cents)} />
+                  <Info
+                    label="Fourchette"
+                    value={
+                      estimationReport.value_low_cents != null || estimationReport.value_high_cents != null
+                        ? `${formatCentsToEuros(estimationReport.value_low_cents)} – ${formatCentsToEuros(estimationReport.value_high_cents)}`
+                        : "—"
+                    }
+                  />
+                  <Info label="Prix espéré (propriétaire)" value={formatCentsToEuros(estimationReport.owner_expected_cents)} />
+                </div>
+                {estimationReport.agent_recommendation ? (
+                  <div>
+                    <p className="crm-label mb-1">Recommandation de l’agent</p>
+                    <p className="crm-wrap text-sm text-[var(--crm-text-dim)]">{estimationReport.agent_recommendation}</p>
+                  </div>
+                ) : null}
+                {estimationReport.confidential_notes && canOp ? (
+                  <div className="rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] p-3">
+                    <p className="crm-label mb-1">Notes confidentielles (internes)</p>
+                    <p className="crm-wrap text-xs text-[var(--crm-text-dim)]">{estimationReport.confidential_notes}</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="mb-4 text-xs text-[var(--crm-text-faint)]">
+                Aucun compte rendu d’estimation enregistré.
+              </p>
+            )}
+            <div className="border-t border-[var(--crm-line-soft)] pt-4">
+              <EstimationReportForm
+                opportunityId={id}
+                appointmentId={lastAppointment?.id ?? null}
+                report={estimationReport}
+                canEdit={canReportEst}
+              />
+            </div>
+          </Panel>
+
+          {/* Décision d'éligibilité (≠ segment) */}
+          <Panel title="Décision d’éligibilité">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <span className="crm-label">Décision actuelle :</span>
+              {o.eligibility_decision ? (
+                <Chip variant={eligibilityDecisionTone[o.eligibility_decision] ?? "neutral"}>
+                  {eligibilityDecisionLabels[o.eligibility_decision] ?? o.eligibility_decision}
+                </Chip>
+              ) : (
+                <span className="text-xs text-[var(--crm-text-faint)]">Non décidée</span>
+              )}
+              {o.eligibility_is_derogation ? <Chip variant="gold">Dérogation</Chip> : null}
+              <span className="text-[11px] text-[var(--crm-text-faint)]">
+                (l’éligibilité est distincte du segment et du stade)
+              </span>
+            </div>
+            {o.eligibility_reason ? (
+              <p className="mb-3 crm-wrap text-xs text-[var(--crm-text-dim)]">
+                Motif : {o.eligibility_reason}
+                {o.eligibility_decided_at ? ` · ${formatDate(o.eligibility_decided_at)}` : ""}
+              </p>
+            ) : null}
+            <div className="border-t border-[var(--crm-line-soft)] pt-4">
+              <EligibilityDecisionForm
+                opportunityId={id}
+                current={o.eligibility_decision}
+                canDecide={canDecideMdt}
+              />
+            </div>
+          </Panel>
+
+          {/* Mandat */}
+          <Panel
+            title="Mandat"
+            aside={
+              currentMandate ? (
+                <Chip variant={mandateStatusTone[currentMandate.status] ?? "neutral"}>
+                  {mandateStatusLabels[currentMandate.status] ?? currentMandate.status}
+                </Chip>
+              ) : undefined
+            }
+          >
+            {currentMandate ? (
+              <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <Info label="Type" value={currentMandate.mandate_type ?? "—"} />
+                <Info label="Exclusivité" value={currentMandate.is_exclusive == null ? "—" : currentMandate.is_exclusive ? "Exclusif" : "Simple"} />
+                <Info label="Numéro" value={currentMandate.mandate_number ?? "—"} />
+                <Info label="Prise d’effet" value={currentMandate.start_date ? formatDate(currentMandate.start_date) : "—"} />
+                <Info label="Échéance" value={currentMandate.expires_at ? formatDate(currentMandate.expires_at) : "—"} />
+                <Info label="Signé le" value={currentMandate.signed_at ? formatDate(currentMandate.signed_at) : "—"} />
+              </div>
+            ) : null}
+            {canDecideMdt ? (
+              <div className="border-t border-[var(--crm-line-soft)] pt-4">
+                <MandateManager
+                  opportunityId={id}
+                  mandate={currentMandate}
+                  holderOptions={holderOptions.map((h) => ({ id: h.id, name: h.name }))}
+                  activeRules={activeRules}
+                  documents={documents}
+                  canManagePartners={canAdminRules}
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--crm-text-faint)]">
+                Seuls un administrateur ou un manager gèrent le mandat.
+              </p>
+            )}
+          </Panel>
+
+          {/* Conditions économiques (snapshot figé à la proposition) */}
+          {currentMandate?.economic_snapshot ? (
+            <Panel title="Conditions économiques (photographie à la proposition)">
+              {(() => {
+                const s = currentMandate.economic_snapshot as Record<string, unknown>;
+                const pct = (v: unknown) => (v == null ? "—" : `${Number(v)} %`);
+                return (
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    <Info label="Règle appliquée" value={s.name ? String(s.name) : "—"} />
+                    <Info label="Segment" value={s.segment ? String(s.segment) : "—"} />
+                    <Info label="Base des honoraires" value={s.fee_basis ? feeBasisLabels[String(s.fee_basis)] ?? String(s.fee_basis) : "—"} />
+                    <Info label="Part Prodigio" value={pct(s.prodigio_share_pct)} />
+                    <Info label="Part partenaire" value={pct(s.partner_share_pct)} />
+                    <Info label="Version de règle" value={s.version != null ? `v${String(s.version)}` : "—"} />
+                  </div>
+                );
+              })()}
+              <p className="mt-3 text-[11px] text-[var(--crm-text-faint)]">
+                Ces conditions sont figées à la proposition : un changement de règle ne réinterprète
+                pas ce mandat.
+              </p>
+            </Panel>
+          ) : null}
+
+          {/* Documents (bucket privé, accès par lien signé) */}
+          {canOp || documents.length > 0 ? (
+            <Panel title="Documents">
+              <DocumentsManager
+                opportunityId={id}
+                mandateId={currentMandate?.id ?? null}
+                documents={documents}
+                canManage={canDecideMdt}
+              />
+            </Panel>
+          ) : null}
+
+          {/* Passage vers la Fabrique de biens */}
+          {canOp || property ? (
+            <Panel title="Fabrique de biens">
+              <PropertyHandoff
+                opportunityId={id}
+                mandateId={currentMandate?.id ?? null}
+                propertyId={property?.id ?? null}
+                gateMet={handoffGateMet}
+                canHandoff={canDecideMdt}
+              />
             </Panel>
           ) : null}
 

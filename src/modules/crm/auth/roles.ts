@@ -137,6 +137,33 @@ export function canManageAppointments(roles: readonly string[]): boolean {
   return hasAnyRole(roles, ["administrateur", "manager"]);
 }
 
+/**
+ * Peut valider une décision sensible du cycle mandat (éligibilité, transitions de
+ * mandat, documents, handoff) : administrateur / manager. Miroir UI de
+ * `crm_can_decide()` en base — la RLS et les fonctions SECURITY DEFINER restent
+ * l'autorité.
+ */
+export function canDecideMandate(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur", "manager"]);
+}
+
+/**
+ * Peut administrer les règles économiques (versionnées) : administrateur
+ * uniquement. Miroir UI de `crm_require_role('administrateur')`.
+ */
+export function canAdminEconomicRules(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur"]);
+}
+
+/**
+ * Peut renseigner un compte rendu d'estimation : administrateur / manager, ou
+ * agent immobilier (restreint EN BASE à ses seuls dossiers affectés). Miroir UI
+ * grossier de `crm_can_report_estimation()`.
+ */
+export function canReportEstimation(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur", "manager", "agent_immobilier"]);
+}
+
 /** Le rôle « le plus fort » détenu, pour l'affichage (ordre décroissant). */
 export function primaryRole(roles: readonly string[]): CrmRole | null {
   for (const r of CRM_ROLES) {

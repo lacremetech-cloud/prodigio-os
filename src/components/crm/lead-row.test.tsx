@@ -21,6 +21,7 @@ const lead: Lead = {
   segment: "non_determine",
   processingStatus: "non_affecte",
   outcome: null,
+  eligibilityDecision: null,
   propertyType: "villa_architecte",
   city: "Annecy",
   postalCode: "74000",

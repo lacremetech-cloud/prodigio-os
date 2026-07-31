@@ -162,6 +162,7 @@ export async function loadLeadBundle(): Promise<LeadBundle> {
       segment: o.segment,
       processingStatus: o.processing_status,
       outcome: o.outcome,
+      eligibilityDecision: o.eligibility_decision ?? null,
       propertyType: o.property_type,
       city: o.location_city,
       postalCode: o.location_postal_code,

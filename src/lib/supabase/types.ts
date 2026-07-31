@@ -77,6 +77,19 @@ export type OpportunityRow = {
   segment_decided_at: string | null;
   segment_decision_reason: string | null;
   segment_is_derogation: boolean;
+  // Décision d'ÉLIGIBILITÉ (distincte du segment) — voir migration estimation → mandat.
+  eligibility_decision:
+    | "parcours_premium_prodigio"
+    | "agence_classique"
+    | "non_retenu"
+    | "a_completer"
+    | null;
+  eligibility_reason: string | null;
+  eligibility_decided_by: string | null;
+  eligibility_decided_at: string | null;
+  eligibility_is_derogation: boolean;
+  eligibility_derogation_reason: string | null;
+  outcome_reason_code: string | null;
 }
 
 export type FunnelSubmissionRow = {
@@ -306,6 +319,127 @@ export type BookableAgentRow = {
   status: string;
 };
 
+// --- Résultat d'estimation → décision d'éligibilité → mandat → bien (V1) -----
+
+export type EstimationReportOutcome =
+  | "realisee"
+  | "proprietaire_absent"
+  | "rdv_annule"
+  | "estimation_impossible"
+  | "nouveau_rdv_necessaire";
+
+export type EstimationReportRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  opportunity_id: string;
+  appointment_id: string | null;
+  outcome: EstimationReportOutcome;
+  performed_at: string | null;
+  performed_by: string | null;
+  value_low_cents: number | null;
+  value_recommended_cents: number | null;
+  value_high_cents: number | null;
+  owner_expected_cents: number | null;
+  property_condition: string | null;
+  strengths: string | null;
+  risks: string | null;
+  owner_project_summary: string | null;
+  confidential_notes: string | null;
+  agent_recommendation: string | null;
+  next_action: string | null;
+  next_action_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type EconomicRuleSetRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  segment: string;
+  organization_id: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  fee_basis: "HT" | "TTC" | "a_confirmer";
+  prodigio_share_pct: number | null;
+  partner_share_pct: number | null;
+  status: "actif" | "inactif";
+  version: number;
+  created_by: string | null;
+  notes: string | null;
+};
+
+export type MandateStatus =
+  | "brouillon"
+  | "propose"
+  | "en_attente_signature"
+  | "signe"
+  | "refuse"
+  | "expire"
+  | "annule";
+
+export type MandateRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  opportunity_id: string;
+  holder_organization_id: string | null;
+  mandate_type: string | null;
+  is_exclusive: boolean | null;
+  mandate_number: string | null;
+  status: MandateStatus;
+  proposed_at: string | null;
+  signed_at: string | null;
+  start_date: string | null;
+  expires_at: string | null;
+  end_reason_code: string | null;
+  end_reason: string | null;
+  economic_snapshot: Json | null;
+  signed_document_id: string | null;
+  created_by: string | null;
+  last_modified_by: string | null;
+};
+
+export type MandateDocumentKind =
+  | "mandat_propose"
+  | "mandat_signe"
+  | "estimation_avis_valeur"
+  | "piece_interne";
+
+export type MandateDocumentRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  opportunity_id: string;
+  mandate_id: string | null;
+  kind: MandateDocumentKind;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  status: "actif" | "supprime";
+  uploaded_by: string | null;
+  deleted_by: string | null;
+  deleted_at: string | null;
+};
+
+export type PropertyRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  opportunity_id: string;
+  mandate_id: string;
+  holder_organization_id: string | null;
+  status: "preparation_a_lancer";
+  created_by: string | null;
+};
+
 export type OpportunityAssignmentRow = {
   id: string;
   created_at: string;
@@ -405,6 +539,11 @@ export interface Database {
       calendar_connections: WithMutations<CalendarConnectionRow>;
       calendar_credentials: WithMutations<CalendarCredentialRow>;
       estimation_appointments: WithMutations<EstimationAppointmentRow>;
+      estimation_reports: WithMutations<EstimationReportRow>;
+      economic_rule_sets: WithMutations<EconomicRuleSetRow>;
+      mandates: WithMutations<MandateRow>;
+      mandate_documents: WithMutations<MandateDocumentRow>;
+      properties: WithMutations<PropertyRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -468,7 +607,12 @@ export interface Database {
         Returns: Json;
       };
       crm_record_outcome: {
-        Args: { p_opportunity_id: string; p_outcome: string; p_reason?: string | null };
+        Args: {
+          p_opportunity_id: string;
+          p_outcome: string;
+          p_reason?: string | null;
+          p_reason_code?: string | null;
+        };
         Returns: Json;
       };
       crm_bootstrap_first_admin: { Args: { p_email: string }; Returns: Json };
@@ -594,6 +738,124 @@ export interface Database {
       };
       crm_set_appointment_result: {
         Args: { p_id: string; p_status: string; p_notes?: string | null };
+        Returns: Json;
+      };
+      // --- V1 estimation → éligibilité → mandat → bien ---
+      crm_can_decide: { Args: Record<string, never>; Returns: boolean };
+      crm_can_report_estimation: {
+        Args: { p_opportunity_id: string };
+        Returns: boolean;
+      };
+      crm_save_estimation_report: {
+        Args: {
+          p_opportunity_id: string;
+          p_outcome: string;
+          p_performed_at?: string | null;
+          p_performed_by?: string | null;
+          p_value_low_cents?: number | null;
+          p_value_recommended_cents?: number | null;
+          p_value_high_cents?: number | null;
+          p_owner_expected_cents?: number | null;
+          p_property_condition?: string | null;
+          p_strengths?: string | null;
+          p_risks?: string | null;
+          p_owner_project_summary?: string | null;
+          p_confidential_notes?: string | null;
+          p_agent_recommendation?: string | null;
+          p_next_action?: string | null;
+          p_next_action_at?: string | null;
+          p_appointment_id?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_validate_eligibility: {
+        Args: {
+          p_opportunity_id: string;
+          p_decision: string;
+          p_reason?: string | null;
+          p_is_derogation?: boolean;
+          p_derogation_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_upsert_economic_rule: {
+        Args: {
+          p_id: string | null;
+          p_name: string;
+          p_segment: string;
+          p_effective_from: string;
+          p_fee_basis?: string;
+          p_prodigio_share_pct?: number | null;
+          p_partner_share_pct?: number | null;
+          p_organization_id?: string | null;
+          p_effective_to?: string | null;
+          p_status?: string;
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_create_mandate_draft: {
+        Args: {
+          p_opportunity_id: string;
+          p_holder_organization_id?: string | null;
+          p_mandate_type?: string | null;
+          p_is_exclusive?: boolean | null;
+        };
+        Returns: Json;
+      };
+      crm_propose_mandate: {
+        Args: {
+          p_mandate_id: string;
+          p_economic_rule_id: string;
+          p_mandate_type?: string | null;
+          p_is_exclusive?: boolean | null;
+          p_start_date?: string | null;
+          p_expires_at?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_sign_mandate: {
+        Args: {
+          p_mandate_id: string;
+          p_mandate_number: string;
+          p_signed_at: string;
+          p_signed_document_id: string;
+          p_start_date?: string | null;
+          p_expires_at?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_transition_mandate: {
+        Args: {
+          p_mandate_id: string;
+          p_status: string;
+          p_reason_code?: string | null;
+          p_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_register_document: {
+        Args: {
+          p_opportunity_id: string;
+          p_kind: string;
+          p_storage_path: string;
+          p_file_name: string;
+          p_mime_type: string;
+          p_size_bytes: number;
+          p_mandate_id?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_delete_document: {
+        Args: { p_document_id: string };
+        Returns: Json;
+      };
+      crm_handoff_create_property: {
+        Args: { p_mandate_id: string };
+        Returns: Json;
+      };
+      crm_register_partner_organization: {
+        Args: { p_name: string; p_slug: string };
         Returns: Json;
       };
     };
