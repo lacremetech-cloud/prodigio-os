@@ -428,6 +428,17 @@ export type MandateDocumentRow = {
   deleted_at: string | null;
 };
 
+export type PropertyStatus =
+  | "preparation_a_lancer"
+  | "collecte_en_cours"
+  | "strategie_en_cours"
+  | "production_en_cours"
+  | "validation_avant_lancement"
+  | "pret_a_lancer"
+  | "en_diffusion"
+  | "suspendu"
+  | "archive";
+
 export type PropertyRow = {
   id: string;
   created_at: string;
@@ -436,8 +447,173 @@ export type PropertyRow = {
   opportunity_id: string;
   mandate_id: string;
   holder_organization_id: string | null;
-  status: "preparation_a_lancer";
+  status: PropertyStatus;
   created_by: string | null;
+  // Identité (Fabrique de biens V1) — additive.
+  project_name: string | null;
+  commercial_title: string | null;
+  property_type: string | null;
+  address_line: string | null;
+  location_city: string | null;
+  location_postal_code: string | null;
+  location_country: string | null;
+  surface_m2: number | null;
+  land_m2: number | null;
+  rooms: number | null;
+  bedrooms: number | null;
+  year_built: number | null;
+  arch_style: string | null;
+  description: string | null;
+  history: string | null;
+  signature_detail: string | null;
+  responsible_user_id: string | null;
+  main_media_id: string | null;
+  ready_at: string | null;
+  ready_by: string | null;
+  status_reason: string | null;
+};
+
+export type PropertyPositioningRow = {
+  property_id: string;
+  created_at: string;
+  updated_at: string;
+  central_promise: string | null;
+  value_pillars: string | null;
+  differentiators: string | null;
+  emotional_details: string | null;
+  ideal_buyer_profile: string | null;
+  buyer_locations: string | null;
+  buyer_motivation: string | null;
+  target_zones: string | null;
+  ad_angles: string | null;
+  do_not_communicate: string | null;
+  brand_name: string | null;
+  validated: boolean;
+  validated_by: string | null;
+  validated_at: string | null;
+  updated_by: string | null;
+};
+
+export type PropertyMediaKind =
+  | "photo"
+  | "video"
+  | "drone"
+  | "plan"
+  | "rendu"
+  | "couverture"
+  | "autre";
+
+export type PropertyMediaRightsStatus =
+  | "a_verifier"
+  | "libre"
+  | "sous_licence"
+  | "restreint";
+
+export type PropertyMediaRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  property_id: string;
+  kind: PropertyMediaKind;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  title: string | null;
+  rights_status: PropertyMediaRightsStatus;
+  status: "actif" | "supprime";
+  uploaded_by: string | null;
+  deleted_by: string | null;
+  deleted_at: string | null;
+};
+
+export type PropertyDocumentCategory =
+  | "mandat"
+  | "diagnostic"
+  | "plan"
+  | "titre"
+  | "legal"
+  | "copropriete"
+  | "autorisation"
+  | "libre";
+
+export type PropertyDocumentRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  property_id: string;
+  category: PropertyDocumentCategory;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  doc_status: "a_valider" | "valide" | "obsolete";
+  visibility: "interne" | "restreint";
+  status: "actif" | "supprime";
+  uploaded_by: string | null;
+  deleted_by: string | null;
+  deleted_at: string | null;
+};
+
+export type PropertyProductionKind =
+  | "photographie"
+  | "video"
+  | "drone"
+  | "redaction"
+  | "positionnement"
+  | "identite_visuelle"
+  | "site_dedie"
+  | "brochure"
+  | "publicites"
+  | "funnel_acquereur"
+  | "validation_finale";
+
+export type PropertyProductionStatus =
+  | "a_faire"
+  | "en_cours"
+  | "en_revue"
+  | "termine"
+  | "valide"
+  | "bloque";
+
+export type PropertyProductionItemRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  property_id: string;
+  kind: PropertyProductionKind;
+  status: PropertyProductionStatus;
+  assignee_user_id: string | null;
+  due_at: string | null;
+  notes: string | null;
+  deliverable_url: string | null;
+  blocker: string | null;
+  validated_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+/** Résultat calculé en base par `crm_property_readiness` (source de vérité). */
+export type PropertyReadinessChecks = {
+  identity: boolean;
+  positioning_validated: boolean;
+  main_media: boolean;
+  photos: boolean;
+  mandate_document: boolean;
+  deliverables: boolean;
+  responsible: boolean;
+};
+
+export type PropertyReadiness = {
+  ready: boolean;
+  total: number;
+  done: number;
+  percent: number;
+  blocked: boolean;
+  checks: PropertyReadinessChecks;
 };
 
 export type OpportunityAssignmentRow = {
@@ -486,8 +662,13 @@ export type AuditEventRow = {
   id: string;
   created_at: string;
   actor_user_id: string | null;
-  entity_type: "opportunity" | "contact" | "membership" | "organization" | "invitation";
-  entity_id: string;
+  entity_type:
+    | "opportunity"
+    | "contact"
+    | "membership"
+    | "organization"
+    | "invitation"
+    | "property";
   event_type:
     | "creation"
     | "changement_stade"
@@ -502,7 +683,30 @@ export type AuditEventRow = {
     | "invitation_acceptee"
     | "changement_role"
     | "activation_membre"
-    | "desactivation_membre";
+    | "desactivation_membre"
+    | "estimation_realisee"
+    | "decision_eligibilite"
+    | "mandat_brouillon"
+    | "mandat_propose"
+    | "mandat_signe"
+    | "mandat_refuse"
+    | "mandat_expire"
+    | "mandat_annule"
+    | "document_ajoute"
+    | "document_supprime"
+    | "bien_cree"
+    | "bien_identite"
+    | "bien_positionnement"
+    | "bien_statut"
+    | "bien_responsable"
+    | "bien_media_ajoute"
+    | "bien_media_supprime"
+    | "bien_media_principal"
+    | "bien_document_ajoute"
+    | "bien_document_supprime"
+    | "bien_production_maj"
+    | "bien_pret";
+  entity_id: string;
   old_value: Json | null;
   new_value: Json | null;
   metadata: Json | null;
@@ -544,6 +748,10 @@ export interface Database {
       mandates: WithMutations<MandateRow>;
       mandate_documents: WithMutations<MandateDocumentRow>;
       properties: WithMutations<PropertyRow>;
+      property_positioning: WithMutations<PropertyPositioningRow>;
+      property_media: WithMutations<PropertyMediaRow>;
+      property_documents: WithMutations<PropertyDocumentRow>;
+      property_production_items: WithMutations<PropertyProductionItemRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -856,6 +1064,125 @@ export interface Database {
       };
       crm_register_partner_organization: {
         Args: { p_name: string; p_slug: string };
+        Returns: Json;
+      };
+      // --- V1 Fabrique de biens ---
+      crm_property_access: { Args: { p_property_id: string }; Returns: boolean };
+      crm_property_can_edit: { Args: { p_property_id: string }; Returns: boolean };
+      crm_property_update_identity: {
+        Args: {
+          p_property_id: string;
+          p_project_name?: string | null;
+          p_commercial_title?: string | null;
+          p_property_type?: string | null;
+          p_address_line?: string | null;
+          p_location_city?: string | null;
+          p_location_postal_code?: string | null;
+          p_location_country?: string | null;
+          p_surface_m2?: number | null;
+          p_land_m2?: number | null;
+          p_rooms?: number | null;
+          p_bedrooms?: number | null;
+          p_year_built?: number | null;
+          p_arch_style?: string | null;
+          p_description?: string | null;
+          p_history?: string | null;
+          p_signature_detail?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_property_upsert_positioning: {
+        Args: {
+          p_property_id: string;
+          p_central_promise?: string | null;
+          p_value_pillars?: string | null;
+          p_differentiators?: string | null;
+          p_emotional_details?: string | null;
+          p_ideal_buyer_profile?: string | null;
+          p_buyer_locations?: string | null;
+          p_buyer_motivation?: string | null;
+          p_target_zones?: string | null;
+          p_ad_angles?: string | null;
+          p_do_not_communicate?: string | null;
+          p_brand_name?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_property_validate_positioning: {
+        Args: { p_property_id: string; p_validated?: boolean };
+        Returns: Json;
+      };
+      crm_property_register_media: {
+        Args: {
+          p_property_id: string;
+          p_kind: string;
+          p_storage_path: string;
+          p_file_name: string;
+          p_mime_type: string;
+          p_size_bytes: number;
+          p_title?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_property_update_media: {
+        Args: {
+          p_media_id: string;
+          p_title?: string | null;
+          p_kind?: string | null;
+          p_rights_status?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_property_set_primary_media: {
+        Args: { p_property_id: string; p_media_id: string };
+        Returns: Json;
+      };
+      crm_property_delete_media: {
+        Args: { p_media_id: string };
+        Returns: Json;
+      };
+      crm_property_register_document: {
+        Args: {
+          p_property_id: string;
+          p_category: string;
+          p_storage_path: string;
+          p_file_name: string;
+          p_mime_type: string;
+          p_size_bytes: number;
+          p_visibility?: string;
+        };
+        Returns: Json;
+      };
+      crm_property_delete_document: {
+        Args: { p_document_id: string };
+        Returns: Json;
+      };
+      crm_property_seed_production_plan: {
+        Args: { p_property_id: string };
+        Returns: Json;
+      };
+      crm_property_set_production: {
+        Args: {
+          p_item_id: string;
+          p_status?: string | null;
+          p_assignee_user_id?: string | null;
+          p_due_at?: string | null;
+          p_notes?: string | null;
+          p_deliverable_url?: string | null;
+          p_blocker?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_property_set_responsible: {
+        Args: { p_property_id: string; p_user_id: string | null };
+        Returns: Json;
+      };
+      crm_property_readiness: {
+        Args: { p_property_id: string };
+        Returns: Json;
+      };
+      crm_property_transition_status: {
+        Args: { p_property_id: string; p_status: string; p_reason?: string | null };
         Returns: Json;
       };
     };

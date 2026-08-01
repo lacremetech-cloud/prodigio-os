@@ -11,7 +11,18 @@ mandats portés par une agence partenaire habilitée.
 interne Mandats V1, (3) alerte Slack « Nouvelle demande de mandat », (4) page
 d'accueil publique, (5) planification des estimations (Google Calendar) + alertes
 Slack associées, (6) résultat d'estimation → éligibilité → mandat → passage
-contrôlé vers la Fabrique de biens.**
+contrôlé vers la Fabrique de biens, (7) Fabrique de biens V1 : cockpit de
+production du bien après signature (identité, positionnement, médiathèque et
+documents privés, plan de production, préparation au lancement calculée).**
+
+**Fabrique de biens** (`/crm/biens`) — portefeuille des biens et cockpit par bien
+qui prend le relais après la signature du mandat pour préparer la mise sur le
+marché : sections identité, positionnement & stratégie, médiathèque privée,
+documents, plan de production pilotable et **préparation au lancement calculée en
+base** (impossible de déclarer « prêt à lancer » tant que les prérequis ne sont
+pas réunis). Statuts à transitions contrôlées et audités ; Storage privé et URL
+signées éphémères ; accès dérivé du dossier d'origine (jamais global). Voir
+[docs/18-PROPERTY-FACTORY-V1.md](docs/18-PROPERTY-FACTORY-V1.md).
 
 **Page d'accueil publique** (`/`) — porte d'entrée premium et courte vers
 l'écosystème : signature cinématographique, positionnement en points courts,
@@ -109,6 +120,8 @@ src/
   modules/
     mandates/funnel/  # domaine capture : schémas Zod, normalisation,
                       # attribution, idempotence, payload, action serveur
+    mandates/lifecycle/ # estimation → éligibilité → mandat → handoff bien
+    properties/factory/ # Fabrique de biens : queries, actions, storage, readiness, labels
     crm/              # domaine CRM : auth/rôles, données, mutations, leads, timeline
     shared/           # éléments partagés entre modules
 public/images/mandate/ # visuels premium optimisés (WebP)
@@ -167,6 +180,11 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   / système (no-flash, sans erreur d'hydratation), tokens sémantiques clair+sombre,
   couleurs métier centralisées, correction structurelle de la timeline, lisibilité
   et accessibilité. UI/UX uniquement, sans migration.
+- [docs/18-PROPERTY-FACTORY-V1.md](docs/18-PROPERTY-FACTORY-V1.md) — Fabrique de
+  biens V1 : cockpit de production après signature (identité, positionnement,
+  médiathèque et documents en Storage privé, plan de production, préparation au
+  lancement calculée en base), machine d'état contrôlée et auditée, modèle additif,
+  permissions dérivées du dossier, recette réelle et captures.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

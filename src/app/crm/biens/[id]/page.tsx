@@ -1,108 +1,274 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { CSSProperties } from "react";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getPropertyById } from "@/modules/mandates/lifecycle/queries";
-import { propertyStatusLabels } from "@/modules/mandates/lifecycle/labels";
-import { propertyLabel } from "@/modules/crm/labels";
-import { formatDateTime } from "@/modules/crm/format";
-import { Chip } from "@/components/crm/ui";
-import type { MandateRow, OpportunityRow, OrganizationRow } from "@/lib/supabase/types";
+import { canDecideMandate, canOperate } from "@/modules/crm/auth/roles";
+import {
+  getPropertyCockpit,
+  listAssignableMembers,
+} from "@/modules/properties/factory/queries";
+import { buildPropertyTimeline } from "@/modules/properties/factory/timeline";
+import { propertyStatusLabels, propertyStatusVisual } from "@/modules/properties/factory/labels";
+import { createPropertyAssetSignedUrl } from "@/modules/properties/factory/storage";
+import { isSupabaseAdminConfigured } from "@/config";
+import { memberDisplayName } from "@/modules/crm/data/queries";
+import { formatDate } from "@/modules/crm/format";
+import { cssVarRef } from "@/modules/crm/status-visuals";
+import { Timeline } from "@/components/crm/timeline";
+import {
+  IdentityForm,
+  PositioningForm,
+  ResponsibleControl,
+  StatusReadinessPanel,
+} from "@/components/crm/property/cockpit";
+import { MediaManager } from "@/components/crm/property/media-manager";
+import { DocumentsManager } from "@/components/crm/property/documents-manager";
+import { ProductionPlan } from "@/components/crm/property/production-plan";
+import type { PropertyStatus } from "@/lib/supabase/types";
 
-export const metadata: Metadata = { title: "Bien" };
+export const metadata: Metadata = { title: "Cockpit du bien" };
 
-export default async function PropertyPage({
+function displayName(p: {
+  project_name: string | null;
+  property_type: string | null;
+  location_city: string | null;
+}): string {
+  if (p.project_name?.trim()) return p.project_name;
+  const parts = [p.property_type?.trim(), p.location_city?.trim()].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Bien sans nom";
+}
+
+export default async function PropertyCockpitPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireCrmSession(`/crm/biens/${id}`);
-  const property = await getPropertyById(id);
-  if (!property) notFound();
+  const session = await requireCrmSession(`/crm/biens/${id}`);
+  const cockpit = await getPropertyCockpit(id);
+  if (!cockpit) notFound();
 
-  const supabase = await createSupabaseServerClient();
-  const [{ data: opportunity }, { data: mandate }, { data: holder }] = await Promise.all([
-    supabase.from("opportunities").select("*").eq("id", property.opportunity_id).maybeSingle(),
-    supabase.from("mandates").select("*").eq("id", property.mandate_id).maybeSingle(),
-    property.holder_organization_id
-      ? supabase.from("organizations").select("*").eq("id", property.holder_organization_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
-  const o = (opportunity as OpportunityRow | null) ?? null;
-  const m = (mandate as MandateRow | null) ?? null;
-  const h = (holder as OrganizationRow | null) ?? null;
+  const { property: p, positioning, media, documents, production, readiness, audit } = cockpit;
+
+  const isAgent = session.roles.includes("agent_immobilier");
+  const canEdit = canOperate(session.roles) || isAgent; // opérateur ou agent affecté (RLS déjà vérifiée)
+  const canDecide = canDecideMandate(session.roles); // admin / manager
+  const canAddDocuments = canDecide || isAgent;
+
+  const members = canDecide || canEdit ? await listAssignableMembers() : [];
+  const nameFor = (uid: string | null) => (uid ? memberDisplayName(uid, cockpit.members) : null);
+  const timeline = buildPropertyTimeline(audit, nameFor);
+  const visual = propertyStatusVisual[p.status as PropertyStatus];
+
+  // Aperçu de l'image principale : URL signée COURTE (jamais stockée). Placeholder sinon.
+  let heroUrl: string | null = null;
+  if (p.main_media_id && isSupabaseAdminConfigured()) {
+    const main = media.find((m) => m.id === p.main_media_id);
+    if (main && (main.mime_type.startsWith("image/") || main.mime_type === "application/pdf")) {
+      if (main.mime_type.startsWith("image/")) {
+        heroUrl = await createPropertyAssetSignedUrl(main.storage_path, 300);
+      }
+    }
+  }
+
+  const location = [p.address_line, p.location_postal_code, p.location_city, p.location_country]
+    .filter(Boolean)
+    .join(", ");
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Link
-          href={`/crm/mandats/${property.opportunity_id}`}
-          className="text-xs text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]"
-        >
-          ← Retour au dossier
-        </Link>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="crm-eyebrow">Fabrique de biens</p>
-            <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">
-              {o ? propertyLabel(o.property_type) ?? "Bien" : "Bien"}
-              {o?.location_city ? ` · ${o.location_city}` : ""}
-            </h1>
+    <div className="mx-auto flex max-w-6xl flex-col gap-5">
+      {/* Fil d'Ariane */}
+      <Link href="/crm/biens" className="text-xs text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]">
+        ← Portefeuille des biens
+      </Link>
+
+      {/* En-tête premium */}
+      <header className="crm-panel relative overflow-hidden">
+        <div
+          aria-hidden
+          className="h-32 w-full bg-cover bg-center sm:h-40"
+          style={{
+            backgroundImage: heroUrl
+              ? `linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.15)), url("${heroUrl}")`
+              : "linear-gradient(135deg, var(--crm-panel-2), var(--crm-elevated))",
+          }}
+        />
+        <div className="flex flex-col gap-3 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="crm-eyebrow">Cockpit de production</p>
+              <h1 className="crm-wrap mt-1 text-2xl font-semibold text-[var(--crm-text)]">
+                {displayName(p)}
+              </h1>
+              {p.commercial_title ? (
+                <p className="crm-wrap text-sm text-[var(--crm-text-dim)]">{p.commercial_title}</p>
+              ) : null}
+              <p className="crm-wrap mt-1 text-xs text-[var(--crm-text-faint)]">
+                {[p.property_type, p.location_city].filter(Boolean).join(" · ") ||
+                  "Type et localisation à renseigner"}
+              </p>
+            </div>
+            <span
+              className="crm-chip crm-chip--accent shrink-0"
+              style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(visual.cssVar) } as CSSProperties}
+            >
+              <span aria-hidden>{visual.icon}</span>
+              {propertyStatusLabels[p.status as PropertyStatus]}
+            </span>
           </div>
-          <Chip variant="ok">{propertyStatusLabels[property.status] ?? property.status}</Chip>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--crm-text-dim)]">
+            <span>Responsable : {cockpit.responsibleName ?? "non désigné"}</span>
+            <span>Créé le {formatDate(p.created_at)}</span>
+            {p.ready_at ? <span className="crm-aging--frais">Prêt depuis le {formatDate(p.ready_at)}</span> : null}
+            <span>Préparation : {readiness ? `${readiness.percent}%` : "—"}</span>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <section className="crm-panel p-5">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
-          Bien créé
-        </h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Info label="Statut" value={propertyStatusLabels[property.status] ?? property.status} />
-          <Info label="Créé le" value={formatDateTime(property.created_at)} />
-          <Info label="Organisation porteuse" value={h?.name ?? "—"} />
-          <Info label="Type de bien" value={o ? propertyLabel(o.property_type) ?? "—" : "—"} />
-          <Info
-            label="Localisation"
-            value={
-              o?.location_city
-                ? `${o.location_city}${o.location_postal_code ? ` (${o.location_postal_code})` : ""}`
-                : "—"
-            }
-          />
-          <Info label="Numéro de mandat" value={m?.mandate_number ?? "—"} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
+        {/* Colonne principale */}
+        <div className="flex min-w-0 flex-col gap-5">
+          <Section title="Identité du bien">
+            <IdentityForm property={p} canEdit={canEdit} />
+          </Section>
+
+          <Section title="Positionnement & stratégie">
+            <PositioningForm
+              propertyId={p.id}
+              positioning={positioning}
+              canEdit={canEdit}
+              canDecide={canDecide}
+            />
+          </Section>
+
+          <Section
+            title="Médiathèque privée"
+            subtitle="Photos, vidéos, drone, plans et rendus. Accès par lien signé temporaire ; aucun fichier public."
+          >
+            <MediaManager
+              propertyId={p.id}
+              media={media}
+              mainMediaId={p.main_media_id}
+              canEdit={canEdit}
+            />
+          </Section>
+
+          <Section
+            title="Documents"
+            subtitle="Mandat, diagnostics, plans, titre, légal, copropriété, autorisations. Stockage privé."
+          >
+            <DocumentsManager
+              propertyId={p.id}
+              documents={documents}
+              canAdd={canAddDocuments}
+              canDelete={canDecide}
+            />
+          </Section>
+
+          <Section
+            title="Plan de production"
+            subtitle="Pilotage des livrables (photo, vidéo, rédaction, identité, site, brochure, publicités, funnel…)."
+          >
+            <ProductionPlan
+              propertyId={p.id}
+              items={production}
+              members={members}
+              canEdit={canEdit}
+              canDecide={canDecide}
+            />
+          </Section>
+
+          <Section title="Activité & historique">
+            {timeline.length === 0 ? (
+              <p className="text-xs text-[var(--crm-text-faint)]">Aucun événement pour le moment.</p>
+            ) : (
+              <Timeline entries={timeline} />
+            )}
+          </Section>
         </div>
-        <p className="mt-4 crm-wrap text-xs text-[var(--crm-text-faint)]">
-          Socle canonique minimal : le bien conserve le lien vers l’opportunité et le mandat
-          d’origine. La Fabrique de biens complète (tunnel acquéreurs, page de vente, brochure,
-          publicités, portail propriétaire) est hors du périmètre de cette version.
-        </p>
-      </section>
 
-      <section className="crm-panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
-            Dossier d’origine
-          </h2>
-          <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
-            Le mandat, les documents et l’historique restent rattachés à l’opportunité.
+        {/* Colonne latérale : préparation, statut, responsable, dossier */}
+        <aside className="flex min-w-0 flex-col gap-5">
+          <Section title="Préparation au lancement">
+            <StatusReadinessPanel
+              propertyId={p.id}
+              status={p.status as PropertyStatus}
+              readiness={readiness}
+              canDecide={canDecide}
+              canEdit={canEdit}
+            />
+          </Section>
+
+          <Section title="Responsable">
+            <ResponsibleControl
+              propertyId={p.id}
+              currentUserId={p.responsible_user_id}
+              currentName={cockpit.responsibleName}
+              members={members}
+              canDecide={canDecide}
+            />
+          </Section>
+
+          <Section title="Dossier d’origine">
+            <div className="flex flex-col gap-2 text-sm text-[var(--crm-text-dim)]">
+              {location ? (
+                <p className="crm-wrap">
+                  <span className="crm-label">Adresse</span>
+                  <br />
+                  {location}
+                </p>
+              ) : null}
+              {cockpit.holder ? (
+                <p>
+                  <span className="crm-label">Agence porteuse</span>
+                  <br />
+                  {cockpit.holder.name}
+                </p>
+              ) : null}
+              {cockpit.mandate?.mandate_number ? (
+                <p>
+                  <span className="crm-label">N° de mandat</span>
+                  <br />
+                  {cockpit.mandate.mandate_number}
+                  {cockpit.mandate.signed_at ? ` · signé le ${formatDate(cockpit.mandate.signed_at)}` : ""}
+                </p>
+              ) : null}
+              <Link href={`/crm/mandats/${p.opportunity_id}`} className="crm-btn crm-btn--sm mt-1 self-start">
+                Ouvrir le dossier (mandat)
+              </Link>
+            </div>
+          </Section>
+
+          <p className="crm-wrap px-1 text-[11px] text-[var(--crm-text-faint)]">
+            Hors périmètre V1 : CRM acquéreurs, portail propriétaire, campagnes Meta réelles,
+            publication automatique du site et génération complète de brochure. Le cockpit prépare le
+            bien jusqu’à sa mise sur le marché.
           </p>
-        </div>
-        <Link href={`/crm/mandats/${property.opportunity_id}`} className="crm-btn shrink-0">
-          Ouvrir le dossier
-        </Link>
-      </section>
+        </aside>
+      </div>
     </div>
   );
 }
 
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
+function Section({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="crm-label">{label}</span>
-      <span className="crm-wrap text-sm text-[var(--crm-text)]">{value ?? "—"}</span>
-    </div>
+    <section className="crm-panel p-5">
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
+          {title}
+        </h2>
+        {subtitle ? <p className="crm-wrap mt-1 text-xs text-[var(--crm-text-faint)]">{subtitle}</p> : null}
+      </div>
+      {children}
+    </section>
   );
 }
