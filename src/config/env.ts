@@ -82,6 +82,17 @@ const envSchema = z.object({
   // est contrôlée à l'envoi (voir `isEstimationSlackConfigured`).
   SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL: z.string().min(1).optional(),
 
+  // --- Slack (alertes des nouvelles demandes ACQUÉREURS) ---
+  // URL de webhook entrant Slack du canal privé `#alertes-acquereurs`. STRICTEMENT
+  // côté serveur : jamais préfixée `NEXT_PUBLIC_`, jamais renvoyée au client, jamais
+  // journalisée, jamais dans Git ni le bundle. **Distincte du canal Mandats** : ne
+  // JAMAIS réutiliser silencieusement `SLACK_MANDATES_WEBHOOK_URL`. Présente en
+  // PRODUCTION uniquement (Vercel). Absente en preview/dev → alertes acquéreurs
+  // désactivées proprement (le dépôt fonctionne normalement, aucun appel Slack).
+  // Non validée en `z.url()` pour ne jamais faire échouer le build ; la forme https
+  // est contrôlée à l'envoi (voir `isBuyerSlackConfigured`).
+  SLACK_BUYER_LEADS_WEBHOOK_URL: z.string().min(1).optional(),
+
   // --- Google Calendar (planification des rendez-vous d'estimation) ---
   // Identifiants OAuth du projet Google Cloud. Utilisés EXCLUSIVEMENT côté
   // serveur (construction de l'URL de consentement, échange du code, rafraîchi-
@@ -248,6 +259,20 @@ export function isEstimationSlackConfigured(
   source: Pick<Env, "SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL"> = env,
 ): boolean {
   const url = source.SLACK_ESTIMATION_APPOINTMENTS_WEBHOOK_URL;
+  return typeof url === "string" && /^https:\/\/\S+$/i.test(url.trim());
+}
+
+/**
+ * Indique si les alertes Slack des nouvelles demandes acquéreurs sont configurées
+ * (webhook présent et de forme `https://`). **Canal distinct** de celui des
+ * Mandats : ne réutilise jamais `SLACK_MANDATES_WEBHOOK_URL`. Ne révèle jamais la
+ * valeur. Absent (preview/dev) ⇒ alertes désactivées proprement, sans jamais
+ * bloquer l'enregistrement de la demande.
+ */
+export function isBuyerSlackConfigured(
+  source: Pick<Env, "SLACK_BUYER_LEADS_WEBHOOK_URL"> = env,
+): boolean {
+  const url = source.SLACK_BUYER_LEADS_WEBHOOK_URL;
   return typeof url === "string" && /^https:\/\/\S+$/i.test(url.trim());
 }
 

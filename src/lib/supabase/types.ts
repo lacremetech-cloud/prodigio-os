@@ -596,6 +596,154 @@ export type PropertyProductionItemRow = {
   updated_by: string | null;
 };
 
+// --- Expérience publique & funnel acquéreur (V1) -----------------------------
+
+export type PublicationStatus =
+  | "brouillon"
+  | "en_preparation"
+  | "pret_a_publier"
+  | "publie"
+  | "depublie"
+  | "archive";
+
+export type PropertyPublicConfigRow = {
+  property_id: string;
+  created_at: string;
+  updated_at: string;
+  slug: string | null;
+  public_name: string | null;
+  tagline: string | null;
+  intro: string | null;
+  story: string | null;
+  experience_text: string | null;
+  architecture_text: string | null;
+  pillars: string | null;
+  highlighted_features: string | null;
+  emotional_details: string | null;
+  environment_text: string | null;
+  sections_config: Json | null;
+  hero_media_id: string | null;
+  main_public_media_id: string | null;
+  social_image_media_id: string | null;
+  cta_label: string | null;
+  show_price: boolean;
+  price_label: string | null;
+  public_location: string | null;
+  reference_value_cents: number | null;
+  seo_index: boolean;
+  seo_title: string | null;
+  seo_description: string | null;
+  privacy_reviewed: boolean;
+  validated: boolean;
+  validated_by: string | null;
+  validated_at: string | null;
+  publication_status: PublicationStatus;
+  published_snapshot_id: string | null;
+  first_published_at: string | null;
+  published_at: string | null;
+  published_by: string | null;
+  updated_by: string | null;
+};
+
+export type PropertyPublicMediaKind =
+  | "photo"
+  | "video"
+  | "drone"
+  | "rendu"
+  | "plan"
+  | "couverture";
+
+export type PropertyPublicMediaRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  property_id: string;
+  source_media_id: string | null;
+  kind: PropertyPublicMediaKind;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  alt_text: string | null;
+  caption: string | null;
+  sort_order: number;
+  approved: boolean;
+  status: "actif" | "supprime";
+  uploaded_by: string | null;
+  deleted_by: string | null;
+  deleted_at: string | null;
+};
+
+export type PropertyPublicSnapshotRow = {
+  id: string;
+  created_at: string;
+  property_id: string;
+  version: number;
+  slug: string;
+  seo_index: boolean;
+  content: Json;
+  published_by: string | null;
+};
+
+export type BuyerReviewStatus = "nouveau" | "consulte" | "traite";
+
+export type BuyerInterestRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  property_id: string;
+  contact_id: string | null;
+  funnel_key: string;
+  funnel_version: string;
+  idempotency_key: string;
+  raw_answers: Json;
+  normalized_answers: Json;
+  project_nature: string | null;
+  budget_band: string | null;
+  financing: string | null;
+  purchase_horizon: string | null;
+  decision_mode: string | null;
+  availability: string | null;
+  residence_country: string | null;
+  residence_area: string | null;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
+  contact_email: string | null;
+  contact_email_raw: string | null;
+  contact_phone: string | null;
+  contact_phone_raw: string | null;
+  contact_preference: string | null;
+  contact_recall_preference: string | null;
+  consent_given: boolean;
+  consent_notice_version: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_term: string | null;
+  utm_content: string | null;
+  fbclid: string | null;
+  gclid: string | null;
+  origin_url: string | null;
+  referrer: string | null;
+  first_touch: Json | null;
+  last_touch: Json | null;
+  user_agent: string | null;
+  budget_score: number | null;
+  maturity_score: number | null;
+  financing_score: number | null;
+  availability_score: number | null;
+  overall_score: number | null;
+  priority: string | null;
+  score_version: string | null;
+  score_breakdown: Json | null;
+  review_status: BuyerReviewStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  resolution: "nouveau_contact" | "contact_existant" | null;
+};
+
 /** Résultat calculé en base par `crm_property_readiness` (source de vérité). */
 export type PropertyReadinessChecks = {
   identity: boolean;
@@ -752,6 +900,10 @@ export interface Database {
       property_media: WithMutations<PropertyMediaRow>;
       property_documents: WithMutations<PropertyDocumentRow>;
       property_production_items: WithMutations<PropertyProductionItemRow>;
+      property_public_config: WithMutations<PropertyPublicConfigRow>;
+      property_public_media: WithMutations<PropertyPublicMediaRow>;
+      property_public_snapshots: WithMutations<PropertyPublicSnapshotRow>;
+      buyer_interests: WithMutations<BuyerInterestRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -1183,6 +1335,92 @@ export interface Database {
       };
       crm_property_transition_status: {
         Args: { p_property_id: string; p_status: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      // --- V1 expérience publique & funnel acquéreur ---
+      submit_buyer_interest: { Args: { payload: Json }; Returns: Json };
+      public_property_by_slug: { Args: { p_slug: string }; Returns: Json };
+      public_indexable_properties: {
+        Args: Record<string, never>;
+        Returns: { slug: string; published_at: string | null }[];
+      };
+      crm_property_public_readiness: { Args: { p_property_id: string }; Returns: Json };
+      crm_property_public_preview: { Args: { p_property_id: string }; Returns: Json };
+      crm_property_upsert_public_config: {
+        Args: {
+          p_property_id: string;
+          p_slug?: string | null;
+          p_public_name?: string | null;
+          p_tagline?: string | null;
+          p_intro?: string | null;
+          p_story?: string | null;
+          p_experience_text?: string | null;
+          p_architecture_text?: string | null;
+          p_pillars?: string | null;
+          p_highlighted_features?: string | null;
+          p_emotional_details?: string | null;
+          p_environment_text?: string | null;
+          p_sections_config?: Json | null;
+          p_cta_label?: string | null;
+          p_show_price?: boolean | null;
+          p_price_label?: string | null;
+          p_public_location?: string | null;
+          p_reference_value_cents?: number | null;
+          p_seo_index?: boolean | null;
+          p_seo_title?: string | null;
+          p_seo_description?: string | null;
+          p_privacy_reviewed?: boolean | null;
+        };
+        Returns: Json;
+      };
+      crm_property_validate_public_content: {
+        Args: { p_property_id: string; p_validated?: boolean };
+        Returns: Json;
+      };
+      crm_property_register_public_media: {
+        Args: {
+          p_property_id: string;
+          p_kind: string;
+          p_storage_path: string;
+          p_file_name: string;
+          p_mime_type: string;
+          p_size_bytes: number;
+          p_alt_text?: string | null;
+          p_caption?: string | null;
+          p_source_media_id?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_property_update_public_media: {
+        Args: {
+          p_media_id: string;
+          p_alt_text?: string | null;
+          p_caption?: string | null;
+          p_kind?: string | null;
+          p_sort_order?: number | null;
+          p_approved?: boolean | null;
+        };
+        Returns: Json;
+      };
+      crm_property_delete_public_media: {
+        Args: { p_media_id: string };
+        Returns: Json;
+      };
+      crm_property_set_public_media_role: {
+        Args: { p_property_id: string; p_role: string; p_media_id: string | null };
+        Returns: Json;
+      };
+      crm_property_publish: { Args: { p_property_id: string }; Returns: Json };
+      crm_property_unpublish: {
+        Args: { p_property_id: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      crm_property_set_publication_status: {
+        Args: { p_property_id: string; p_status: string };
+        Returns: Json;
+      };
+      crm_buyer_interest_set_status: {
+        Args: { p_interest_id: string; p_status: string };
         Returns: Json;
       };
     };
