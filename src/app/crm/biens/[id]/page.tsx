@@ -3,11 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canDecideMandate, canOperate } from "@/modules/crm/auth/roles";
+import { canDecideMandate, canOperate, canViewContactDetails } from "@/modules/crm/auth/roles";
 import {
   getPropertyCockpit,
   listAssignableMembers,
 } from "@/modules/properties/factory/queries";
+import { getPublicExperience, listBuyerInterests } from "@/modules/buyers/public/queries";
+import {
+  PublicConfigForm,
+  PublicMediaManager,
+  PublicationPanel,
+} from "@/components/crm/property/public-experience";
+import { BuyerInterestsPanel } from "@/components/crm/property/buyer-interests";
 import { buildPropertyTimeline } from "@/modules/properties/factory/timeline";
 import { propertyStatusLabels, propertyStatusVisual } from "@/modules/properties/factory/labels";
 import { createPropertyAssetSignedUrl } from "@/modules/properties/factory/storage";
@@ -41,10 +48,14 @@ function displayName(p: {
 
 export default async function PropertyCockpitPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const highlightInterest = Array.isArray(sp.interet) ? sp.interet[0] : sp.interet ?? null;
   const session = await requireCrmSession(`/crm/biens/${id}`);
   const cockpit = await getPropertyCockpit(id);
   if (!cockpit) notFound();
@@ -55,6 +66,17 @@ export default async function PropertyCockpitPage({
   const canEdit = canOperate(session.roles) || isAgent; // opérateur ou agent affecté (RLS déjà vérifiée)
   const canDecide = canDecideMandate(session.roles); // admin / manager
   const canAddDocuments = canDecide || isAgent;
+  const canOperateRole = canOperate(session.roles);
+  const canViewContacts = canViewContactDetails(session.roles);
+
+  const [publicExperience, buyerInterests] = await Promise.all([
+    getPublicExperience(id),
+    listBuyerInterests(id),
+  ]);
+  const publicHref =
+    publicExperience.config?.publication_status === "publie" && publicExperience.config?.slug
+      ? `/bien/${publicExperience.config.slug}`
+      : null;
 
   const members = canDecide || canEdit ? await listAssignableMembers() : [];
   const nameFor = (uid: string | null) => (uid ? memberDisplayName(uid, cockpit.members) : null);
@@ -179,6 +201,43 @@ export default async function PropertyCockpitPage({
             />
           </Section>
 
+          <Section
+            title="Expérience publique"
+            subtitle="Configurez la page publique dédiée à ce seul bien (contenus, sections, SEO, confidentialité). L’adresse exacte n’est jamais publique."
+          >
+            <PublicConfigForm
+              config={publicExperience.config}
+              propertyId={p.id}
+              canEdit={canEdit}
+              canDecide={canDecide}
+            />
+          </Section>
+
+          <Section
+            title="Médias publics"
+            subtitle="Uniquement les visuels expressément approuvés pour la diffusion. Bucket public dédié, distinct du stockage privé de la Fabrique."
+          >
+            <PublicMediaManager
+              propertyId={p.id}
+              media={publicExperience.media}
+              config={publicExperience.config}
+              canEdit={canEdit}
+            />
+          </Section>
+
+          <Section
+            title="Intérêts acquéreurs"
+            subtitle="Réception opérationnelle minimale des demandes déposées sur la page publique."
+          >
+            <BuyerInterestsPanel
+              propertyId={p.id}
+              summary={buyerInterests}
+              canOperate={canOperateRole}
+              canViewContacts={canViewContacts}
+              highlightId={highlightInterest}
+            />
+          </Section>
+
           <Section title="Activité & historique">
             {timeline.length === 0 ? (
               <p className="text-xs text-[var(--crm-text-faint)]">Aucun événement pour le moment.</p>
@@ -197,6 +256,18 @@ export default async function PropertyCockpitPage({
               readiness={readiness}
               canDecide={canDecide}
               canEdit={canEdit}
+            />
+          </Section>
+
+          <Section title="Publication">
+            <PublicationPanel
+              propertyId={p.id}
+              config={publicExperience.config}
+              readiness={publicExperience.readiness}
+              canDecide={canDecide}
+              canEdit={canEdit}
+              previewHref={`/apercu-bien/${p.id}`}
+              publicHref={publicHref}
             />
           </Section>
 
