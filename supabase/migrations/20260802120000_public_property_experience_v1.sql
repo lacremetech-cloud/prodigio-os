@@ -598,8 +598,8 @@ as $$
   );
 $$;
 
-comment on function public.build_property_public_content(uuid) is
-  'Assemble le CONTENU PUBLIC d''un bien à partir de property_public_config + property_public_media UNIQUEMENT (aucune donnée privée). Source unique du snapshot publié et de la prévisualisation privée : preview et page publiée sont donc identiques.';
+comment on function public.build_property_public_content(uuid, text) is
+  'Assemble le CONTENU PUBLIC d''un bien à partir de property_public_config + property_public_media UNIQUEMENT (aucune donnée privée). Mode publish → copies publiques ; mode preview → masters privés à signer. Source unique du snapshot publié et de la prévisualisation privée.';
 
 revoke all on function public.build_property_public_content(uuid, text) from public, anon;
 grant execute on function public.build_property_public_content(uuid, text) to authenticated;
