@@ -8,9 +8,12 @@ import { canDecideMandate } from "@/modules/crm/auth/roles";
 import { isSupabaseAdminConfigured } from "@/config";
 import type { PropertyPublicMediaRow } from "@/lib/supabase/types";
 import {
-  buildPublicAssetPath,
-  removePublicAsset,
-  uploadPublicAsset,
+  buildMasterPath,
+  copyMasterToPublic,
+  purgePublicCopies,
+  removeMasterObject,
+  removePublicObjects,
+  uploadMasterAsset,
   validatePublicMedia,
 } from "./storage";
 
@@ -159,9 +162,11 @@ export async function uploadPublicMediaAction(formData: FormData): Promise<Actio
   const validation = validatePublicMedia({ mime: file.type, size: file.size, fileName: file.name });
   if (!validation.ok) return { ok: false, error: validation.error };
 
-  const storagePath = buildPublicAssetPath(propertyId, validation.ext);
-  const uploaded = await uploadPublicAsset({
-    storagePath,
+  // Le MASTER est téléversé dans le bucket PRIVÉ ; la copie publique n'est créée
+  // qu'à la publication (cycle de vie maîtrisé).
+  const masterPath = buildMasterPath(propertyId, validation.ext);
+  const uploaded = await uploadMasterAsset({
+    storagePath: masterPath,
     bytes: await file.arrayBuffer(),
     mime: validation.mime,
   });
@@ -171,7 +176,7 @@ export async function uploadPublicMediaAction(formData: FormData): Promise<Actio
   const { data, error } = await supabase.rpc("crm_property_register_public_media", {
     p_property_id: propertyId,
     p_kind: kind,
-    p_storage_path: storagePath,
+    p_storage_path: masterPath,
     p_file_name: validation.fileName,
     p_mime_type: validation.mime,
     p_size_bytes: validation.size,
@@ -180,7 +185,7 @@ export async function uploadPublicMediaAction(formData: FormData): Promise<Actio
     p_source_media_id: null,
   });
   if (error) {
-    await removePublicAsset(storagePath); // compensation : aucun objet orphelin.
+    await removeMasterObject(masterPath); // compensation : aucun objet orphelin.
     return { ok: false, error: humanize(error.code, error.message) };
   }
   revalidateProperty(propertyId);
@@ -227,11 +232,11 @@ export async function deletePublicMediaAction(input: unknown): Promise<ActionRes
     p_media_id: parsed.data.mediaId,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
-  const storagePath =
-    data && typeof data === "object" && "storage_path" in data
-      ? String((data as Record<string, unknown>).storage_path ?? "")
-      : "";
-  if (storagePath) await removePublicAsset(storagePath);
+  const row = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  const master = String(row.storage_path ?? "");
+  const publicPath = String(row.public_path ?? "");
+  if (master) await removeMasterObject(master);
+  if (publicPath) await removePublicObjects([publicPath]);
   revalidateProperty(parsed.data.propertyId);
   return { ok: true };
 }
@@ -258,16 +263,68 @@ export async function setPublicMediaRoleAction(input: unknown): Promise<ActionRe
 }
 
 // --- Publication (décisions sensibles : admin/manager en base) ---------------
+interface MediaToPublish {
+  id: string;
+  storage_path: string;
+  mime_type: string;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string" && v.length > 0);
+}
+
+/**
+ * Publication orchestrée côté serveur : purge les anciennes copies publiques,
+ * COPIE chaque master approuvé vers le bucket public (chemin frais, sans PII),
+ * puis délègue à `crm_property_publish` (garde + snapshot atomique). En cas
+ * d'échec, les copies fraîchement créées sont retirées (aucun objet orphelin).
+ */
 export async function publishPropertyAction(input: unknown): Promise<ActionResult> {
   await requireCrmSession();
   const parsed = z.object({ propertyId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Saisie invalide." };
+  if (!isSupabaseAdminConfigured()) {
+    return { ok: false, error: "Stockage public non configuré (clé serveur absente)." };
+  }
+  const propertyId = parsed.data.propertyId;
   const supabase = await createSupabaseServerClient();
+
+  const { data: mediaData, error: listError } = await supabase.rpc(
+    "crm_property_media_to_publish",
+    { p_property_id: propertyId },
+  );
+  if (listError) return { ok: false, error: humanize(listError.code, listError.message) };
+  const media = (Array.isArray(mediaData) ? mediaData : []) as MediaToPublish[];
+
+  // Purge des anciennes copies publiques : seule la version courante subsiste.
+  await purgePublicCopies(propertyId);
+
+  const publicPaths: Record<string, string> = {};
+  const created: string[] = [];
+  for (const m of media) {
+    const copy = await copyMasterToPublic({
+      propertyId,
+      masterPath: m.storage_path,
+      mime: m.mime_type,
+    });
+    if (!copy.ok) {
+      await removePublicObjects(created); // compensation.
+      return { ok: false, error: copy.error };
+    }
+    publicPaths[m.id] = copy.publicPath;
+    created.push(copy.publicPath);
+  }
+
   const { data, error } = await supabase.rpc("crm_property_publish", {
-    p_property_id: parsed.data.propertyId,
+    p_property_id: propertyId,
+    p_public_paths: publicPaths as never,
   });
-  if (error) return { ok: false, error: humanize(error.code, error.message) };
-  revalidateProperty(parsed.data.propertyId);
+  if (error) {
+    await removePublicObjects(created); // aucune copie orpheline si la garde refuse.
+    return { ok: false, error: humanize(error.code, error.message) };
+  }
+  revalidateProperty(propertyId);
   return { ok: true, data: (data as Record<string, unknown>) ?? undefined };
 }
 
@@ -278,11 +335,15 @@ export async function unpublishPropertyAction(input: unknown): Promise<ActionRes
   const parsed = unpublishSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Saisie invalide." };
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("crm_property_unpublish", {
+  const { data, error } = await supabase.rpc("crm_property_unpublish", {
     p_property_id: parsed.data.propertyId,
     p_reason: parsed.data.reason ?? null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+  // Supprime les COPIES publiques : la copie directe cesse de résoudre.
+  const paths = toStringArray((data as Record<string, unknown> | null)?.public_paths);
+  await removePublicObjects(paths);
+  await purgePublicCopies(parsed.data.propertyId); // filet : aucun résidu.
   revalidateProperty(parsed.data.propertyId);
   return { ok: true };
 }
@@ -297,11 +358,17 @@ export async function setPublicationStatusAction(input: unknown): Promise<Action
   const parsed = publicationStatusSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Saisie invalide." };
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("crm_property_set_publication_status", {
+  const { data, error } = await supabase.rpc("crm_property_set_publication_status", {
     p_property_id: parsed.data.propertyId,
     p_status: parsed.data.status,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+  // L'archivage retire aussi les copies publiques.
+  if (parsed.data.status === "archive") {
+    const paths = toStringArray((data as Record<string, unknown> | null)?.public_paths);
+    await removePublicObjects(paths);
+    await purgePublicCopies(parsed.data.propertyId);
+  }
   revalidateProperty(parsed.data.propertyId);
   return { ok: true };
 }

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { env } from "@/config";
+import { env, isSupabaseAdminConfigured } from "@/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { PropertyExperience } from "@/components/public/property/property-experience";
-import type { PublicPropertyContent } from "@/modules/buyers/public/snapshot";
+import type { PublicMediaNode, PublicPropertyContent } from "@/modules/buyers/public/snapshot";
+import { createMasterSignedUrl } from "@/modules/buyers/public/storage";
 
 /**
  * Prévisualisation PRIVÉE de l'expérience publique d'un bien (avant publication).
@@ -34,6 +35,22 @@ export default async function PropertyPreviewPage({ params }: PageProps) {
   });
   if (error || !data || typeof data !== "object") notFound();
   const content = data as unknown as PublicPropertyContent;
+
+  // Prévisualisation : les médias pointent le MASTER privé. On génère des URL
+  // signées COURTES (jamais stockées) et on les injecte dans chaque nœud média.
+  if (isSupabaseAdminConfigured()) {
+    const signCache = new Map<string, string | null>();
+    const sign = async (node: PublicMediaNode | null): Promise<void> => {
+      if (!node || !node.storage_path) return;
+      if (!signCache.has(node.storage_path)) {
+        signCache.set(node.storage_path, await createMasterSignedUrl(node.storage_path));
+      }
+      node.url = signCache.get(node.storage_path) ?? null;
+    };
+    await sign(content.hero);
+    await sign(content.main_media);
+    for (const g of content.gallery ?? []) await sign(g);
+  }
 
   return (
     <div className="relative">

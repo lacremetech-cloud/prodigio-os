@@ -15,7 +15,6 @@ import {
   PublicationPanel,
 } from "@/components/crm/property/public-experience";
 import { BuyerInterestsPanel } from "@/components/crm/property/buyer-interests";
-import { env } from "@/config";
 import { buildPropertyTimeline } from "@/modules/properties/factory/timeline";
 import { propertyStatusLabels, propertyStatusVisual } from "@/modules/properties/factory/labels";
 import { createPropertyAssetSignedUrl } from "@/modules/properties/factory/storage";
@@ -223,7 +222,6 @@ export default async function PropertyCockpitPage({
               media={publicExperience.media}
               config={publicExperience.config}
               canEdit={canEdit}
-              supabaseUrl={env.NEXT_PUBLIC_SUPABASE_URL}
             />
           </Section>
 

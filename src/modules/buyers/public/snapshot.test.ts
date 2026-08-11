@@ -28,4 +28,23 @@ describe("publicMediaUrl / publicPathUrl", () => {
     expect(publicMediaUrl(null, supabase)).toBeNull();
     expect(publicPathUrl(null, supabase)).toBeNull();
   });
+
+  it("privilégie une URL déjà résolue (prévisualisation : master signé)", () => {
+    const signed = "https://abcd.supabase.co/storage/v1/object/sign/property-public-master/x?token=zzz";
+    expect(
+      publicMediaUrl(
+        { bucket: "property-public-master", storage_path: "p/master/x.jpg", url: signed },
+        supabase,
+      ),
+    ).toBe(signed);
+  });
+
+  it("ne sert jamais le bucket master en URL directe (privé)", () => {
+    expect(
+      publicMediaUrl(
+        { bucket: "property-public-master", storage_path: "p/master/x.jpg" },
+        supabase,
+      ),
+    ).toBeNull();
+  });
 });

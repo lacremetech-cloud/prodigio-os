@@ -104,29 +104,55 @@ Toujours `noindex`.
 
 ---
 
-## 3. Médias publics vs privés
+## 3. Médias publics vs privés — cycle de vie maîtrisé
 
-Deux buckets **distincts** :
+**Trois buckets distincts**, aucun mélange :
 
 | Bucket | Visibilité | Contenu |
 |---|---|---|
-| `property-assets` | **PRIVÉ** (Fabrique) | Sources originales, documents légaux. URL signée courte, jamais public. |
-| `property-public` | **PUBLIC** (nouveau) | **Uniquement** les médias expressément approuvés pour diffusion. |
+| `property-assets` | **PRIVÉ** (Fabrique) | Sources originales, documents légaux. **Jamais rendu public.** |
+| `property-public-master` | **PRIVÉ** (nouveau) | Le **master** de chaque média approuvé. Accès serveur uniquement ; URL signée courte pour la prévisualisation. |
+| `property-public` | **PUBLIC** (nouveau) | Les **copies publiques** des médias du bien **publié uniquement**. |
 
-Le bucket privé `property-assets` **n'est jamais rendu public**. Le bucket public
-`property-public` :
+**Cycle de vie** (le point critique) :
 
-- ne contient **aucun document légal** (types autorisés : JPEG, PNG, WEBP, MP4) ;
-- **aucune PII** dans les chemins : `{propertyId}/public/{uuid}.{ext}` ;
-- porte pour chaque média : type, **texte alternatif**, **légende** (facultative),
-  **ordre d'affichage**, **approbation explicite** (`approved`) ;
-- **seuls** les médias `approved = true` et `status = 'actif'` entrent dans un
-  snapshot. Un média retiré d'approbation disparaît de la prochaine publication.
-- une **image principale** (aperçu social), un **hero** et une **image sociale**
-  sont sélectionnés parmi ces médias (`crm_property_set_public_media_role`).
+1. **Téléversement** → le master va dans le bucket **PRIVÉ** `property-public-master`
+   (`storage_path`, chemin `{propertyId}/master/{uuid}.{ext}`). Aucune copie
+   publique n'existe encore.
+2. **Publication** → pour chaque média approuvé/actif, une **copie publique
+   fraîche** est créée dans `property-public`
+   (`public_path`, chemin `{propertyId}/pub/{uuid}.{ext}`) ; le snapshot pointe
+   ces copies. Avant la copie, **toutes** les copies publiques antérieures du bien
+   sont **purgées** (une seule version en ligne à la fois).
+3. **Dépublication / archivage** → **suppression** des objets du bucket public +
+   `public_path` remis à `null`. **La copie directe cesse alors de résoudre**
+   (nouvelle requête → 404).
 
+Garanties :
+
+- le bucket privé `property-assets` **n'est jamais rendu public** ; le master n'est
+  **jamais** rendu public (on en fait une **copie**, on ne le publie pas) ;
+- **copies publiques versionnées** (chemin frais à chaque publication, sans PII) ;
+- **aucun document légal** dans les buckets publics (types autorisés : JPEG, PNG,
+  WEBP, MP4) ;
+- **aucune URL signée persistée** : le public utilise des URL directes du bucket
+  public ; la prévisualisation authentifiée génère des URL signées **courtes**
+  (120 s) du master, jamais stockées ;
+- **seuls** les médias `approved = true` et `status = 'actif'` sont copiés/servis.
+
+> ⚠️ **Caches & copies déjà téléchargées.** Une dépublication supprime les objets
+> côté bucket, donc **toute nouvelle requête** à l'URL publique échoue (404).
+> Elle **ne peut pas** révoquer une copie **déjà téléchargée** par un visiteur, ni
+> une éventuelle mise en cache CDN/navigateur déjà servie : ces copies restent hors
+> de notre contrôle jusqu'à expiration du cache. Ne jamais prétendre l'inverse.
+> (Le bucket Supabase Storage public est servi avec un cache court ; un CDN
+> éventuel devant l'app doit être configuré en conséquence.)
+
+Une **image principale** (aperçu social), un **hero** et une **image sociale** sont
+sélectionnés parmi les médias approuvés (`crm_property_set_public_media_role`).
 L'URL publique est reconstruite côté application (`publicMediaUrl`) — le snapshot
-stocke le **chemin** (indépendant de l'environnement), jamais l'hôte Supabase.
+stocke le **chemin** de la copie publique (indépendant de l'environnement), jamais
+l'hôte Supabase ni le chemin du master.
 
 ---
 

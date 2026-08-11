@@ -23,7 +23,6 @@ import {
   publicationStatusVisual,
   type PublicationStatus,
 } from "@/modules/buyers/public/labels";
-import { publicMediaUrl } from "@/modules/buyers/public/snapshot";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import type {
   PropertyPublicConfigRow,
@@ -266,13 +265,11 @@ export function PublicMediaManager({
   media,
   config,
   canEdit,
-  supabaseUrl,
 }: {
   propertyId: string;
   media: PropertyPublicMediaRow[];
   config: PropertyPublicConfigRow | null;
   canEdit: boolean;
-  supabaseUrl: string | undefined;
 }) {
   const { pending, error, done, run } = useAction();
   const [kind, setKind] = useState<(typeof PUBLIC_MEDIA_KINDS)[number]>("photo");
@@ -360,7 +357,6 @@ export function PublicMediaManager({
               propertyId={propertyId}
               config={config}
               canEdit={canEdit}
-              supabaseUrl={supabaseUrl}
               run={run}
               pending={pending}
               confirmId={confirmId}
@@ -378,7 +374,6 @@ function PublicMediaCard({
   propertyId,
   config,
   canEdit,
-  supabaseUrl,
   run,
   pending,
   confirmId,
@@ -388,7 +383,6 @@ function PublicMediaCard({
   propertyId: string;
   config: PropertyPublicConfigRow | null;
   canEdit: boolean;
-  supabaseUrl: string | undefined;
   run: ReturnType<typeof useAction>["run"];
   pending: boolean;
   confirmId: string | null;
@@ -398,35 +392,25 @@ function PublicMediaCard({
   const [alt, setAlt] = useState(m.alt_text ?? "");
   const [caption, setCaption] = useState(m.caption ?? "");
   const [order, setOrder] = useState(String(m.sort_order));
-  const url = publicMediaUrl(
-    { bucket: "property-public", storage_path: m.storage_path },
-    supabaseUrl,
-  );
   const isHero = config?.hero_media_id === m.id;
   const isMain = config?.main_public_media_id === m.id;
   const isSocial = config?.social_image_media_id === m.id;
+  const isLive = Boolean(m.public_path); // copie publique en ligne (bien publié)
 
   return (
     <li className="flex flex-col gap-2 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] p-3">
       <div className="flex items-start gap-3">
-        {url && m.mime_type.startsWith("image/") ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={url}
-            alt={m.alt_text ?? ""}
-            className="h-16 w-24 shrink-0 rounded-[6px] object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-[6px] bg-[var(--crm-panel)] text-xs text-[var(--crm-text-faint)]">
-            {mediaKindPublicLabels[m.kind] ?? m.kind}
-          </div>
-        )}
+        {/* Master privé : pas d'aperçu public direct. La prévisualisation privée
+            (URL signée) sert de rendu visuel. */}
+        <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-[6px] bg-[var(--crm-panel)] text-xs text-[var(--crm-text-faint)]">
+          {mediaKindPublicLabels[m.kind] ?? m.kind}
+        </div>
         <div className="min-w-0 flex-1">
           <p className="crm-wrap text-sm text-[var(--crm-text)]">{m.alt_text || m.file_name}</p>
           <p className="text-[11px] text-[var(--crm-text-faint)]">
             {mediaKindPublicLabels[m.kind] ?? m.kind} · ordre {m.sort_order}
             {m.approved ? "" : " · non approuvé"}
+            {isLive ? " · en ligne" : ""}
           </p>
           <div className="mt-1 flex flex-wrap gap-1">
             {isHero ? <span className="crm-chip crm-chip--gold">Hero</span> : null}

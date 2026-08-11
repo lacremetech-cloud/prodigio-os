@@ -662,6 +662,7 @@ export type PropertyPublicMediaRow = {
   source_media_id: string | null;
   kind: PropertyPublicMediaKind;
   storage_path: string;
+  public_path: string | null;
   file_name: string;
   mime_type: string;
   size_bytes: number;
@@ -1410,7 +1411,14 @@ export interface Database {
         Args: { p_property_id: string; p_role: string; p_media_id: string | null };
         Returns: Json;
       };
-      crm_property_publish: { Args: { p_property_id: string }; Returns: Json };
+      crm_property_publish: {
+        Args: { p_property_id: string; p_public_paths?: Json };
+        Returns: Json;
+      };
+      crm_property_media_to_publish: {
+        Args: { p_property_id: string };
+        Returns: { id: string; storage_path: string; mime_type: string }[];
+      };
       crm_property_unpublish: {
         Args: { p_property_id: string; p_reason?: string | null };
         Returns: Json;

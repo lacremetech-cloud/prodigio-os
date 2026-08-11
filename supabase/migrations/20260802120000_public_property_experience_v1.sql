@@ -169,9 +169,16 @@ alter table public.property_public_config enable row level security;
 grant select on public.property_public_config to authenticated;
 
 -- =============================================================================
--- 3. PROPERTY_PUBLIC_MEDIA — médias EXPRESSÉMENT approuvés (bucket PUBLIC).
---    Aucun document légal ici. Aucune PII dans storage_path. Le fichier vit dans
---    le bucket public dédié ; l'URL publique est reconstruite côté application.
+-- 3. PROPERTY_PUBLIC_MEDIA — médias EXPRESSÉMENT approuvés.
+--    CYCLE DE VIE MAÎTRISÉ (cf. docs/19 § Médias) :
+--      - le MASTER est téléversé dans un bucket PRIVÉ dédié
+--        « property-public-master » (jamais public) : colonne `storage_path` ;
+--      - à la PUBLICATION, une COPIE publique (chemin frais, sans PII) est créée
+--        dans le bucket PUBLIC « property-public » : colonne `public_path` ;
+--      - à la DÉPUBLICATION / archivage, les COPIES publiques sont SUPPRIMÉES
+--        (`public_path` remis à null) — la copie directe cesse de résoudre.
+--    Aucun objet du bucket privé de la Fabrique (`property-assets`) n'est rendu
+--    public. Aucun document légal ici. Aucune PII dans les chemins.
 -- =============================================================================
 create table if not exists public.property_public_media (
   id               uuid primary key default gen_random_uuid(),
@@ -183,7 +190,10 @@ create table if not exists public.property_public_media (
   source_media_id  uuid references public.property_media (id) on delete set null,
   kind             text not null
                      check (kind in ('photo', 'video', 'drone', 'rendu', 'plan', 'couverture')),
+  -- MASTER dans le bucket PRIVÉ « property-public-master ». Jamais public.
   storage_path     text not null,
+  -- COPIE publique courante dans « property-public » (null = non publié / dépublié).
+  public_path      text,
   file_name        text not null,
   mime_type        text not null,
   size_bytes       bigint not null check (size_bytes >= 0),
@@ -200,7 +210,7 @@ create table if not exists public.property_public_media (
 );
 
 comment on table public.property_public_media is
-  'Médias EXPRESSÉMENT approuvés pour la diffusion publique du bien (bucket Storage PUBLIC « property-public »). Aucun document légal, aucune PII dans storage_path. Seuls les médias approuvés et actifs entrent dans un snapshot.';
+  'Médias EXPRESSÉMENT approuvés pour la diffusion. MASTER privé (storage_path, bucket « property-public-master »), COPIE publique courante (public_path, bucket « property-public ») créée à la publication et SUPPRIMÉE à la dépublication/archivage. Aucun document légal, aucune PII. Seuls les médias approuvés et actifs entrent dans un snapshot.';
 
 create index if not exists property_public_media_property_idx
   on public.property_public_media (property_id, status, sort_order);
@@ -494,54 +504,70 @@ revoke all on function public.compute_buyer_scores(text, text, text, text, text,
 --    ni les données économiques ou du propriétaire. Garantie structurelle
 --    d'absence de fuite.
 -- =============================================================================
-create or replace function public.build_property_public_content(p_property_id uuid)
+create or replace function public.build_property_public_content(
+  p_property_id uuid, p_mode text default 'publish')
 returns jsonb
 language sql
 stable
 security definer
 set search_path = public, pg_temp
 as $$
-  with cfg as (
+  -- Deux modes :
+  --   'publish'  → chemins de COPIE publique (public_path, bucket « property-public »),
+  --                servis directement au public. Exclut les médias non encore copiés.
+  --   'preview'  → chemins du MASTER privé (storage_path, bucket
+  --                « property-public-master ») + `needs_sign` : la prévisualisation
+  --                (authentifiée) génère des URL signées côté serveur. AUCUN chemin
+  --                de master n'est jamais exposé au public (mode 'preview' réservé
+  --                à crm_property_public_preview).
+  with params as (
+    select (p_mode = 'preview') as preview
+  ),
+  cfg as (
     select * from public.property_public_config where property_id = p_property_id
+  ),
+  eligible as (
+    -- En publication : seulement les médias disposant d'une copie publique.
+    select m.*,
+      case when (select preview from params) then m.storage_path else m.public_path end as path,
+      case when (select preview from params) then 'property-public-master' else 'property-public' end as bucket
+    from public.property_public_media m
+    where m.property_id = p_property_id and m.status = 'actif' and m.approved is true
+      and (case when (select preview from params) then m.storage_path else m.public_path end) is not null
   ),
   media as (
     select jsonb_agg(
              jsonb_build_object(
-               'id', m.id, 'kind', m.kind, 'bucket', 'property-public',
-               'storage_path', m.storage_path, 'mime_type', m.mime_type,
-               'alt', m.alt_text, 'caption', m.caption, 'sort_order', m.sort_order
-             ) order by m.sort_order, m.created_at
+               'id', e.id, 'kind', e.kind, 'bucket', e.bucket,
+               'storage_path', e.path, 'mime_type', e.mime_type,
+               'alt', e.alt_text, 'caption', e.caption, 'sort_order', e.sort_order,
+               'needs_sign', (select preview from params)
+             ) order by e.sort_order, e.created_at
            ) as items
-    from public.property_public_media m
-    where m.property_id = p_property_id and m.status = 'actif' and m.approved is true
+    from eligible e
   ),
   hero as (
     select jsonb_build_object(
-             'id', m.id, 'kind', m.kind, 'bucket', 'property-public',
-             'storage_path', m.storage_path, 'mime_type', m.mime_type, 'alt', m.alt_text
+             'id', e.id, 'kind', e.kind, 'bucket', e.bucket,
+             'storage_path', e.path, 'mime_type', e.mime_type, 'alt', e.alt_text,
+             'needs_sign', (select preview from params)
            ) as node
-    from public.property_public_media m
-    join cfg on cfg.hero_media_id = m.id
-    where m.status = 'actif' and m.approved is true
+    from eligible e join cfg on cfg.hero_media_id = e.id
   ),
   main as (
     select jsonb_build_object(
-             'id', m.id, 'bucket', 'property-public', 'storage_path', m.storage_path,
-             'mime_type', m.mime_type, 'alt', m.alt_text
+             'id', e.id, 'bucket', e.bucket, 'storage_path', e.path,
+             'mime_type', e.mime_type, 'alt', e.alt_text,
+             'needs_sign', (select preview from params)
            ) as node
-    from public.property_public_media m
-    join cfg on cfg.main_public_media_id = m.id
-    where m.status = 'actif' and m.approved is true
+    from eligible e join cfg on cfg.main_public_media_id = e.id
   ),
   social as (
-    select coalesce(
-      (select m.storage_path from public.property_public_media m
-        join cfg on cfg.social_image_media_id = m.id
-        where m.status = 'actif' and m.approved is true),
-      (select m.storage_path from public.property_public_media m
-        join cfg on cfg.main_public_media_id = m.id
-        where m.status = 'actif' and m.approved is true)
-    ) as social_path
+    -- Chemin de l'image sociale (SEO). En publication uniquement : copie publique.
+    select case when (select preview from params) then null else coalesce(
+      (select e.path from eligible e join cfg on cfg.social_image_media_id = e.id),
+      (select e.path from eligible e join cfg on cfg.main_public_media_id = e.id)
+    ) end as social_path
   )
   select jsonb_build_object(
     'slug', (select slug from cfg),
@@ -575,8 +601,8 @@ $$;
 comment on function public.build_property_public_content(uuid) is
   'Assemble le CONTENU PUBLIC d''un bien à partir de property_public_config + property_public_media UNIQUEMENT (aucune donnée privée). Source unique du snapshot publié et de la prévisualisation privée : preview et page publiée sont donc identiques.';
 
-revoke all on function public.build_property_public_content(uuid) from public, anon;
-grant execute on function public.build_property_public_content(uuid) to authenticated;
+revoke all on function public.build_property_public_content(uuid, text) from public, anon;
+grant execute on function public.build_property_public_content(uuid, text) to authenticated;
 
 -- =============================================================================
 -- 10. GARDE DE PUBLICATION — readiness publique CALCULÉE (source de vérité).
@@ -894,7 +920,7 @@ begin
   if v_m.id is null then raise exception 'média introuvable' using errcode = '22023'; end if;
   if not public.crm_property_access(v_m.property_id) then raise exception 'droits insuffisants' using errcode = '42501'; end if;
 
-  update public.property_public_media set status = 'supprime', deleted_by = v_uid, deleted_at = now()
+  update public.property_public_media set status = 'supprime', deleted_by = v_uid, deleted_at = now(), public_path = null
     where id = p_media_id;
   -- Détache le média s'il servait de hero / image principale / image sociale.
   update public.property_public_config set
@@ -906,7 +932,9 @@ begin
   insert into public.audit_events (actor_user_id, entity_type, entity_id, event_type, new_value)
   values (v_uid, 'property', v_m.property_id, 'bien_public_media_supprime', jsonb_build_object('kind', v_m.kind));
 
-  return jsonb_build_object('ok', true, 'storage_path', v_m.storage_path);
+  -- Renvoie le MASTER (privé) et la COPIE publique éventuelle : l'action serveur
+  -- supprime les deux objets Storage.
+  return jsonb_build_object('ok', true, 'storage_path', v_m.storage_path, 'public_path', v_m.public_path);
 end;
 $$;
 
@@ -953,12 +981,19 @@ declare v_uid uuid := auth.uid();
 begin
   if v_uid is null then raise exception 'authentification requise' using errcode = '28000'; end if;
   if not public.crm_property_access(p_property_id) then raise exception 'droits insuffisants' using errcode = '42501'; end if;
-  return public.build_property_public_content(p_property_id);
+  -- Mode 'preview' : chemins du MASTER privé, signés par la page de prévisualisation.
+  return public.build_property_public_content(p_property_id, 'preview');
 end;
 $$;
 
 -- --- Publication contrôlée (décision : admin/manager) + snapshot versionné ----
-create or replace function public.crm_property_publish(p_property_id uuid)
+-- p_public_paths : map { media_id (text) -> chemin de la COPIE publique fraîche }
+-- produite CÔTÉ SERVEUR (action Next) qui a copié le master privé vers le bucket
+-- public AVANT cet appel. La fonction re-vérifie le rôle et la readiness (autorité
+-- serveur), impose le préfixe `{propertyId}/` sur chaque chemin (anti-détournement),
+-- fixe `public_path`, assemble le snapshot depuis les copies publiques puis publie.
+create or replace function public.crm_property_publish(
+  p_property_id uuid, p_public_paths jsonb default '{}'::jsonb)
 returns jsonb language plpgsql security definer
 set search_path = public, pg_temp
 as $$
@@ -969,20 +1004,42 @@ declare
   v_version int;
   v_content jsonb;
   v_snapshot_id uuid;
+  v_media record;
+  v_path text;
+  v_prefix text := p_property_id::text || '/';
 begin
   if v_uid is null then raise exception 'authentification requise' using errcode = '28000'; end if;
   if not public.crm_can_decide() then
     raise exception 'seul un administrateur ou un manager publie un bien' using errcode = '42501';
   end if;
   if not public.crm_property_access(p_property_id) then raise exception 'droits insuffisants' using errcode = '42501'; end if;
+  if p_public_paths is null or jsonb_typeof(p_public_paths) <> 'object' then
+    raise exception 'chemins publics invalides' using errcode = '22023';
+  end if;
 
   v_ready := public.crm_property_public_readiness(p_property_id);
   if not (v_ready->>'ready')::boolean then
     raise exception 'préparation publique incomplète : le bien ne peut pas être publié' using errcode = '22023';
   end if;
 
+  -- Fixe la COPIE publique de chaque média approuvé/actif à partir de la map.
+  -- Toute copie hors du préfixe du bien est refusée (anti-détournement).
+  for v_media in
+    select id from public.property_public_media
+    where property_id = p_property_id and status = 'actif' and approved is true
+  loop
+    v_path := nullif(p_public_paths->>v_media.id::text, '');
+    if v_path is not null then
+      if left(v_path, length(v_prefix)) <> v_prefix then
+        raise exception 'chemin public hors du périmètre du bien' using errcode = '42501';
+      end if;
+      update public.property_public_media set public_path = v_path where id = v_media.id;
+    end if;
+  end loop;
+
   select * into v_cfg from public.property_public_config where property_id = p_property_id;
-  v_content := public.build_property_public_content(p_property_id);
+  -- Assemble le snapshot depuis les COPIES publiques (mode 'publish').
+  v_content := public.build_property_public_content(p_property_id, 'publish');
 
   select coalesce(max(version), 0) + 1 into v_version
     from public.property_public_snapshots where property_id = p_property_id;
@@ -1008,12 +1065,28 @@ begin
 end;
 $$;
 
--- Dépublication (décision : admin/manager). Le snapshot est conservé.
+-- Médias approuvés/actifs à COPIER vers le public (masters). Sert l'orchestration
+-- de publication côté serveur (lecture RLS-safe des chemins de master).
+create or replace function public.crm_property_media_to_publish(p_property_id uuid)
+returns table (id uuid, storage_path text, mime_type text)
+language sql stable security definer
+set search_path = public, pg_temp
+as $$
+  select m.id, m.storage_path, m.mime_type
+  from public.property_public_media m
+  where m.property_id = p_property_id and m.status = 'actif' and m.approved is true
+    and public.crm_property_access(p_property_id);
+$$;
+
+-- Dépublication (décision : admin/manager). Le snapshot est CONSERVÉ (historique)
+-- mais les COPIES publiques sont retirées : `public_path` remis à null et la liste
+-- des chemins retournée pour SUPPRESSION des objets du bucket public par l'action
+-- serveur. La copie directe cesse alors de résoudre (voir docs/19 § caches).
 create or replace function public.crm_property_unpublish(p_property_id uuid, p_reason text default null)
 returns jsonb language plpgsql security definer
 set search_path = public, pg_temp
 as $$
-declare v_uid uuid := auth.uid();
+declare v_uid uuid := auth.uid(); v_paths text[];
 begin
   if v_uid is null then raise exception 'authentification requise' using errcode = '28000'; end if;
   if not public.crm_can_decide() then
@@ -1021,15 +1094,23 @@ begin
   end if;
   if not public.crm_property_access(p_property_id) then raise exception 'droits insuffisants' using errcode = '42501'; end if;
 
-  update public.property_public_config set publication_status = 'depublie', updated_by = v_uid
+  update public.property_public_config set
+    publication_status = 'depublie', published_snapshot_id = null, updated_by = v_uid
     where property_id = p_property_id;
   if not found then raise exception 'configuration publique introuvable' using errcode = '22023'; end if;
+
+  -- Retire les copies publiques (chemins retournés pour suppression Storage).
+  select array_agg(public_path) into v_paths
+    from public.property_public_media
+    where property_id = p_property_id and public_path is not null;
+  update public.property_public_media set public_path = null
+    where property_id = p_property_id and public_path is not null;
 
   insert into public.audit_events (actor_user_id, entity_type, entity_id, event_type, new_value)
   values (v_uid, 'property', p_property_id, 'bien_depublie',
           jsonb_build_object('reason', nullif(btrim(p_reason), '')));
 
-  return jsonb_build_object('ok', true);
+  return jsonb_build_object('ok', true, 'public_paths', to_jsonb(coalesce(v_paths, array[]::text[])));
 end;
 $$;
 
@@ -1055,6 +1136,26 @@ begin
   insert into public.property_public_config (property_id, publication_status, updated_by)
   values (p_property_id, p_status, v_uid)
   on conflict (property_id) do update set publication_status = p_status, updated_by = v_uid;
+
+  -- Archiver retire aussi les copies publiques (comme la dépublication).
+  if p_status = 'archive' then
+    declare v_paths text[];
+    begin
+      select array_agg(public_path) into v_paths
+        from public.property_public_media
+        where property_id = p_property_id and public_path is not null;
+      update public.property_public_media set public_path = null
+        where property_id = p_property_id and public_path is not null;
+      update public.property_public_config set published_snapshot_id = null
+        where property_id = p_property_id;
+
+      insert into public.audit_events (actor_user_id, entity_type, entity_id, event_type, new_value)
+      values (v_uid, 'property', p_property_id, 'bien_public_statut', jsonb_build_object('status', p_status));
+
+      return jsonb_build_object('ok', true, 'status', p_status,
+                                'public_paths', to_jsonb(coalesce(v_paths, array[]::text[])));
+    end;
+  end if;
 
   insert into public.audit_events (actor_user_id, entity_type, entity_id, event_type, new_value)
   values (v_uid, 'property', p_property_id, 'bien_public_statut', jsonb_build_object('status', p_status));
@@ -1367,7 +1468,8 @@ begin
       'public.crm_property_delete_public_media(uuid)',
       'public.crm_property_set_public_media_role(uuid, text, uuid)',
       'public.crm_property_public_preview(uuid)',
-      'public.crm_property_publish(uuid)',
+      'public.crm_property_publish(uuid, jsonb)',
+      'public.crm_property_media_to_publish(uuid)',
       'public.crm_property_unpublish(uuid, text)',
       'public.crm_property_set_publication_status(uuid, text)',
       'public.crm_buyer_interest_set_status(uuid, text)'
@@ -1379,12 +1481,21 @@ begin
 end $$;
 
 -- =============================================================================
--- 14. STORAGE — bucket PUBLIC des médias approuvés (distinct du bucket privé).
---     Le bucket privé « property-assets » de la Fabrique n'est JAMAIS rendu public.
+-- 14. STORAGE — deux buckets DÉDIÉS (cycle de vie des médias publics) :
+--     - « property-public-master » : PRIVÉ. Masters des médias approuvés. Accès
+--       serveur (rôle de service) uniquement ; jamais public ; URL signée courte
+--       pour la prévisualisation authentifiée. JAMAIS d'objet du bucket privé de
+--       la Fabrique (« property-assets ») rendu public.
+--     - « property-public » : PUBLIC. Copies publiques des médias approuvés du
+--       bien PUBLIÉ uniquement ; supprimées à la dépublication / archivage.
 -- =============================================================================
 do $$
 begin
   if to_regclass('storage.buckets') is not null then
+    insert into storage.buckets (id, name, public)
+    values ('property-public-master', 'property-public-master', false)
+    on conflict (id) do update set public = false;
+
     insert into storage.buckets (id, name, public)
     values ('property-public', 'property-public', true)
     on conflict (id) do update set public = true;

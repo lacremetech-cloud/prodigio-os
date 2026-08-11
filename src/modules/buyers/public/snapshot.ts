@@ -17,6 +17,13 @@ export interface PublicMediaNode {
   alt: string | null;
   caption?: string | null;
   sort_order?: number;
+  /** Mode prévisualisation : le chemin pointe le master privé (à signer). */
+  needs_sign?: boolean;
+  /**
+   * URL déjà résolue (prévisualisation : URL signée courte du master injectée
+   * côté serveur). Prioritaire sur la reconstruction d'URL publique.
+   */
+  url?: string | null;
 }
 
 export interface PublicSeo {
@@ -95,13 +102,21 @@ export const DEFAULT_SECTION_ORDER: PublicSectionKey[] = [
  * configuré, renvoie `null` (aucun rendu d'image cassée).
  */
 export function publicMediaUrl(
-  node: Pick<PublicMediaNode, "bucket" | "storage_path"> | null | undefined,
+  node:
+    | (Pick<PublicMediaNode, "bucket" | "storage_path"> & { url?: string | null })
+    | null
+    | undefined,
   supabaseUrl: string | undefined,
 ): string | null {
-  if (!node || !node.storage_path) return null;
+  if (!node) return null;
+  // Prévisualisation : URL signée du master déjà injectée côté serveur.
+  if (typeof node.url === "string" && node.url.length > 0) return node.url;
+  if (!node.storage_path) return null;
   const base = (supabaseUrl ?? "").trim().replace(/\/+$/, "");
   if (!base) return null;
+  // Seul le bucket PUBLIC est servi par URL directe.
   const bucket = node.bucket || "property-public";
+  if (bucket !== "property-public") return null;
   return `${base}/storage/v1/object/public/${bucket}/${node.storage_path}`;
 }
 
