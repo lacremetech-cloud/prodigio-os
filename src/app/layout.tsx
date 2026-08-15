@@ -1,26 +1,39 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { site } from "@/lib/site";
 
-// Polices auto-hébergées par Next.js lors du build (aucun appel Google Fonts
-// depuis le navigateur). DEUX familles maîtrisées :
-//  - Cormorant Garamond : GRANDS titres éditoriaux uniquement (serif de luxe).
+// Polices AUTO-HÉBERGÉES dans le dépôt (fichiers `src/app/fonts/*.woff2`, sous-
+// ensemble latin) et servies via `next/font/local`. AUCUN appel réseau au build
+// ni côté navigateur : le build ne dépend plus de fonts.gstatic.com (cause de
+// l'échec Vercel). Fichiers sous licence SIL Open Font License (OFL), qui
+// autorise l'auto-hébergement (voir `src/app/fonts/*-OFL-LICENSE.txt`).
+//
+// DEUX familles maîtrisées, identiques à l'existant (mêmes variables CSS, mêmes
+// graisses/styles) :
+//  - Cormorant Garamond : GRANDS titres éditoriaux uniquement (serif de luxe) —
+//    graisses 500/600, normal + italique.
 //  - Inter : tout le reste — textes, questions, choix, formulaires, boutons,
-//    signature et intertitres. Sans-serif extrêmement lisible et contemporaine.
-const cormorant = Cormorant_Garamond({
+//    signature et intertitres — graisses 400/500/600.
+const cormorant = localFont({
   variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  style: ["normal", "italic"],
   display: "swap",
+  src: [
+    { path: "./fonts/cormorant-garamond-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/cormorant-garamond-latin-500-italic.woff2", weight: "500", style: "italic" },
+    { path: "./fonts/cormorant-garamond-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/cormorant-garamond-latin-600-italic.woff2", weight: "600", style: "italic" },
+  ],
 });
 
-const inter = Inter({
+const inter = localFont({
   variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
   display: "swap",
+  src: [
+    { path: "./fonts/inter-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/inter-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/inter-latin-600-normal.woff2", weight: "600", style: "normal" },
+  ],
 });
 
 export const metadata: Metadata = {
