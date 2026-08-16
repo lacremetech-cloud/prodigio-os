@@ -233,12 +233,14 @@ aucune campagne automatique n'est construite dans cette mission.
 | `agent_immobilier` | **Uniquement** les dossiers qui lui sont affectés, ou liés à un bien auquel il a accès |
 | `partenaire_lecture` | **Aucun accès en V1** — voir ci-dessous |
 
-> **`partenaire_lecture`.** Aucun mécanisme de partage de *dossier acquéreur*
-> n'existe encore (l'équivalent d'`OpportunityOrganization` côté acquéreurs
-> reste à décider — [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md)). Plutôt que
-> d'accorder une visibilité par défaut, le rôle est **exclu** : c'est la lecture
-> conservatrice de « lecture strictement limitée ». Le rôle reste par ailleurs
-> non attribuable en V1 ([12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md)).
+> **`partenaire_lecture` — exigence définitive V1.** Ce rôle **n'a aucun accès**
+> aux dossiers acquéreurs **tant qu'aucun partage explicite et précisément
+> limité n'existe**. Aucun mécanisme de partage de *dossier acquéreur* n'est
+> conçu à ce jour (l'équivalent d'`OpportunityOrganization` côté acquéreurs
+> reste à décider — [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md)). Accorder une
+> visibilité par défaut ouvrirait *tous* les dossiers : c'est exclu. Le rôle
+> reste par ailleurs non attribuable en V1
+> ([12-USERS-AND-ACCESS.md](12-USERS-AND-ACCESS.md)).
 
 ### Garanties vérifiées
 
@@ -262,16 +264,29 @@ aucune campagne automatique n'est construite dans cette mission.
   `SLACK_BUYER` dans les chunks client ; les pages publiques prérendues ne
   référencent aucun code du CRM Acquéreurs.
 
-### Comportement du CRM Mandats — inchangé
+### Comportement du CRM Mandats — strictement inchangé
 
-La politique RLS de `tasks` / `activities` a été réécrite pour couvrir les deux
-cas, en conservant **à l'identique** la branche mandat :
+La politique RLS de `tasks` / `activities` est réécrite pour couvrir les deux
+cas, en reproduisant **mot pour mot** la branche mandat en vigueur :
 
 ```sql
 case when buyer_profile_id is not null
      then public.crm_buyer_profile_access(buyer_profile_id)
-     else public.crm_has_access() end
+     else (
+       public.crm_is_operator()
+       or (public.crm_has_role('agent_immobilier')
+           and opportunity_id in (select public.crm_assigned_opportunity_ids()))
+     ) end
 ```
+
+> ⚠️ **Piège identifié et corrigé pendant l'audit.** La politique en vigueur est
+> celle posée par `20260730190000_users_and_access_v1` (isolation *role-aware*),
+> qui avait **déjà remplacé** la version initiale plus permissive de
+> `20260730120000_crm_internal_v1` (`crm_has_access()`). Reprendre cette version
+> initiale aurait rouvert **toutes** les tâches et activités Mandats aux agents
+> **non affectés** et à `partenaire_lecture` — pour qui `crm_has_access()`
+> renvoie `true`. Vérifié en base : agent affecté 1/1, agent non affecté 0/0,
+> `partenaire_lecture` 0/0, administrateur 1/1.
 
 ---
 
@@ -346,7 +361,62 @@ explicitement plutôt que de laisser croire à une fonction disponible :
 
 ---
 
-## 11. Réserves et questions ouvertes
+## 11. Garde RGPD — périmètre des traitements et bloquants
+
+> **Aucune conformité n'est affirmée.** Le CRM Acquéreurs **n'est pas déclaré
+> juridiquement conforme**. La base légale des `privacy_records` acquéreurs reste
+> `a_valider_juridiquement`, et cette valeur **ne doit pas être changée** sans
+> validation juridique écrite.
+
+### Trois finalités à ne jamais confondre
+
+| # | Finalité | Nature |
+|---|---|---|
+| 1 | **Réponse et suivi de la demande explicite** relative à **un bien précis** | La personne a sollicité Prodigio sur ce bien : le traitement sert à traiter *sa* demande. |
+| 2 | **Communications nécessaires au service demandé** | Organisation d'une visite, échanges sur ce bien, informations indispensables au suivi. |
+| 3 | **Prospection ultérieure** — autres biens, campagnes, e-mails et SMS marketing | Finalité **distincte**, qui ne découle **pas** de la demande initiale. |
+
+Les finalités 1 et 2 relèvent du traitement de la demande. **La finalité 3 est
+une autre chose** : elle ne peut pas être déduite du simple fait qu'une personne
+a manifesté un intérêt pour un bien.
+
+En principe, les **communications marketing électroniques B2C** (e-mail, SMS)
+nécessitent un **consentement distinct, spécifique et prouvable**, recueilli
+séparément de la demande initiale. Le consentement enregistré aujourd'hui par le
+funnel porte sur la demande, **pas** sur de la prospection.
+
+### Bloquants avant toute activation marketing
+
+Aucune campagne, aucun envoi d'e-mail ou de SMS marketing ne doit être activé
+tant que **tous** les points suivants ne sont pas traités et validés :
+
+1. **validation de la base légale** de chaque finalité (par un conseil qualifié) ;
+2. **texte d'information** présenté à la personne, versionné ;
+3. **durée de conservation** définie par finalité ;
+4. **mécanisme d'opposition / désinscription** effectif et documenté ;
+5. **exercice des droits** (accès, rectification, effacement, opposition,
+   portabilité) : procédure et responsable identifiés ;
+6. **suppression ou anonymisation** au terme de la durée retenue ;
+7. **liste d'opposition** (« ne plus contacter ») respectée par tous les canaux.
+
+### Référence de durée — indicative, non implémentée
+
+La **CNIL retient une référence de trois ans** à compter du dernier contact pour
+les données de **prospects** utilisées à des fins de **prospection**. Cette
+référence est mentionnée ici **à titre indicatif** : elle **n'est pas
+implémentée** comme règle juridique définitive et **ne doit pas l'être** avant
+validation. Aucune purge automatique n'existe dans cette version.
+
+### Hors périmètre de cette PR
+
+Ne sont **pas** construits ici, volontairement : moteur d'e-mailing, workflows
+automatisés, campagnes, purge automatique, calcul de fin de conservation. Le
+modèle conserve les preuves et l'historique nécessaires pour les concevoir plus
+tard, sans préjuger de leur régime juridique.
+
+---
+
+## 12. Réserves et questions ouvertes
 
 - **RGPD.** Les intérêts acquéreurs portent un `PrivacyRecord` dont la base
   légale reste `a_valider_juridiquement`. Le dossier acquéreur consolide des
@@ -354,11 +424,11 @@ explicitement plutôt que de laisser croire à une fonction disponible :
   conservation, information de la personne et base légale doivent être validées
   juridiquement avant mise en production**. Aucune conformité n'est présumée
   ([05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md)).
-- **Fusion de dossiers.** Aucune fusion manuelle de deux dossiers n'est
-  proposée en V1 : le dédoublonnage conservateur par e-mail peut laisser deux
-  dossiers distincts pour une même personne ayant utilisé deux adresses. C'est
-  un choix assumé — mieux vaut deux dossiers qu'une fusion erronée. Une action
-  de fusion **tracée et réversible** reste à concevoir.
+- **Aucune fusion automatique de dossiers — exigence définitive V1.** Deux
+  e-mails différents produisent **deux dossiers distincts**. Aucune fusion
+  automatique n'existe et aucune ne doit être introduite. Une éventuelle fusion
+  future devra être **manuelle**, **réservée aux administrateurs**, **auditée**,
+  et conçue dans une **mission séparée**.
 - **Matching.** La compatibilité budgétaire dépend de
   `property_public_config.reference_value_cents`, saisie par un opérateur. Sans
   cette valeur, le critère budget est neutre et signalé comme « donnée

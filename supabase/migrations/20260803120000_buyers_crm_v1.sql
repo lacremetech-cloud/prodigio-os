@@ -399,15 +399,26 @@ create policy buyer_interests_profile_read on public.buyer_interests
   for select to authenticated
   using (buyer_profile_id is not null and public.crm_buyer_profile_access(buyer_profile_id));
 
--- Tâches & activités : le comportement Mandats est INCHANGÉ (branche
--- `opportunity_id`) ; les lignes acquéreur sont cloisonnées par dossier.
+-- Tâches & activités : le comportement Mandats est STRICTEMENT INCHANGÉ.
+-- ⚠️ La branche `opportunity_id` reproduit MOT POUR MOT la politique en vigueur,
+-- posée par 20260730190000_users_and_access_v1 (isolation role-aware), et NON la
+-- version initiale plus permissive de 20260730120000_crm_internal_v1
+-- (`crm_has_access()`), que cette migration-là avait déjà remplacée. Toute
+-- simplification ici rouvrirait l'accès aux agents non affectés et à
+-- `partenaire_lecture` : régression de sécurité.
 drop policy if exists tasks_crm_read on public.tasks;
 create policy tasks_crm_read on public.tasks
   for select to authenticated
   using (
     case
       when buyer_profile_id is not null then public.crm_buyer_profile_access(buyer_profile_id)
-      else public.crm_has_access()
+      else (
+        public.crm_is_operator()
+        or (
+          public.crm_has_role('agent_immobilier')
+          and opportunity_id in (select public.crm_assigned_opportunity_ids())
+        )
+      )
     end
   );
 
@@ -417,7 +428,13 @@ create policy activities_crm_read on public.activities
   using (
     case
       when buyer_profile_id is not null then public.crm_buyer_profile_access(buyer_profile_id)
-      else public.crm_has_access()
+      else (
+        public.crm_is_operator()
+        or (
+          public.crm_has_role('agent_immobilier')
+          and opportunity_id in (select public.crm_assigned_opportunity_ids())
+        )
+      )
     end
   );
 
