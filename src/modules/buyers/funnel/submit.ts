@@ -26,6 +26,8 @@ interface SubmitBuyerInterestResult {
   interest_id?: string | null;
   property_id?: string | null;
   property_name?: string | null;
+  /** Dossier acquéreur consolidé, résolu EN BASE (cible du deep link Slack). */
+  buyer_profile_id?: string | null;
 }
 
 /**
@@ -136,6 +138,10 @@ export async function submitBuyerInterestAction(
           propertyId: result.property_id,
           propertyName:
             typeof result.property_name === "string" ? result.property_name : null,
+          buyerProfileId:
+            typeof result.buyer_profile_id === "string" && result.buyer_profile_id.length > 0
+              ? result.buyer_profile_id
+              : null,
         });
       }
       return { ok: true };

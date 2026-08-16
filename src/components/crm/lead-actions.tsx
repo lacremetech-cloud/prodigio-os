@@ -13,6 +13,7 @@ import {
   setTaskStatus,
   type ActionResult,
 } from "@/modules/crm/data/mutations";
+import { setBuyerTaskStatusAction } from "@/modules/buyers/crm/actions";
 import {
   activityOutcomeLabels,
   activityTypeLabels,
@@ -319,10 +320,17 @@ export function TaskToggle({
   taskId,
   status,
   opportunityId,
+  buyerProfileId,
 }: {
   taskId: string;
   status: string;
   opportunityId?: string;
+  /**
+   * Renseigné pour une tâche de dossier acquéreur : la mutation passe alors par
+   * `crm_buyer_set_task_status`, qui applique la garde d'accès du dossier
+   * acquéreur (et non celle d'une opportunité de mandat).
+   */
+  buyerProfileId?: string;
 }) {
   const { pending, run } = useAction();
   const done = status === "fait";
@@ -330,7 +338,13 @@ export function TaskToggle({
     <button
       type="button"
       disabled={pending || done}
-      onClick={() => run(() => setTaskStatus(taskId, "fait", opportunityId))}
+      onClick={() =>
+        run(() =>
+          buyerProfileId
+            ? setBuyerTaskStatusAction({ buyerProfileId, taskId, status: "fait" })
+            : setTaskStatus(taskId, "fait", opportunityId),
+        )
+      }
       className={`crm-btn crm-btn--sm ${done ? "crm-btn--ghost" : ""}`}
       aria-label={done ? "Tâche terminée" : "Marquer comme terminée"}
     >

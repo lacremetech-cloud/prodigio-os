@@ -424,3 +424,57 @@ PostgreSQL (migration `supabase/migrations/20260730120000_crm_internal_v1.sql`),
   tranche) — l'architecture reste prête à les accueillir.
 - Distinctions préservées en base : **Stade ≠ Segment**, **Activité ≠ AuditEvent**,
   recommandation du scoring ≠ **décision de segment humaine** (tracée).
+
+---
+
+## Extension — CRM Acquéreurs V1 (objets du domaine acquéreur)
+
+La tranche **CRM Acquéreurs V1** (migration
+`supabase/migrations/20260803120000_buyers_crm_v1.sql`) étend le modèle au
+**parcours acquéreur**, en **réutilisant** les objets existants plutôt qu'en les
+dupliquant. Détail complet : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md).
+
+### Nouveaux objets
+
+| Objet du modèle | Définition | Table |
+|---|---|---|
+| **Profil acquéreur** | Dossier acquéreur **global** d'une personne. **1-1 avec le Contact** : une personne = un dossier, quel que soit le nombre d'intérêts. Distinct du Contact, de l'Intérêt et du résultat commercial. | `buyer_profiles` |
+| **Critères de recherche** | Ce que l'acquéreur recherche (types, localisations, fourchette de budget, horizon, financement). Amorcés depuis le funnel, puis **verrouillés dès qu'un humain les affine**. | `buyer_search_criteria` |
+| **BuyerAssignment** | Relation N-N Profil acquéreur ↔ Utilisateur, avec responsabilité. Miroir d'`OpportunityAssignment`. | `buyer_assignments` |
+| **Intérêt acquéreur** | Manifestation d'intérêt **ponctuelle**, rattachée à **un bien**. Soumission d'origine conservée telle quelle. | `buyer_interests` (existante, rattachée) |
+
+### Distinctions fondamentales ajoutées
+
+- **Contact ≠ Profil acquéreur.** Le contact est la personne (potentiellement
+  aussi vendeuse) ; le profil est son dossier acquéreur. Réutiliser un contact
+  ne modifie **jamais** ses données issues du parcours vendeur.
+- **Intérêt ponctuel ≠ dossier acquéreur global.** Un acquéreur peut porter
+  plusieurs intérêts sur plusieurs biens ; le dossier reste unique.
+- **Score automatique ≠ recommandation opérationnelle ≠ qualification humaine
+  ≠ étape du pipeline.** Quatre notions, quatre colonnes, quatre cycles de vie
+  (voir [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md) §2).
+- **Scoring du funnel ≠ matching biens ↔ acquéreurs.** Le scoring qualifie la
+  *demande* ; le matching (`buyer-matching-v1`) compare des *critères explicites*
+  à des *biens réels*. Il reste une **recommandation**, jamais une décision.
+- **Pipeline Mandats ≠ pipeline Acquéreurs.** Deux cycles distincts, deux jeux
+  d'étapes, deux Kanban.
+
+### Objets réutilisés (aucune table en double)
+
+- **Activité (métier)** et **Tâche** : tables `activities` / `tasks`
+  **élargies** — `opportunity_id` devient nullable, `buyer_profile_id` est
+  ajouté, et une contrainte impose **exactement un** rattachement. Aucune ligne
+  existante n'est invalidée.
+- **Note** : toujours représentée comme une **activité de type `note`**.
+- **AuditEvent** : même journal immuable, entité `buyer_profile` et événements
+  `acquereur_*` ajoutés de manière additive.
+- **Contact**, **Organisation**, **Utilisateur**, **OrganizationMembership**,
+  **Bien** (`properties`) : inchangés.
+
+### Résultat commercial du dossier acquéreur
+
+`buyer_profiles.outcome` (`gagne` / `perdu`) est **distinct de l'étape du
+pipeline** et de l'`OpportunityOutcome` du parcours mandat. Le **motif de perte
+est obligatoire**, l'enregistrement est réservé aux rôles décisionnaires et
+tracé dans le journal d'audit. La réouverture d'un dossier clos est également
+une décision motivée et tracée.

@@ -21,6 +21,8 @@ export interface BuyerNotifyInput {
   interestId: string;
   propertyId: string;
   propertyName: string | null;
+  /** Dossier acquéreur consolidé, résolu en base au moment du dépôt. */
+  buyerProfileId: string | null;
 }
 
 export interface BuyerNotifyResult {
@@ -59,6 +61,7 @@ export async function notifyNewBuyerInterest(
       interestId: input.interestId,
       propertyId: input.propertyId,
       propertyName: input.propertyName,
+      buyerProfileId: input.buyerProfileId,
       crmBaseUrl: mandateCrmBaseUrl(env),
       receivedAt: deps.now ?? new Date(),
     });

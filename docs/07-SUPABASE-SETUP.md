@@ -624,3 +624,66 @@ aucune valeur inventée). Manipulation manuelle unique restante : voir
 **Données préservées.** Le compte administrateur réel (`agence@indescale.com`) et
 l'unique dossier propriétaire réel sont **intacts** ; **aucune** donnée de test
 persistée.
+
+---
+
+## 12. CRM Acquéreurs V1 — migration **écrite, NON appliquée**
+
+| Fichier | Rôle |
+|---|---|
+| `20260803120000_buyers_crm_v1.sql` | Dossiers acquéreurs consolidés : `buyer_profiles`, `buyer_search_criteria`, `buyer_assignments` ; élargissement de `tasks`/`activities` ; RLS dédiée ; 17 fonctions `SECURITY DEFINER` ; matching versionné ; `submit_buyer_interest` étendu (retour `buyer_profile_id`) |
+
+> ⚠️ **Statut : NON APPLIQUÉE sur `wmhrpweefutwldbhllhg`.** La migration est
+> fournie pour revue et application contrôlée. Contrairement aux sections
+> précédentes, **aucune vérification n'a été réalisée sur le projet distant** :
+> ne pas lire les résultats ci-dessous comme un état de production.
+
+**Strictement additive.** Aucune table, colonne ou donnée supprimée. Les seules
+modifications d'objets existants sont des **élargissements** :
+
+- `tasks.opportunity_id` et `activities.opportunity_id` deviennent **nullable**,
+  avec ajout de `buyer_profile_id` et d'une contrainte imposant **exactement un**
+  rattachement. Toutes les lignes existantes portent `opportunity_id` : **aucune
+  donnée invalidée**.
+- Contraintes `audit_events` **étendues** (sur-ensemble strict) : entité
+  `buyer_profile`, événements `acquereur_*`.
+- `buyer_interests` reçoit la colonne `buyer_profile_id`.
+- Politiques RLS de `tasks` / `activities` réécrites en conservant **à
+  l'identique** la branche mandat.
+- `submit_buyer_interest` remplacée (`create or replace`) : comportement public
+  inchangé (idempotence, dédoublonnage conservateur, scoring en base, preuve
+  RGPD, réponse neutre) ; ajout du rattachement au dossier et du champ serveur
+  `buyer_profile_id`.
+
+### Validation réalisée (locale, PostgreSQL 16)
+
+Un harnais reproduisant l'environnement Supabase (`auth.users`, `auth.uid()`,
+`storage.buckets`, rôles `anon` / `authenticated` / `service_role`) a permis de
+**rejouer les 14 migrations dans l'ordre** puis d'exécuter, en transactions
+annulées :
+
+- **Fonctionnel** — premier dépôt (1 contact / 1 dossier / 1 intérêt) ; rejeu
+  idempotent sans doublon ; même personne sur un autre bien → **1 contact,
+  1 dossier, 2 intérêts**, critères unionnés ; données du contact **intactes**
+  après réutilisation ; matching explicable retourné.
+- **Règles métier** — étapes protégées refusées ; « perdu » sans motif refusé ;
+  dossier clos non déplaçable ; réouverture tracée ; contrainte de rattachement
+  exclusif des tâches vérifiée dans les deux sens.
+- **Isolation RLS** — agent non affecté : **0 dossier** ; setter : dossier visible.
+- **Posture de sécurité** — `anon`/`PUBLIC` sans `EXECUTE` sur les 17 fonctions ;
+  aucun privilège table pour `anon` ; RLS active sur les 6 tables concernées ;
+  `search_path` figé partout ; trigger d'immuabilité de l'audit conservé.
+
+### À faire avant application
+
+1. Revoir la migration (aucune donnée acquéreur en base à ce jour :
+   `buyer_interests` = 0 ligne, le backfill est donc un no-op).
+2. L'appliquer via l'éditeur SQL Supabase ou `apply_migration`, **dans une
+   fenêtre contrôlée**.
+3. Rejouer les vérifications de sécurité sur le projet distant et consigner les
+   résultats ici (comme pour les sections 9 et 11).
+4. Vérifier les **advisors** Supabase : seuls des `WARN` attendus
+   (fonctions `SECURITY DEFINER` exécutables par `authenticated` = architecture
+   d'écriture ; funnel public).
+
+Détail fonctionnel : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md).

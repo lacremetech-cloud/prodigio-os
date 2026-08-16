@@ -68,6 +68,7 @@ function makeInput() {
     interestId: "int-abc",
     propertyId: "prop-xyz",
     propertyName: "Villa Belvédère",
+    buyerProfileId: "bp-1",
   };
 }
 

@@ -25,6 +25,7 @@ const NAV: NavItem[] = [
   { href: "/crm", label: "Vue d’ensemble", icon: "◈", exact: true },
   { href: "/crm/mandats", label: "Leads Mandats", icon: "☰" },
   { href: "/crm/mandats/pipeline", label: "Pipeline", icon: "▤" },
+  { href: "/crm/acquereurs", label: "Acquéreurs", icon: "◉" },
   { href: "/crm/biens", label: "Fabrique de biens", icon: "◆" },
   { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
   { href: "/crm/taches", label: "Tâches", icon: "✓" },
@@ -35,6 +36,10 @@ function isActive(pathname: string, item: NavItem): boolean {
   if (item.exact) return pathname === item.href;
   if (item.href === "/crm/mandats") {
     return pathname === "/crm/mandats" || pathname.startsWith("/crm/mandats/");
+  }
+  // « Acquéreurs » couvre aussi son pipeline et ses fiches.
+  if (item.href === "/crm/acquereurs") {
+    return pathname === "/crm/acquereurs" || pathname.startsWith("/crm/acquereurs/");
   }
   return pathname === item.href || pathname.startsWith(item.href + "/");
 }

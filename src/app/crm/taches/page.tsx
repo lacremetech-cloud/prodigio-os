@@ -27,7 +27,7 @@ function TaskSection({
         </Chip>
       </div>
       <div className="flex flex-col gap-2">
-        {items.map(({ task, opportunityId, contactLabel, city }) => (
+        {items.map(({ task, kind, href, contactLabel, city, opportunityId, buyerProfileId }) => (
           <div
             key={task.id}
             className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5"
@@ -35,14 +35,25 @@ function TaskSection({
             <div className="min-w-0">
               <p className="crm-wrap text-sm font-medium text-[var(--crm-text)]">{task.title}</p>
               <p className="crm-ellipsis text-xs text-[var(--crm-text-faint)]">
-                <Link href={`/crm/mandats/${opportunityId}`} className="hover:text-[var(--crm-text)]">
+                <Link href={href} className="hover:text-[var(--crm-text)]">
                   {contactLabel}
                   {city ? ` · ${city}` : ""}
                 </Link>
                 {task.due_at ? ` · échéance ${formatDateTime(task.due_at)}` : " · sans échéance"}
               </p>
             </div>
-            <TaskToggle taskId={task.id} status={task.status} opportunityId={opportunityId} />
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Le dossier d'origine reste explicite : Mandats ou Acquéreurs. */}
+              <Chip variant={kind === "acquereur" ? "gold" : "neutral"}>
+                {kind === "acquereur" ? "Acquéreur" : "Mandat"}
+              </Chip>
+              <TaskToggle
+                taskId={task.id}
+                status={task.status}
+                opportunityId={opportunityId ?? undefined}
+                buyerProfileId={buyerProfileId ?? undefined}
+              />
+            </div>
           </div>
         ))}
       </div>

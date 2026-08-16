@@ -185,6 +185,12 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   médiathèque et documents en Storage privé, plan de production, préparation au
   lancement calculée en base), machine d'état contrôlée et auditée, modèle additif,
   permissions dérivées du dossier, recette réelle et captures.
+- [docs/20-CRM-ACQUEREURS.md](docs/20-CRM-ACQUEREURS.md) — CRM Acquéreurs V1 :
+  dossiers acquéreurs consolidés (une personne = un dossier, sans doublon de
+  contact ni écrasement des données vendeur), pipeline Acquéreurs distinct avec
+  étapes protégées, boîte de réception, fiche consolidée, fondation de matching
+  biens ↔ acquéreurs déterministe et explicable, permissions et RLS dédiées.
+  **Migration écrite, non appliquée** — voir docs/07 §12.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
