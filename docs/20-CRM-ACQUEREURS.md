@@ -10,9 +10,11 @@ en **dossiers acquéreurs** exploitables, **sans dupliquer** les contacts, tâch
 activités, utilisateurs, propriétés, systèmes d'audit ni composants CRM
 existants.
 
-> **Statut.** Migration `20260803120000_buyers_crm_v1.sql` **écrite et validée
-> localement** (rejeu complet des 14 migrations sur PostgreSQL 16, tests
-> fonctionnels et de sécurité). **Non appliquée** au projet distant : voir §9.
+> **Statut.** Migration **APPLIQUÉE** au projet `wmhrpweefutwldbhllhg` le
+> 2026-08-16 (version distante `20260816172831`, nom `buyers_crm_v1`,
+> enregistrée **exactement une fois**). Recette contrôlée exécutée sur données
+> **entièrement fictives** en transaction annulée, retour à la baseline vérifié.
+> Voir §9 pour le détail, les contrôles et les écarts constatés.
 
 ---
 
@@ -313,39 +315,93 @@ au serveur uniquement (jamais au navigateur). Si aucun dossier n'a pu être rés
 ## 9. Application de la migration
 
 `supabase/migrations/20260803120000_buyers_crm_v1.sql` est **strictement
-additive** et **n'a pas été appliquée** au projet distant : elle est fournie pour
-revue et application contrôlée (voir
-[07-SUPABASE-SETUP.md](07-SUPABASE-SETUP.md)).
+additive**. Elle a été **appliquée une seule fois** au projet
+`wmhrpweefutwldbhllhg` via l'outil officiel Supabase (`apply_migration`).
 
-Validation réalisée **localement** sur PostgreSQL 16, avec un harnais reproduisant
-l'environnement Supabase (`auth.users`, `auth.uid()`, `storage.buckets`, rôles
-`anon` / `authenticated` / `service_role`) :
+| Élément | Valeur |
+|---|---|
+| Project ref | `wmhrpweefutwldbhllhg` |
+| Nom de migration | `buyers_crm_v1` |
+| Version distante | `20260816172831` |
+| Occurrences enregistrées | **1** (total : 14 migrations) |
+| Migrations historiques rejouées | **aucune** |
 
-1. **Rejeu intégral** des 14 migrations dans l'ordre — toutes appliquées sans
-   erreur.
-2. **Tests fonctionnels** (transactions annulées) :
-   - premier dépôt → 1 contact, 1 dossier, 1 intérêt, priorité dérivée ;
-   - rejeu de la même clé d'idempotence → **aucun doublon** ;
-   - même personne sur un **autre bien** → **1 contact, 1 dossier, 2 intérêts**,
-     critères unionnés (2 types, 2 localisations) ;
-   - données du contact **intactes** après réutilisation ;
-   - matching explicable retourné avec facteurs et poids.
-3. **Tests de règles métier** : étapes protégées refusées ; « perdu » sans motif
-   refusé ; dossier clos non déplaçable ; réouverture tracée ; contrainte de
-   rattachement exclusif des tâches vérifiée dans les deux sens.
-4. **Tests d'isolation RLS** : agent non affecté → **0 dossier** ; setter
-   (opérateur) → dossier visible.
-5. **Tests de posture de sécurité** : `anon`/`PUBLIC` sans `EXECUTE` sur les
-   17 fonctions ; aucun privilège table pour `anon` ; RLS active partout ;
-   `search_path` figé partout ; audit immuable.
+### Baseline distante avant application (agrégats, aucune PII)
 
-**Backfill.** La migration rattache les intérêts déjà enregistrés à un dossier
-(idempotent, aucun doublon possible grâce à l'unicité par contact). Le projet
-distant ne contient aucune donnée acquéreur à ce jour (`buyer_interests` : 0
-ligne), donc le backfill est un no-op — il reste néanmoins correct si des
-données apparaissent avant l'application.
+`contacts` 2 · `privacy_records` 2 · `audit_events` 60 · `opportunities` 2 ·
+`funnel_submissions` 2 · `estimation_appointments` 7 · `activities` 10 ·
+`opportunity_assignments` 2 · `opportunity_contacts` 2 ·
+`opportunity_organizations` 2 · `organization_invitations` 1 ·
+`organization_memberships` 1 · `organizations` 1 · `tasks` 0 · `mandates` 0 ·
+`properties` 0 · `property_public_config` 0 · `buyer_interests` 0.
 
----
+Le backfill est donc un **no-op** (aucun intérêt acquéreur préexistant), tout en
+restant correct si des données apparaissent.
+
+### Contrôles post-application (mesurés sur le projet distant)
+
+| Contrôle | Résultat |
+|---|---|
+| Fonctions CRM Acquéreurs exécutables par `anon`/`PUBLIC` | **0 sur 17** |
+| Privilèges table directs `anon`/`PUBLIC` | **0** |
+| RLS active | `buyer_profiles`, `buyer_search_criteria`, `buyer_assignments`, `buyer_interests`, `tasks`, `activities` = toutes `true` |
+| `search_path` figé | **17 sur 17** |
+| Audit immuable | trigger `audit_events_immutable` présent |
+| Unicité 1-1 profil/contact | `buyer_profiles_contact_unique` présente |
+| Rattachement exclusif | `tasks_owner_exactly_one`, `activities_owner_exactly_one` présentes |
+| Funnels publics | `submit_mandate_funnel` et `submit_buyer_interest` toujours exécutables par `anon` |
+| Branche Mandats des politiques RLS | empreinte `aea0beab…` — **identique avant et après**, et identique à la référence locale |
+| Advisors sécurité Supabase | **0 ERROR** ; uniquement des `WARN` attendus (fonctions `SECURITY DEFINER` exécutables par `authenticated` = architecture d'écriture) |
+
+### Recette contrôlée (données fictives, transaction annulée)
+
+Exécutée sur le domaine réservé `.invalid`, dans un bloc terminé par `RAISE` —
+**rollback atomique garanti**. Aucun vrai webhook Slack, aucun contournement de
+Turnstile (le dépôt SQL direct ne passe pas par la couche applicative).
+
+| # | Preuve | Résultat |
+|---|---|---|
+| 1 | Même e-mail sur deux biens | 1 contact, 1 dossier, 2 intérêts |
+| 2 | Contact vendeur réutilisé | `RecetteVendeur/Fictif/+33000000001/qualifie` **inchangé** |
+| 3 | Deux e-mails différents | **deux dossiers distincts, aucune fusion** |
+| 4 | Rattachement exclusif | 1 tâche Mandat + 1 tâche Acquéreur, cloisonnées |
+| 5 | Quatre notions distinctes | score `88` / reco `prioritaire` / qualification `qualifie` / étape `visite_planifiee` |
+| 6 | Matching | `buyer-matching-v1`, deux appels identiques ⇒ résultat identique ; sans budget ni localisation, poids évaluable **60/100** et `missing = ["budget"]` |
+| 7 | Non-membre | **0 dossier** |
+| 8 | `partenaire_lecture` | **0 dossier, 0 critère** |
+| 9 | Matrice opérateurs | agent non affecté 0 / agent affecté 2 ; setter 2 / admin 2 |
+| 9c | **Non-régression Mandats** | tâches Mandats : agent non affecté **0**, agent affecté **1** |
+| 10 | Mutations interdites | étape protégée refusée ; perte sans motif refusée ; setter ne peut pas clore — **refus en base**, pas seulement dans l'interface |
+| 11 | Audit | 6 événements, **0** contenant e-mail, téléphone, nom ou texte libre |
+| 12 | Accès anonyme | lecture dossiers refusée (`permission denied for table buyer_profiles`) ; matching refusé |
+
+**Retour à la baseline vérifié** après la recette : tous les compteurs sont
+identiques à l'avant-application, et **0** utilisateur fictif subsiste.
+
+### Écarts constatés et assumés
+
+1. **Commentaires non transmis à l'application (mon erreur).** Le corps déployé
+   de 9 fonctions ne contient pas tous les commentaires `--` du fichier
+   versionné : ils ont été condensés lors de la composition de l'appel
+   d'application. **Les sémantiques sont prouvées identiques** : en retirant les
+   commentaires des deux côtés, les 17 fonctions de cette migration ont des
+   empreintes **strictement égales** à la référence locale construite depuis le
+   fichier réel (dont `submit_buyer_interest`, `e3f72f73…`, 7392 caractères des
+   deux côtés). Aucune correction n'a été appliquée en production pour ce seul
+   écart cosmétique : une réécriture supplémentaire ferait courir un risque
+   sémantique là où il n'y en a aucun. **Le fichier versionné reste la
+   référence.**
+2. **Dérive préexistante, hors périmètre.** `crm_buyer_interest_set_status`
+   (posée par `20260802120000_public_property_experience_v1`) diffère entre le
+   dépôt et la base : le message d'erreur déployé est `'interet introuvable'`
+   au lieu de `'intérêt introuvable'` (accents retirés). Écart **cosmétique**,
+   **antérieur** à cette PR, non corrigé ici — corriger reviendrait à rejouer
+   une migration historique.
+3. **Observation préexistante.** `crm_can_decide` et
+   `crm_can_report_estimation` sont exécutables par `anon` (héritage de
+   `estimation_to_mandate_v1`). Elles ne renvoient qu'un booléen et valent
+   `false` pour `anon` (`auth.uid()` nul). Aucune fonction du CRM Acquéreurs
+   n'est dans ce cas. À traiter séparément si souhaité.
 
 ## 10. Points d'extension (hors périmètre V1)
 

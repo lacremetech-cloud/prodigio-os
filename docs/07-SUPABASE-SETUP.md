@@ -627,63 +627,68 @@ persistée.
 
 ---
 
-## 12. CRM Acquéreurs V1 — migration **écrite, NON appliquée**
+## 12. CRM Acquéreurs V1 — migration **APPLIQUÉE**
 
 | Fichier | Rôle |
 |---|---|
 | `20260803120000_buyers_crm_v1.sql` | Dossiers acquéreurs consolidés : `buyer_profiles`, `buyer_search_criteria`, `buyer_assignments` ; élargissement de `tasks`/`activities` ; RLS dédiée ; 17 fonctions `SECURITY DEFINER` ; matching versionné ; `submit_buyer_interest` étendu (retour `buyer_profile_id`) |
 
-> ⚠️ **Statut : NON APPLIQUÉE sur `wmhrpweefutwldbhllhg`.** La migration est
-> fournie pour revue et application contrôlée. Contrairement aux sections
-> précédentes, **aucune vérification n'a été réalisée sur le projet distant** :
-> ne pas lire les résultats ci-dessous comme un état de production.
+**Appliquée une seule fois** sur `wmhrpweefutwldbhllhg` via `apply_migration` :
+nom `buyers_crm_v1`, version distante `20260816172831`, **1 occurrence**
+(total : 14 migrations). **Aucune migration historique rejouée.**
 
-**Strictement additive.** Aucune table, colonne ou donnée supprimée. Les seules
-modifications d'objets existants sont des **élargissements** :
+**Strictement additive.** Aucune table, colonne ou donnée supprimée. Seules
+modifications d'objets existants (toutes des élargissements) :
 
-- `tasks.opportunity_id` et `activities.opportunity_id` deviennent **nullable**,
-  avec ajout de `buyer_profile_id` et d'une contrainte imposant **exactement un**
-  rattachement. Toutes les lignes existantes portent `opportunity_id` : **aucune
-  donnée invalidée**.
-- Contraintes `audit_events` **étendues** (sur-ensemble strict) : entité
-  `buyer_profile`, événements `acquereur_*`.
-- `buyer_interests` reçoit la colonne `buyer_profile_id`.
-- Politiques RLS de `tasks` / `activities` réécrites en conservant **à
-  l'identique** la branche mandat.
-- `submit_buyer_interest` remplacée (`create or replace`) : comportement public
-  inchangé (idempotence, dédoublonnage conservateur, scoring en base, preuve
-  RGPD, réponse neutre) ; ajout du rattachement au dossier et du champ serveur
-  `buyer_profile_id`.
+- `tasks.opportunity_id` / `activities.opportunity_id` deviennent **nullable**,
+  avec `buyer_profile_id` et une contrainte « exactement un rattachement ».
+  Toutes les lignes existantes portent `opportunity_id` : **aucune donnée
+  invalidée** (vérifié : 10 activités et 0 tâche préexistantes intactes).
+- Contraintes `audit_events` **étendues** (sur-ensemble strict).
+- `buyer_interests` reçoit `buyer_profile_id`.
+- Politiques RLS `tasks`/`activities` réécrites en **préservant à l'identique**
+  la branche mandat (empreinte `aea0beab…` inchangée avant/après).
+- `submit_buyer_interest` remplacée : comportement public inchangé, ajout du
+  rattachement au dossier et du champ serveur `buyer_profile_id`.
 
-### Validation réalisée (locale, PostgreSQL 16)
+### Baseline avant application (agrégats, aucune PII)
 
-Un harnais reproduisant l'environnement Supabase (`auth.users`, `auth.uid()`,
-`storage.buckets`, rôles `anon` / `authenticated` / `service_role`) a permis de
-**rejouer les 14 migrations dans l'ordre** puis d'exécuter, en transactions
-annulées :
+`contacts` 2 · `privacy_records` 2 · `audit_events` 60 · `opportunities` 2 ·
+`funnel_submissions` 2 · `estimation_appointments` 7 · `activities` 10 ·
+`tasks` 0 · `properties` 0 · `buyer_interests` 0. Backfill = **no-op**.
 
-- **Fonctionnel** — premier dépôt (1 contact / 1 dossier / 1 intérêt) ; rejeu
-  idempotent sans doublon ; même personne sur un autre bien → **1 contact,
-  1 dossier, 2 intérêts**, critères unionnés ; données du contact **intactes**
-  après réutilisation ; matching explicable retourné.
-- **Règles métier** — étapes protégées refusées ; « perdu » sans motif refusé ;
-  dossier clos non déplaçable ; réouverture tracée ; contrainte de rattachement
-  exclusif des tâches vérifiée dans les deux sens.
-- **Isolation RLS** — agent non affecté : **0 dossier** ; setter : dossier visible.
-- **Posture de sécurité** — `anon`/`PUBLIC` sans `EXECUTE` sur les 17 fonctions ;
-  aucun privilège table pour `anon` ; RLS active sur les 6 tables concernées ;
-  `search_path` figé partout ; trigger d'immuabilité de l'audit conservé.
+> ⚠️ **Correction d'un rapport antérieur.** Une note de session avait indiqué que
+> « toutes les tables sont vides ». C'était **faux** : cette affirmation reposait
+> sur les statistiques du planificateur renvoyées par `list_tables`
+> (`reltuples`), non sur un `COUNT(*)`. La base distante **contient des données
+> réelles** (voir baseline ci-dessus). Seules les **nouvelles** tables du CRM
+> Acquéreurs étaient — et sont — vides.
 
-### À faire avant application
+### Contrôles post-application
 
-1. Revoir la migration (aucune donnée acquéreur en base à ce jour :
-   `buyer_interests` = 0 ligne, le backfill est donc un no-op).
-2. L'appliquer via l'éditeur SQL Supabase ou `apply_migration`, **dans une
-   fenêtre contrôlée**.
-3. Rejouer les vérifications de sécurité sur le projet distant et consigner les
-   résultats ici (comme pour les sections 9 et 11).
-4. Vérifier les **advisors** Supabase : seuls des `WARN` attendus
-   (fonctions `SECURITY DEFINER` exécutables par `authenticated` = architecture
-   d'écriture ; funnel public).
+`anon`/`PUBLIC` sans `EXECUTE` sur les **17** fonctions · **0** privilège table
+direct · RLS active sur les 6 tables · `search_path` figé **17/17** · trigger
+`audit_events_immutable` présent · `buyer_profiles_contact_unique` présente ·
+`tasks_owner_exactly_one` + `activities_owner_exactly_one` présentes ·
+`submit_mandate_funnel` et `submit_buyer_interest` toujours ouverts à `anon` ·
+advisors Supabase : **0 ERROR**, uniquement des `WARN` attendus.
+
+Recette contrôlée sur données fictives en transaction annulée, et **retour à la
+baseline vérifié** : voir [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md) §9.
+
+### Écarts constatés
+
+1. **Commentaires non transmis** dans le corps déployé de 9 fonctions
+   (condensés lors de la composition de l'appel d'application). Sémantiques
+   **prouvées identiques** — empreintes égales après retrait des commentaires
+   des deux côtés. Le fichier versionné reste la référence.
+2. **Dérive préexistante** : `crm_buyer_interest_set_status` (migration
+   `20260802…`) affiche `'interet introuvable'` au lieu de
+   `'intérêt introuvable'`. Cosmétique, antérieure à cette PR, non corrigée
+   (corriger = rejouer une migration historique).
+3. **Observation préexistante** : `crm_can_decide` et
+   `crm_can_report_estimation` restent exécutables par `anon` (héritage
+   `estimation_to_mandate_v1`) ; elles ne renvoient qu'un booléen `false` pour
+   `anon`. Aucune fonction du CRM Acquéreurs n'est concernée.
 
 Détail fonctionnel : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md).

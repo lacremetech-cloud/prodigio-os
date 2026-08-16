@@ -190,7 +190,7 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   contact ni écrasement des données vendeur), pipeline Acquéreurs distinct avec
   étapes protégées, boîte de réception, fiche consolidée, fondation de matching
   biens ↔ acquéreurs déterministe et explicable, permissions et RLS dédiées.
-  **Migration écrite, non appliquée** — voir docs/07 §12.
+  **Migration appliquée** (version distante `20260816172831`) — voir docs/07 §12.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
