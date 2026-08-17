@@ -183,3 +183,50 @@ conçu — et il reste par ailleurs **non attribuable** en V1.
   reste accessible, et ne renvoie qu'un accusé neutre.
 
 Détail complet : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md).
+
+---
+
+## Communications V1 — accès aux messages, modèles et oppositions
+
+Détail complet : [21-COMMUNICATIONS.md](21-COMMUNICATIONS.md).
+
+### Matrice
+
+| Rôle | Historique des messages | Modèles | Oppositions | Automatisations | File d'attente |
+|---|---|---|---|---|---|
+| administrateur | ✅ tout | ✅ créer / activer | ✅ créer **et lever** | ✅ | ✅ |
+| manager | ✅ tout | ✅ créer / activer | ✅ créer | 👁 lecture | ✅ |
+| setter | ✅ dossiers accessibles | 👁 lecture | 👁 lecture | 👁 lecture | ✅ |
+| agent immobilier | ∂ **ses** dossiers, biens et rendez-vous | 👁 lecture | 👁 lecture | ⛔ | ⛔ |
+| partenaire_lecture | ⛔ **aucun accès** | ⛔ | ⛔ | ⛔ | ⛔ |
+
+`∂` = restreint en base par `comm_message_access()`, qui **réutilise** les règles
+d'accès existantes (`crm_assigned_opportunity_ids`, `crm_buyer_profile_access`,
+`crm_property_access`) plutôt que d'en inventer de nouvelles.
+
+`partenaire_lecture` est **exclu** pour la même raison que côté acquéreurs :
+aucun mécanisme de partage explicite de communication n'existe en V1, et une
+visibilité par défaut ouvrirait **tous** les messages.
+
+### Règles structurelles
+
+- **Écriture** : aucun `INSERT/UPDATE/DELETE` direct sur les six tables ; toute
+  mutation passe par une fonction `SECURITY DEFINER` (`crm_comm_*`) qui
+  revérifie le rôle, applique la politique et écrit un **AuditEvent**.
+  `search_path` figé sur chaque fonction.
+- **Décisions sensibles** : la **levée d'une opposition** est réservée à
+  l'administrateur et exige un **motif obligatoire**, tracé. L'annulation d'un
+  message exige également un motif.
+- **Politique d'envoi côté serveur** : `crm_comm_eligibility` fait autorité. Le
+  navigateur ne peut ni injecter un statut, ni contourner une opposition, ni
+  décider qu'un message est éligible.
+- **Helpers internes** (`comm_operator_org`, `comm_can_manage`,
+  `comm_google_covers_appointment`, `comm_enqueue`, les trois déclencheurs) :
+  aucun `EXECUTE` pour `public`, `anon` ni `authenticated`.
+  `comm_message_access` conserve `authenticated` car il est appelé
+  **directement** par les politiques RLS.
+- **`anon`** : aucun privilège table, aucune politique, **aucune fonction du
+  module exécutable**.
+- **Masquage** : les coordonnées suivent les règles existantes
+  (`crm_can_view_contact_details` / `maskContactValue`), appliquées **côté
+  serveur**. La recherche ne porte jamais sur une coordonnée masquée.

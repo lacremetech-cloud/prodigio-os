@@ -1006,6 +1006,211 @@ type WithMutations<Row> = {
   Relationships: [];
 };
 
+// --- Communications ---------------------------------------------------------
+// Miroir TypeScript de 20260818120000_communications_v1. Aucun type ne dépend
+// d'un fournisseur : `provider` est une VALEUR, jamais une structure.
+
+export type CommunicationChannel = "email" | "sms";
+export type CommunicationCategory = "transactionnel" | "marketing";
+export type CommunicationTemplateStatus = "brouillon" | "actif" | "archive";
+export type CommunicationBodyFormat = "markdown" | "html" | "texte";
+
+export type CommunicationTemplateRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  template_key: string;
+  version: number;
+  channel: CommunicationChannel;
+  category: CommunicationCategory;
+  name: string;
+  subject: string | null;
+  body: string;
+  body_format: CommunicationBodyFormat;
+  preview_text: string | null;
+  /** Variables AUTORISÉES : le rendu refuse toute autre variable. */
+  allowed_variables: string[];
+  status: CommunicationTemplateStatus;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type CommunicationMessageStatus =
+  | "planifie"
+  | "en_attente"
+  | "envoye"
+  | "livre"
+  | "echec"
+  | "bloque"
+  | "annule";
+
+export type CommunicationErrorCode =
+  | "configuration_absente"
+  | "authentification_refusee"
+  | "destinataire_invalide"
+  | "domaine_non_verifie"
+  | "limite_debit"
+  | "indisponible"
+  | "delai_depasse"
+  | "rejet_permanent"
+  | "erreur_inconnue";
+
+export type CommunicationBlockedReason =
+  | "coordonnee_absente"
+  | "ne_plus_contacter"
+  | "opposition_active"
+  | "base_legale_insuffisante"
+  | "canal_non_autorise"
+  | "modele_absent"
+  | "modele_inactif"
+  | "google_couvre_l_envoi"
+  | "envoi_desactive";
+
+export type CommunicationMessageRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  /** Le destinataire est TOUJOURS un contact : aucune coordonnée n'est dupliquée. */
+  contact_id: string;
+  opportunity_id: string | null;
+  buyer_profile_id: string | null;
+  property_id: string | null;
+  appointment_id: string | null;
+  channel: CommunicationChannel;
+  category: CommunicationCategory;
+  event_type: string;
+  template_id: string | null;
+  template_key: string | null;
+  template_version: number | null;
+  status: CommunicationMessageStatus;
+  /** Trace fournisseur, jamais une clé métier. */
+  provider: "lumail" | "twilio" | "aucun" | null;
+  provider_message_id: string | null;
+  provider_status: string | null;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  failed_at: string | null;
+  error_code: CommunicationErrorCode | null;
+  error_detail: string | null;
+  /** Décision de la POLITIQUE, jamais un motif fournisseur. */
+  blocked_reason: CommunicationBlockedReason | null;
+  rendered_subject: string | null;
+  rendered_body: string | null;
+  /** Clé d'idempotence SANS PII. */
+  idempotency_key: string;
+  attempt_count: number;
+  created_by: string | null;
+};
+
+export type CommunicationOutboxStatus =
+  | "en_attente"
+  | "en_cours"
+  | "traite"
+  | "ignore"
+  | "echec"
+  | "abandonne";
+
+export type CommunicationOutboxRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  event_type: string;
+  /** Clé d'idempotence de l'événement, sans PII. */
+  event_key: string;
+  contact_id: string | null;
+  opportunity_id: string | null;
+  buyer_profile_id: string | null;
+  property_id: string | null;
+  appointment_id: string | null;
+  template_key: string;
+  channel: CommunicationChannel;
+  /** Charge utile MINIMALE : identifiants et horodatages uniquement. */
+  payload: Json;
+  available_at: string;
+  attempt_count: number;
+  max_attempts: number;
+  locked_at: string | null;
+  locked_by: string | null;
+  status: CommunicationOutboxStatus;
+  skip_reason: string | null;
+  last_error_code: string | null;
+  message_id: string | null;
+};
+
+export type CommunicationSuppressionRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  contact_id: string;
+  channel: CommunicationChannel | "tout";
+  scope: "marketing" | "transactionnel" | "tout";
+  reason:
+    | "rebond_definitif"
+    | "plainte"
+    | "desinscription"
+    | "demande_personne"
+    | "erreur_permanente"
+    | "decision_interne";
+  source: "fournisseur" | "humain" | "import";
+  provider: "lumail" | "twilio" | null;
+  evidence: Json | null;
+  notes: string | null;
+  active: boolean;
+  created_by: string | null;
+  released_at: string | null;
+  released_by: string | null;
+  released_reason: string | null;
+};
+
+export type CommunicationAutomationStatus = "brouillon" | "actif" | "en_pause" | "archive";
+
+export type CommunicationAutomationRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  automation_key: string;
+  version: number;
+  name: string;
+  trigger_event: string;
+  conditions: Json;
+  delay_minutes: number;
+  action_type: "envoyer_message";
+  template_key: string;
+  channel: CommunicationChannel;
+  exit_rules: Json;
+  status: CommunicationAutomationStatus;
+  notes: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+export type CommunicationAutomationRunRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  automation_id: string;
+  /** Version RÉELLEMENT exécutée : un changement de règle ne réinterprète rien. */
+  automation_version: number;
+  contact_id: string | null;
+  opportunity_id: string | null;
+  buyer_profile_id: string | null;
+  appointment_id: string | null;
+  status: "planifie" | "en_pause" | "execute" | "sorti" | "annule" | "echec";
+  scheduled_at: string;
+  executed_at: string | null;
+  exit_reason: string | null;
+  message_id: string | null;
+  idempotency_key: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -1046,6 +1251,12 @@ export interface Database {
       buyer_profiles: WithMutations<BuyerProfileRow>;
       buyer_search_criteria: WithMutations<BuyerSearchCriteriaRow>;
       buyer_assignments: WithMutations<BuyerAssignmentRow>;
+      communication_templates: WithMutations<CommunicationTemplateRow>;
+      communication_messages: WithMutations<CommunicationMessageRow>;
+      communication_outbox: WithMutations<CommunicationOutboxRow>;
+      communication_suppressions: WithMutations<CommunicationSuppressionRow>;
+      communication_automations: WithMutations<CommunicationAutomationRow>;
+      communication_automation_runs: WithMutations<CommunicationAutomationRunRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -1649,6 +1860,93 @@ export interface Database {
         Args: { p_buyer_profile_id: string; p_limit?: number };
         Returns: Json;
       };
+
+      // --- Communications ---------------------------------------------------
+      crm_comm_eligibility: {
+        Args: { p_contact_id: string; p_channel: string; p_category: string };
+        Returns: Json;
+      };
+      crm_comm_upsert_template: {
+        Args: {
+          p_template_key: string;
+          p_channel: string;
+          p_category: string;
+          p_name: string;
+          p_subject?: string | null;
+          p_body: string;
+          p_body_format?: string;
+          p_preview_text?: string | null;
+          p_allowed_variables?: string[];
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_comm_set_template_status: {
+        Args: { p_template_id: string; p_status: string };
+        Returns: Json;
+      };
+      crm_comm_add_suppression: {
+        Args: {
+          p_contact_id: string;
+          p_channel: string;
+          p_scope: string;
+          p_reason: string;
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_comm_release_suppression: {
+        Args: { p_id: string; p_reason: string };
+        Returns: Json;
+      };
+      crm_comm_upsert_automation: {
+        Args: {
+          p_automation_key: string;
+          p_name: string;
+          p_trigger_event: string;
+          p_template_key: string;
+          p_channel: string;
+          p_delay_minutes?: number;
+          p_conditions?: Json;
+          p_exit_rules?: Json;
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_comm_set_automation_status: {
+        Args: { p_automation_id: string; p_status: string };
+        Returns: Json;
+      };
+      crm_comm_claim_outbox: { Args: { p_limit?: number }; Returns: Json };
+      crm_comm_prepare_message: { Args: { p_outbox_id: string }; Returns: Json };
+      crm_comm_record_send: {
+        Args: {
+          p_message_id: string;
+          p_status: string;
+          p_provider: string;
+          p_provider_message_id?: string | null;
+          p_error_code?: string | null;
+          p_error_detail?: string | null;
+          p_rendered_subject?: string | null;
+          p_rendered_body?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_comm_reconcile_status: {
+        Args: {
+          p_message_id: string;
+          p_status: string;
+          p_provider_status?: string | null;
+          p_error_code?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_comm_cancel_message: {
+        Args: { p_message_id: string; p_reason: string };
+        Returns: Json;
+      };
+      crm_comm_retry_message: { Args: { p_message_id: string }; Returns: Json };
+      crm_comm_schedule_reminders: { Args: { p_hours_ahead?: number }; Returns: Json };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

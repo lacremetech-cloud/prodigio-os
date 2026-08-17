@@ -737,3 +737,53 @@ nécessaires. Les `ALTER DEFAULT PRIVILEGES` du projet ne sont pas modifiés.
 
 Preuves et non-régression : voir
 [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md) § surface EXECUTE.
+
+---
+
+## 13. Migration Communications V1 (`20260818120000_communications_v1`)
+
+**Strictement additive.** Ne supprime aucune table, colonne, contrainte,
+politique ni fonction. Ne modifie aucune migration historique.
+
+### Ce qu'elle crée
+
+Six tables : `communication_templates`, `communication_messages`,
+`communication_outbox`, `communication_suppressions`,
+`communication_automations`, `communication_automation_runs` — toutes avec RLS
+active, `select` réservé à `authenticated` sous politique, et **aucun** droit
+pour `anon`.
+
+Vingt-et-une fonctions `SECURITY DEFINER` à `search_path` figé : quatorze
+actions CRM (`crm_comm_*`), sept helpers internes (`comm_*`, dont trois
+fonctions de déclencheur), plus le helper de politique RLS
+`comm_message_access`.
+
+Trois déclencheurs, qui écrivent l'événement **dans la même transaction** que
+l'écriture métier : `comm_funnel_submission_enqueue`,
+`comm_buyer_interest_enqueue`, `comm_estimation_appointment_enqueue`.
+
+### Ce qu'elle modifie sur l'existant
+
+| Objet | Modification | Nature |
+|---|---|---|
+| `privacy_records` | Ajout de `opportunity_id` et `buyer_profile_id` (nullables) | **Additive** — aucune colonne existante touchée |
+| `audit_events` | CHECK `entity_type` et `event_type` **étendus** | **Additive** — aucune valeur retirée |
+
+Vérifié localement par empreintes, sur une base rejouant toutes les migrations :
+les politiques préexistantes (`c504a754…`) et les fonctions préexistantes
+(`f84a0b6c…`) sont **strictement identiques** avant et après la migration.
+
+### Application
+
+⚠️ **Ne pas exécuter automatiquement.** Appliquer **une seule fois** via l'outil
+officiel Supabase, sans réécrire le fichier au moment de l'application.
+
+### Après application
+
+Aucun envoi n'est possible : les six modèles sont amorcés en **`brouillon`**, et
+la politique refuse tout modèle non actif. L'interrupteur
+`COMMUNICATIONS_DISPATCH_ENABLED` doit valoir **exactement** `true` pour qu'un
+envoi réel ait lieu — il n'est pas renseigné.
+
+Variables à créer manuellement dans Vercel (aucune n'est requise pour que
+l'application fonctionne) : voir [21-COMMUNICATIONS.md](21-COMMUNICATIONS.md) §12.

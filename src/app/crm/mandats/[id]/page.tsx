@@ -25,6 +25,8 @@ import { DEFAULT_ESTIMATION_CONFIG } from "@/modules/calendar/config";
 import { EstimationScheduler } from "@/components/crm/calendar/estimation-scheduler";
 import { AppointmentActions } from "@/components/crm/calendar/appointment-actions";
 import { buildTimeline } from "@/modules/crm/timeline";
+import { getMessagesForEntity } from "@/modules/communications/queries";
+import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { formatDate, formatDateTime } from "@/modules/crm/format";
 import {
   canAdminEconomicRules,
@@ -180,6 +182,11 @@ export default async function LeadDetailPage({
     canPlan ? listBookableAgents() : Promise.resolve([]),
   ]);
   const activeAppointments = appointments.filter((a) => a.status !== "annule");
+
+  // Communications adressées au(x) contact(s) de ce dossier.
+  const communications = await getMessagesForEntity("opportunity", id, {
+    canViewDetails: canView,
+  });
 
   // Cycle « estimation → éligibilité → mandat → bien ».
   const canDecideMdt = canDecideMandate(session.roles);
@@ -382,6 +389,19 @@ export default async function LeadDetailPage({
                           canManage={canManageRdv}
                           canResult={canResult}
                         />
+                        {/* Communications liées à CE rendez-vous. Un message
+                            bloqué en « Google couvre l'envoi » indique que
+                            l'invitation Google a déjà informé le propriétaire. */}
+                        {communications.some((c) => c.message.appointment_id === a.id) ? (
+                          <div className="mt-3 border-t border-[var(--crm-line-soft)] pt-3">
+                            <p className="mb-2 text-[11px] uppercase tracking-wide text-[var(--crm-text-faint)]">
+                              Communications de ce rendez-vous
+                            </p>
+                            <EntityCommunications
+                              items={communications.filter((c) => c.message.appointment_id === a.id)}
+                            />
+                          </div>
+                        ) : null}
                       </li>
                     );
                   })}
@@ -698,6 +718,18 @@ export default async function LeadDetailPage({
             ) : (
               <Timeline entries={timeline} />
             )}
+          </Panel>
+
+          {/* Communications — distinctes des activités métier */}
+          <Panel title="Communications">
+            <p className="mb-3 text-[11px] text-[var(--crm-text-faint)]">
+              Messages adressés au contact par le système. Distincts des activités commerciales
+              saisies par un humain.
+            </p>
+            <EntityCommunications
+              items={communications}
+              emptyHint="Aucun message n’a encore été préparé pour ce dossier."
+            />
           </Panel>
 
           {isAdmin ? (

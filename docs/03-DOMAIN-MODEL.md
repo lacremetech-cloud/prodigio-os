@@ -478,3 +478,57 @@ pipeline** et de l'`OpportunityOutcome` du parcours mandat. Le **motif de perte
 est obligatoire**, l'enregistrement est réservé aux rôles décisionnaires et
 tracé dans le journal d'audit. La réouverture d'un dossier clos est également
 une décision motivée et tracée.
+
+---
+
+## Extension — Communications V1 (objets du domaine communication)
+
+La tranche **Communications V1** (migration
+`supabase/migrations/20260818120000_communications_v1.sql`) ajoute la couche
+d'**envoi aux contacts**, indépendante de tout fournisseur. Détail complet :
+[21-COMMUNICATIONS.md](21-COMMUNICATIONS.md) et
+[adr/002-COMMUNICATIONS-LAYER.md](adr/002-COMMUNICATIONS-LAYER.md).
+
+### Nouveaux objets
+
+| Objet du modèle | Définition | Table |
+|---|---|---|
+| **Modèle de message** | Contenu **versionné** (clé stable + version), avec ses **variables déclarées**, son canal, sa catégorie et son statut. Un modèle non actif ne peut jamais être envoyé. | `communication_templates` |
+| **Communication** | **Historique** d'un message adressé à un Contact : pourquoi, quand, par quel canal, livré, échoué ou bloqué. | `communication_messages` |
+| **Événement de communication** | Événement métier en attente de traitement, écrit dans la **même transaction** que l'événement d'origine. Charge utile **sans donnée personnelle**. | `communication_outbox` |
+| **Opposition** | **Fait** bloquant (rebond définitif, plainte, désinscription, demande). Complète le PrivacyRecord sans le remplacer. | `communication_suppressions` |
+| **Automatisation** | Définition **versionnée** : déclencheur métier, conditions, délai, action, règles de sortie. | `communication_automations` |
+| **Exécution d'automatisation** | Exécution pour une entité donnée, conservant la **version exécutée**. Idempotente. | `communication_automation_runs` |
+
+### Distinctions fondamentales ajoutées
+
+- **Communication ≠ Activité métier.** Une activité est une interaction
+  commerciale **saisie par un humain** ; une communication est un message **du
+  système** au contact. Deux objets, deux cycles de vie.
+- **Communication ≠ AuditEvent.** L'audit trace le changement technique ; il ne
+  contient **jamais** le contenu du message ni une coordonnée.
+- **PrivacyRecord ≠ Opposition.** Le PrivacyRecord porte le **choix** de la
+  personne et la **base légale** ; l'opposition porte un **fait** bloquant.
+  Ni l'un ni l'autre ne peut **autoriser** un envoi : les deux ne font que
+  restreindre.
+- **Catégorie transactionnelle ≠ marketing.** Le transactionnel répond à une
+  demande de la personne ou exécute le service ; le marketing relève d'une
+  finalité **distincte**, exigeant une base légale établie.
+- **Modèle ≠ version de modèle.** La clé est stable, la version évolue ; la
+  communication conserve une **photographie** (clé + version) de ce qui a servi.
+- **Fournisseur ≠ modèle métier.** `provider` et `provider_message_id` sont des
+  **traces**, jamais des clés. Changer de fournisseur n'invalide aucun dossier,
+  aucun consentement, aucun modèle.
+
+### Objets réutilisés (aucune table en double)
+
+- **Contact** : reste l'**unique** porteur des coordonnées. Aucune adresse
+  n'est dupliquée dans une communication : le destinataire est le contact.
+- **PrivacyRecord** : **étendu** de deux colonnes de rattachement facultatives
+  (`opportunity_id`, `buyer_profile_id`). Reste la **source de vérité** du
+  consentement, de la base légale et des canaux autorisés.
+- **AuditEvent** : même journal immuable ; entités `communication_*` et
+  événements `communication_*` / `modele_*` / `automatisation_*` /
+  `opposition_*` ajoutés de manière additive.
+- **Opportunité**, **Profil acquéreur**, **Bien**, **Rendez-vous d'estimation** :
+  inchangés — simplement rattachables à une communication.
