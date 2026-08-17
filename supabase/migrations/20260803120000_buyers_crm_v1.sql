@@ -497,13 +497,11 @@ begin
     raise exception 'intérêt introuvable' using errcode = '22023';
   end if;
   if v_i.contact_id is null then
-    -- Sans personne résolue, aucun dossier consolidé n'est possible.
     return null;
   end if;
 
   v_org := coalesce(v_i.organization_id, public.crm_current_operator_org());
 
-  -- 1) Dossier de la PERSONNE : réutilisé s'il existe (jamais de doublon).
   select id into v_profile_id from public.buyer_profiles where contact_id = v_i.contact_id;
 
   if v_profile_id is null then
@@ -521,7 +519,6 @@ begin
     returning id into v_profile_id;
 
     if v_profile_id is null then
-      -- Course : un autre dépôt vient de créer le dossier. On le réutilise.
       select id into v_profile_id from public.buyer_profiles where contact_id = v_i.contact_id;
     else
       v_created := true;
@@ -530,12 +527,8 @@ begin
 
   if v_profile_id is null then return null; end if;
 
-  -- 2) Rattachement de l'intérêt au dossier.
   update public.buyer_interests set buyer_profile_id = v_profile_id where id = p_interest_id;
 
-  -- 3) Agrégats recalculés depuis la SOURCE (les intérêts), jamais depuis le client.
-  --    L'attribution du DERNIER contact est rafraîchie ; celle du premier contact
-  --    (posée à la création) n'est jamais écrasée.
   update public.buyer_profiles bp set
     interest_count = (
       select count(*) from public.buyer_interests bi where bi.buyer_profile_id = v_profile_id),
@@ -546,7 +539,6 @@ begin
     best_overall_score = (
       select max(bi.overall_score) from public.buyer_interests bi where bi.buyer_profile_id = v_profile_id),
     recommended_priority = (
-      -- Recommandation = meilleure priorité observée sur les intérêts du dossier.
       select case
         when bool_or(bi.priority = 'prioritaire') then 'prioritaire'
         when bool_or(bi.priority = 'a_qualifier') then 'a_qualifier'
@@ -556,15 +548,11 @@ begin
     last_touch = coalesce(v_i.last_touch, bp.last_touch)
   where bp.id = v_profile_id;
 
-  -- 4) Critères : amorçage depuis le funnel UNIQUEMENT si aucune saisie humaine.
   select source into v_criteria_source
     from public.buyer_search_criteria where buyer_profile_id = v_profile_id;
 
   if v_criteria_source is null or v_criteria_source = 'funnel' then
     v_bounds := public.buyer_band_bounds(v_i.budget_band);
-    -- Le type ET la localisation sont amorcés depuis le BIEN qui a suscité
-    -- l'intérêt : c'est le seul signal fiable de ce que la personne recherche.
-    -- (`residence_area` indique où elle HABITE, jamais où elle veut acheter.)
     select p.property_type, lower(btrim(coalesce(p.location_city, '')))
       into v_property_type, v_property_city
       from public.properties p where p.id = v_i.property_id;
@@ -582,21 +570,16 @@ begin
       v_i.purchase_horizon, v_i.financing, v_i.project_nature, v_i.decision_mode,
       'funnel')
     on conflict (buyer_profile_id) do update set
-      -- Union des types de biens ayant suscité un intérêt (sans doublon).
       property_types = (
         select coalesce(array_agg(distinct t), '{}'::text[])
         from unnest(c.property_types || case when v_property_type is null
                     then '{}'::text[] else array[v_property_type] end) as t
         where t is not null and t <> ''),
-      -- Union des localisations des biens ayant suscité un intérêt.
       locations = (
         select coalesce(array_agg(distinct l), '{}'::text[])
         from unnest(c.locations || case when v_property_city is null
                     then '{}'::text[] else array[v_property_city] end) as l
         where l is not null and l <> ''),
-      -- Le budget s'ÉLARGIT au fil des intérêts (jamais de fausse précision).
-      -- Une borne absente signifie « non bornée » : elle le RESTE (least/greatest
-      -- ignorent les NULL, ce qui resserrerait la fourchette à tort).
       budget_min_cents = case
         when c.budget_min_cents is null or (v_bounds->>'min')::bigint is null then null
         else least(c.budget_min_cents, (v_bounds->>'min')::bigint) end,
@@ -609,7 +592,6 @@ begin
       decision_mode = coalesce(v_i.decision_mode, c.decision_mode);
   end if;
 
-  -- 5) Audit (journal immuable, distinct de l'activité métier).
   if v_created then
     insert into public.audit_events (actor_user_id, entity_type, entity_id, event_type, new_value)
     values (auth.uid(), 'buyer_profile', v_profile_id, 'acquereur_profil_cree',
@@ -659,7 +641,6 @@ begin
   select pipeline_stage into v_old from public.buyer_profiles where id = p_buyer_profile_id;
   if v_old is null then raise exception 'dossier introuvable' using errcode = '22023'; end if;
 
-  -- Un dossier déjà clos (gagné / perdu) n'est pas rouvert par un simple déplacement.
   if v_old in ('acquereur_gagne', 'perdu') then
     raise exception 'ce dossier est clos : rouvrez-le depuis une action métier dédiée'
       using errcode = '22023';
@@ -690,7 +671,6 @@ begin
   if p_status not in ('non_qualifie', 'en_cours', 'qualifie', 'ecarte') then
     raise exception 'statut de qualification invalide' using errcode = '22023';
   end if;
-  -- Écarter un dossier est une décision motivée.
   if p_status = 'ecarte' and nullif(btrim(coalesce(p_reason, '')), '') is null then
     raise exception 'un motif est requis pour écarter un dossier' using errcode = '22023';
   end if;
@@ -722,7 +702,6 @@ as $$
 declare v_uid uuid := auth.uid(); v_resp text;
 begin
   if v_uid is null then raise exception 'authentification requise' using errcode = '28000'; end if;
-  -- Affecter est un acte de pilotage : réservé à l'opérateur Prodigio.
   perform public.crm_require_role('administrateur', 'manager', 'setter');
   if not exists (select 1 from public.buyer_profiles where id = p_buyer_profile_id) then
     raise exception 'dossier introuvable' using errcode = '22023';
@@ -803,7 +782,6 @@ begin
     raise exception 'le budget maximal doit être supérieur au budget minimal' using errcode = '22023';
   end if;
 
-  -- Normalisation : valeurs non vides, dédoublonnées, localisations en minuscules.
   select coalesce(array_agg(distinct btrim(t)), '{}'::text[]) into v_types
     from unnest(coalesce(p_property_types, '{}'::text[])) as t
     where nullif(btrim(t), '') is not null;
@@ -831,7 +809,6 @@ begin
     project_nature = p_project_nature,
     decision_mode = p_decision_mode,
     notes = nullif(btrim(left(coalesce(p_notes, ''), 4000)), ''),
-    -- Verrou : une saisie humaine ne sera plus écrasée par un nouvel intérêt.
     source = 'humain',
     updated_by = v_uid;
 
@@ -877,7 +854,6 @@ begin
     offer_recorded_at = now()
   where id = p_buyer_profile_id;
 
-  -- Trace métier lisible dans la timeline (distincte de l'audit technique).
   insert into public.activities (buyer_profile_id, author_user_id, type, body)
   values (p_buyer_profile_id, v_uid, 'note',
           nullif(btrim(left(coalesce(p_note, ''), 4000)), ''));
@@ -900,7 +876,6 @@ as $$
 declare v_uid uuid := auth.uid(); v_old text; v_stage text;
 begin
   if v_uid is null then raise exception 'authentification requise' using errcode = '28000'; end if;
-  -- Clore un dossier est une décision sensible.
   if not public.crm_can_decide() then
     raise exception 'seul un administrateur ou un manager enregistre le résultat d''un dossier acquéreur'
       using errcode = '42501';
@@ -1121,15 +1096,12 @@ begin
       cfg.reference_value_cents
     from public.properties p
     left join public.property_public_config cfg on cfg.property_id = p.id
-    -- Cloisonnement : uniquement les biens réellement accessibles à l'utilisateur.
     where public.crm_property_access(p.id)
       and p.status <> 'archive'
   ),
   scored as (
     select
       c.*,
-      -- --- Budget (poids 40) : la valeur de référence interne du bien est
-      --     comparée à la fourchette de l'acquéreur. Sans donnée : NEUTRE.
       case
         when c.reference_value_cents is null
              or (v_c.budget_min_cents is null and v_c.budget_max_cents is null) then null
@@ -1138,14 +1110,12 @@ begin
           then true
         else false
       end as budget_ok,
-      -- --- Type de bien (poids 25).
       case
         when v_c.property_types is null or cardinality(v_c.property_types) = 0
              or c.property_type is null then null
         when c.property_type = any (v_c.property_types) then true
         else false
       end as type_ok,
-      -- --- Localisation (poids 25) : comparaison textuelle explicite.
       case
         when v_c.locations is null or cardinality(v_c.locations) = 0 then null
         when exists (
@@ -1158,8 +1128,6 @@ begin
         when c.location_city is null and c.public_location is null then null
         else false
       end as location_ok,
-      -- --- Disponibilité commerciale (poids 10) : un bien publié est proposable
-      --     tout de suite ; un bien en préparation reste une piste, pas un refus.
       case
         when c.publication_status = 'publie' then true
         when c.publication_status in ('pret_a_publier', 'en_preparation') then null
@@ -1169,8 +1137,6 @@ begin
   ),
   weighted as (
     select s.*,
-      -- Score = points obtenus / points RÉELLEMENT évaluables (les critères sans
-      -- donnée sont exclus du dénominateur : aucune fausse précision).
       (case when s.budget_ok then 40 else 0 end
        + case when s.type_ok then 25 else 0 end
        + case when s.location_ok then 25 else 0 end
@@ -1198,7 +1164,6 @@ begin
         'score', case when w.evaluable = 0 then null
                       else round((w.points::numeric / w.evaluable) * 100)::int end,
         'evaluable_weight', w.evaluable,
-        -- Détail EXPLICABLE : trois listes distinctes, jamais un score opaque.
         'positives',
           (case when w.budget_ok is true then jsonb_build_array('budget') else '[]'::jsonb end
            || case when w.type_ok is true then jsonb_build_array('type_de_bien') else '[]'::jsonb end
@@ -1216,8 +1181,6 @@ begin
            || case when w.ready_ok is null then jsonb_build_array('disponibilite') else '[]'::jsonb end)
       ) as node
     from weighted w
-    -- Une incompatibilité de budget ou de localisation reste affichée (elle est
-    -- explicable), mais les biens sans AUCUN critère évaluable sont écartés.
     where w.evaluable > 0
     order by node_score desc nulls last, node_name asc
     limit v_limit
@@ -1358,7 +1321,6 @@ begin
     v_budget_band, v_financing, v_purchase_horizon, v_project_nature,
     v_decision_mode, v_availability, v_ref_cents);
 
-  -- 1) Intérêt (soumission conservée). Idempotent : gère aussi la course.
   insert into public.buyer_interests (
     organization_id, property_id, funnel_key, funnel_version, idempotency_key,
     raw_answers, normalized_answers,
@@ -1398,14 +1360,12 @@ begin
   on conflict (idempotency_key) do nothing
   returning id into v_interest_id;
 
-  -- Rejeu idempotent : accusé NEUTRE, aucune alerte Slack, aucun doublon.
   if v_interest_id is null then
     return jsonb_build_object('accepted', true, 'created', false);
   end if;
 
-  -- 2) Résolution du contact — dédoublonnage CONSERVATEUR par e-mail uniquement.
-  --    Un contact existant (vendeur ou acquéreur) est RÉUTILISÉ TEL QUEL :
-  --    aucune de ses données n'est modifiée ici.
+  -- Dédoublonnage CONSERVATEUR par e-mail uniquement. Un contact existant
+  -- (vendeur ou acquéreur) est RÉUTILISÉ TEL QUEL : aucune donnée modifiée.
   if v_email is not null then
     select id into v_contact_id from public.contacts
       where lower(email) = v_email order by created_at asc limit 1;
@@ -1422,7 +1382,6 @@ begin
     v_resolution := 'contact_existant';
   end if;
 
-  -- 3) PrivacyRecord (preuve). Rattaché à l'intérêt acquéreur. Base légale À VALIDER.
   insert into public.privacy_records (
     buyer_interest_id, contact_id, purpose, legal_basis, notice_version, notice_text,
     controllers, recipients, authorized_channels, choice, choice_source, proof, do_not_contact
@@ -1441,16 +1400,11 @@ begin
     false
   );
 
-  -- 4) Rattachement du contact à l'intérêt (la soumission reste la source).
   update public.buyer_interests set contact_id = v_contact_id, resolution = v_resolution
     where id = v_interest_id;
 
-  -- 5) NOUVEAU : rattachement au DOSSIER ACQUÉREUR consolidé (créé si absent).
-  --    Ne modifie jamais le contact, ne fusionne jamais deux personnes.
   v_profile_id := public.buyer_attach_interest(v_interest_id);
 
-  -- Accusé NEUTRE + champs SERVEUR (alerte Slack sans doublon), jamais renvoyés
-  -- au navigateur par l'action Next.
   return jsonb_build_object(
     'accepted', true, 'created', true,
     'interest_id', v_interest_id, 'property_id', v_property_id,

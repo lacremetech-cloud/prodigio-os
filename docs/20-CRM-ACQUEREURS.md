@@ -378,9 +378,48 @@ Turnstile (le dépôt SQL direct ne passe pas par la couche applicative).
 **Retour à la baseline vérifié** après la recette : tous les compteurs sont
 identiques à l'avant-application, et **0** utilisateur fictif subsiste.
 
-### Écarts constatés et assumés
+### Réconciliation dépôt ↔ production (post-application)
 
-1. **Commentaires non transmis à l'application (mon erreur).** Le corps déployé
+Le fichier de migration versionné a été **réconcilié** pour qu'une installation
+neuve reproduise **exactement** les définitions présentes en production. Seuls
+**48 lignes de commentaires** ont été retirées de **9 corps de fonctions** —
+aucune sémantique, politique, permission, contrainte ni signature modifiée, et
+**aucune écriture distante** n'a été effectuée.
+
+Fonctions réconciliées : `buyer_attach_interest`, `crm_buyer_assign`,
+`crm_buyer_property_matches`, `crm_buyer_qualify`, `crm_buyer_record_offer`,
+`crm_buyer_record_outcome`, `crm_buyer_set_stage`, `crm_buyer_upsert_criteria`,
+`submit_buyer_interest`.
+
+Vérification après rejeu des 14 migrations sur PostgreSQL vierge : les **17
+fonctions** sont identiques à la production sur `prosrc` (**commentaires
+inclus**), arguments, `SECURITY DEFINER`, volatilité et `search_path`. Les
+empreintes des politiques Mandats restent `aea0beab…`, inchangées.
+
+### Écart de privilège constaté (à traiter séparément)
+
+`buyer_attach_interest` est **exécutable par `authenticated` en production**
+(`acl = postgres=X authenticated=X service_role=X`) alors que la migration ne
+révoque que sur `public, anon`. Cause : Supabase applique des
+`ALTER DEFAULT PRIVILEGES` accordant `EXECUTE` à `anon`/`authenticated`/
+`service_role` sur les nouvelles fonctions du schéma `public` ; la révocation
+sur `anon` a bien pris effet, mais **pas** sur `authenticated`.
+
+Portée réelle : la fonction est un **helper interne** appelé par
+`submit_buyer_interest`. Elle ne renvoie qu'un identifiant, ne lit ni ne modifie
+aucune coordonnée, et n'expose aucune donnée personnelle. Un utilisateur
+authentifié connaissant un identifiant d'intérêt valide pourrait toutefois
+déclencher un rattachement et un événement d'audit. **Ce n'est pas une fuite de
+données, mais un durcissement manquant.**
+
+Non corrigé ici : la consigne de réconciliation interdit de modifier les
+permissions, et le corriger ferait diverger le dépôt de la production. À traiter
+par une **migration de durcissement dédiée** (`revoke all on function
+public.buyer_attach_interest(uuid) from authenticated;`).
+
+### Écarts historiques constatés et assumés
+
+1. **Commentaires non transmis à l'application (mon erreur, désormais réconciliée).** Le corps déployé
    de 9 fonctions ne contient pas tous les commentaires `--` du fichier
    versionné : ils ont été condensés lors de la composition de l'appel
    d'application. **Les sémantiques sont prouvées identiques** : en retirant les
@@ -389,8 +428,9 @@ identiques à l'avant-application, et **0** utilisateur fictif subsiste.
    fichier réel (dont `submit_buyer_interest`, `e3f72f73…`, 7392 caractères des
    deux côtés). Aucune correction n'a été appliquée en production pour ce seul
    écart cosmétique : une réécriture supplémentaire ferait courir un risque
-   sémantique là où il n'y en a aucun. **Le fichier versionné reste la
-   référence.**
+   sémantique là où il n'y en a aucun. **Écart désormais résolu par la
+   réconciliation ci-dessus : le fichier versionné reproduit exactement la
+   production.**
 2. **Dérive préexistante, hors périmètre.** `crm_buyer_interest_set_status`
    (posée par `20260802120000_public_property_experience_v1`) diffère entre le
    dépôt et la base : le message d'erreur déployé est `'interet introuvable'`
