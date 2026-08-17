@@ -396,30 +396,82 @@ fonctions** sont identiques à la production sur `prosrc` (**commentaires
 inclus**), arguments, `SECURITY DEFINER`, volatilité et `search_path`. Les
 empreintes des politiques Mandats restent `aea0beab…`, inchangées.
 
-### Écart de privilège constaté (à traiter séparément)
+### Surface EXECUTE — classification et durcissement
 
-`buyer_attach_interest` est **exécutable par `authenticated` en production**
-(`acl = postgres=X authenticated=X service_role=X`) alors que la migration ne
-révoque que sur `public, anon`. Cause : Supabase applique des
-`ALTER DEFAULT PRIVILEGES` accordant `EXECUTE` à `anon`/`authenticated`/
-`service_role` sur les nouvelles fonctions du schéma `public` ; la révocation
-sur `anon` a bien pris effet, mais **pas** sur `authenticated`.
+Migration **`20260817120000_buyers_crm_restrict_internal_execute.sql`**
+(appliquée le 2026-08-17, version distante `20260817181644`, enregistrée **une
+seule fois**). Strictement limitée aux **privilèges** : aucune table, colonne,
+contrainte, politique, fonction ni donnée touchée.
 
-Portée réelle : la fonction est un **helper interne** appelé par
-`submit_buyer_interest`. Elle ne renvoie qu'un identifiant, ne lit ni ne modifie
-aucune coordonnée, et n'expose aucune donnée personnelle. Un utilisateur
-authentifié connaissant un identifiant d'intérêt valide pourrait toutefois
-déclencher un rattachement et un événement d'audit. **Ce n'est pas une fuite de
-données, mais un durcissement manquant.**
+Les 18 fonctions SQL du module (les 17 de `buyers_crm_v1` +
+`crm_buyer_interest_set_status`) sont classées en quatre catégories, déclarées
+dans `src/modules/buyers/crm/execute-surface.ts` et **vérifiées par un test**.
 
-Non corrigé ici : la consigne de réconciliation interdit de modifier les
-permissions, et le corriger ferait diverger le dépôt de la production. À traiter
-par une **migration de durcissement dédiée** (`revoke all on function
-public.buyer_attach_interest(uuid) from authenticated;`).
+| Catégorie | Fonctions | `anon` | `authenticated` |
+|---|---|:--:|:--:|
+| **1. Point d'entrée public** | `submit_buyer_interest(jsonb)` | ✅ | ✅ |
+| **2. Actions CRM** (13) | `crm_buyer_set_stage`, `crm_buyer_qualify`, `crm_buyer_assign`, `crm_buyer_unassign`, `crm_buyer_upsert_criteria`, `crm_buyer_record_offer`, `crm_buyer_record_outcome`, `crm_buyer_reopen`, `crm_buyer_log_activity`, `crm_buyer_create_task`, `crm_buyer_set_task_status`, `crm_buyer_property_matches`, `crm_buyer_interest_set_status` | ❌ | ✅ |
+| **3. Helpers internes** (3) | `buyer_attach_interest(uuid)`, `buyer_band_bounds(text)`, `crm_buyer_can_operate(uuid)` | ❌ | ❌ |
+| **4. Helper requis par RLS** | `crm_buyer_profile_access(uuid)` | ❌ | ✅ |
+
+`service_role` conserve `EXECUTE` partout : c'est le rôle serveur de confiance.
+
+#### Pourquoi ces trois helpers étaient exposés
+
+`buyer_attach_interest` l'était via les **`ALTER DEFAULT PRIVILEGES` de
+Supabase**, qui accordent `EXECUTE` aux rôles du schéma `public` : la révocation
+d'origine, limitée à `public, anon`, ne suffisait pas. `buyer_band_bounds` et
+`crm_buyer_can_operate` l'étaient via un `grant … to authenticated` explicite,
+en réalité inutile.
+
+`buyer_attach_interest` a des **effets de bord** (création/rattachement d'un
+dossier, recalcul d'agrégats, amorçage de critères, écriture d'audit). Qu'elle ne
+renvoie aucune donnée personnelle ne suffit pas à la laisser appelable
+directement hors de `submit_buyer_interest`.
+
+#### Pourquoi `crm_buyer_profile_access` n'est PAS durcie
+
+C'est le **seul** helper invoqué directement par les politiques RLS
+(`buyer_profiles_read`, `buyer_search_criteria_read`, `buyer_assignments_read`,
+`buyer_interests_profile_read`, `tasks_crm_read`, `activities_crm_read`). Une
+expression de politique est évaluée avec les privilèges du **rôle appelant** :
+lui retirer `EXECUTE` casse la lecture autorisée. Vérifié par un **test
+contrefactuel** — « permission denied for function crm_buyer_profile_access »
+dès la première lecture d'un administrateur.
+
+#### Preuves mesurées en production (transaction annulée)
+
+| Preuve | Résultat |
+|---|---|
+| Appel direct de `buyer_attach_interest` sous `authenticated` | **refusé** — `permission denied for function buyer_attach_interest` |
+| Aucune mutation avant le refus | dossiers `1 → 1` |
+| `submit_buyer_interest` — dépôt | `created=true`, dossier rattaché, scoring serveur `88` |
+| Réponse neutre | aucun score, priorité ni détail renvoyé au client |
+| Idempotence | rejeu ⇒ `created=false`, 1 seul intérêt |
+| Dédoublonnage e-mail | 1 seul contact |
+| Contact vendeur | `RecetteVendeur/Fictif/+33000000001/qualifie` **inchangé** |
+| 6 actions CRM sous un rôle setter | **OK** |
+| RLS | admin 1 · setter 1 · agent non affecté 0 · `partenaire_lecture` 0 · non-membre 0 · `anon` refusé |
+
+Non-régression : les 17 empreintes `prosrc` et les politiques Mandats
+(`aea0beab…`) sont **inchangées**, la baseline distante est identique, aucune
+donnée fictive résiduelle.
+
+#### Convention pour les migrations futures
+
+1. **`REVOKE ALL`** sur chaque nouvelle fonction — pour `public`, `anon` **et
+   `authenticated`**. Ne jamais se reposer sur les privilèges par défaut :
+   Supabase accorde `EXECUTE` par défaut aux rôles du schéma `public`.
+2. **`GRANT EXECUTE` explicite** aux seuls rôles réellement nécessaires.
+
+Les `ALTER DEFAULT PRIVILEGES` du projet ne sont **pas** modifiés : cela
+affecterait d'autres modules. Le garde-fou vit dans
+`src/modules/buyers/crm/execute-surface.test.ts`, qui relit les migrations et
+échoue si un helper interne acquiert `EXECUTE authenticated`.
 
 ### Écarts historiques constatés et assumés
 
-1. **Commentaires non transmis à l'application (mon erreur, désormais réconciliée).** Le corps déployé
+1. **Commentaires non transmis à l'application (mon erreur, réconciliée).** Le corps déployé
    de 9 fonctions ne contient pas tous les commentaires `--` du fichier
    versionné : ils ont été condensés lors de la composition de l'appel
    d'application. **Les sémantiques sont prouvées identiques** : en retirant les

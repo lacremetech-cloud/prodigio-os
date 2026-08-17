@@ -692,3 +692,48 @@ baseline vérifié** : voir [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md) §9.
    `anon`. Aucune fonction du CRM Acquéreurs n'est concernée.
 
 Détail fonctionnel : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md).
+
+---
+
+## 13. CRM Acquéreurs — durcissement de la surface EXECUTE (APPLIQUÉ)
+
+| Fichier | Rôle |
+|---|---|
+| `20260817120000_buyers_crm_restrict_internal_execute.sql` | Retire `EXECUTE` à `public`/`anon`/`authenticated` sur les trois **helpers internes** du CRM Acquéreurs |
+
+**Appliquée une seule fois** sur `wmhrpweefutwldbhllhg` : nom
+`buyers_crm_restrict_internal_execute`, version distante `20260817181644`,
+**1 occurrence** (total : 15 migrations). **Aucune migration précédente
+rejouée**, `20260803120000_buyers_crm_v1.sql` **non modifiée**, aucune donnée
+métier touchée.
+
+Fonctions durcies : `buyer_attach_interest(uuid)`, `buyer_band_bounds(text)`,
+`crm_buyer_can_operate(uuid)`.
+
+| Fonction | `anon` avant → après | `authenticated` avant → après | `service_role` |
+|---|:--:|:--:|:--:|
+| `buyer_attach_interest` | false → false | **true → false** | true (conservé) |
+| `buyer_band_bounds` | false → false | **true → false** | true (conservé) |
+| `crm_buyer_can_operate` | false → false | **true → false** | true (conservé) |
+| `crm_buyer_profile_access` | false → false | true → **true** (requis par RLS) | true |
+| `submit_buyer_interest` | true → **true** | true → true | true |
+
+Les 13 actions CRM restent exécutables par `authenticated` (13/13).
+
+**Motif.** `buyer_attach_interest` était exposée via les `ALTER DEFAULT
+PRIVILEGES` de Supabase (la révocation d'origine ne portait que sur
+`public, anon`) ; les deux autres via un `grant` explicite inutile. Ce sont des
+helpers internes avec effets de bord, appelés uniquement depuis des fonctions
+`SECURITY DEFINER`.
+
+**`crm_buyer_profile_access` volontairement préservée** : seul helper invoqué
+directement par les politiques RLS, dont l'expression est évaluée avec les
+privilèges du rôle appelant. Un test contrefactuel confirme que la révoquer
+casserait la lecture autorisée.
+
+**Convention retenue pour les migrations futures** : `REVOKE ALL` (`public`,
+`anon`, `authenticated`) puis `GRANT EXECUTE` explicite aux seuls rôles
+nécessaires. Les `ALTER DEFAULT PRIVILEGES` du projet ne sont pas modifiés.
+
+Preuves et non-régression : voir
+[20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md) § surface EXECUTE.
