@@ -743,6 +743,120 @@ export type BuyerInterestRow = {
   reviewed_by: string | null;
   reviewed_at: string | null;
   resolution: "nouveau_contact" | "contact_existant" | null;
+  /** Dossier acquéreur consolidé auquel cet intérêt est rattaché. */
+  buyer_profile_id: string | null;
+};
+
+// --- CRM Acquéreurs ----------------------------------------------------------
+
+/** Étape COMMERCIALE du pipeline acquéreur (distincte du pipeline Mandats). */
+export type BuyerPipelineStage =
+  | "nouveau"
+  | "a_contacter"
+  | "contact_en_cours"
+  | "qualifie"
+  | "bien_a_proposer"
+  | "visite_a_planifier"
+  | "visite_planifiee"
+  | "suivi_apres_visite"
+  | "offre_en_cours"
+  | "acquereur_gagne"
+  | "perdu";
+
+/** Qualification validée par un HUMAIN (jamais déduite d'un score). */
+export type BuyerQualificationStatus = "non_qualifie" | "en_cours" | "qualifie" | "ecarte";
+
+/** Recommandation opérationnelle DÉRIVÉE des scores (≠ qualification humaine). */
+export type BuyerRecommendedPriority = "prioritaire" | "a_qualifier" | "a_suivre";
+
+export type BuyerOutcome = "gagne" | "perdu";
+
+export type BuyerProfileRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  contact_id: string;
+  pipeline_stage: BuyerPipelineStage;
+  qualification_status: BuyerQualificationStatus;
+  qualification_reason: string | null;
+  qualified_by: string | null;
+  qualified_at: string | null;
+  recommended_priority: BuyerRecommendedPriority | null;
+  best_overall_score: number | null;
+  interest_count: number;
+  first_interest_at: string | null;
+  last_interest_at: string | null;
+  last_activity_at: string | null;
+  origin_funnel_key: string | null;
+  first_touch: Json | null;
+  last_touch: Json | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_term: string | null;
+  utm_content: string | null;
+  outcome: BuyerOutcome | null;
+  outcome_reason: string | null;
+  outcome_recorded_by: string | null;
+  outcome_recorded_at: string | null;
+  offer_amount_cents: number | null;
+  offer_property_id: string | null;
+  offer_recorded_by: string | null;
+  offer_recorded_at: string | null;
+  created_by: string | null;
+};
+
+export type BuyerSearchCriteriaRow = {
+  buyer_profile_id: string;
+  created_at: string;
+  updated_at: string;
+  property_types: string[];
+  locations: string[];
+  budget_min_cents: number | null;
+  budget_max_cents: number | null;
+  purchase_horizon: string | null;
+  financing: string | null;
+  project_nature: string | null;
+  decision_mode: string | null;
+  notes: string | null;
+  /** `funnel` = amorcé automatiquement ; `humain` = affiné par l'équipe (verrou). */
+  source: "funnel" | "humain";
+  updated_by: string | null;
+};
+
+export type BuyerAssignmentRow = {
+  id: string;
+  created_at: string;
+  buyer_profile_id: string;
+  user_id: string;
+  responsibility: "setter" | "manager" | "agent_immobilier" | "responsable_marketing";
+  assigned_by: string | null;
+};
+
+/** Facteur de matching explicable (miroir des tokens SQL). */
+export type BuyerMatchFactor = "budget" | "type_de_bien" | "localisation" | "disponibilite";
+
+export type BuyerMatchItem = {
+  property_id: string;
+  name: string;
+  slug: string | null;
+  property_type: string | null;
+  city: string | null;
+  publication_status: string | null;
+  score: number | null;
+  evaluable_weight: number;
+  positives: BuyerMatchFactor[];
+  incompatibilities: BuyerMatchFactor[];
+  missing: BuyerMatchFactor[];
+};
+
+/** Résultat versionné de `crm_buyer_property_matches` (recommandation, jamais décision). */
+export type BuyerMatchResult = {
+  version: string;
+  criteria_source: "funnel" | "humain" | "absent";
+  weights: Record<BuyerMatchFactor, number>;
+  items: BuyerMatchItem[];
 };
 
 /** Résultat calculé en base par `crm_property_readiness` (source de vérité). */
@@ -778,7 +892,13 @@ export type ActivityRow = {
   id: string;
   created_at: string;
   occurred_at: string;
-  opportunity_id: string;
+  /**
+   * Rattachement à une opportunité de mandat. `null` pour une activité de
+   * dossier acquéreur : exactement UN rattachement est renseigné (contrainte
+   * `activities_owner_exactly_one` en base).
+   */
+  opportunity_id: string | null;
+  buyer_profile_id: string | null;
   contact_id: string | null;
   author_user_id: string | null;
   type: "appel" | "tentative_appel" | "email" | "sms_whatsapp" | "rendez_vous" | "note" | "autre";
@@ -797,7 +917,13 @@ export type TaskRow = {
   id: string;
   created_at: string;
   updated_at: string;
-  opportunity_id: string;
+  /**
+   * Rattachement à une opportunité de mandat. `null` pour une tâche de dossier
+   * acquéreur : exactement UN rattachement est renseigné (contrainte
+   * `tasks_owner_exactly_one` en base).
+   */
+  opportunity_id: string | null;
+  buyer_profile_id: string | null;
   author_user_id: string | null;
   assignee_user_id: string | null;
   title: string;
@@ -817,7 +943,9 @@ export type AuditEventRow = {
     | "membership"
     | "organization"
     | "invitation"
-    | "property";
+    | "property"
+    | "buyer_interest"
+    | "buyer_profile";
   event_type:
     | "creation"
     | "changement_stade"
@@ -854,7 +982,17 @@ export type AuditEventRow = {
     | "bien_document_ajoute"
     | "bien_document_supprime"
     | "bien_production_maj"
-    | "bien_pret";
+    | "bien_pret"
+    | "acquereur_interet_statut"
+    // CRM Acquéreurs
+    | "acquereur_profil_cree"
+    | "acquereur_interet_rattache"
+    | "acquereur_stade"
+    | "acquereur_qualification"
+    | "acquereur_affectation"
+    | "acquereur_criteres"
+    | "acquereur_offre"
+    | "acquereur_resultat";
   entity_id: string;
   old_value: Json | null;
   new_value: Json | null;
@@ -905,6 +1043,9 @@ export interface Database {
       property_public_media: WithMutations<PropertyPublicMediaRow>;
       property_public_snapshots: WithMutations<PropertyPublicSnapshotRow>;
       buyer_interests: WithMutations<BuyerInterestRow>;
+      buyer_profiles: WithMutations<BuyerProfileRow>;
+      buyer_search_criteria: WithMutations<BuyerSearchCriteriaRow>;
+      buyer_assignments: WithMutations<BuyerAssignmentRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -1429,6 +1570,83 @@ export interface Database {
       };
       crm_buyer_interest_set_status: {
         Args: { p_interest_id: string; p_status: string };
+        Returns: Json;
+      };
+      // --- CRM Acquéreurs ----------------------------------------------------
+      crm_buyer_set_stage: {
+        Args: { p_buyer_profile_id: string; p_stage: string };
+        Returns: Json;
+      };
+      crm_buyer_qualify: {
+        Args: { p_buyer_profile_id: string; p_status: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      crm_buyer_assign: {
+        Args: { p_buyer_profile_id: string; p_user_id: string; p_responsibility?: string };
+        Returns: Json;
+      };
+      crm_buyer_unassign: {
+        Args: { p_buyer_profile_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      crm_buyer_upsert_criteria: {
+        Args: {
+          p_buyer_profile_id: string;
+          p_property_types?: string[] | null;
+          p_locations?: string[] | null;
+          p_budget_min_cents?: number | null;
+          p_budget_max_cents?: number | null;
+          p_purchase_horizon?: string | null;
+          p_financing?: string | null;
+          p_project_nature?: string | null;
+          p_decision_mode?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_buyer_record_offer: {
+        Args: {
+          p_buyer_profile_id: string;
+          p_property_id?: string | null;
+          p_amount_cents?: number | null;
+          p_note?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_buyer_record_outcome: {
+        Args: { p_buyer_profile_id: string; p_outcome: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      crm_buyer_reopen: {
+        Args: { p_buyer_profile_id: string; p_reason: string };
+        Returns: Json;
+      };
+      crm_buyer_log_activity: {
+        Args: {
+          p_buyer_profile_id: string;
+          p_type: string;
+          p_outcome?: string | null;
+          p_body?: string | null;
+          p_occurred_at?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_buyer_create_task: {
+        Args: {
+          p_buyer_profile_id: string;
+          p_title: string;
+          p_kind?: string;
+          p_due_at?: string | null;
+          p_assignee_user_id?: string | null;
+        };
+        Returns: Json;
+      };
+      crm_buyer_set_task_status: {
+        Args: { p_task_id: string; p_status: string };
+        Returns: Json;
+      };
+      crm_buyer_property_matches: {
+        Args: { p_buyer_profile_id: string; p_limit?: number };
         Returns: Json;
       };
     };

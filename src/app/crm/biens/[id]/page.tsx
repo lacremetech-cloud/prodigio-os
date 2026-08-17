@@ -9,12 +9,14 @@ import {
   listAssignableMembers,
 } from "@/modules/properties/factory/queries";
 import { getPublicExperience, listBuyerInterests } from "@/modules/buyers/public/queries";
+import { listBuyersForProperty } from "@/modules/buyers/crm/queries";
 import {
   PublicConfigForm,
   PublicMediaManager,
   PublicationPanel,
 } from "@/components/crm/property/public-experience";
 import { BuyerInterestsPanel } from "@/components/crm/property/buyer-interests";
+import { PropertyBuyersPanel } from "@/components/crm/buyers/property-buyers";
 import { buildPropertyTimeline } from "@/modules/properties/factory/timeline";
 import { propertyStatusLabels, propertyStatusVisual } from "@/modules/properties/factory/labels";
 import { createPropertyAssetSignedUrl } from "@/modules/properties/factory/storage";
@@ -69,9 +71,11 @@ export default async function PropertyCockpitPage({
   const canOperateRole = canOperate(session.roles);
   const canViewContacts = canViewContactDetails(session.roles);
 
-  const [publicExperience, buyerInterests] = await Promise.all([
+  const [publicExperience, buyerInterests, propertyBuyers] = await Promise.all([
     getPublicExperience(id),
     listBuyerInterests(id),
+    // Même donnée, autre vue : les dossiers acquéreurs filtrés sur ce bien.
+    listBuyersForProperty(id, canViewContacts),
   ]);
   const publicHref =
     publicExperience.config?.publication_status === "publie" && publicExperience.config?.slug
@@ -226,8 +230,20 @@ export default async function PropertyCockpitPage({
           </Section>
 
           <Section
-            title="Intérêts acquéreurs"
-            subtitle="Réception opérationnelle minimale des demandes déposées sur la page publique."
+            title="Dossiers acquéreurs"
+            subtitle="Les acquéreurs intéressés par ce bien. Ouvrez un dossier pour le suivi complet."
+            action={
+              <Link href="/crm/acquereurs" className="crm-btn crm-btn--sm crm-btn--ghost">
+                Tous les acquéreurs
+              </Link>
+            }
+          >
+            <PropertyBuyersPanel rows={propertyBuyers} />
+          </Section>
+
+          <Section
+            title="Intérêts acquéreurs (soumissions)"
+            subtitle="Les soumissions d'origine déposées sur la page publique, conservées telles quelles."
           >
             <BuyerInterestsPanel
               propertyId={p.id}
@@ -325,19 +341,27 @@ export default async function PropertyCockpitPage({
 function Section({
   title,
   subtitle,
+  action,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /** Action optionnelle alignée à droite du titre (lien, bouton). */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="crm-panel p-5">
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
-          {title}
-        </h2>
-        {subtitle ? <p className="crm-wrap mt-1 text-xs text-[var(--crm-text-faint)]">{subtitle}</p> : null}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
+            {title}
+          </h2>
+          {subtitle ? (
+            <p className="crm-wrap mt-1 text-xs text-[var(--crm-text-faint)]">{subtitle}</p>
+          ) : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {children}
     </section>

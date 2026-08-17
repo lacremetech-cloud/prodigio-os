@@ -80,10 +80,18 @@ export async function loadLeadBundle(): Promise<LeadBundle> {
     supabase.from("contacts").select("*"),
     supabase.from("funnel_submissions").select("*"),
     supabase.from("opportunity_assignments").select("*"),
-    supabase.from("tasks").select("*").eq("status", "a_faire"),
+    // Tâches et activités DE MANDAT uniquement : ces tables sont partagées avec
+    // le CRM Acquéreurs, dont les lignes portent `buyer_profile_id` et un
+    // `opportunity_id` nul. On les exclut explicitement côté requête.
+    supabase
+      .from("tasks")
+      .select("*")
+      .eq("status", "a_faire")
+      .not("opportunity_id", "is", null),
     supabase
       .from("activities")
       .select("id, opportunity_id, occurred_at, type, outcome")
+      .not("opportunity_id", "is", null)
       .order("occurred_at", { ascending: false }),
     getMembersMap(),
   ]);
@@ -124,6 +132,8 @@ export async function loadLeadBundle(): Promise<LeadBundle> {
   // Prochaine action = tâche ouverte à l'échéance la plus proche.
   const nextTaskByOpp = new Map<string, LeadNextTask>();
   for (const t of (openTasks ?? []) as TaskRow[]) {
+    // Filet : une tâche de dossier acquéreur n'appartient pas à un lead Mandats.
+    if (!t.opportunity_id) continue;
     const current = nextTaskByOpp.get(t.opportunity_id);
     const candidate: LeadNextTask = {
       id: t.id,
@@ -144,6 +154,7 @@ export async function loadLeadBundle(): Promise<LeadBundle> {
     ActivityRow,
     "id" | "opportunity_id" | "occurred_at" | "type" | "outcome"
   >[]) {
+    if (!a.opportunity_id) continue;
     if (!lastActivityByOpp.has(a.opportunity_id)) {
       lastActivityByOpp.set(a.opportunity_id, a.occurred_at);
     }
@@ -316,11 +327,20 @@ export async function getLeadDetail(
 }
 
 /** Tâches ouvertes, avec le contexte minimal de leur opportunité (pour /crm/taches). */
+/**
+ * Tâche ouverte avec son contexte. La table `tasks` est PARTAGÉE entre le CRM
+ * Mandats et le CRM Acquéreurs (aucune table en double) : `kind` indique à quel
+ * dossier la tâche appartient, et `href` pointe vers la bonne fiche.
+ */
 export interface TaskWithContext {
   task: TaskRow;
-  opportunityId: string;
+  kind: "mandat" | "acquereur";
+  /** Lien vers la fiche du dossier concerné. */
+  href: string;
   contactLabel: string;
   city: string | null;
+  opportunityId: string | null;
+  buyerProfileId: string | null;
 }
 
 export async function listOpenTasks(): Promise<TaskWithContext[]> {
@@ -332,16 +352,63 @@ export async function listOpenTasks(): Promise<TaskWithContext[]> {
     .in("status", ["a_faire"])
     .order("due_at", { ascending: true });
 
+  const rows = (tasks ?? []) as TaskRow[];
+
+  // Contexte des tâches de dossier acquéreur (une seule passe, si nécessaire).
+  const buyerIds = [
+    ...new Set(rows.map((t) => t.buyer_profile_id).filter((v): v is string => Boolean(v))),
+  ];
+  const buyerLabel = new Map<string, string>();
+  if (buyerIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("buyer_profiles")
+      .select("id, contact_id")
+      .in("id", buyerIds);
+    const profileRows = (profiles ?? []) as { id: string; contact_id: string }[];
+    const contactIds = [...new Set(profileRows.map((p) => p.contact_id))];
+    const { data: contacts } = contactIds.length
+      ? await supabase.from("contacts").select("id, first_name, last_name").in("id", contactIds)
+      : { data: [] };
+    const contactById = new Map(
+      ((contacts ?? []) as { id: string; first_name: string | null; last_name: string | null }[])
+        .map((c) => [c.id, c]),
+    );
+    for (const p of profileRows) {
+      const c = contactById.get(p.contact_id);
+      buyerLabel.set(p.id, contactName(c?.first_name ?? null, c?.last_name ?? null));
+    }
+  }
+
   const leadByOpp = new Map(leads.map((l) => [l.opportunityId, l]));
-  return ((tasks ?? []) as TaskRow[]).map((t) => {
-    const lead = leadByOpp.get(t.opportunity_id);
-    return {
-      task: t,
-      opportunityId: t.opportunity_id,
-      contactLabel: lead
-        ? contactName(lead.contactFirstName, lead.contactLastName)
-        : "Dossier",
-      city: lead?.city ?? null,
-    };
+
+  return rows.flatMap((task): TaskWithContext[] => {
+    if (task.buyer_profile_id) {
+      return [
+        {
+          task,
+          kind: "acquereur",
+          href: `/crm/acquereurs/${task.buyer_profile_id}`,
+          contactLabel: buyerLabel.get(task.buyer_profile_id) ?? "Dossier acquéreur",
+          city: null,
+          opportunityId: null,
+          buyerProfileId: task.buyer_profile_id,
+        },
+      ];
+    }
+    if (!task.opportunity_id) return []; // contrainte en base : ne peut pas arriver
+    const lead = leadByOpp.get(task.opportunity_id);
+    return [
+      {
+        task,
+        kind: "mandat",
+        href: `/crm/mandats/${task.opportunity_id}`,
+        contactLabel: lead
+          ? contactName(lead.contactFirstName, lead.contactLastName)
+          : "Dossier",
+        city: lead?.city ?? null,
+        opportunityId: task.opportunity_id,
+        buyerProfileId: null,
+      },
+    ];
   });
 }

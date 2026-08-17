@@ -130,3 +130,56 @@ contrôles applicatifs) :
   (déclencheur bloquant UPDATE/DELETE).
 
 Détails et guide : [09-CRM-GUIDE.md](09-CRM-GUIDE.md).
+
+---
+
+## 6. Accès aux dossiers acquéreurs (CRM Acquéreurs V1)
+
+Le CRM Acquéreurs introduit une **frontière d'accès dédiée**, portée par
+`crm_buyer_profile_access(buyer_profile_id)`. Elle est **plus restrictive** que
+`crm_has_access()` : la visibilité d'un lead Mandats n'ouvre pas celle d'un
+dossier acquéreur.
+
+| Capacité | Admin Prodigio | Manager | Setter | Agent immobilier | Partenaire lecture |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Voir les dossiers acquéreurs | ✔ | ✔ | ✔ | ∂ | — |
+| Traiter / qualifier un dossier | ✔ | ✔ | ✔ | ∂ | — |
+| Affecter un responsable | ✔ | ✔ | ✔ | — | — |
+| Modifier les critères de recherche | ✔ | ✔ | ✔ | ∂ | — |
+| Changer d'étape (hors étapes protégées) | ✔ | ✔ | ✔ | ∂ | — |
+| Enregistrer une **offre** | ✔ | ✔ | ✔ | ∂ | — |
+| Enregistrer le **résultat commercial** (gagné / perdu) | ✔ | ✔ | — | — | — |
+| **Rouvrir** un dossier clos | ✔ | ✔ | — | — | — |
+| Voir les coordonnées non masquées | ✔ | ✔ | ✔ | ✔ | — |
+| Consulter l'historique audité | ✔ | ✔ | — | — | — |
+
+`∂` (agent immobilier) = **uniquement** les dossiers qui lui sont **affectés**
+(`buyer_assignments`) **ou** liés à un bien auquel il a accès via ses
+opportunités affectées.
+
+### Pourquoi `partenaire_lecture` est exclu en V1
+
+Aucun mécanisme de **partage de dossier acquéreur** n'existe encore :
+l'équivalent d'`OpportunityOrganization` côté acquéreurs reste à décider (§4).
+Accorder une visibilité par défaut reviendrait à ouvrir **tous** les dossiers à
+ce rôle, ce que la règle « lecture strictement limitée aux dossiers explicitement
+partagés » interdit. Le rôle est donc **exclu** tant que le partage n'est pas
+conçu — et il reste par ailleurs **non attribuable** en V1.
+
+### Règles structurelles
+
+- **Écriture** : aucun `INSERT/UPDATE/DELETE` direct ; toute mutation passe par
+  une fonction `SECURITY DEFINER` (`crm_buyer_*`) qui **revérifie le rôle**,
+  applique la règle métier et écrit un **AuditEvent**. `search_path` figé.
+- **Étapes protégées** : « offre en cours », « acquéreur gagné » et « perdu » ne
+  sont **jamais** atteignables par un simple changement d'étape — elles exigent
+  une action métier dédiée (confirmation, motif, audit).
+- **Tâches et activités partagées** : la politique RLS distingue les deux cas
+  sans changer le comportement Mandats — branche `opportunity_id` inchangée
+  (`crm_has_access()`), branche `buyer_profile_id` soumise à
+  `crm_buyer_profile_access()`.
+- **`anon`** : aucun privilège table, aucune politique, **aucune fonction du CRM
+  Acquéreurs exécutable**. Seul `submit_buyer_interest` (dépôt public contrôlé)
+  reste accessible, et ne renvoie qu'un accusé neutre.
+
+Détail complet : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md).

@@ -31,6 +31,8 @@ export interface BuyerNotificationInput {
   interestId: string;
   propertyId: string;
   propertyName: string | null;
+  /** Dossier acquéreur consolidé (cible du bouton d'action). */
+  buyerProfileId: string | null;
   crmBaseUrl: string;
   receivedAt: Date;
 }
@@ -47,13 +49,25 @@ function esc(value: string | null | undefined): string | null {
   return trimmed.length === 0 ? null : escapeSlack(trimmed);
 }
 
-/** Deep link CRM vers l'intérêt : /crm/biens/{propertyId}?interet={interestId}. */
+/**
+ * Deep link CRM vers le **dossier acquéreur consolidé** :
+ * `/crm/acquereurs/{buyerProfileId}`.
+ *
+ * C'est le point d'entrée opérationnel : le dossier réunit l'identité, tous les
+ * intérêts de la personne, la qualification, l'affectation et le suivi. À
+ * défaut de dossier résolu (cas limite : contact non résolu), on retombe sur la
+ * réception du bien, qui reste exacte — jamais sur un lien mort.
+ */
 export function buyerCrmDeepLink(
   baseUrl: string,
   propertyId: string,
   interestId: string,
+  buyerProfileId?: string | null,
 ): string {
   const base = baseUrl.replace(/\/+$/, "");
+  if (buyerProfileId) {
+    return `${base}/crm/acquereurs/${encodeURIComponent(buyerProfileId)}`;
+  }
   return `${base}/crm/biens/${encodeURIComponent(propertyId)}?interet=${encodeURIComponent(interestId)}`;
 }
 
@@ -72,7 +86,8 @@ function formatReceivedAt(date: Date): string {
 }
 
 export function buildBuyerSlackMessage(input: BuyerNotificationInput): BuyerSlackMessage {
-  const { request, score, interestId, propertyId, propertyName, crmBaseUrl, receivedAt } = input;
+  const { request, score, interestId, propertyId, propertyName, buyerProfileId, crmBaseUrl, receivedAt } =
+    input;
   const a = request.answers;
   const c = a.contact;
 
@@ -104,7 +119,7 @@ export function buildBuyerSlackMessage(input: BuyerNotificationInput): BuyerSlac
   pushAttr("Ensemble de pubs", last?.utm_term ?? null);
   pushAttr("Publicité", last?.utm_content ?? null);
 
-  const crmUrl = buyerCrmDeepLink(crmBaseUrl, propertyId, interestId);
+  const crmUrl = buyerCrmDeepLink(crmBaseUrl, propertyId, interestId, buyerProfileId);
 
   const blocks: unknown[] = [
     {
@@ -183,7 +198,7 @@ export function buildBuyerSlackMessage(input: BuyerNotificationInput): BuyerSlac
     elements: [
       {
         type: "button",
-        text: { type: "plain_text", text: "Ouvrir l’intérêt dans Prodigio OS", emoji: false },
+        text: { type: "plain_text", text: "Ouvrir le dossier acquéreur", emoji: false },
         url: crmUrl,
         style: "primary",
       },

@@ -62,6 +62,7 @@ function input() {
     interestId: "int-abc",
     propertyId: "prop-xyz",
     propertyName: "Villa Belvédère",
+    buyerProfileId: "bp-1",
     crmBaseUrl: "https://go.prodigio.fr",
     receivedAt: new Date("2026-08-02T10:05:00.000Z"),
   };
@@ -78,10 +79,20 @@ describe("buildBuyerSlackMessage", () => {
     expect(s).toContain("Résidence principale");
   });
 
-  it("porte un lien profond vers l'intérêt dans Prodigio OS", () => {
+  it("porte un lien profond vers la FICHE ACQUÉREUR exacte", () => {
     const msg = buildBuyerSlackMessage(input());
     const s = JSON.stringify(msg);
+    // Cible opérationnelle attendue : le dossier acquéreur consolidé.
+    expect(s).toContain("https://go.prodigio.fr/crm/acquereurs/bp-1");
+    expect(s).not.toContain("/crm/biens/prop-xyz?interet=int-abc");
+  });
+
+  it("retombe sur la réception du bien si aucun dossier n'est résolu", () => {
+    const msg = buildBuyerSlackMessage({ ...input(), buyerProfileId: null });
+    const s = JSON.stringify(msg);
+    // Jamais de lien mort : on garde une cible exacte et existante.
     expect(s).toContain("/crm/biens/prop-xyz?interet=int-abc");
+    expect(s).not.toContain("/crm/acquereurs/");
   });
 
   it("n'expose JAMAIS le user agent, fbclid, ni le JSON brut", () => {

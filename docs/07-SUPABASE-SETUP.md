@@ -624,3 +624,116 @@ aucune valeur inventée). Manipulation manuelle unique restante : voir
 **Données préservées.** Le compte administrateur réel (`agence@indescale.com`) et
 l'unique dossier propriétaire réel sont **intacts** ; **aucune** donnée de test
 persistée.
+
+---
+
+## 12. CRM Acquéreurs V1 — migration **APPLIQUÉE**
+
+| Fichier | Rôle |
+|---|---|
+| `20260803120000_buyers_crm_v1.sql` | Dossiers acquéreurs consolidés : `buyer_profiles`, `buyer_search_criteria`, `buyer_assignments` ; élargissement de `tasks`/`activities` ; RLS dédiée ; 17 fonctions `SECURITY DEFINER` ; matching versionné ; `submit_buyer_interest` étendu (retour `buyer_profile_id`) |
+
+**Appliquée une seule fois** sur `wmhrpweefutwldbhllhg` via `apply_migration` :
+nom `buyers_crm_v1`, version distante `20260816172831`, **1 occurrence**
+(total : 14 migrations). **Aucune migration historique rejouée.**
+
+**Strictement additive.** Aucune table, colonne ou donnée supprimée. Seules
+modifications d'objets existants (toutes des élargissements) :
+
+- `tasks.opportunity_id` / `activities.opportunity_id` deviennent **nullable**,
+  avec `buyer_profile_id` et une contrainte « exactement un rattachement ».
+  Toutes les lignes existantes portent `opportunity_id` : **aucune donnée
+  invalidée** (vérifié : 10 activités et 0 tâche préexistantes intactes).
+- Contraintes `audit_events` **étendues** (sur-ensemble strict).
+- `buyer_interests` reçoit `buyer_profile_id`.
+- Politiques RLS `tasks`/`activities` réécrites en **préservant à l'identique**
+  la branche mandat (empreinte `aea0beab…` inchangée avant/après).
+- `submit_buyer_interest` remplacée : comportement public inchangé, ajout du
+  rattachement au dossier et du champ serveur `buyer_profile_id`.
+
+### Baseline avant application (agrégats, aucune PII)
+
+`contacts` 2 · `privacy_records` 2 · `audit_events` 60 · `opportunities` 2 ·
+`funnel_submissions` 2 · `estimation_appointments` 7 · `activities` 10 ·
+`tasks` 0 · `properties` 0 · `buyer_interests` 0. Backfill = **no-op**.
+
+> ⚠️ **Correction d'un rapport antérieur.** Une note de session avait indiqué que
+> « toutes les tables sont vides ». C'était **faux** : cette affirmation reposait
+> sur les statistiques du planificateur renvoyées par `list_tables`
+> (`reltuples`), non sur un `COUNT(*)`. La base distante **contient des données
+> réelles** (voir baseline ci-dessus). Seules les **nouvelles** tables du CRM
+> Acquéreurs étaient — et sont — vides.
+
+### Contrôles post-application
+
+`anon`/`PUBLIC` sans `EXECUTE` sur les **17** fonctions · **0** privilège table
+direct · RLS active sur les 6 tables · `search_path` figé **17/17** · trigger
+`audit_events_immutable` présent · `buyer_profiles_contact_unique` présente ·
+`tasks_owner_exactly_one` + `activities_owner_exactly_one` présentes ·
+`submit_mandate_funnel` et `submit_buyer_interest` toujours ouverts à `anon` ·
+advisors Supabase : **0 ERROR**, uniquement des `WARN` attendus.
+
+Recette contrôlée sur données fictives en transaction annulée, et **retour à la
+baseline vérifié** : voir [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md) §9.
+
+### Écarts constatés
+
+1. **Commentaires non transmis** dans le corps déployé de 9 fonctions
+   (condensés lors de la composition de l'appel d'application). Sémantiques
+   **prouvées identiques** — empreintes égales après retrait des commentaires
+   des deux côtés. Le fichier versionné reste la référence.
+2. **Dérive préexistante** : `crm_buyer_interest_set_status` (migration
+   `20260802…`) affiche `'interet introuvable'` au lieu de
+   `'intérêt introuvable'`. Cosmétique, antérieure à cette PR, non corrigée
+   (corriger = rejouer une migration historique).
+3. **Observation préexistante** : `crm_can_decide` et
+   `crm_can_report_estimation` restent exécutables par `anon` (héritage
+   `estimation_to_mandate_v1`) ; elles ne renvoient qu'un booléen `false` pour
+   `anon`. Aucune fonction du CRM Acquéreurs n'est concernée.
+
+Détail fonctionnel : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md).
+
+---
+
+## 13. CRM Acquéreurs — durcissement de la surface EXECUTE (APPLIQUÉ)
+
+| Fichier | Rôle |
+|---|---|
+| `20260817120000_buyers_crm_restrict_internal_execute.sql` | Retire `EXECUTE` à `public`/`anon`/`authenticated` sur les trois **helpers internes** du CRM Acquéreurs |
+
+**Appliquée une seule fois** sur `wmhrpweefutwldbhllhg` : nom
+`buyers_crm_restrict_internal_execute`, version distante `20260817181644`,
+**1 occurrence** (total : 15 migrations). **Aucune migration précédente
+rejouée**, `20260803120000_buyers_crm_v1.sql` **non modifiée**, aucune donnée
+métier touchée.
+
+Fonctions durcies : `buyer_attach_interest(uuid)`, `buyer_band_bounds(text)`,
+`crm_buyer_can_operate(uuid)`.
+
+| Fonction | `anon` avant → après | `authenticated` avant → après | `service_role` |
+|---|:--:|:--:|:--:|
+| `buyer_attach_interest` | false → false | **true → false** | true (conservé) |
+| `buyer_band_bounds` | false → false | **true → false** | true (conservé) |
+| `crm_buyer_can_operate` | false → false | **true → false** | true (conservé) |
+| `crm_buyer_profile_access` | false → false | true → **true** (requis par RLS) | true |
+| `submit_buyer_interest` | true → **true** | true → true | true |
+
+Les 13 actions CRM restent exécutables par `authenticated` (13/13).
+
+**Motif.** `buyer_attach_interest` était exposée via les `ALTER DEFAULT
+PRIVILEGES` de Supabase (la révocation d'origine ne portait que sur
+`public, anon`) ; les deux autres via un `grant` explicite inutile. Ce sont des
+helpers internes avec effets de bord, appelés uniquement depuis des fonctions
+`SECURITY DEFINER`.
+
+**`crm_buyer_profile_access` volontairement préservée** : seul helper invoqué
+directement par les politiques RLS, dont l'expression est évaluée avec les
+privilèges du rôle appelant. Un test contrefactuel confirme que la révoquer
+casserait la lecture autorisée.
+
+**Convention retenue pour les migrations futures** : `REVOKE ALL` (`public`,
+`anon`, `authenticated`) puis `GRANT EXECUTE` explicite aux seuls rôles
+nécessaires. Les `ALTER DEFAULT PRIVILEGES` du projet ne sont pas modifiés.
+
+Preuves et non-régression : voir
+[20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md) § surface EXECUTE.
