@@ -118,6 +118,35 @@ const envSchema = z.object({
   // Google Calendar est désactivée proprement (jamais de jeton en clair). Voir
   // `isCalendarEncryptionConfigured` et `src/modules/calendar/google/crypto.ts`.
   CALENDAR_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
+
+  // --- Communications : fournisseur E-MAIL (Lumail) ---------------------------
+  // Jeton d'API Lumail (`lum_…`). STRICTEMENT serveur :
+  //   - JAMAIS préfixé `NEXT_PUBLIC_` ; JAMAIS renvoyé au client ; JAMAIS journalisé.
+  // Absent ⇒ le transport e-mail est « non configuré » : aucun appel réseau n'est
+  // tenté et l'interface l'indique explicitement (voir `isLumailConfigured`).
+  LUMAIL_API_KEY: z.string().min(1).optional(),
+  // Adresse expéditrice. Son DOMAINE doit être vérifié côté Lumail, sans quoi
+  // l'API refuse l'envoi (erreur normalisée `domaine_non_verifie`).
+  LUMAIL_FROM_EMAIL: z.string().min(1).optional(),
+  // Adresse de réponse (facultative). Sert à diriger les réponses vers une boîte
+  // réellement relevée plutôt que vers l'expéditeur technique.
+  LUMAIL_REPLY_TO: z.string().min(1).optional(),
+
+  // --- Communications : fournisseur SMS (Twilio) ------------------------------
+  // PRÉPARÉ, non activé en V1. Mêmes règles : strictement serveur, jamais
+  // journalisé, jamais dans le bundle. Absent ⇒ transport SMS désactivé.
+  TWILIO_ACCOUNT_SID: z.string().min(1).optional(),
+  TWILIO_AUTH_TOKEN: z.string().min(1).optional(),
+  // Numéro émetteur E.164 (`+33…`) OU identifiant de Messaging Service (`MG…`).
+  TWILIO_FROM: z.string().min(1).optional(),
+
+  // --- Communications : interrupteur d'ENVOI RÉEL -----------------------------
+  // Interrupteur explicite. Tant qu'il ne vaut pas exactement « true », le
+  // dispatcher fonctionne en SIMULATION : la politique est appliquée, les
+  // messages sont préparés et tracés, mais AUCUN appel fournisseur n'est émis.
+  // Volontairement distinct de la présence des clés : disposer d'une clé ne doit
+  // jamais suffire à déclencher un envoi réel.
+  COMMUNICATIONS_DISPATCH_ENABLED: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -361,6 +390,51 @@ export function isCalendarEncryptionConfigured(
   } catch {
     return false;
   }
+}
+
+/**
+ * Indique si le transport e-mail Lumail est configuré : jeton **et** adresse
+ * expéditrice présents. Ne révèle jamais la valeur — ne lit qu'une présence.
+ * Absent ⇒ transport désactivé proprement, aucun appel réseau tenté.
+ */
+export function isLumailConfigured(
+  source: Pick<Env, "LUMAIL_API_KEY" | "LUMAIL_FROM_EMAIL"> = env,
+): boolean {
+  return (
+    typeof source.LUMAIL_API_KEY === "string" &&
+    source.LUMAIL_API_KEY.trim().length > 0 &&
+    typeof source.LUMAIL_FROM_EMAIL === "string" &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(source.LUMAIL_FROM_EMAIL.trim())
+  );
+}
+
+/**
+ * Indique si le transport SMS Twilio est configuré (identifiant de compte, jeton
+ * et expéditeur). Ne révèle jamais les valeurs. Absent ⇒ SMS désactivé.
+ */
+export function isTwilioConfigured(
+  source: Pick<Env, "TWILIO_ACCOUNT_SID" | "TWILIO_AUTH_TOKEN" | "TWILIO_FROM"> = env,
+): boolean {
+  return (
+    typeof source.TWILIO_ACCOUNT_SID === "string" &&
+    source.TWILIO_ACCOUNT_SID.trim().length > 0 &&
+    typeof source.TWILIO_AUTH_TOKEN === "string" &&
+    source.TWILIO_AUTH_TOKEN.trim().length > 0 &&
+    typeof source.TWILIO_FROM === "string" &&
+    source.TWILIO_FROM.trim().length > 0
+  );
+}
+
+/**
+ * Vrai UNIQUEMENT si l'envoi réel a été explicitement activé. Toute autre valeur
+ * (absente, vide, « 1 », « yes », « TRUE ») laisse le système en SIMULATION.
+ * La comparaison est volontairement stricte : un envoi réel ne doit jamais
+ * résulter d'une valeur ambiguë.
+ */
+export function isCommunicationDispatchEnabled(
+  source: Pick<Env, "COMMUNICATIONS_DISPATCH_ENABLED"> = env,
+): boolean {
+  return source.COMMUNICATIONS_DISPATCH_ENABLED === "true";
 }
 
 /**

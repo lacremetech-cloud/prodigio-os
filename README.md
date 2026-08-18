@@ -191,10 +191,19 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   étapes protégées, boîte de réception, fiche consolidée, fondation de matching
   biens ↔ acquéreurs déterministe et explicable, permissions et RLS dédiées.
   **Migration appliquée** (version distante `20260816172831`) — voir docs/07 §12.
+- [docs/21-COMMUNICATIONS.md](docs/21-COMMUNICATIONS.md) — Centre de
+  communications V1 : couche d'envoi **indépendante des fournisseurs** (Lumail,
+  Twilio), modèle d'outbox idempotent, modèles versionnés, politique
+  d'éligibilité faisant autorité côté serveur, oppositions centralisées,
+  fondation des automatisations. **Envoi désactivé** : aucun e-mail, aucun SMS
+  n'est émis, aucun contact n'est importé, la base légale reste à valider.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
   Décision de fondation technique (acceptée pour le MVP, réévaluable).
+- [docs/adr/002-COMMUNICATIONS-LAYER.md](docs/adr/002-COMMUNICATIONS-LAYER.md) —
+  Décision d'architecture de la couche Communications (acceptée pour la V1,
+  réévaluable).
 
 Le MVP couvre une **tranche verticale Mandats jusqu'au résultat du mandat**
 (signé, refusé ou perdu) — voir [docs/02-MVP-SCOPE.md](docs/02-MVP-SCOPE.md).

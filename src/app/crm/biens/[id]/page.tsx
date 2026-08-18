@@ -17,6 +17,8 @@ import {
 } from "@/components/crm/property/public-experience";
 import { BuyerInterestsPanel } from "@/components/crm/property/buyer-interests";
 import { PropertyBuyersPanel } from "@/components/crm/buyers/property-buyers";
+import { getMessagesForEntity } from "@/modules/communications/queries";
+import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { buildPropertyTimeline } from "@/modules/properties/factory/timeline";
 import { propertyStatusLabels, propertyStatusVisual } from "@/modules/properties/factory/labels";
 import { createPropertyAssetSignedUrl } from "@/modules/properties/factory/storage";
@@ -71,11 +73,13 @@ export default async function PropertyCockpitPage({
   const canOperateRole = canOperate(session.roles);
   const canViewContacts = canViewContactDetails(session.roles);
 
-  const [publicExperience, buyerInterests, propertyBuyers] = await Promise.all([
+  const [publicExperience, buyerInterests, propertyBuyers, communications] = await Promise.all([
     getPublicExperience(id),
     listBuyerInterests(id),
     // Même donnée, autre vue : les dossiers acquéreurs filtrés sur ce bien.
     listBuyersForProperty(id, canViewContacts),
+    // Communications rattachées à ce bien (le rattachement existe : `property_id`).
+    getMessagesForEntity("property", id, { canViewDetails: canViewContacts }),
   ]);
   const publicHref =
     publicExperience.config?.publication_status === "publie" && publicExperience.config?.slug
@@ -251,6 +255,16 @@ export default async function PropertyCockpitPage({
               canOperate={canOperateRole}
               canViewContacts={canViewContacts}
               highlightId={highlightInterest}
+            />
+          </Section>
+
+          <Section
+            title="Communications"
+            subtitle="Messages adressés aux contacts au sujet de ce bien. Distincts des activités commerciales."
+          >
+            <EntityCommunications
+              items={communications}
+              emptyHint="Aucun message n'a encore été préparé au sujet de ce bien."
             />
           </Section>
 

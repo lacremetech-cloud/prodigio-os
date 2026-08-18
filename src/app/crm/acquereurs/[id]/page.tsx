@@ -36,6 +36,8 @@ import { activityOutcomeLabels, activityTypeLabels } from "@/modules/crm/labels"
 import { formatDateTime, timeSince } from "@/modules/crm/format";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { Chip, ScoreMeter, SectionTitle } from "@/components/crm/ui";
+import { getMessagesForEntity } from "@/modules/communications/queries";
+import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { CopyableValue } from "@/components/crm/copyable";
 import {
   BuyerActivityForm,
@@ -85,6 +87,9 @@ export default async function BuyerProfilePage({
   if (!detail) notFound();
 
   const matches = await getBuyerMatches(id, 8);
+  const communications = await getMessagesForEntity("buyer_profile", id, {
+    canViewDetails: canViewContacts,
+  });
   const { profile, criteria, interests, assignees, tasks, activities, auditEvents, members } =
     detail;
 
@@ -425,6 +430,15 @@ export default async function BuyerProfilePage({
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* Communications adressées à cette personne */}
+          <section className="crm-panel p-4">
+            <SectionTitle eyebrow="Communications" title="Messages envoyés à cette personne" />
+            <EntityCommunications
+              items={communications}
+              emptyHint="Aucun message n'a encore été préparé pour ce dossier acquéreur."
+            />
           </section>
 
           {/* Historique audité */}

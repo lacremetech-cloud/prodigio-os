@@ -10,6 +10,9 @@ import {
   isTurnstileProductionSafe,
   isTurnstileTestSecretKey,
   isTurnstileTestSiteKey,
+  isCommunicationDispatchEnabled,
+  isLumailConfigured,
+  isTwilioConfigured,
   parseEnv,
   safeInternalPath,
 } from "./env";
@@ -254,5 +257,55 @@ describe("redirections sûres", () => {
       "https://x.fr",
     );
     expect(canonicalSiteUrl({ NODE_ENV: "production" } as never)).toBe("https://go.prodigio.fr");
+  });
+});
+
+describe("communications — configuration des fournisseurs", () => {
+  it("isLumailConfigured exige un jeton ET une adresse expéditrice valide", () => {
+    expect(isLumailConfigured({} as never)).toBe(false);
+    expect(isLumailConfigured({ LUMAIL_API_KEY: "lum_x" } as never)).toBe(false);
+    expect(
+      isLumailConfigured({ LUMAIL_API_KEY: "lum_x", LUMAIL_FROM_EMAIL: "pas-une-adresse" }),
+    ).toBe(false);
+    expect(
+      isLumailConfigured({ LUMAIL_API_KEY: "lum_x", LUMAIL_FROM_EMAIL: "envoi@exemple.invalid" }),
+    ).toBe(true);
+  });
+
+  it("isTwilioConfigured exige les trois variables", () => {
+    expect(isTwilioConfigured({} as never)).toBe(false);
+    expect(
+      isTwilioConfigured({ TWILIO_ACCOUNT_SID: "AC", TWILIO_AUTH_TOKEN: "t" } as never),
+    ).toBe(false);
+    expect(
+      isTwilioConfigured({
+        TWILIO_ACCOUNT_SID: "AC",
+        TWILIO_AUTH_TOKEN: "t",
+        TWILIO_FROM: "+33600000000",
+      }),
+    ).toBe(true);
+  });
+
+  it("l'envoi réel exige la valeur EXACTE « true » : aucune valeur ambiguë ne l'active", () => {
+    for (const value of [undefined, "", "1", "yes", "TRUE", "True", "false", "oui"]) {
+      expect(
+        isCommunicationDispatchEnabled({ COMMUNICATIONS_DISPATCH_ENABLED: value }),
+        `« ${String(value)} » ne doit pas activer l'envoi`,
+      ).toBe(false);
+    }
+    expect(isCommunicationDispatchEnabled({ COMMUNICATIONS_DISPATCH_ENABLED: "true" })).toBe(true);
+  });
+
+  it("aucune variable de communication n'est préfixée NEXT_PUBLIC_ (jamais dans le bundle)", () => {
+    // Un préfixe NEXT_PUBLIC_ exposerait le secret au navigateur.
+    const parsed = parseEnv({
+      LUMAIL_API_KEY: "lum_secret",
+      TWILIO_AUTH_TOKEN: "tok_secret",
+    });
+    for (const key of Object.keys(parsed)) {
+      if (/^(LUMAIL_|TWILIO_|COMMUNICATIONS_)/.test(key)) {
+        expect(key.startsWith("NEXT_PUBLIC_"), `${key} ne doit jamais être public`).toBe(false);
+      }
+    }
   });
 });
