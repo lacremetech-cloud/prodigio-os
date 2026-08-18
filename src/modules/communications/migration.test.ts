@@ -104,6 +104,14 @@ function lastPrivilege(fn: string, role: "anon" | "authenticated"): boolean {
   return granted;
 }
 
+/** Corps EXACT d'une fonction, borné à la fin réelle de sa définition. */
+function functionBody(name: string): string {
+  const start = SQL_LOWER.indexOf(`create or replace function public.${name}`);
+  if (start === -1) return "";
+  const end = SQL_LOWER.indexOf("$$;", start);
+  return SQL_LOWER.slice(start, end === -1 ? undefined : end);
+}
+
 describe("migration Communications — présence et caractère additif", () => {
   it("est versionnée dans supabase/migrations", () => {
     expect(readdirSync(MIGRATIONS_DIR)).toContain(FILE);
@@ -257,6 +265,32 @@ describe("migration Communications — garanties métier", () => {
   it("exige un motif pour tout événement ignoré (aucune perte silencieuse)", () => {
     expect(SQL_LOWER).toContain("communication_outbox_skip_reason_required");
     expect(SQL_LOWER).toContain("communication_messages_blocked_consistency");
+  });
+
+  it("un envoi accepté produit `en_file_fournisseur`, JAMAIS `livre`", () => {
+    // Un HTTP 200 de Lumail ne prouve que la mise en file : le système ne doit
+    // jamais affirmer une livraison qu'il ne peut pas établir.
+    expect(SQL_LOWER).toContain("'en_file_fournisseur'");
+    expect(SQL_LOWER.includes("'envoye'"), "le statut ambigu `envoye` ne doit plus exister").toBe(
+      false,
+    );
+    // `crm_comm_record_send` n'accepte que la mise en file ou l'échec.
+    const recordSend = functionBody("crm_comm_record_send");
+    expect(recordSend).toContain("p_status not in ('en_file_fournisseur', 'echec')");
+    // `livre` n'apparaît que dans la garde anti-double-envoi (lecture de l'état
+    // courant) : il n'est JAMAIS assigné ici.
+    expect(recordSend).toContain("if v_old in ('en_file_fournisseur', 'livre') then");
+    expect(
+      /status\s*=\s*'livre'/.test(recordSend),
+      "record_send ne doit jamais AFFECTER `livre`",
+    ).toBe(false);
+  });
+
+  it("le passage à `livre` exige une preuve de livraison du fournisseur", () => {
+    const reconcile = functionBody("crm_comm_reconcile_status");
+    expect(reconcile).toContain("p_status = 'livre'");
+    expect(reconcile).toContain("p_provider_status is null");
+    expect(reconcile).toContain("preuve de livraison");
   });
 
   it("refuse le marketing tant que la base légale n'est pas tranchée", () => {

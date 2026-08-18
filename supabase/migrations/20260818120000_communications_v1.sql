@@ -200,7 +200,7 @@ create table if not exists public.communication_messages (
   template_version      integer,
 
   status                text not null default 'planifie'
-                          check (status in ('planifie', 'en_attente', 'envoye',
+                          check (status in ('planifie', 'en_attente', 'en_file_fournisseur',
                                             'livre', 'echec', 'bloque', 'annule')),
 
   -- Traces fournisseur : jamais des clés métier. Remplaçables sans perte.
@@ -245,7 +245,7 @@ create table if not exists public.communication_messages (
   constraint communication_messages_idempotency_unique unique (idempotency_key),
   -- Un message envoyé porte forcément une date d'envoi.
   constraint communication_messages_sent_consistency
-    check (status <> 'envoye' or sent_at is not null),
+    check (status <> 'en_file_fournisseur' or sent_at is not null),
   -- Un message bloqué porte forcément un motif de politique.
   constraint communication_messages_blocked_consistency
     check (status <> 'bloque' or blocked_reason is not null)
@@ -253,6 +253,10 @@ create table if not exists public.communication_messages (
 
 comment on table public.communication_messages is
   'Historique d''un message adressé à un CONTACT : à qui, pourquoi, quand, par quel canal, livré ou échoué, ou bloqué par la politique. Distinct d''une `activity` (interaction commerciale humaine) et d''un `audit_event` (trace technique). Ne duplique aucune coordonnée : le destinataire est le contact.';
+comment on column public.communication_messages.status is
+  'Cycle de vie du message. `en_file_fournisseur` = le fournisseur a ACCEPTÉ et MIS EN FILE le message (une réponse HTTP 200 ne prouve rien de plus) ; la livraison n''est PAS confirmée. `livre` n''est atteignable que via crm_comm_reconcile_status avec une preuve de livraison du fournisseur.';
+comment on column public.communication_messages.provider_status is
+  'Statut brut rapporté par le fournisseur (ex. « queued »). Sert de PREUVE lors du rapprochement : sans lui, le passage à `livre` est refusé.';
 comment on column public.communication_messages.idempotency_key is
   'Clé d''idempotence SANS PII (identifiants techniques + canal). Un rejeu du même événement métier ne peut pas créer un second message.';
 comment on column public.communication_messages.rendered_body is
@@ -1368,13 +1372,13 @@ begin
   if not public.comm_can_manage() then
     raise exception 'droits insuffisants sur la file de communications' using errcode = '42501';
   end if;
-  if p_status not in ('envoye', 'echec') then
+  if p_status not in ('en_file_fournisseur', 'echec') then
     raise exception 'statut d''envoi inconnu' using errcode = '22023';
   end if;
 
   select status into v_old from public.communication_messages where id = p_message_id;
   if v_old is null then raise exception 'message introuvable' using errcode = '22023'; end if;
-  if v_old in ('envoye', 'livre') then
+  if v_old in ('en_file_fournisseur', 'livre') then
     -- Anti-double envoi : un message déjà parti n'est jamais réécrit.
     return jsonb_build_object('ok', true, 'unchanged', true, 'status', v_old);
   end if;
@@ -1387,7 +1391,7 @@ begin
   set status = p_status,
       provider = p_provider,
       provider_message_id = p_provider_message_id,
-      sent_at = case when p_status = 'envoye' then now() else sent_at end,
+      sent_at = case when p_status = 'en_file_fournisseur' then now() else sent_at end,
       failed_at = case when p_status = 'echec' then now() else failed_at end,
       error_code = p_error_code,
       error_detail = p_error_detail,
@@ -1399,7 +1403,7 @@ begin
   -- L'audit ne contient JAMAIS le contenu ni une coordonnée.
   insert into public.audit_events (actor_user_id, entity_type, entity_id, event_type, old_value, new_value)
   values (v_uid, 'communication_message', p_message_id,
-          case when p_status = 'envoye' then 'communication_envoyee' else 'communication_echec' end,
+          case when p_status = 'en_file_fournisseur' then 'communication_envoyee' else 'communication_echec' end,
           jsonb_build_object('status', v_old),
           jsonb_build_object('status', p_status, 'provider', p_provider, 'error_code', p_error_code));
 
@@ -1425,10 +1429,20 @@ begin
   if p_status not in ('livre', 'echec') then
     raise exception 'statut de livraison inconnu' using errcode = '22023';
   end if;
+  -- Une RÉPONSE 200 du fournisseur ne prouve QUE la mise en file. Le passage à
+  -- `livre` exige donc une PREUVE de livraison réellement disponible (statut
+  -- rapporté par le fournisseur : webhook, sondage ou console). Sans preuve, le
+  -- message reste `en_file_fournisseur` : le système n'affirme jamais une
+  -- livraison qu'il ne peut pas établir.
+  if p_status = 'livre'
+     and (p_provider_status is null or length(trim(p_provider_status)) = 0) then
+    raise exception 'une preuve de livraison du fournisseur est requise pour passer a livre'
+      using errcode = '22023';
+  end if;
 
   select status into v_old from public.communication_messages where id = p_message_id;
   if v_old is null then raise exception 'message introuvable' using errcode = '22023'; end if;
-  if v_old not in ('envoye', 'livre', 'echec') then
+  if v_old not in ('en_file_fournisseur', 'livre', 'echec') then
     raise exception 'ce message n''a pas encore été envoyé' using errcode = '22023';
   end if;
 
@@ -1465,7 +1479,7 @@ begin
 
   select status into v_old from public.communication_messages where id = p_message_id;
   if v_old is null then raise exception 'message introuvable' using errcode = '22023'; end if;
-  if v_old in ('envoye', 'livre') then
+  if v_old in ('en_file_fournisseur', 'livre') then
     raise exception 'un message déjà envoyé ne peut plus être annulé' using errcode = '22023';
   end if;
 

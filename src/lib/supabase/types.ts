@@ -1040,7 +1040,7 @@ export type CommunicationTemplateRow = {
 export type CommunicationMessageStatus =
   | "planifie"
   | "en_attente"
-  | "envoye"
+  | "en_file_fournisseur"
   | "livre"
   | "echec"
   | "bloque"

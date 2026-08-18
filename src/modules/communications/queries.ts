@@ -35,7 +35,7 @@ export interface MessageListItem {
 export interface CommunicationCounts {
   total: number;
   enAttente: number;
-  envoyes: number;
+  enFile: number;
   livres: number;
   echecs: number;
   bloques: number;
@@ -163,7 +163,7 @@ export async function getCommunicationsOverview(
     counts: {
       total: messages.length,
       enAttente: messages.filter((m) => m.status === "en_attente" || m.status === "planifie").length,
-      envoyes: messages.filter((m) => m.status === "envoye").length,
+      enFile: messages.filter((m) => m.status === "en_file_fournisseur").length,
       livres: messages.filter((m) => m.status === "livre").length,
       echecs: messages.filter((m) => m.status === "echec").length,
       bloques: messages.filter((m) => m.status === "bloque").length,

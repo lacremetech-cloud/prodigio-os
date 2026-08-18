@@ -33,7 +33,7 @@ export const categoryHints: Record<Category, string> = {
 export const messageStatusLabels: Record<MessageStatus, string> = {
   planifie: "Planifié",
   en_attente: "En attente d'envoi",
-  envoye: "Envoyé",
+  en_file_fournisseur: "En file chez le fournisseur",
   livre: "Livré",
   echec: "Échec",
   bloque: "Bloqué",
@@ -102,7 +102,7 @@ export function messageStatusVisual(status: MessageStatus): { cssVar: string; ic
   switch (status) {
     case "livre":
       return { cssVar: "--crm-st-signe", icon: "✓" };
-    case "envoye":
+    case "en_file_fournisseur":
       return { cssVar: "--crm-st-nouveau", icon: "→" };
     case "en_attente":
     case "planifie":

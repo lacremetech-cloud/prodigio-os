@@ -28,7 +28,7 @@ export type Category = (typeof CATEGORIES)[number];
 export const MESSAGE_STATUSES = [
   "planifie",
   "en_attente",
-  "envoye",
+  "en_file_fournisseur",
   "livre",
   "echec",
   "bloque",

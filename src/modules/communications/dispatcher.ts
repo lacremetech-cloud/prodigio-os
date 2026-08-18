@@ -41,7 +41,7 @@ export interface DispatcherDeps {
 export interface DispatchOutcome {
   outboxId: string;
   messageId: string | null;
-  result: "envoye" | "bloque" | "echec" | "simule" | "doublon" | "ignore";
+  result: "en_file_fournisseur" | "bloque" | "echec" | "simule" | "doublon" | "ignore";
   reason?: string | null;
   errorCode?: ErrorCode | null;
 }
@@ -88,7 +88,7 @@ export async function dispatchPending(
 
   console.info(LOG_EVENT, {
     claimed: claimed.length,
-    sent: outcomes.filter((o) => o.result === "envoye").length,
+    queued: outcomes.filter((o) => o.result === "en_file_fournisseur").length,
     simulated: outcomes.filter((o) => o.result === "simule").length,
     blocked: outcomes.filter((o) => o.result === "bloque").length,
     failed: outcomes.filter((o) => o.result === "echec").length,
@@ -177,13 +177,13 @@ async function processOne(deps: DispatcherDeps, row: ClaimedRow): Promise<Dispat
   if (sent.ok) {
     await deps.supabase.rpc("crm_comm_record_send", {
       p_message_id: messageId,
-      p_status: "envoye",
+      p_status: "en_file_fournisseur",
       p_provider: provider,
       p_provider_message_id: sent.providerMessageId,
       p_rendered_subject: rendered.subject,
       p_rendered_body: rendered.body,
     });
-    return { outboxId: row.id, messageId, result: "envoye" };
+    return { outboxId: row.id, messageId, result: "en_file_fournisseur" };
   }
 
   await deps.supabase.rpc("crm_comm_record_send", {

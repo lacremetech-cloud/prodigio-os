@@ -144,7 +144,7 @@ export default async function CommunicationsPage({
           [
             ["Total", overview.counts.total],
             ["En attente", overview.counts.enAttente],
-            ["Envoyés", overview.counts.envoyes],
+            ["En file", overview.counts.enFile],
             ["Livrés", overview.counts.livres],
             ["Échecs", overview.counts.echecs],
             ["Bloqués", overview.counts.bloques],

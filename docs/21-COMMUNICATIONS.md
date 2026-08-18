@@ -51,6 +51,7 @@ que l'événement métier. Conséquences :
 |---|---|
 | **Double clic → un seul message** | Réservation atomique `for update skip locked` + verrou UI |
 | **Rejeu d'événement → aucun doublon** | `communication_outbox.event_key` unique + `communication_messages.idempotency_key` unique |
+| **Aucune livraison affirmée à tort** | `crm_comm_record_send` n'accepte que `en_file_fournisseur` ou `echec` ; `livre` exige une preuve fournisseur |
 | **Panne fournisseur → dossier valide** | L'outbox est écrite en base ; l'échec d'envoi n'annule rien |
 | **Retries bornés** | `attempt_count < max_attempts` (max 10), une tentative par passage |
 | **Aucune boucle infinie** | Pas de réessai automatique récursif ; le compteur est la borne |

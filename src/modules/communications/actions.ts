@@ -298,11 +298,11 @@ export async function processOutboxAction(input: unknown): Promise<ActionResult>
     revalidate();
     const simulated = report.outcomes.filter((o) => o.result === "simule").length;
     const blocked = report.outcomes.filter((o) => o.result === "bloque").length;
-    const sent = report.outcomes.filter((o) => o.result === "envoye").length;
+    const queued = report.outcomes.filter((o) => o.result === "en_file_fournisseur").length;
 
     return {
       ok: true,
-      info: `${report.claimed} événement(s) traité(s) — ${sent} envoyé(s), ${simulated} simulé(s), ${blocked} bloqué(s).`,
+      info: `${report.claimed} événement(s) traité(s) — ${queued} mis en file chez le fournisseur (livraison non confirmée), ${simulated} simulé(s), ${blocked} bloqué(s).`,
     };
   } catch {
     return { ok: false, error: "Traitement de la file impossible." };

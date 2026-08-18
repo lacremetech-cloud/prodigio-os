@@ -202,7 +202,11 @@ démontrable ; une panne fournisseur n'altère aucun dossier.
 **Négatives assumées** — un `dispatcher` doit être déclenché (aucun cron n'est
 créé dans cette V1 : le déclenchement reste manuel/serveur, documenté) ; le
 rapprochement des statuts est **par sondage** tant qu'aucun webhook signé n'est
-disponible côté Lumail.
+disponible côté Lumail. En conséquence, la plupart des messages resteront
+durablement en **`en_file_fournisseur`** : c'est volontaire. Une réponse HTTP 200
+n'accuse qu'une **mise en file**, et le système refuse d'afficher `livre` sans
+preuve fournisseur — mieux vaut un statut honnêtement incertain qu'une livraison
+affirmée à tort.
 
 **Risque documenté** — `POST /api/v1/emails` de Lumail **crée le destinataire
 comme « subscriber »** s'il n'existe pas. Envoyer un transactionnel a donc un

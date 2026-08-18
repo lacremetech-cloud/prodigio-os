@@ -155,13 +155,32 @@ describe("dispatchPending — envoi activé", () => {
       dispatchEnabled: true,
     });
 
-    expect(report.outcomes[0]?.result).toBe("envoye");
+    expect(report.outcomes[0]?.result).toBe("en_file_fournisseur");
     expect(sent).toEqual(["email:claire@exemple.invalid"]);
 
     const record = rpcCalls.find((c) => c.fn === "crm_comm_record_send");
-    expect(record?.args.p_status).toBe("envoye");
+    expect(record?.args.p_status).toBe("en_file_fournisseur");
     expect(record?.args.p_provider).toBe("lumail");
     expect(record?.args.p_provider_message_id).toBe("prov_1");
+  });
+
+  it("n'affirme JAMAIS une livraison : une réponse fournisseur réussie vaut mise en file", async () => {
+    const { client, rpcCalls } = fakeSupabase(READY_STATE);
+    const p = providers([]);
+    await dispatchPending({
+      supabase: client,
+      emailProvider: p.email,
+      smsProvider: p.sms,
+      dispatchEnabled: true,
+    });
+
+    const statuses = rpcCalls
+      .filter((c) => c.fn === "crm_comm_record_send")
+      .map((c) => c.args.p_status);
+    expect(statuses).toEqual(["en_file_fournisseur"]);
+    expect(statuses).not.toContain("livre");
+    // Le rapprochement de livraison n'est jamais déclenché par le dispatcher.
+    expect(rpcCalls.some((c) => c.fn === "crm_comm_reconcile_status")).toBe(false);
   });
 
   it("route un SMS vers l'adaptateur SMS, avec le téléphone", async () => {
