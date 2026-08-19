@@ -9,6 +9,19 @@
 
 Décision d'architecture : [adr/002-COMMUNICATIONS-LAYER.md](adr/002-COMMUNICATIONS-LAYER.md).
 
+> **Suite : le studio.** L'écran `/crm/communications` est devenu le **Studio
+> Communications & Workflows** (modèles, automatisations, simulateur,
+> oppositions, préparation à l'activation). Ce document décrit la **couche** ;
+> le studio est décrit dans
+> [22-COMMUNICATIONS-STUDIO.md](22-COMMUNICATIONS-STUDIO.md).
+>
+> Deux évolutions apportées par le studio touchent ce document : une
+> automatisation personnalisée **ne peut plus être activée** (le statut `actif`
+> est retiré du domaine, remplacé par un cycle brouillon → prêt pour revue →
+> suspendu → archivé), et les automatisations sont désormais gérées par
+> l'**administrateur ET le manager**, la levée d'opposition restant réservée à
+> l'administrateur.
+
 ---
 
 ## 1. Ce que fait cette tranche
@@ -184,8 +197,8 @@ Le CRM n'affiche jamais un code brut de fournisseur. Seuls `limite_debit`,
 
 | Rôle | Historique | Modèles | Oppositions | Automatisations | File |
 |---|---|---|---|---|---|
-| **administrateur** | ✅ tout | ✅ créer / activer | ✅ créer **et lever** | ✅ | ✅ |
-| **manager** | ✅ tout | ✅ créer / activer | ✅ créer | ⛔ lecture | ✅ |
+| **administrateur** | ✅ tout | ✅ créer / activer | ✅ créer **et lever** | ✅ brouillons | ✅ |
+| **manager** | ✅ tout | ✅ créer / activer | ✅ créer | ✅ brouillons | ✅ |
 | **setter** | ✅ dossiers accessibles | 👁 lecture | 👁 lecture | 👁 lecture | ✅ |
 | **agent immobilier** | ✅ **ses** dossiers, biens et RDV | 👁 lecture | 👁 lecture | ⛔ | ⛔ |
 | **partenaire_lecture** | ⛔ **aucun accès** | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -280,8 +293,11 @@ préexistantes strictement identiques avant/après.
 - Le rapprochement des statuts de livraison est **par sondage** : Lumail
   n'expose pas de webhook signé documenté.
 - Les automatisations disposent d'une **définition versionnée et d'un journal
-  d'exécution**, mais **aucun moteur d'exécution autonome** n'est activé.
-- Aucun **éditeur graphique** de workflows.
+  d'exécution**, mais **aucun moteur d'exécution autonome** n'est activé. Depuis
+  le studio, une automatisation personnalisée ne peut même plus être **activée** :
+  le statut `actif` est retiré du domaine par contrainte.
+- Aucun **éditeur graphique** de workflows : l'éditeur du studio est un
+  formulaire structuré.
 - Pas de gestion des rebonds en réception : les oppositions se saisissent à la
   main tant qu'aucun webhook n'est disponible.
 
@@ -291,7 +307,9 @@ préexistantes strictement identiques avant/après.
    désinscriptions alimenteraient automatiquement `communication_suppressions`.
 2. **Déclenchement planifié** de la file et des rappels.
 3. **Moteur d'automatisations** : évaluation des conditions et règles de sortie
-   déclaratives déjà modélisées, avec pause et annulation.
+   déclaratives déjà modélisées, avec pause et annulation. Sa mise en service
+   suppose de **rouvrir explicitement** le statut `actif` par une migration
+   dédiée, assortie des garde-fous décidés à ce moment-là.
 4. **SMS activé** une fois le cadre juridique tranché et Twilio configuré.
 5. **Assistance IA au brouillon** : proposition de contenu soumise à validation
    humaine — jamais d'envoi autonome.

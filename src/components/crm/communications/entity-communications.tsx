@@ -20,7 +20,20 @@ import type { MessageListItem } from "@/modules/communications/queries";
  * Server component pur : les coordonnées reçues sont **déjà masquées** selon le
  * rôle. Répond aux six questions attendues : quel message, à qui, pourquoi,
  * quand, par quel canal, et s'il a été livré, a échoué, ou est bloqué.
+ *
+ * ⚠️ Sémantique stricte : « mis en file » n'est ni « envoyé » ni « livré », et
+ * une livraison n'est affichée que si une PREUVE fournisseur est enregistrée.
+ * Aucun contenu brut, aucun jeton, aucune URL de webhook n'est exposé.
  */
+const dateFormat = new Intl.DateTimeFormat("fr-FR", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+function formatDate(value: string): string {
+  return dateFormat.format(new Date(value));
+}
+
 export function EntityCommunications({
   items,
   emptyHint,
@@ -90,15 +103,36 @@ export function EntityCommunications({
               </p>
             ) : null}
 
-            <p className="mt-1 text-[11px] text-[var(--crm-text-faint)]">
-              {new Intl.DateTimeFormat("fr-FR", {
-                dateStyle: "short",
-                timeStyle: "short",
-              }).format(new Date(message.sent_at ?? message.created_at))}
-              {message.template_key
-                ? ` · ${message.template_key}${message.template_version ? ` v${message.template_version}` : ""}`
-                : ""}
-            </p>
+            {/* Trois dates DISTINCTES : préparer, remettre au fournisseur et
+                livrer sont trois faits différents. Les confondre laisserait
+                croire à une livraison qui n'est pas établie. */}
+            <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-[var(--crm-text-faint)]">
+              <div className="flex gap-1">
+                <dt>Préparé :</dt>
+                <dd>{formatDate(message.created_at)}</dd>
+              </div>
+              <div className="flex gap-1">
+                <dt>Mis en file :</dt>
+                <dd>{message.sent_at ? formatDate(message.sent_at) : "—"}</dd>
+              </div>
+              <div className="flex gap-1">
+                <dt>Livraison prouvée :</dt>
+                <dd>
+                  {message.delivered_at && message.provider_status
+                    ? formatDate(message.delivered_at)
+                    : "non établie"}
+                </dd>
+              </div>
+              {message.template_key ? (
+                <div className="flex gap-1">
+                  <dt className="sr-only">Modèle :</dt>
+                  <dd>
+                    {message.template_key}
+                    {message.template_version ? ` v${message.template_version}` : ""}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
           </li>
         );
       })}

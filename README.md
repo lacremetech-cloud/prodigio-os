@@ -197,6 +197,14 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   d'éligibilité faisant autorité côté serveur, oppositions centralisées,
   fondation des automatisations. **Envoi désactivé** : aucun e-mail, aucun SMS
   n'est émis, aucun contact n'est importé, la base légale reste à valider.
+- [docs/22-COMMUNICATIONS-STUDIO.md](docs/22-COMMUNICATIONS-STUDIO.md) — Studio
+  Communications & Workflows V1 : cockpit `/crm/communications` (vue d'ensemble,
+  modèles versionnés avec prévisualisation et comparaison, automatisations
+  système en lecture seule, brouillons personnalisés, simulateur synthétique,
+  registre des oppositions, centre de préparation à l'activation). **Mode
+  brouillon** : aucun envoi, aucune automatisation personnalisée activable,
+  activation marketing bloquée. **Migration appliquée** (version distante
+  `20260819130113`) — voir docs/07 §14.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

@@ -787,3 +787,84 @@ envoi réel ait lieu — il n'est pas renseigné.
 
 Variables à créer manuellement dans Vercel (aucune n'est requise pour que
 l'application fonctionne) : voir [21-COMMUNICATIONS.md](21-COMMUNICATIONS.md) §12.
+
+---
+
+## 14. Migration Studio Communications V1 (`20260819120000_communications_studio_v1`)
+
+**Strictement additive et minimale.** Ne crée aucune table, ne supprime aucune
+table ni colonne, ne touche à aucune politique RLS, à aucun droit de table, à
+aucun déclencheur, et ne modifie aucune migration historique.
+
+### Ce qu'elle apporte
+
+| Objet | Modification | Nature |
+|---|---|---|
+| `communication_automations.template_version` | Colonne **ajoutée** (nullable, `>= 1`) | Additive |
+| `communication_automations_status_check` | Domaine **restreint** : `brouillon` / `pret_pour_revue` / `en_pause` / `archive` — `actif` **retiré** | Durcissement |
+| `communication_automations_conditions_declaratives` | Contrainte **ajoutée** : conditions validées contre un catalogue fermé | Additive |
+| `comm_automation_conditions_valid(jsonb)` | Helper interne **ajouté**, `search_path` figé, non exécutable par `anon`/`authenticated` | Additive |
+| `crm_comm_upsert_automation` | Signature **remplacée** (ajout de `p_template_version`) ; statut `brouillon` **forcé** ; ouverte à `administrateur` **et** `manager` | Durcissement |
+| `crm_comm_set_automation_status` | Refuse `actif` (erreur `42501`) ; ouverte à `administrateur` **et** `manager` | Durcissement |
+
+Le retrait de `actif` est protégé par un **garde-fou** : la migration échoue
+(`22023`) si une automatisation active existe. Aucune donnée existante ne peut
+donc devenir invalide.
+
+### Ce qu'elle ne touche pas
+
+Ni `crm_comm_eligibility`, ni `crm_comm_prepare_message`, ni le traitement de la
+file, ni les modèles, ni les oppositions, ni les six déclencheurs
+transactionnels. Aucun cron, aucun `pg_net`, aucun moteur d'exécution.
+
+### Validation avant application
+
+Chaîne complète rejouée sur une base **vierge** (`scripts/replay-migrations.sh`),
+les dix-sept migrations passant sans erreur. Vérifié ensuite en local :
+
+- un `insert` ou un `update` portant `status = 'actif'` est **refusé** par la
+  contrainte ;
+- une condition hors catalogue ou non scalaire est **refusée** ;
+- un brouillon `pret_pour_revue` est accepté.
+
+### Application
+
+Appliquée **une seule fois** via l'outil officiel Supabase.
+Version au ledger distant : **`20260819130113`** (`communications_studio_v1`).
+
+### Contrôles post-application
+
+| Contrôle | Résultat |
+|---|---|
+| RLS active sur les six tables Communications | ✅ (1 politique chacune) |
+| Droits de table pour `authenticated` | `r` (lecture seule) — aucune écriture directe |
+| Droits de table pour `anon` | aucun |
+| `search_path` des trois fonctions | `public, pg_temp` |
+| `comm_automation_conditions_valid` exécutable par `authenticated` | ❌ (révoquée, conforme) |
+| Surcharges de `crm_comm_upsert_automation` | 1 (l'ancienne signature est supprimée) |
+| Contrainte de statut | `brouillon` / `pret_pour_revue` / `en_pause` / `archive` |
+
+### Baseline (agrégats, aucune PII) — inchangée par l'application
+
+| Table | Avant | Après |
+|---|---|---|
+| `communication_templates` | 6 (dont 0 actif) | 6 (dont 0 actif) |
+| `communication_messages` | 0 | 0 |
+| `communication_outbox` | 0 | 0 |
+| `communication_suppressions` | 0 | 0 |
+| `communication_automations` | 0 | 0 |
+| `communication_automation_runs` | 0 | 0 |
+| `privacy_records` | 2 | 2 |
+| `contacts` | 2 | 2 |
+| `audit_events` | 60 | 60 |
+
+### Écarts constatés
+
+Le linter Supabase signale 124 avertissements et 1 information, **tous
+antérieurs** à cette migration : `SECURITY DEFINER` exécutables par
+`authenticated` (choix d'architecture assumé — toute écriture passe par une
+fonction qui re-vérifie le rôle), six fonctions publiques du funnel exécutables
+par `anon`, `calendar_credentials` en RLS sans politique (refus total voulu), et
+la protection contre les mots de passe divulgués non activée. Aucun avertissement
+ne concerne les objets ajoutés ici : `comm_automation_conditions_valid` n'apparaît
+dans aucun.

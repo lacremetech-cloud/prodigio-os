@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canViewContactDetails, hasAnyRole } from "@/modules/crm/auth/roles";
-import { contactName } from "@/modules/crm/format";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   env,
   isCommunicationDispatchEnabled,
@@ -10,32 +8,29 @@ import {
   isTwilioConfigured,
 } from "@/config";
 import { describeProviders, getCommunicationsOverview } from "@/modules/communications/queries";
+import { getStudioOverview } from "@/modules/communications/studio/queries";
 import {
   CommunicationFilters,
   MessageTable,
   type MessageRow,
 } from "@/components/crm/communications/message-table";
-import {
-  AutomationsPanel,
-  OutboxPanel,
-  ProvidersPanel,
-  SuppressionsPanel,
-  TemplatesPanel,
-} from "@/components/crm/communications/panels";
+import { OutboxPanel, ProvidersPanel } from "@/components/crm/communications/panels";
+import { OverviewStats } from "@/components/crm/communications/studio/overview-stats";
+import { ActivationCenter } from "@/components/crm/communications/studio/activation-center";
 
-export const metadata: Metadata = { title: "Communications" };
+export const metadata: Metadata = { title: "Communications — Vue d’ensemble" };
 
 /**
- * Centre de communications.
+ * **Vue d'ensemble du studio.**
  *
- * L'autorisation est vérifiée côté serveur (session + RLS) : la liste ne
- * contient que les communications réellement visibles. Les coordonnées sont
- * masquées **avant** d'atteindre le navigateur, selon le rôle.
+ * Ne présente que des données réelles, comptées en base et filtrées par la RLS :
+ * un agent immobilier ne voit et ne compte que ses dossiers ; `partenaire_lecture`
+ * ne voit rien. Les coordonnées sont masquées **avant** d'atteindre le navigateur.
  *
- * ⚠️ Aucune valeur de secret n'est lue ni transmise : l'état des fournisseurs se
- * limite à des booléens de présence et au NOM des variables manquantes.
+ * ⚠️ Aucune valeur de secret n'est lue : l'état des fournisseurs se limite à des
+ * booléens de présence et au NOM des variables manquantes.
  */
-export default async function CommunicationsPage({
+export default async function CommunicationsOverviewPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -49,17 +44,19 @@ export default async function CommunicationsPage({
 
   const canViewContacts = canViewContactDetails(session.roles);
   const canManage = hasAnyRole(session.roles, ["administrateur", "manager"]);
-  const canRelease = hasAnyRole(session.roles, ["administrateur"]);
 
-  const overview = await getCommunicationsOverview(
-    {
-      channel: one("canal"),
-      category: one("categorie"),
-      status: one("statut"),
-      search: one("q"),
-    },
-    { canViewDetails: canViewContacts, canManage },
-  );
+  const [overview, studio] = await Promise.all([
+    getCommunicationsOverview(
+      {
+        channel: one("canal"),
+        category: one("categorie"),
+        status: one("statut"),
+        search: one("q"),
+      },
+      { canViewDetails: canViewContacts, canManage },
+    ),
+    getStudioOverview(),
+  ]);
 
   const rows: MessageRow[] = overview.messages.map((item) => ({
     id: item.message.id,
@@ -82,26 +79,12 @@ export default async function CommunicationsPage({
     href: null,
   }));
 
-  // Noms des contacts visés par une opposition (masquage déjà appliqué ailleurs :
-  // ici seul le NOM est nécessaire, jamais la coordonnée).
-  const supabase = await createSupabaseServerClient();
-  const suppressionContactIds = [...new Set(overview.suppressions.map((s) => s.contact_id))];
-  const { data: suppressionContacts } = suppressionContactIds.length
-    ? await supabase
-        .from("contacts")
-        .select("id, first_name, last_name, company_name")
-        .in("id", suppressionContactIds)
-    : { data: [] };
-  const nameById = new Map(
-    (suppressionContacts ?? []).map((c) => [
-      c.id,
-      c.company_name?.trim() || contactName(c.first_name, c.last_name),
-    ]),
-  );
+  const lumailConfigured = isLumailConfigured();
+  const twilioConfigured = isTwilioConfigured();
 
   const providers = describeProviders({
-    lumailConfigured: isLumailConfigured(),
-    twilioConfigured: isTwilioConfigured(),
+    lumailConfigured,
+    twilioConfigured,
     hasLumailKey: Boolean(env.LUMAIL_API_KEY),
     hasLumailFrom: Boolean(env.LUMAIL_FROM_EMAIL),
     hasTwilioSid: Boolean(env.TWILIO_ACCOUNT_SID),
@@ -110,66 +93,56 @@ export default async function CommunicationsPage({
   });
 
   const dispatchEnabled =
-    isCommunicationDispatchEnabled() && (isLumailConfigured() || isTwilioConfigured());
+    isCommunicationDispatchEnabled() && (lumailConfigured || twilioConfigured);
+
+  const activeTemplateCount = overview.templates.filter((t) => t.status === "actif").length;
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <header>
-        <p className="crm-eyebrow">Communications</p>
-        <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">
-          Centre de communications
-        </h1>
-        <p className="mt-1 max-w-3xl text-sm text-[var(--crm-text-dim)]">
-          Prodigio conserve les contacts, les consentements, les modèles, l&apos;historique et
-          l&apos;audit. Lumail et Twilio ne sont que des infrastructures d&apos;envoi, remplaçables.
-        </p>
-      </header>
-
       {!dispatchEnabled ? (
         <div
           role="status"
           className="rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel-2)] px-4 py-3 text-sm"
         >
           <p className="font-medium text-[var(--crm-text)]">Envoi réel désactivé</p>
-          <p className="mt-0.5 text-[var(--crm-text-dim)]">
-            La fondation est en place et auditable, mais aucun message ne part. La base légale des
-            traitements reste <strong>à valider juridiquement</strong> : aucune activation marketing
-            n&apos;est possible tant que ce point n&apos;est pas tranché.
+          <p className="crm-wrap mt-0.5 text-[var(--crm-text-dim)]">
+            La fondation est en place et auditable, mais aucun message ne part. Les brouillons du
+            studio ne s&apos;exécutent pas, et aucune automatisation personnalisée ne peut être
+            activée.
           </p>
         </div>
       ) : null}
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {(
-          [
-            ["Total", overview.counts.total],
-            ["En attente", overview.counts.enAttente],
-            ["En file", overview.counts.enFile],
-            ["Livrés", overview.counts.livres],
-            ["Échecs", overview.counts.echecs],
-            ["Bloqués", overview.counts.bloques],
-          ] as const
-        ).map(([label, value]) => (
-          <div
-            key={label}
-            className="rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] px-3 py-2.5"
-          >
-            <p className="text-[11px] uppercase tracking-wide text-[var(--crm-text-faint)]">
-              {label}
-            </p>
-            <p className="mt-0.5 text-xl font-semibold text-[var(--crm-text)]">{value}</p>
-          </div>
-        ))}
-      </section>
-
-      <CommunicationFilters
-        channel={one("canal")}
-        category={one("categorie")}
-        status={one("statut")}
-        search={one("q")}
+      <OverviewStats
+        stats={studio.stats}
+        blockedReasons={studio.blockedReasons}
+        skippedReasons={studio.skippedReasons}
       />
 
-      <MessageTable rows={rows} canManage={canManage} />
+      <ActivationCenter
+        readiness={{
+          emailProviderConfigured: lumailConfigured,
+          smsProviderConfigured: twilioConfigured,
+          dispatchEnabled,
+          activeTemplateCount,
+          templateCount: overview.templates.length,
+          queueProcessable: lumailConfigured || twilioConfigured,
+          // Aucune remontée de statut fournisseur n'est branchée : le constat est
+          // « non disponible », et il le restera tant qu'aucun webhook ni sondage
+          // n'existe. On ne suppose jamais une preuve que le système n'a pas.
+          deliveryProofAvailable: false,
+        }}
+      />
+
+      <section className="flex min-w-0 flex-col gap-3">
+        <CommunicationFilters
+          channel={one("canal")}
+          category={one("categorie")}
+          status={one("statut")}
+          search={one("q")}
+        />
+        <MessageTable rows={rows} canManage={canManage} />
+      </section>
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <OutboxPanel
@@ -187,44 +160,6 @@ export default async function CommunicationsPage({
           }))}
         />
         <ProvidersPanel providers={providers} dispatchEnabled={dispatchEnabled} />
-        <TemplatesPanel
-          canManage={canManage}
-          rows={overview.templates.map((t) => ({
-            id: t.id,
-            templateKey: t.template_key,
-            version: t.version,
-            name: t.name,
-            channel: t.channel,
-            category: t.category,
-            status: t.status,
-            allowedVariables: t.allowed_variables ?? [],
-          }))}
-        />
-        <SuppressionsPanel
-          canRelease={canRelease}
-          rows={overview.suppressions.map((s) => ({
-            id: s.id,
-            contactName: nameById.get(s.contact_id) ?? "Contact inconnu",
-            channel: s.channel,
-            scope: s.scope,
-            reason: s.reason,
-            createdAt: s.created_at,
-          }))}
-        />
-        <AutomationsPanel
-          canManage={canManage}
-          rows={overview.automations.map((a) => ({
-            id: a.id,
-            automationKey: a.automation_key,
-            version: a.version,
-            name: a.name,
-            triggerEvent: a.trigger_event,
-            templateKey: a.template_key,
-            channel: a.channel,
-            delayMinutes: a.delay_minutes,
-            status: a.status,
-          }))}
-        />
       </div>
     </div>
   );
