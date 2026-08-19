@@ -44,6 +44,14 @@ remonte dans le domaine.
 | **Message** (`communication_messages`) | Un message **préparé** pour un contact : contenu rendu, statut, motif. | « Préparé » ne veut pas dire « parti ». |
 | **Livraison** | Un statut de livraison **rapporté par le fournisseur**. | Une réponse `200` à l'envoi ne prouve **que** la mise en file. |
 
+> **Où le modèle est-il contrôlé ?** Pas dans l'éligibilité.
+> `crm_comm_eligibility` couvre le canal, la coordonnée, le « ne plus
+> contacter », l'opposition et la base légale. Le contrôle du **modèle actif**
+> appartient à `crm_comm_prepare_message`, qui ne retient que `status = 'actif'`
+> et bloque sinon en `modele_absent` / `modele_inactif`. Un `allowed = true`
+> renvoyé par l'éligibilité ne signifie donc **jamais** qu'un message partira :
+> les six modèles étant en brouillon, tout message est préparé puis **bloqué**.
+
 ### La chaîne, dans l'ordre
 
 ```

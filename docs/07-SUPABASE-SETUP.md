@@ -843,6 +843,7 @@ Version au ledger distant : **`20260819130113`** (`communications_studio_v1`).
 | `comm_automation_conditions_valid` exécutable par `authenticated` | ❌ (révoquée, conforme) |
 | Surcharges de `crm_comm_upsert_automation` | 1 (l'ancienne signature est supprimée) |
 | Contrainte de statut | `brouillon` / `pret_pour_revue` / `en_pause` / `archive` |
+| Index `communication_automations_active_unique` | Conservé, mais **désormais inatteignable** (`where status = 'actif'`) — seconde ceinture volontaire si `actif` était un jour rouvert |
 
 ### Baseline (agrégats, aucune PII) — inchangée par l'application
 
@@ -857,6 +858,96 @@ Version au ledger distant : **`20260819130113`** (`communications_studio_v1`).
 | `privacy_records` | 2 | 2 |
 | `contacts` | 2 | 2 |
 | `audit_events` | 60 | 60 |
+
+### Écart constaté entre le fichier versionné et l'objet appliqué
+
+**Un écart existe, et il est purement rédactionnel.** Au moment de
+l'application, le SQL a été transmis à `apply_migration` au lieu d'être relu
+verbatim depuis le fichier ; deux lignes de **commentaire** ont été perdues dans
+le corps de `crm_comm_upsert_automation` :
+
+```
+  -- Une version épinglée doit EXISTER : on ne prépare jamais un brouillon qui
+  -- référence une version de modèle inexistante.
+```
+
+Vérification par empreinte des corps de fonction (`md5(prosrc)`) :
+
+| Fonction | Fichier versionné | Base distante | Verdict |
+|---|---|---|---|
+| `comm_automation_conditions_valid` | `909ff342…` | `909ff342…` | identique |
+| `crm_comm_set_automation_status` | `2071dec7…` | `2071dec7…` | identique |
+| `crm_comm_upsert_automation` | `84e0f7b3…` | `4a2ee475…` | **2 lignes de commentaire en moins** |
+
+Le `diff` complet des deux corps ne contient que ces deux lignes : **aucune
+instruction, aucune condition, aucun message d'erreur, aucun code SQLSTATE ne
+diffère**. Le comportement est identique.
+
+**Aucune correction n'est appliquée en base** : réappliquer la migration
+créerait une seconde entrée au ledger et romprait la règle d'application unique.
+Le fichier versionné reste la référence ; un environnement neuf rejouant la
+chaîne obtient la version commentée, fonctionnellement identique. L'écart est
+consigné ici plutôt que corrigé silencieusement.
+
+### Non-régression des politiques — preuve par rejeu comparé
+
+Deux bases vierges ont été construites localement : l'une avec les **16**
+migrations antérieures, l'autre avec les **17** (studio inclus). Comparaison
+exhaustive des politiques (`pg_policies`), des corps de fonction (`md5(prosrc)`)
+et des ACL de table :
+
+```
+FUNC|comm_automation_conditions_valid   → AJOUTÉE
+FUNC|crm_comm_set_automation_status     → corps remplacé
+FUNC|crm_comm_upsert_automation         → signature + corps remplacés
+```
+
+**Aucune autre différence.** Zéro ligne `POLICY|` et zéro ligne `ACL|` ne varie :
+les politiques Mandats, Acquéreurs, tâches, activités, biens et agenda sont
+strictement intactes.
+
+### Recette transactionnelle annulée
+
+Exécutée sur base locale rejouée (données synthétiques, `ROLLBACK` final) :
+
+| # | Contrôle | Résultat |
+|---|---|---|
+| 1 | Modèle brouillon versionné créé | ✅ v1, statut `brouillon` |
+| 2 | Nouvelle version sans écrasement | ✅ v1 et v2 coexistent, v1 inchangée |
+| 3 | Automatisation brouillon créée | ✅ statut `brouillon` forcé |
+| 4 | Nouvelle version d'automatisation | ✅ v2 créée, v1 intacte |
+| 5 | Transition vers `pret_pour_revue` | ✅ acceptée |
+| 6a | Activation via la fonction | ✅ refusée (`42501`) |
+| 6b | Activation par `INSERT` direct | ✅ refusée (contrainte) |
+| 6c | Activation par `UPDATE` direct | ✅ refusée (contrainte) |
+| 7 | Condition hors catalogue | ✅ refusée (`22023`) |
+| 8 | Condition non scalaire | ✅ refusée (`22023`) |
+| 9 | Version de modèle inexistante | ✅ refusée (`22023`) |
+| 10 | Marketing avec choix « accordé » mais base légale non tranchée | ✅ refusé — `base_legale_insuffisante` |
+| 11 | Opposition globale sur le transactionnel | ✅ bloque — `opposition_active` |
+| 12 | Opposition globale sur SMS/marketing | ✅ bloque — prioritaire sur tout canal |
+| 13 | Levée d'opposition sans motif | ✅ refusée (`22023`) |
+| 14 | Message préparé pour un contact éligible | ✅ `bloque` / `modele_inactif` — les six modèles sont en brouillon |
+| 15 | Contenu rendu pour un message bloqué | ✅ aucun |
+| 16 | Passage à `livre` sans preuve fournisseur | ✅ refusé (`22023`) |
+| 17 | `record_send` avec le statut `livre` | ✅ refusé — au mieux `en_file_fournisseur` |
+| 18 | Lignes créées dans l'outbox / les messages / les exécutions | ✅ aucune |
+| 19 | PII dans `audit_events` | ✅ aucune (identifiants et clés techniques seulement) |
+
+Après `ROLLBACK` : baseline strictement identique, aucun résidu.
+
+> ⚠️ Précision utile : `crm_comm_eligibility` **ne vérifie pas le modèle**. Elle
+> couvre le canal, la coordonnée, le « ne plus contacter », l'opposition et la
+> base légale. Le contrôle du modèle actif appartient à
+> `crm_comm_prepare_message`, qui ne retient que `status = 'actif'` et bloque
+> sinon en `modele_absent` / `modele_inactif`. Un `allowed = true` renvoyé par
+> l'éligibilité ne signifie donc **jamais** qu'un message partira.
+
+Les mêmes invariants de contrainte ont été rejoués **sur la base distante**,
+dans un bloc annulé par une exception finale : statut `actif` refusé en `INSERT`
+et en `UPDATE`, conditions hors catalogue et non scalaires refusées, brouillon
+`pret_pour_revue` accepté, aucune ligne d'outbox, de message ni d'exécution
+créée. Baseline vérifiée identique après annulation.
 
 ### Écarts constatés
 
