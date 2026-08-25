@@ -197,6 +197,10 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   d'éligibilité faisant autorité côté serveur, oppositions centralisées,
   fondation des automatisations. **Envoi désactivé** : aucun e-mail, aucun SMS
   n'est émis, aucun contact n'est importé, la base légale reste à valider.
+- [docs/23-RESILIENCE-ACTIONS.md](docs/23-RESILIENCE-ACTIONS.md) — Résilience des
+  actions serveur du CRM : une action qui échoue affiche un message et
+  **conserve la saisie**, au lieu de remplacer l'écran. Analyse de l'incident du
+  25 août, correctif `safeAction`, portée et garde-fous.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/modules/properties/factory/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Primitives client partagées du cockpit Fabrique de biens : hook d'action
@@ -21,7 +22,7 @@ export function useAction() {
     setError(null);
     setDone(false);
     start(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       if (res.ok) {
         setDone(true);
         onOk?.(res);

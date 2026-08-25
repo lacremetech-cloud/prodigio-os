@@ -10,6 +10,7 @@ import {
 import type { FreeSlot } from "@/modules/calendar/availability";
 import { formatSlotTime } from "@/modules/calendar/format";
 import type { BookableAgentRow } from "@/lib/supabase/types";
+import { safeAction } from "@/modules/crm/safe-action";
 
 export interface SchedulerAgent {
   userId: string;
@@ -89,7 +90,9 @@ export function EstimationScheduler({
   const loadSlots = () => {
     reset();
     start(async () => {
-      const res = await getAvailabilityAction({ agentUserId: agentId, date, durationMinutes });
+      const res = await safeAction(() =>
+        getAvailabilityAction({ agentUserId: agentId, date, durationMinutes }),
+      );
       if (res.ok) {
         setSlots(res.slots ?? []);
         if ((res.slots ?? []).length === 0) {
@@ -114,20 +117,22 @@ export function EstimationScheduler({
     setError(null);
     setInfo(null);
     start(async () => {
-      const res = await bookEstimationAction({
-        idempotencyKey,
-        opportunityId,
-        agentUserId: agentId,
-        startsAt: selectedSlot.start,
-        endsAt: selectedSlot.end,
-        timezone,
-        address: address.trim() || null,
-        city,
-        ownerContactId,
-        ownerEmail: ownerEmail.trim() || null,
-        ownerName: ownerName.trim() || null,
-        notes: notes.trim() || null,
-      });
+      const res = await safeAction(() =>
+        bookEstimationAction({
+          idempotencyKey,
+          opportunityId,
+          agentUserId: agentId,
+          startsAt: selectedSlot.start,
+          endsAt: selectedSlot.end,
+          timezone,
+          address: address.trim() || null,
+          city,
+          ownerContactId,
+          ownerEmail: ownerEmail.trim() || null,
+          ownerName: ownerName.trim() || null,
+          notes: notes.trim() || null,
+        }),
+      );
       if (res.ok) {
         if (res.processing) {
           setInfo("Réservation en cours d'enregistrement…");
@@ -136,7 +141,7 @@ export function EstimationScheduler({
         }
         setOpen(false);
         router.refresh();
-      } else if (res.code === "slot_taken") {
+      } else if ("code" in res && res.code === "slot_taken") {
         setError(res.error ?? "Ce créneau vient d'être pris.");
         setSelectedSlot(null);
         loadSlots();

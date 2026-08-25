@@ -6,6 +6,7 @@ import {
   acceptInvitationAction,
   setInvitationPasswordAction,
 } from "@/modules/crm/team/accept-actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Écran d'acceptation d'invitation (côté personne invitée, connectée via le lien
@@ -52,13 +53,13 @@ export function InvitationAccept({
 
         start(async () => {
           if (password.length > 0) {
-            const pwd = await setInvitationPasswordAction(password);
+            const pwd = await safeAction(() => setInvitationPasswordAction(password));
             if (!pwd.ok) {
               setError(pwd.error ?? "Impossible de définir le mot de passe.");
               return;
             }
           }
-          const res = await acceptInvitationAction();
+          const res = await safeAction(() => acceptInvitationAction());
           if (res.ok) {
             router.push("/crm");
             router.refresh();

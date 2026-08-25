@@ -18,6 +18,7 @@ import {
   type BuyerKanbanCard,
 } from "@/modules/buyers/crm/pipeline";
 import { moveBuyerCardAction } from "@/modules/buyers/crm/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Kanban Acquéreurs — mêmes standards que le Kanban Mandats :
@@ -117,7 +118,9 @@ export function BuyerKanbanBoard({
     setLive(`${name} déplacé vers « ${buyerStageLabels[toStage] ?? toStage} », enregistrement…`);
 
     startTransition(async () => {
-      const res = await moveBuyerCardAction({ buyerProfileId, fromStage, toStage });
+      const res = await safeAction(() =>
+        moveBuyerCardAction({ buyerProfileId, fromStage, toStage }),
+      );
       setSavingId(null);
       // Dans les deux cas on retire l'override : le serveur fait autorité.
       setStageOverride((prev) => {
@@ -132,7 +135,9 @@ export function BuyerKanbanBoard({
         setNotice({
           buyerProfileId,
           text: res.error ?? "Enregistrement impossible.",
-          action: res.requiresAction,
+          // Un échec technique n'a pas d'action métier associée : `in` distingue
+          // le refus métier (qui en propose une) de la panne (qui n'en a pas).
+          action: "requiresAction" in res ? res.requiresAction : undefined,
         });
         setLive(`Échec du déplacement : ${res.error ?? ""}`);
       }
