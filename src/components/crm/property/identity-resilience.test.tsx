@@ -47,6 +47,10 @@ const EMPTY_PROPERTY = {
   signature_detail: null,
 } as unknown as PropertyRow;
 
+// `safeAction` consigne volontairement la cause en console : on la fait taire
+// ici pour garder la sortie de test lisible, sans neutraliser le comportement.
+vi.spyOn(console, "error").mockImplementation(() => {});
+
 afterEach(() => {
   cleanup();
   updatePropertyIdentityAction.mockReset();

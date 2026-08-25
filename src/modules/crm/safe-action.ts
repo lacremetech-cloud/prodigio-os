@@ -95,11 +95,34 @@ export function describeActionFailure(cause: unknown): ActionFailure {
 }
 
 /**
+ * Préfixe des traces de diagnostic. Rattraper une exception la rend survivable ;
+ * sans trace, elle deviendrait aussi **indiagnosticable** — l'incident du
+ * 25 août n'a justement pas pu être expliqué faute de trace exploitable.
+ *
+ * La ligne part dans la console du navigateur de l'utilisateur, jamais à un
+ * tiers, et n'est **pas** montrée dans l'interface.
+ */
+export const ACTION_LOG_PREFIX = "[prodigio:action]";
+
+/**
+ * Consigne la cause réelle, sans jamais l'afficher. Conserve la pile, qui
+ * désigne le site d'appel — c'est elle qui permet de remonter au défaut.
+ */
+function reportActionFailure(cause: unknown): void {
+  try {
+    console.error(`${ACTION_LOG_PREFIX} échec non prévu d'une action serveur —`, cause);
+  } catch {
+    // Une console indisponible ne doit jamais aggraver un échec déjà en cours.
+  }
+}
+
+/**
  * Exécute une action serveur sans jamais laisser un rejet s'échapper.
  *
  * Renvoie le résultat de l'action lorsqu'elle aboutit — succès **comme** échec
  * métier, qui reste un `{ ok: false, error }` produit volontairement. Une
- * exception imprévue devient un échec lisible ; une redirection est relancée.
+ * exception imprévue est consignée puis traduite en échec lisible ; une
+ * redirection est relancée.
  */
 export async function safeAction<T extends ActionOutcome>(
   fn: () => Promise<T>,
@@ -108,6 +131,7 @@ export async function safeAction<T extends ActionOutcome>(
     return await fn();
   } catch (cause) {
     if (isFrameworkControlFlow(cause)) throw cause;
+    reportActionFailure(cause);
     return describeActionFailure(cause);
   }
 }

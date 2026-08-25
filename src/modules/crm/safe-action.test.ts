@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ACTION_FAILURE_MESSAGE,
+  ACTION_LOG_PREFIX,
   ACTION_NETWORK_MESSAGE,
   ACTION_STALE_BUILD_MESSAGE,
   describeActionFailure,
@@ -13,6 +14,8 @@ import {
  * rejet jusqu'à la frontière d'erreur — sans quoi l'écran est remplacé et la
  * saisie en cours est perdue.
  */
+
+afterEach(() => vi.restoreAllMocks());
 
 function withDigest(digest: string): Error {
   const error = new Error("boom");
@@ -114,5 +117,56 @@ describe("messages spécifiques", () => {
   it("retombe sur le message générique pour toute autre cause", () => {
     expect(describeActionFailure(new Error("erreur imprévue")).error).toBe(ACTION_FAILURE_MESSAGE);
     expect(describeActionFailure(new Error("erreur imprévue")).requiresReload).toBeUndefined();
+  });
+});
+
+describe("diagnosticabilité — rattraper ne doit pas rendre aveugle", () => {
+  it("consigne la cause réelle, avec sa pile, quand une exception survient", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cause = new Error("Cause technique précise");
+
+    await safeAction(async () => {
+      throw cause;
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const [prefix, logged] = spy.mock.calls[0] ?? [];
+    expect(String(prefix)).toContain(ACTION_LOG_PREFIX);
+    // La cause est passée telle quelle : la pile désigne le site d'appel.
+    expect(logged).toBe(cause);
+  });
+
+  it("ne consigne RIEN pour un échec métier volontaire", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await safeAction(async () => ({ ok: false as const, error: "Droits insuffisants." }));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("ne consigne RIEN pour une redirection : ce n'est pas une panne", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const redirect = withDigest("NEXT_REDIRECT;replace;/connexion;307;");
+    await expect(safeAction(async () => { throw redirect; })).rejects.toBe(redirect);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("reste fonctionnel si la console est indisponible", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {
+      throw new Error("console cassée");
+    });
+    const res = await safeAction(async () => {
+      throw new Error("boom");
+    });
+    expect(res.ok).toBe(false);
+    expect(res.error).toBe(ACTION_FAILURE_MESSAGE);
+    spy.mockRestore();
+  });
+
+  it("la trace n'est jamais montrée à l'utilisateur", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await safeAction(async () => {
+      throw new Error("SELECT * FROM contacts WHERE email = 'a@b.c'");
+    });
+    expect(res.error).toBe(ACTION_FAILURE_MESSAGE);
+    expect(res.error).not.toMatch(/SELECT|contacts|a@b\.c/);
   });
 });
