@@ -32,7 +32,7 @@ les titres de section sont des `H2`, les piliers/labels des `H3`.
 
 - **Signature (H1)** : « Prodigio ne met pas votre bien en vente. Prodigio le
   vend. »
-- **CTA primaire** : « Tester l'éligibilité de ma propriété » → `/proprietaire/analyse`.
+- **CTA primaire** : « Voir si mon bien est éligible » → `/proprietaire/analyse`.
 - **CTA secondaire** : « Découvrir le Système Prodigio » → `/proprietaire`.
 - Copywriting sans promesse juridiquement risquée, sans délai garanti, sans
   superlatif invérifiable.

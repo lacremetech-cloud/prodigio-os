@@ -197,6 +197,11 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   d'éligibilité faisant autorité côté serveur, oppositions centralisées,
   fondation des automatisations. **Envoi désactivé** : aucun e-mail, aucun SMS
   n'est émis, aucun contact n'est importé, la base légale reste à valider.
+- [docs/22-LANDING-PROPRIETAIRE.md](docs/22-LANDING-PROPRIETAIRE.md) — Landing
+  propriétaire `/proprietaire` : principes éditoriaux (une idée par écran),
+  structure des sections, système d'appel à l'action (libellé et couleur
+  uniques, CTA au-dessus de la ligne de flottaison, rappel collant mobile et
+  ordinateur), et journal de ce qui a été retiré.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
