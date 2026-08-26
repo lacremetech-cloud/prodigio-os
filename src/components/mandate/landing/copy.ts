@@ -42,9 +42,7 @@ export const hero = {
   tagline: "Immobilier d'exception",
   /** Cartouche d'ouverture : le nom de la méthode, en capitales. */
   badge: SYSTEM_NAME,
-  title:
-    "Et si, au lieu d'attendre votre acheteur pendant des mois, nous allions " +
-    "le chercher ?",
+  title: "Et si, au lieu d'attendre votre acheteur, nous allions le chercher ?",
   /**
    * Sous-titre en trois morceaux : le nom de la méthode est mis en valeur au
    * milieu de la phrase, sans la casser.
@@ -52,8 +50,8 @@ export const hero = {
   subtitleBefore: `Après ${EXPERIENCE_LABEL} dans l'immobilier, nous avons créé le `,
   systemName: SYSTEM_NAME,
   subtitleAfter:
-    " : une nouvelle façon d'aller chercher activement les bons acheteurs pour " +
-    "vendre votre bien plus vite, au prix qu'il mérite.",
+    " pour trouver activement les bons acheteurs et vendre votre bien plus " +
+    "vite, au prix qu'il mérite.",
   /** Annotation manuscrite qui désigne le film. Formulation validée — ne pas réécrire. */
   vslNote: "En moins de 5 min, on vous explique tout.",
 } as const;

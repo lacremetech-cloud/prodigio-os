@@ -59,16 +59,16 @@ export function Hero() {
         </Reveal>
 
         <Reveal variant="rise" delayMs={60} className="-mt-1">
-          <h1 className="hero-title text-balance text-[1.75rem] leading-[1.1] text-ivory min-[420px]:text-[2rem] sm:text-[2.4rem] sm:leading-[1.08] lg:text-[2.85rem]">
+          <h1 className="hero-title text-balance font-semibold text-[1.75rem] leading-[1.1] text-ivory min-[420px]:text-[2rem] sm:text-[2.4rem] sm:leading-[1.08] lg:text-[2.85rem]">
             {hero.title}
           </h1>
         </Reveal>
 
         <Reveal delayMs={120} className="-mt-1">
-          <p className="hero-sub mx-auto max-w-2xl text-pretty leading-relaxed text-ivory/80">
+          <p className="hero-sub mx-auto max-w-2xl text-pretty font-medium leading-relaxed text-ivory/85">
             {hero.subtitleBefore}
             {/* Le nom de la méthode ressort sans casser la phrase. */}
-            <strong className="font-display text-[1.1em] font-normal not-italic text-gold-soft">
+            <strong className="font-semibold uppercase tracking-[0.04em] text-gold-soft">
               {hero.systemName}
             </strong>
             {hero.subtitleAfter}
