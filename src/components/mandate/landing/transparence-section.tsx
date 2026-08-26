@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Reveal } from "@/components/ui/reveal";
 import { transparence } from "./copy";
 
@@ -9,6 +10,11 @@ import { transparence } from "./copy";
  * les indicateurs suivis le sont, et la mention le dit explicitement. Montrer
  * des chiffres inventés dans une maquette reviendrait à les faire passer pour
  * des résultats.
+ *
+ * Elle se présente comme une **démonstration produit** : le panneau arrive très
+ * légèrement incliné, se redresse face caméra, puis les niveaux montent l'un
+ * après l'autre. Pas de 3D artificielle — une inclinaison de six degrés suffit
+ * à donner l'objet.
  */
 export function TransparenceSection() {
   return (
@@ -23,8 +29,8 @@ export function TransparenceSection() {
           </h2>
         </Reveal>
 
-        <Reveal variant="scale" delayMs={160}>
-          <div className="mt-12 overflow-hidden border border-border-dark bg-onyx-soft shadow-[0_40px_90px_-36px_rgba(0,0,0,0.9)]">
+        <Reveal delayMs={160}>
+          <div className="dash-panel mt-12 overflow-hidden border border-border-dark bg-onyx-soft shadow-[0_40px_90px_-36px_rgba(0,0,0,0.9)]">
             <div className="flex items-center gap-2 border-b border-border-dark px-5 py-3">
               <span aria-hidden="true" className="flex gap-1.5">
                 <span className="size-2 rounded-full bg-ivory/20" />
@@ -51,8 +57,14 @@ export function TransparenceSection() {
                     {[0.35, 0.55, 0.45, 0.75, 0.6].map((h, j) => (
                       <span
                         key={j}
-                        className="w-2 bg-gold-soft/30"
-                        style={{ height: `${h * (1 - i * 0.12) * 100}%` }}
+                        className="dash-bar w-2 bg-gold-soft/30"
+                        style={{
+                          height: `${h * (1 - i * 0.12) * 100}%`,
+                          // Les niveaux montent colonne après colonne, de la
+                          // gauche vers la droite. Assez court pour qu'on ne
+                          // l'attende pas.
+                          "--dash-delay": `${180 + i * 70 + j * 45}ms`,
+                        } as CSSProperties}
                       />
                     ))}
                   </span>

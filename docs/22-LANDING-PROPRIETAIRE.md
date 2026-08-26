@@ -223,6 +223,32 @@ l'intention : **matérialiser** ce qui, autrement, resterait une affirmation.
   ⚠️ Vocabulaire de commercialisation immobilière, **jamais d'achat média** :
   ni CPC, ni CPM, ni ROAS, ni nom de régie. `copy.test.ts` le vérifie.
 
+### Annonce parmi d'autres → sujet unique
+
+Le propos de la section création n'est pas « voici deux formats » mais « votre
+bien cesse d'être une annonce parmi d'autres ». Il se **ressent** : les annonces
+sont présentées petites et côte à côte, puis **reculent** dès que l'écrin est
+complet à l'écran. Aucun défilement n'est capturé, aucun élément épinglé.
+
+La commercialisation traditionnelle **recule, elle n'est pas barrée** : c'est un
+format, pas une faute.
+
+### Le tableau de bord
+
+Présenté comme une démonstration produit : le panneau arrive incliné de six
+degrés, se redresse face caméra, puis les niveaux montent colonne après colonne.
+Deux `transform`, rien d'autre — les hauteurs restent dans le flux, donc aucun
+décalage de mise en page. Pas de 3D artificielle.
+
+### Le piège à connaître
+
+`Reveal` anime en `animation-fill-mode: both` : sa dernière image fixe
+`opacity` et `transform` sur l'élément révélé, et **l'emporte sur toute
+déclaration CSS**. Toute classe qui pilote ces propriétés (`.creation-classique`,
+`.dash-panel`, `.dash-bar`, `.step-dot`) doit donc vivre sur un **enfant** de
+l'élément révélé, jamais sur l'élément lui-même. Une règle posée au mauvais
+endroit ne produit aucune erreur : elle ne fait simplement rien.
+
 ### Le questionnaire
 
 **Sa logique est un contrat de données**, verrouillé par

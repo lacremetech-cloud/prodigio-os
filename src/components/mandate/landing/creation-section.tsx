@@ -45,6 +45,15 @@ function Shot({
  *
  * Section essentiellement **visuelle** : la comparaison porte le propos, le
  * texte se contente de la nommer.
+ *
+ * Le passage se **ressent** plutôt qu'il ne s'explique : les annonces sont
+ * présentées petites et côte à côte — une parmi d'autres — puis **reculent** dès
+ * que l'écrin arrive à l'écran, où le bien devient le seul sujet. Le recul est
+ * porté par `:has()` (voir `.creation-duo` dans `globals.css`) : aucun
+ * observateur supplémentaire, aucune ligne de JavaScript.
+ *
+ * La commercialisation traditionnelle n'est jamais dénigrée : c'est un format,
+ * pas une faute. Elle recule, elle n'est pas barrée.
  */
 export function CreationSection() {
   const { captions } = creation.prodigio;
@@ -68,33 +77,47 @@ export function CreationSection() {
           </Reveal>
         </div>
 
-        <div className="mt-14 grid gap-10 lg:grid-cols-2 lg:gap-8">
-          {/* Annonce classique — présentée sans mépris : c'est un format, pas une faute. */}
-          <Reveal variant="blur">
-            <p className="font-signature text-xs uppercase tracking-[0.28em] text-text-secondary">
-              {creation.classique.label}
-            </p>
-            <div className="mt-6 space-y-5">
-              <Shot asset={media.ecrinAgence1} />
-              <Shot asset={media.ecrinAgence2} />
+        <div className="creation-duo mt-14 grid gap-10 lg:grid-cols-2 lg:gap-8">
+          {/* Annonce classique — présentée sans mépris : c'est un format, pas une
+              faute. Petites et côte à côte : une annonce parmi d'autres. */}
+          <Reveal variant="blur" className="self-start">
+            {/* Le recul porte sur cet enfant, pas sur l'élément révélé :
+                l'animation de `Reveal` est en `fill-mode: both` et fixe
+                l'opacité, ce qui l'emporterait sur toute déclaration. */}
+            <div className="creation-classique">
+              <p className="font-signature text-xs uppercase tracking-[0.28em] text-text-secondary">
+                {creation.classique.label}
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <Shot asset={media.ecrinAgence1} />
+                <Shot asset={media.ecrinAgence2} />
+              </div>
             </div>
           </Reveal>
 
-          {/* Expérience Prodigio — l'écrin dédié. */}
+          {/* Expérience Prodigio — l'écrin dédié. Son arrivée à l'écran fait
+              reculer la colonne précédente. */}
           <Reveal variant="rise" delayMs={140}>
             <p className="font-signature text-xs uppercase tracking-[0.28em] text-[color:var(--color-gold)]">
               {creation.prodigio.label}
             </p>
             <div className="mt-6 space-y-5">
               <Shot asset={media.ecrinProdigio} caption={captions.ecrinProdigio} tone="gold" />
-              <div className="grid grid-cols-2 gap-5">
-                <Shot asset={media.ecrinIdentite} caption={captions.ecrinIdentite} tone="gold" />
-                <Shot
-                  asset={media.ecrinBrochureCover}
-                  caption={captions.ecrinBrochureCover}
-                  tone="gold"
-                />
-              </div>
+              {/* Le repère qui déclenche le recul se situe ICI, et non en tête
+                  de colonne : une colonne haute entre dans le viewport bien
+                  avant d'être regardée, et les annonces reculeraient avant même
+                  d'avoir été vues. Le recul intervient quand l'écrin est
+                  complet. */}
+              <Reveal className="creation-prodigio">
+                <div className="grid grid-cols-2 gap-5">
+                  <Shot asset={media.ecrinIdentite} caption={captions.ecrinIdentite} tone="gold" />
+                  <Shot
+                    asset={media.ecrinBrochureCover}
+                    caption={captions.ecrinBrochureCover}
+                    tone="gold"
+                  />
+                </div>
+              </Reveal>
             </div>
           </Reveal>
         </div>
