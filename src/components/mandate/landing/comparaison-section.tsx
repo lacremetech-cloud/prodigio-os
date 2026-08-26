@@ -14,6 +14,9 @@ export function ComparaisonSection() {
       <div className="mx-auto max-w-5xl">
         <Reveal>
           <p className="eyebrow text-[color:var(--color-gold)]">{comparaison.eyebrow}</p>
+          <p className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-text-secondary">
+            {comparaison.body}
+          </p>
         </Reveal>
 
         <div className="mt-12 grid gap-8 md:grid-cols-2">
@@ -38,7 +41,7 @@ export function ComparaisonSection() {
             <p className="font-signature text-xs uppercase tracking-[0.24em] text-[color:var(--color-gold)]">
               {comparaison.prodigio.label}
             </p>
-            <p className="mt-6 text-lg text-text-secondary">{comparaison.prodigio.lead}</p>
+            <p className="mt-6 text-lg text-text-secondary">{comparaison.prodigio.intro}</p>
             <ul className="mt-4 space-y-3">
               {comparaison.prodigio.items.map((item) => (
                 <li key={item} className="flex items-start gap-3 text-lg leading-snug">

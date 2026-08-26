@@ -13,8 +13,14 @@ import { CTA_PRIMARY, CTA_SUB, hero } from "./copy";
  * La headline domine : c'est elle qui doit rester en tête si le visiteur ne lit
  * rien d'autre. Aucun paragraphe explicatif : une seule ligne sous le titre.
  *
- * L'écrin vidéo et le CTA tiennent avec le titre sur le premier écran ; la
- * barre de réassurance vient juste après, en bas de la hero.
+ * Hiérarchie verrouillée : eyebrow, titre, sous-titre, annotation manuscrite,
+ * film, action. Rien d'autre — pas de second paragraphe explicatif, pas de
+ * bandeau. Le « comment » est révélé progressivement par la VSL et les sections
+ * suivantes.
+ *
+ * La mise à l'échelle sur écran court est portée par `.hero-fit` / `.hero-media`
+ * (globals.css) : deux paliers de hauteur de fenêtre se recouvrent, et seul un
+ * ordre de cascade explicite garantit lequel l'emporte.
  */
 export function Hero() {
   return (
@@ -40,30 +46,55 @@ export function Hero() {
 
       <LandingNav />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-6 pb-4 pt-20 text-center sm:gap-6 sm:px-8 sm:pt-24">
+      <div className="hero-fit mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-6 pb-4 pt-20 text-center sm:gap-6 sm:px-8 sm:pt-24">
         <Reveal>
           <p className="eyebrow text-gold-soft">{hero.eyebrow}</p>
         </Reveal>
 
         <Reveal variant="rise" delayMs={60} className="-mt-1">
-          <h1 className="text-balance text-[1.75rem] leading-[1.1] text-ivory min-[420px]:text-[2rem] sm:text-[2.4rem] sm:leading-[1.08] lg:text-[2.85rem]">
+          <h1 className="hero-title text-balance text-[1.75rem] leading-[1.1] text-ivory min-[420px]:text-[2rem] sm:text-[2.4rem] sm:leading-[1.08] lg:text-[2.85rem]">
             {hero.title}
           </h1>
         </Reveal>
 
         <Reveal delayMs={120} className="-mt-1">
-          <p className="mx-auto max-w-xl text-pretty leading-relaxed text-ivory/80">
-            {hero.subtitle}
+          <p className="hero-sub mx-auto max-w-2xl text-pretty leading-relaxed text-ivory/80">
+            {hero.subtitleBefore}
+            {/* Le nom de la méthode ressort sans casser la phrase. */}
+            <strong className="font-display text-[1.1em] font-normal not-italic text-gold-soft">
+              {hero.systemName}
+            </strong>
+            {hero.subtitleAfter}
           </p>
+        </Reveal>
+
+        {/* Annotation manuscrite qui désigne le film, juste en dessous.
+            Formulation validée par le propriétaire — ne pas la réécrire. */}
+        <Reveal delayMs={150} className="-mt-1">
+          <span className="flex items-end justify-center gap-2 text-gold-soft">
+            <span className="hero-note font-display text-lg italic leading-tight sm:text-xl">
+              {hero.vslNote}
+            </span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 48 44"
+              className="h-7 w-8 shrink-0 -scale-x-100 sm:h-8 sm:w-9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {/* Flèche courbe pointant vers le bas (la vidéo). */}
+              <path d="M6 6c10 4 18 14 20 30" />
+              <path d="M16 30l10 8 4-11" />
+            </svg>
+          </span>
         </Reveal>
 
         {/* Le film. Sur un écran court, l'écrin se resserre pour que le bouton
             et sa réassurance restent visibles sans défiler. */}
-        <Reveal
-          variant="scale"
-          delayMs={180}
-          className="mx-auto w-full [@media(max-height:900px)]:max-w-2xl [@media(max-height:800px)]:max-w-xl"
-        >
+        <Reveal variant="scale" delayMs={200} className="hero-media mx-auto w-full">
           <div className="vsl-frame">
             <HeroVsl />
           </div>
@@ -83,23 +114,6 @@ export function Hero() {
         </Reveal>
       </div>
 
-      {/* Barre de réassurance — quatre repères, aucun superlatif. */}
-      <Reveal
-        as="div"
-        delayMs={340}
-        className="border-t border-ivory/10 px-6 py-4 sm:px-10"
-      >
-        <ul className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center">
-          {hero.reassurance.map((item) => (
-            <li
-              key={item}
-              className="font-signature text-[0.6rem] uppercase tracking-[0.2em] text-ivory/55 sm:text-[0.66rem]"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      </Reveal>
     </section>
   );
 }

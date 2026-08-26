@@ -49,20 +49,44 @@ function AdMock() {
 }
 
 /**
- * Prolongement de la Big Idea : l'attention est ailleurs, et elle est mesurable.
+ * L'angle mort, puis où se trouve l'attention.
  *
- * Deux volumes, une question, la portée géographique. Les sources restent
- * discrètes mais présentes — aucune statistique sans référence.
+ * Le constat d'abord (« et tous les autres ? »), la mesure ensuite. La
+ * comparaison détaillée avec la commercialisation traditionnelle vit plus bas :
+ * inutile de la faire deux fois.
  */
 export function AudienceSection() {
   return (
-    <section className="grain relative isolate overflow-hidden bg-onyx px-6 pb-28 text-ivory sm:px-10 lg:px-16">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-[1fr_auto] lg:gap-20">
-        <div>
-          <Reveal variant="rise">
-            <h2 className="text-balance font-display text-3xl leading-[1.12] text-ivory sm:text-4xl md:text-[2.9rem]">
+    <section className="grain relative isolate overflow-hidden bg-onyx px-6 py-20 text-ivory sm:px-10 sm:py-28 lg:px-16">
+      <div className="mx-auto max-w-6xl">
+        <div className="max-w-3xl">
+          <Reveal>
+            <p className="eyebrow text-gold-soft">{audience.eyebrow}</p>
+          </Reveal>
+          <Reveal variant="rise" delayMs={70}>
+            <h2 className="mt-6 text-balance font-display text-2xl leading-[1.2] text-ivory/70 sm:text-3xl md:text-4xl">
               {audience.title}
             </h2>
+          </Reveal>
+          <Reveal variant="rise" delayMs={200}>
+            <p className="mt-4 font-display text-[2.6rem] leading-[1.04] text-gold-soft sm:text-6xl md:text-7xl">
+              {audience.emphasis}
+            </p>
+          </Reveal>
+          <Reveal delayMs={280}>
+            <p className="mt-8 max-w-xl text-pretty leading-relaxed text-text-on-dark-muted">
+              {audience.body}
+            </p>
+          </Reveal>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-20 grid max-w-6xl items-center gap-14 lg:grid-cols-[1fr_auto] lg:gap-20">
+        <div>
+          <Reveal variant="rise">
+            <p className="text-balance font-display text-3xl leading-[1.12] text-ivory sm:text-4xl">
+              {audience.subtitle}
+            </p>
           </Reveal>
 
           <dl className="mt-12 grid gap-10 sm:grid-cols-2">

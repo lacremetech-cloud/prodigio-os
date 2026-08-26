@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { CountUp, easeOutExpo } from "@/components/ui/count-up";
 import { ProofStripSection } from "./proof-strip-section";
-import { BigIdeaSection } from "./big-idea-section";
+import { AudienceSection } from "./audience-section";
 import { ComparaisonSection } from "./comparaison-section";
-import { bigIdea, comparaison, proofStrip } from "./copy";
+import { audience, comparaison, proofStrip } from "./copy";
 
 afterEach(() => cleanup());
 
@@ -41,11 +41,19 @@ describe("ProofStripSection", () => {
   });
 });
 
-describe("BigIdeaSection", () => {
-  it("oppose la demande existante aux nouvelles intentions", () => {
-    render(<BigIdeaSection />);
-    expect(screen.getByText(bigIdea.traditional.outcome)).toBeTruthy();
-    expect(screen.getByText(bigIdea.prodigio.outcome)).toBeTruthy();
+describe("AudienceSection", () => {
+  it("pose l'angle mort avant la mesure de l'audience", () => {
+    const { container } = render(<AudienceSection />);
+    const texte = container.textContent ?? "";
+    expect(screen.getByText(audience.emphasis)).toBeTruthy();
+    expect(texte).toContain(audience.punch);
+    // Le constat vise la commercialisation passive, jamais la profession.
+    expect(texte).not.toMatch(/dépassé|obsolèt|ne font rien|ne fonctionne plus/i);
+  });
+
+  it("ne publie jamais de statistique sans mention de source", () => {
+    const { container } = render(<AudienceSection />);
+    expect(container.textContent ?? "").toContain(audience.sourceNote);
   });
 });
 

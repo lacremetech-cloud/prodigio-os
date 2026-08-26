@@ -1,9 +1,21 @@
+import { EXPERIENCE_LABEL, SYSTEM_NAME } from "@/config/credentials";
+
 /**
  * Contenu éditorial de la landing propriétaire.
  *
- * **Big Idea : l'acquisition active.** Prodigio ne remplace pas les portails,
- * le réseau ni le fichier acquéreurs — il ajoute une couche qui manque : aller
- * chercher l'attention d'acheteurs qui ne cherchent pas encore.
+ * **Big Idea : le Système Prodigio va chercher l'acheteur.** Prodigio ne
+ * remplace pas les portails, le réseau ni le fichier acquéreurs — il ajoute ce
+ * qui manque : aller chercher activement les bons acheteurs.
+ *
+ * **Trois promesses, et rien d'autre :** vendre plus vite, trouver les bons
+ * acheteurs, défendre la valeur du bien. Jamais de délai ni de prix garantis —
+ * « au prix qu'il mérite » est une promesse de valorisation, pas un engagement
+ * contractuel.
+ *
+ * **Zéro jargon face au propriétaire.** Pas de « lead », « funnel », « avatar »,
+ * « ciblage », « acquisition digitale » : chaque notion marketing est traduite
+ * en bénéfice immobilier. Il doit penser « ils ont une manière différente de
+ * trouver mon acheteur », pas « ils ont une belle machine publicitaire ».
  *
  * Règles d'écriture :
  * - Le visiteur qui ne lit **que les grands titres** doit comprendre l'offre.
@@ -17,69 +29,54 @@
  */
 
 /** Libellé d'action unique — la phrase prononcée à la fin de la VSL. */
-export const CTA_PRIMARY = "Vérifier l'éligibilité de ma propriété";
+export const CTA_PRIMARY = "Vérifier l'éligibilité de mon bien";
 /** Variante courte, réservée à l'en-tête (contrainte de largeur). */
 export const CTA_NAV = "Vérifier mon éligibilité";
 /** Réassurance courte, sous le CTA du hero. */
-export const CTA_SUB = "1 minute · Confidentiel · Sans engagement";
+export const CTA_SUB = "Questionnaire d'une minute · Étude confidentielle · Sans engagement";
 /** Réassurance complète, sous les CTA de fin de page. */
 export const MICROCOPY = "Questionnaire d'une minute · Étude confidentielle · Sans engagement";
 
 export const hero = {
   brand: "PRODIGIO",
   tagline: "Immobilier d'exception",
-  eyebrow: "L'immobilier d'exception, autrement.",
-  title: "Et si votre futur acheteur ne cherchait pas encore votre propriété ?",
-  subtitle:
-    "Prodigio ne se contente pas d'attendre qu'un acquéreur trouve votre bien. " +
-    "Nous allons chercher son attention.",
-  /** Barre de réassurance, sous le CTA. Quatre repères, aucun superlatif. */
-  reassurance: [
-    "France & International",
-    "Acquisition active",
-    "Commercialisation financée par Prodigio",
-    "Rémunération au succès",
-  ],
+  eyebrow: "L'immobilier d'exception, autrement",
+  title:
+    "Et si, au lieu d'attendre votre acheteur pendant des mois, nous allions " +
+    "le chercher ?",
+  /**
+   * Sous-titre en trois morceaux : le nom de la méthode est mis en valeur au
+   * milieu de la phrase, sans la casser.
+   */
+  subtitleBefore: `Après ${EXPERIENCE_LABEL} dans l'immobilier, nous avons créé le `,
+  systemName: SYSTEM_NAME,
+  subtitleAfter:
+    " : une nouvelle façon d'aller chercher activement les bons acheteurs pour " +
+    "vendre votre bien plus vite, au prix qu'il mérite.",
+  /** Annotation manuscrite qui désigne le film. Formulation validée — ne pas réécrire. */
+  vslNote: "En moins de 5 min, on vous explique tout.",
 } as const;
 
 /** Preuve immédiate — comprise en trois secondes, juste après la VSL. */
 export const proofStrip = {
   eyebrow: "Une campagne Prodigio",
-  title: "14 jours. Une propriété à 1,6 M€.",
+  title: "14 jours de campagne.",
   stats: [
     { value: 312, label: "demandes" },
-    { value: 23, label: "budgets > 1 M€" },
+    { value: 23, label: "budgets déclarés > 1 M€" },
     { value: 6, label: "visites qualifiées" },
     { value: 1, label: "vente" },
   ],
-  note: "Font-Romeu · Résultats issus d'une campagne Prodigio",
-} as const;
-
-/** Big Idea — le problème invisible : la demande existante ne fait pas tout. */
-export const bigIdea = {
-  eyebrow: "Mettre en vente ≠ commercialiser",
-  title: "Votre propriété est visible par ceux qui la cherchent.",
-  emphasis: "Et tous les autres ?",
-  traditional: {
-    label: "Méthodes traditionnelles",
-    items: ["Portails", "Google", "Fichier acquéreurs", "Réseau"],
-    outcome: "Acheteurs déjà en recherche",
-  },
-  prodigio: {
-    label: "Prodigio",
-    items: ["Méthodes traditionnelles", "+ Acquisition active"],
-    outcome: "Nouveaux acheteurs potentiels",
-  },
-  body:
-    "Les méthodes traditionnelles captent une demande existante. Prodigio " +
-    "ajoute une stratégie pour aller chercher de nouvelles intentions.",
-  punch:
-    "Pourquoi attendre que votre acheteur cherche votre propriété quand nous " +
-    "pouvons la lui présenter ?",
+  note: "Bien proposé à 1,6 M€ · Font-Romeu",
 } as const;
 
 /**
- * Prolongement visuel de la Big Idea : où se trouve l'attention.
+ * L'angle mort — puis où se trouve l'attention.
+ *
+ * Une seule section : le constat (« et tous les autres ? »), les volumes
+ * d'audience, la portée géographique. La comparaison détaillée avec la
+ * commercialisation traditionnelle vit plus bas ; elle n'a pas à être faite
+ * deux fois.
  *
  * ⚠️ Les deux volumes ci-dessous sont des données publiques d'audience.
  * `sourceNote` doit être **confirmée** (source et millésime exacts) avant toute
@@ -87,18 +84,22 @@ export const bigIdea = {
  * vérifiable.
  */
 export const audience = {
-  title: "Votre acheteur est peut-être déjà devant nous.",
+  eyebrow: "Mettre en vente n'est pas commercialiser",
+  title: "Votre bien est visible par ceux qui le cherchent.",
+  emphasis: "Et tous les autres ?",
+  body:
+    "Les méthodes traditionnelles touchent les acheteurs déjà en recherche. " +
+    "Beaucoup d'autres ont le budget et l'envie, mais ne cherchent pas encore.",
+  subtitle: "Votre acheteur est peut-être déjà devant nous.",
   stats: [
     { value: "51,5 M", label: "d'identités actives sur les réseaux sociaux en France" },
     { value: "5,79 Md", label: "dans le monde" },
   ],
   punch:
-    "Pourquoi attendre qu'il cherche votre propriété quand nous pouvons la lui " +
+    "Pourquoi attendre qu'il cherche votre bien quand nous pouvons le lui " +
     "présenter ?",
   reach: "France · Europe · International",
-  reachNote:
-    "Lorsque le profil du bien le justifie, nos campagnes peuvent dépasser les " +
-    "frontières.",
+  reachNote: "En France comme à l'étranger, lorsque le profil du bien le justifie.",
   sourceNote: "Sources : données publiques d'audience des réseaux sociaux.",
   adMock: {
     sponsored: "Sponsorisé",
@@ -112,10 +113,10 @@ export const audience = {
 export const creation = {
   eyebrow: "La création",
   title: "Votre propriété mérite mieux qu'une annonce.",
-  subtitle: "Pour capter l'attention, encore faut-il donner envie de regarder.",
+  subtitle: "Pour attirer le bon acheteur, encore faut-il lui donner envie de s'arrêter.",
   disciplines: ["Film", "Photographie", "Storytelling", "Expérience digitale"],
   punch: "Chaque propriété devient son propre univers.",
-  classique: { label: "Annonce classique" },
+  classique: { label: "Annonce immobilière classique" },
   prodigio: {
     label: "Expérience Prodigio",
     captions: {
@@ -140,13 +141,13 @@ export const vitrine = {
 
 /** Le système, en six temps. Six lignes, pas six pavés. */
 export const systeme = {
-  eyebrow: "Le Système Prodigio",
+  eyebrow: SYSTEM_NAME,
   title: "Une stratégie construite autour d'un seul bien : le vôtre.",
   phases: [
-    { n: "01", title: "Comprendre", text: "Le bien. Son marché. Son acheteur." },
-    { n: "02", title: "Créer", text: "L'angle. L'image. Le désir." },
+    { n: "01", title: "Comprendre", text: "Le bien et son marché." },
+    { n: "02", title: "Créer", text: "L'univers capable de provoquer l'intérêt." },
     { n: "03", title: "Diffuser", text: "France & international." },
-    { n: "04", title: "Qualifier", text: "Projet. Budget. Timing." },
+    { n: "04", title: "Qualifier", text: "Projet et budget." },
     { n: "05", title: "Visiter", text: "Les profils pertinents." },
     { n: "06", title: "Vendre", text: "" },
   ],
@@ -155,10 +156,10 @@ export const systeme = {
 /** Skin in the game — l'argument économique, en rupture visuelle. */
 export const engagement = {
   eyebrow: "Notre engagement",
-  title: "Nous ne vous demandons pas seulement de croire en notre stratégie.",
-  reveal: "Nous investissons nous-mêmes dedans.",
-  items: ["Création", "Technologie", "Acquisition", "Diffusion"],
-  body: "Prodigio finance la commercialisation des propriétés sélectionnées.",
+  title: "Nous ne nous contentons pas de prendre votre mandat.",
+  reveal: "Nous investissons dans sa réussite.",
+  items: ["Création", "Technologie", "Diffusion"],
+  body: "Prodigio finance la commercialisation des biens sélectionnés.",
   punch: "Nos intérêts sont alignés : vendre.",
   note: "Rémunération au succès, selon les conditions prévues au mandat.",
 } as const;
@@ -166,7 +167,7 @@ export const engagement = {
 /** Transparence — le propriétaire voit ce qui est fait pour vendre son bien. */
 export const transparence = {
   eyebrow: "Transparence",
-  title: "Ne vous demandez plus ce qui est fait pour vendre votre propriété.",
+  title: "Ne vous demandez plus ce qui est fait pour vendre votre bien.",
   metrics: [
     { label: "Personnes touchées" },
     { label: "Demandes" },
@@ -207,7 +208,7 @@ export const comparaison = {
   },
   prodigio: {
     label: "Prodigio",
-    lead: "Tout cela, plus :",
+    intro: "Tout cela, plus :",
     items: [
       "Acquisition active",
       "Campagnes dédiées",
@@ -217,54 +218,55 @@ export const comparaison = {
       "Diffusion internationale lorsque pertinente",
     ],
   },
+  body: "Les méthodes traditionnelles fonctionnent. Prodigio leur ajoute une dimension.",
   punchLine1: "Nous ne remplaçons pas ce qui fonctionne.",
   punchLine2: "Nous ajoutons ce qui manque.",
 } as const;
 
 /** Sélectivité — la montée en gamme avant le dernier CTA. */
 export const selection = {
-  eyebrow: "Système Prodigio",
-  title: "Toutes les propriétés n'intègrent pas Prodigio.",
+  eyebrow: SYSTEM_NAME,
+  title: `Toutes les propriétés n'intègrent pas le ${SYSTEM_NAME}`,
   emphasis: "Et c'est volontaire.",
   body:
-    "Nous sélectionnons les propriétés pour lesquelles notre système peut " +
-    "réellement faire la différence.",
+    "Nous sélectionnons les propriétés pour lesquelles nous pensons pouvoir " +
+    "construire une stratégie capable de faire la différence.",
   criteria: ["Valeur", "Potentiel", "Marché"],
 } as const;
 
 /** FAQ — lever les dernières objections, rien de plus. */
 export const faq = {
   eyebrow: "Questions fréquentes",
-  title: "Avant de nous confier votre propriété.",
+  title: "Avant de nous confier votre bien.",
   items: [
     {
-      q: "Combien coûte le système Prodigio ?",
+      q: `Combien coûte le ${SYSTEM_NAME} ?`,
       a:
-        "Rien à l'avance. Prodigio finance la création et la diffusion des " +
-        "propriétés sélectionnées, et n'est rémunéré qu'au succès, selon les " +
+        "Rien à l'avance. Nous engageons nos propres moyens sur les biens " +
+        "sélectionnés, et ne sommes rémunérés qu'au succès, selon les " +
         "conditions prévues au mandat.",
     },
     {
-      q: "Dois-je signer un mandat exclusif ?",
+      q: "Qui finance la commercialisation et les campagnes ?",
+      a:
+        "Nous. C'est le sens du modèle : si nous vous demandons de nous confier " +
+        "votre bien, nous devons être prêts à investir nous-mêmes dans sa " +
+        "réussite.",
+    },
+    {
+      q: "Dois-je confier mon bien en exclusivité ?",
       a:
         "Une stratégie dans laquelle nous investissons réellement suppose un " +
         "engagement réciproque. Les modalités exactes sont définies avec " +
-        "l'agence porteuse du mandat, et vous sont présentées avant toute " +
+        "l'agence porteuse du mandat et vous sont présentées avant toute " +
         "signature.",
     },
     {
-      q: "Qui finance les campagnes publicitaires ?",
+      q: "Mon bien peut-il être présenté à des acheteurs étrangers ?",
       a:
-        "Nous. C'est le sens du modèle : nous engageons nos propres moyens dans " +
-        "la commercialisation, donc notre intérêt est le même que le vôtre — " +
-        "la vente.",
-    },
-    {
-      q: "Mon bien peut-il être présenté à l'étranger ?",
-      a:
-        "Oui, lorsque le profil du bien le justifie. La diffusion s'étend alors " +
-        "au-delà de la France, en fonction de l'endroit où se trouvent " +
-        "réellement les acheteurs de ce type de propriété.",
+        "Oui, lorsque le profil du bien le justifie. Nous cherchons les " +
+        "acheteurs là où ils se trouvent réellement — en France comme à " +
+        "l'étranger.",
     },
     {
       q: "Comment sélectionnez-vous les propriétés ?",
@@ -279,9 +281,9 @@ export const faq = {
 /** Dernier écran — une propriété plein cadre, une question, un geste. */
 export const finalCta = {
   title: "Votre futur acheteur est peut-être déjà là.",
-  subtitle: "Faisons en sorte que votre propriété arrive jusqu'à lui.",
+  subtitle: "Faisons en sorte que votre bien arrive jusqu'à lui.",
   brand: "PRODIGIO",
-  brandLine: "Votre propriété mérite mieux qu'une annonce.",
+  brandLine: "Votre bien mérite mieux qu'une annonce.",
 } as const;
 
 export const footer = {

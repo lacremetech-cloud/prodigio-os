@@ -198,11 +198,14 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   fondation des automatisations. **Envoi désactivé** : aucun e-mail, aucun SMS
   n'est émis, aucun contact n'est importé, la base légale reste à valider.
 - [docs/22-LANDING-PROPRIETAIRE.md](docs/22-LANDING-PROPRIETAIRE.md) — Landing
-  propriétaire `/proprietaire` : la Big Idea (**l'acquisition active**, jamais
-  au détriment de la profession immobilière), les principes éditoriaux (lecture
-  en trente secondes, montrer plutôt qu'expliquer), la structure des quinze
-  sections, le système d'appel à l'action et les points de vigilance
-  (statistiques à sourcer, interface d'illustration, exclusivité en FAQ).
+  propriétaire `/proprietaire` : la Big Idea (**le Système Prodigio™ va chercher
+  l'acheteur**, jamais au détriment de la profession immobilière), les trois
+  promesses (vendre plus vite, trouver les bons acheteurs, défendre la valeur du
+  bien), les principes éditoriaux (lecture en trente secondes, zéro jargon, ne
+  jamais rallonger la page), la structure des quatorze sections, le système
+  d'appel à l'action et les points de vigilance (statistiques à sourcer,
+  ancienneté annoncée à confirmer, interface d'illustration, exclusivité en
+  FAQ).
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

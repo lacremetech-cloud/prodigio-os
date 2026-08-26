@@ -334,6 +334,58 @@ html.js .reveal.reveal-rise.is-visible {
   84%, 100% { background-position: -80% 0; }
 }
 
+/* --- Hero : tenir au-dessus du pli -------------------------------------- */
+/* Le hero doit livrer, sans défilement, le titre, le film, le bouton et sa
+   réassurance. Un seul palier de hauteur de fenêtre : la typographie se
+   resserre légèrement, puis le film prend exactement la place qui reste.
+   Cette règle vit ici plutôt qu'en utilitaires `[@media(...)]:` parce que deux
+   variantes de même spécificité ne garantissent pas laquelle l'emporte. */
+.hero-media {
+  max-width: 48rem;
+}
+@media (max-height: 900px) {
+  .hero-fit {
+    gap: 1rem;
+    padding-top: 4.5rem;
+  }
+  /* 29rem ≈ hauteur cumulée de tout ce qui entoure le film dans la colonne. */
+  .hero-media {
+    max-width: calc((100dvh - 29rem) * 16 / 9);
+  }
+}
+/* La typographie n'est resserrée qu'à partir de la tablette : en dessous, les
+   tailles mobiles sont déjà les plus petites de la page. */
+@media (max-height: 900px) and (min-width: 640px) {
+  .hero-title {
+    font-size: 2.3rem;
+    line-height: 1.08;
+  }
+  .hero-sub {
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .hero-note {
+    font-size: 1.05rem;
+  }
+}
+/* Petit téléphone : dernier cran pour garder le bouton visible sans défiler. */
+@media (max-height: 780px) and (max-width: 639px) {
+  .hero-fit {
+    gap: 0.7rem;
+    padding-top: 3.75rem;
+  }
+  .hero-title {
+    font-size: 1.5rem;
+  }
+  .hero-sub {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .hero-note {
+    font-size: 0.95rem;
+  }
+}
+
 /* Badge « brillant » (accroche courte, ex. « Système avancé ») : un reflet
    lumineux balaie le cartouche par intermittence. */
 .badge-shine { position: relative; overflow: hidden; }
