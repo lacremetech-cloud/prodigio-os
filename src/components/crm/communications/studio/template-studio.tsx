@@ -24,6 +24,7 @@ import {
   setTemplateStatusAction,
   upsertTemplateAction,
 } from "@/modules/communications/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * **Studio des modèles.**
@@ -78,7 +79,7 @@ function useAction() {
     if (busy) return;
     setBusy(true);
     startTransition(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       setFeedback({
         ok: res.ok,
         message: res.ok ? (res.info ?? "Action enregistrée.") : (res.error ?? "Action impossible."),

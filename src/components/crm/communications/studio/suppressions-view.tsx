@@ -6,6 +6,7 @@ import { Chip, EmptyState, SectionTitle } from "@/components/crm/ui";
 import { Modal } from "@/components/crm/modal";
 import { channelLabels, suppressionReasonLabels } from "@/modules/communications";
 import { releaseSuppressionAction } from "@/modules/communications/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * **Registre des oppositions.**
@@ -88,7 +89,9 @@ export function SuppressionsView({
     if (!target || busy) return;
     setBusy(true);
     startTransition(async () => {
-      const res = await releaseSuppressionAction({ suppressionId: target.id, reason });
+      const res = await safeAction(() =>
+        releaseSuppressionAction({ suppressionId: target.id, reason }),
+      );
       setFeedback({
         ok: res.ok,
         message: res.ok
