@@ -33,13 +33,19 @@ function LivePreview({ src, label, hint, openLabel, title }: LivePreviewProps) {
         </span>
       </div>
 
-      <iframe
-        src={src}
-        title={title}
-        loading="lazy"
-        referrerPolicy="no-referrer"
-        className="h-[26rem] w-full border-0 bg-ivory sm:h-[32rem]"
-      />
+      {/* L'écrin est rendu dans une fenêtre deux fois plus large que le cadre,
+          puis réduit de moitié : on voit la vraie mise en page **bureau**, pas
+          la version mobile — et l'aperçu reste interactif (défilement, pages de
+          la brochure). */}
+      <div className="relative h-[26rem] w-full overflow-hidden bg-ivory sm:h-[32rem]">
+        <iframe
+          src={src}
+          title={title}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="absolute left-0 top-0 h-[200%] w-[200%] origin-top-left scale-50 border-0"
+        />
+      </div>
 
       <figcaption className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
         <span className="text-sm text-text-secondary">{hint}</span>
