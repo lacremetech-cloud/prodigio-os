@@ -15,6 +15,7 @@ import {
 import type { PropertyMediaKind, PropertyMediaRow } from "@/lib/supabase/types";
 import { formatDateTime } from "@/modules/crm/format";
 import { FieldError, Saved, useAction } from "./shared";
+import { safeAction } from "@/modules/crm/safe-action";
 
 const KINDS: PropertyMediaKind[] = ["photo", "video", "drone", "plan", "rendu", "couverture", "autre"];
 const RIGHTS = ["a_verifier", "libre", "sous_licence", "restreint"] as const;
@@ -41,7 +42,9 @@ export function MediaManager({
   const openMedia = (mediaId: string) => {
     setViewError(null);
     startViewing(async () => {
-      const res = await getPropertyAssetSignedUrlAction({ assetType: "media", assetId: mediaId });
+      const res = await safeAction(() =>
+        getPropertyAssetSignedUrlAction({ assetType: "media", assetId: mediaId }),
+      );
       if (res.ok && res.url) window.open(res.url, "_blank", "noopener,noreferrer");
       else setViewError(res.error ?? "Impossible d’ouvrir le média.");
     });

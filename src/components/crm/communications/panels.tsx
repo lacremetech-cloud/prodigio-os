@@ -20,6 +20,7 @@ import {
   setAutomationStatusAction,
   setTemplateStatusAction,
 } from "@/modules/communications/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Panneaux du centre de communications : file d'attente, modèles, oppositions,
@@ -40,7 +41,7 @@ function useAction() {
     if (busy) return;
     setBusy(true);
     startTransition(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       setFeedback(res.ok ? (res.info ?? "Action enregistrée.") : (res.error ?? "Action impossible."));
       setBusy(false);
       if (res.ok) router.refresh();

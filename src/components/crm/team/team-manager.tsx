@@ -23,6 +23,7 @@ import {
   setMemberStatusAction,
   type TeamActionResult,
 } from "@/modules/crm/team/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 function statusChipVariant(v: StatusVariant): "neutral" | "gold" | "danger" | "ok" {
   return v;
@@ -60,12 +61,14 @@ function InviteForm({
         e.preventDefault();
         setError(null);
         start(async () => {
-          const res = await inviteMemberAction({
-            email: email.trim(),
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            role,
-          });
+          const res = await safeAction(() =>
+            inviteMemberAction({
+              email: email.trim(),
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              role,
+            }),
+          );
           if (res.ok) {
             onDone(res);
             onClose();
@@ -161,7 +164,7 @@ function RowActions({ entry, onChanged }: { entry: TeamEntry; onChanged: () => v
 
   const runAction = (fn: () => Promise<TeamActionResult>, okMsg: string) => {
     start(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       if (res.ok) {
         toast(okMsg, "success");
         onChanged();

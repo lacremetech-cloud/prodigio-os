@@ -11,6 +11,7 @@ import {
   economicRuleStatusLabels,
   feeBasisLabels,
 } from "@/modules/mandates/lifecycle/labels";
+import { safeAction } from "@/modules/crm/safe-action";
 
 function useAction() {
   const router = useRouter();
@@ -21,7 +22,7 @@ function useAction() {
     setError(null);
     setDone(false);
     start(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       if (res.ok) {
         setDone(true);
         onOk?.();
