@@ -153,9 +153,9 @@ export const systeme = {
   title: "Une stratégie construite autour d'un seul bien : le vôtre.",
   phases: [
     { n: "01", title: "Comprendre", text: "Le bien et son marché." },
-    { n: "02", title: "Créer", text: "L'univers capable de provoquer l'intérêt." },
-    { n: "03", title: "Diffuser", text: "France & international." },
-    { n: "04", title: "Qualifier", text: "Projet et budget." },
+    { n: "02", title: "Créer", text: "Créer le désir." },
+    { n: "03", title: "Diffuser", text: "Aller chercher son marché." },
+    { n: "04", title: "Qualifier", text: "Projet · délai · budget." },
     { n: "05", title: "Visiter", text: "Les profils pertinents." },
     { n: "06", title: "Vendre", text: "" },
   ],
@@ -166,8 +166,26 @@ export const engagement = {
   eyebrow: "Notre engagement",
   title: "Nous ne nous contentons pas de prendre votre mandat.",
   reveal: "Nous investissons dans sa réussite.",
-  items: ["Création", "Technologie", "Diffusion"],
-  body: "Prodigio finance la commercialisation des biens sélectionnés.",
+  /**
+   * Ce que Prodigio engage réellement sur un bien sélectionné. La **diffusion**
+   * ferme la liste et porte le poids visuel : c'est le poste que le propriétaire
+   * ne voit jamais, et le seul qui décide si son bien est vu.
+   *
+   * ⚠️ Vocabulaire de commercialisation immobilière, jamais d'achat média : ni
+   * CPC, ni CPM, ni ROAS, ni nom de régie. On vend une mise en marché, pas une
+   * prestation publicitaire.
+   */
+  items: [
+    "Photographie",
+    "Production vidéo",
+    "Site dédié",
+    "Brochure",
+    "Création publicitaire",
+  ],
+  climax: {
+    label: "Diffusion",
+    text: "Le budget qui décide si votre bien est vu — ou pas.",
+  },
   punch: "Nos intérêts sont alignés : vendre.",
   note: "Rémunération au succès, selon les conditions prévues au mandat.",
 } as const;

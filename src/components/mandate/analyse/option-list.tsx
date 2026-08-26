@@ -14,8 +14,13 @@ interface OptionListProps<T extends string> {
 }
 
 /**
- * Liste d'options à choix unique — cartes **solides et généreuses**. La sélection
- * provoque un léger **soulèvement**, une **bordure dorée** et une **coche animée**.
+ * Liste d'options à choix unique — cartes **solides et généreuses**.
+ *
+ * Trois retours au geste : l'**appui** est ressenti immédiatement (la carte se
+ * resserre), la **sélection** soulève la carte, dore la bordure et fait
+ * apparaître la coche. Seules `transform`, `border-color` et `box-shadow` sont
+ * animées : `transition-all` embarquait aussi l'épaisseur de bordure, qui
+ * provoque un recalcul de mise en page à chaque survol.
  */
 export function OptionList<T extends string>({
   options,
@@ -35,7 +40,7 @@ export function OptionList<T extends string>({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(option.value)}
-              className={`group flex min-h-[3.75rem] items-center justify-between gap-4 border bg-[color:var(--color-onyx-soft)] px-6 py-4 text-left transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
+              className={`group flex min-h-[3.75rem] items-center justify-between gap-4 border bg-[color:var(--color-onyx-soft)] px-6 py-4 text-left transition-[transform,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0 active:scale-[0.99] active:duration-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
                 isSelected
                   ? "-translate-y-0.5 border-2 border-[color:var(--color-gold)] shadow-[0_16px_40px_-18px_rgba(154,123,69,0.7)]"
                   : "border-[color:var(--color-border-strong-dark)] hover:-translate-y-0.5 hover:border-text-on-dark hover:shadow-[var(--shadow-lg)]"

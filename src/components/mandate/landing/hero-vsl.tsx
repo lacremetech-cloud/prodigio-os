@@ -40,7 +40,7 @@ export function HeroVsl() {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Lire le ${VSL_TITLE.toLowerCase()}`}
+        aria-label="Lire le film de présentation du Système Prodigio"
         className="group relative block aspect-video w-full overflow-hidden border border-[color:var(--color-border-dark)] bg-onyx text-left shadow-[var(--shadow-lg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)]"
       >
         <Image

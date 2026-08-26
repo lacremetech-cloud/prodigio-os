@@ -207,6 +207,30 @@ plein écran natif demandé en plus sur mobile lorsque le navigateur l'accepte.
   la limite de tout lecteur tiers ; le bouton de fermeture est donc placé en
   tête d'ordre de tabulation.
 
+### Le Système, et l'investissement
+
+Deux sections portent la crédibilité du modèle. Elles se ressemblent dans
+l'intention : **matérialiser** ce qui, autrement, resterait une affirmation.
+
+- **Le Système** est une *séquence*, pas un ensemble : six temps le long d'un
+  rail, chacun s'allumant à son arrivée à l'écran (le point passe à l'or, le
+  titre reprend sa densité). L'allumage se greffe sur l'état `is-visible` que
+  `Reveal` pose déjà — aucun observateur supplémentaire n'est monté. Trois mots
+  par étape, jamais plus, et surtout pas de diagramme.
+- **L'investissement** énumère les postes réellement engagés, puis donne à la
+  **diffusion** un poids visuel très supérieur : c'est le poste que le
+  propriétaire ne voit jamais, et le seul qui décide si son bien est vu.
+  ⚠️ Vocabulaire de commercialisation immobilière, **jamais d'achat média** :
+  ni CPC, ni CPM, ni ROAS, ni nom de régie. `copy.test.ts` le vérifie.
+
+### Le questionnaire
+
+**Sa logique est un contrat de données**, verrouillé par
+`use-analyse-machine.test.tsx` : questions, ordre, clés, valeurs, types, clé
+d'idempotence. Seule son enveloppe est retouchée — retour à l'appui, durées de
+transition, propriétés animées. Une amélioration visuelle qui exigerait de
+déformer la charge utile est abandonnée, pas négociée.
+
 ### Appels à l'action
 
 - **Un seul chemin** vers le questionnaire (`ANALYSE_ROUTE`) pour tous les
