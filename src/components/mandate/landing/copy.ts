@@ -29,8 +29,8 @@ export const hero = {
   tagline: "Immobilier d'exception",
   titleLine1: "Votre propriété mérite",
   titleLine2: "plus qu'une annonce.",
-  /** Invitation à regarder le film — sous le titre, au-dessus de l'écrin. */
-  vslNote: "Cinq minutes pour voir la différence.",
+  /** Annotation manuscrite qui désigne le film, sous le titre. */
+  vslNote: "En moins de 5 min, on vous explique tout.",
 } as const;
 
 /** Moment signature — le cœur émotionnel, repris de la VSL. */
@@ -76,8 +76,79 @@ export const ecrin = {
   },
 } as const;
 
-export const systeme = {
+/** Vitrine — l'écrin d'un bien réel, ouvert en direct dans la page. */
+export const vitrine = {
   index: "02",
+  kicker: "L'écrin, en vrai",
+  title: "Ouvrez-le. C'est un bien réel.",
+  body:
+    "Le site et la brochure ci-dessous sont ceux d'une propriété que nous avons " +
+    "commercialisée. Feuilletez-les comme le ferait un acquéreur.",
+  site: {
+    label: "Le site dédié",
+    hint: "Parcourez la page du bien",
+    open: "Ouvrir le site",
+  },
+  brochure: {
+    label: "La brochure confidentielle",
+    hint: "Tournez les pages",
+    open: "Feuilleter en grand",
+  },
+} as const;
+
+/** Questions que se pose un propriétaire avant de remplir le questionnaire. */
+export const faq = {
+  index: "06",
+  kicker: "Questions fréquentes",
+  title: "Ce que les propriétaires nous demandent.",
+  items: [
+    {
+      q: "Qui paie les campagnes publicitaires ?",
+      a:
+        "Nous. Sur les biens éligibles, Prodigio avance le budget de diffusion. " +
+        "C'est le sens du modèle : nous sommes rémunérés au résultat, donc notre " +
+        "intérêt est le même que le vôtre — la vente.",
+    },
+    {
+      q: "Est-ce que je m'engage en remplissant le questionnaire ?",
+      a:
+        "Non. Le questionnaire sert à déterminer si votre bien relève du système " +
+        "Prodigio. Il ne vaut ni mandat, ni promesse, ni engagement d'aucune " +
+        "sorte, d'un côté comme de l'autre.",
+    },
+    {
+      q: "Qui porte le mandat de vente ?",
+      a:
+        "Une agence immobilière habilitée, distincte du Système Prodigio. " +
+        "Prodigio conçoit et pilote la mise en marché ; le mandat, les visites et " +
+        "la transaction relèvent de l'agence partenaire.",
+    },
+    {
+      q: "Ma démarche reste-t-elle confidentielle ?",
+      a:
+        "Oui. Votre demande est étudiée individuellement et n'est diffusée nulle " +
+        "part. Rien n'est publié, ni même préparé, sans votre accord.",
+    },
+    {
+      q: "Combien de temps faut-il pour vendre ?",
+      a:
+        "Nous ne promettons aucun délai : cela dépend du bien, de son prix et de " +
+        "son marché. Ce que nous pouvons dire, c'est ce que nous faisons — aller " +
+        "chercher l'acheteur au lieu d'attendre qu'il passe.",
+    },
+    {
+      q: "Travaillez-vous avec tous les biens ?",
+      a:
+        "Non. Nous ne retenons que les propriétés pour lesquelles nous pensons " +
+        "pouvoir construire une stratégie à la hauteur. Un refus n'est pas un " +
+        "jugement sur votre bien : c'est un aveu sur ce que notre système sait " +
+        "faire, et sur ce qu'il ne sait pas faire.",
+    },
+  ],
+} as const;
+
+export const systeme = {
+  index: "03",
   kicker: "Le Système Prodigio",
   titleLine1: "Nous n'attendons pas le coup de cœur.",
   titleLine2: "Nous le provoquons.",
@@ -113,7 +184,7 @@ export const systeme = {
 } as const;
 
 export const modele = {
-  index: "03",
+  index: "04",
   kicker: "Le modèle",
   title: "Nous finançons la visibilité.",
   emphasis: "Rémunérés au résultat.",
@@ -123,7 +194,7 @@ export const modele = {
 } as const;
 
 export const preuve = {
-  index: "04",
+  index: "05",
   kicker: "La preuve",
   title: "Un cas réel, présenté sans promesse.",
   intro:

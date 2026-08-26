@@ -280,6 +280,60 @@ html.js .reveal.reveal-rise.is-visible {
 }
 .animate-glow { animation: pg-glow 3.6s ease-in-out infinite; }
 
+/* ---------------------------------------------------------------------------
+   Écrin vidéo (VSL) — profondeur et matière.
+   Une bordure dorée très fine, une ombre portée profonde qui décolle l'écrin du
+   fond, un halo doux derrière, et un reflet diagonal qui balaie la surface par
+   intermittence (comme la lumière sur une vitre). Le reflet est purement
+   décoratif : `pointer-events: none` pour ne jamais gêner les contrôles.
+--------------------------------------------------------------------------- */
+.vsl-frame {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid color-mix(in oklab, var(--color-gold-soft) 28%, transparent);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.06) inset,
+    0 40px 90px -32px rgba(0, 0, 0, 0.85),
+    0 12px 32px -18px rgba(0, 0, 0, 0.6);
+}
+/* Halo doré diffus derrière l'écrin. */
+.vsl-frame::before {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    55% 55% at 50% 50%,
+    color-mix(in oklab, var(--color-gold-soft) 26%, transparent) 0%,
+    transparent 70%
+  );
+  filter: blur(28px);
+  opacity: 0.55;
+}
+/* Reflet diagonal, balayage lent. */
+.vsl-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.07) 47%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.07) 53%,
+    transparent 62%
+  );
+  background-size: 260% 100%;
+  animation: pg-sheen 9s ease-in-out infinite;
+}
+@keyframes pg-sheen {
+  0%, 62% { background-position: 180% 0; }
+  84%, 100% { background-position: -80% 0; }
+}
+
 /* Badge « brillant » (accroche courte, ex. « Système avancé ») : un reflet
    lumineux balaie le cartouche par intermittence. */
 .badge-shine { position: relative; overflow: hidden; }
@@ -360,6 +414,7 @@ html.js .reveal.reveal-rise.is-visible {
     filter: none !important;
   }
   .marquee-track,
+  .vsl-frame::after,
   .animate-glow,
   .animate-scroll-cue,
   .badge-shine::after,
@@ -367,5 +422,6 @@ html.js .reveal.reveal-rise.is-visible {
   .cta-shine:focus-visible::after {
     animation: none !important;
   }
-  .badge-shine::after { opacity: 0; }
+  .badge-shine::after,
+  .vsl-frame::after { opacity: 0; }
 }

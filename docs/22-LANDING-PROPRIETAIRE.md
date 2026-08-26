@@ -31,11 +31,13 @@ pas cet objectif l'affaiblit.
 | 2 | **La différence** (`StatementSection`) | onyx | La phrase signature : « Prodigio ne met pas votre bien en vente. Prodigio le vend. » |
 | 3 | **Marquee** | ivoire | Respiration ; les mots-clés du positionnement. |
 | 4 | **L'écrin** (`ConstatSection`) | ivoire | La **preuve visuelle** : fiche d'agence classique ↔ site dédié, carte d'identité, brochure. |
-| 5 | **Le Système Prodigio** (`SystemSection`) | onyx | Les 4 phases (Comprendre · Concevoir · Produire · Acquérir) **en un seul écran**. |
-| 6 | **Le modèle** (`ModeleSection`) | ivoire | Visibilité financée, rémunération au résultat. |
-| 7 | **La preuve** (`ProofSection`) | onyx | L'entonnoir chiffré d'un cas réel + avertissement. |
-| 8 | **Sélection & appel à l'action** (`FinalCtaSection`) | photo en parallaxe | Sélectivité, confidentialité et CTA réunis. |
-| 9 | **Pied de page** (`SiteFooter`) | bois noir | Positionnement honnête, mentions. |
+| 5 | **L'écrin, en vrai** (`VitrineSection`) | ivoire sourd | Le site du bien et sa brochure **ouverts en direct** dans la page (iframes). |
+| 6 | **Le Système Prodigio** (`SystemSection`) | onyx | Les 4 phases (Comprendre · Concevoir · Produire · Acquérir) **en un seul écran**. |
+| 7 | **Le modèle** (`ModeleSection`) | ivoire | Visibilité financée, rémunération au résultat. |
+| 8 | **La preuve** (`ProofSection`) | onyx | L'entonnoir chiffré d'un cas réel + avertissement. |
+| 9 | **Questions fréquentes** (`FaqSection`) | ivoire | Les objections traitées avant d'être posées. |
+| 10 | **Sélection & appel à l'action** (`FinalCtaSection`) | photo en parallaxe | Sélectivité, confidentialité et CTA réunis. |
+| 11 | **Pied de page** (`SiteFooter`) | bois noir | Positionnement honnête, mentions. |
 
 Rythme de contraste **sombre → clair → sombre**. Un seul `H1` (la promesse du
 hero) ; les titres de section sont des `H2`.
@@ -74,8 +76,36 @@ hero) ; les titres de section sont des `H2`.
 | Fond flouté de la hero (miniature de la VSL) | Un flou n'est pas une image : brume brune sans profondeur. Remplacé par une photographie nette voilée. |
 | Capture d'écran de dossier de fichiers publicitaires | Visuel de back-office, incompatible avec le positionnement montré à un propriétaire. |
 
-Résultat : **671 → ~360 mots**, **10 750 → 6 050 px** de hauteur sur ordinateur,
-à information égale — et la VSL reste la première chose que l'on voit.
+Résultat : à information égale, la page est passée de **10 750 px à ~6 000 px**
+et de **671 à ~360 mots** ; la vitrine et la FAQ ont ensuite ajouté de la
+matière **neuve** (preuve ouvrable, objections traitées), pas de la redite.
+
+## 4 bis. La vitrine — montrer plutôt que décrire
+
+`VitrineSection` intègre en direct le **site dédié** et la **brochure
+feuilletable** d'un bien réellement commercialisé. C'est la preuve la plus
+difficile à contester : le visiteur ne lit pas une description de l'écrin, il
+l'ouvre.
+
+- Les URL vivent dans [`src/config/showcase.ts`](../src/config/showcase.ts) —
+  changer de bien de vitrine, c'est changer une ligne (ou définir
+  `NEXT_PUBLIC_SHOWCASE_SITE_URL`). Les pages sont **intégrées**, jamais
+  recopiées ni réhébergées.
+- `loading="lazy"` : rien n'est chargé tant que la section n'est pas atteinte.
+- Chaque aperçu garde un lien « ouvrir en grand » : l'iframe est un avant-goût,
+  pas une prison.
+
+## 4 ter. La FAQ — traiter les objections avant qu'on les pose
+
+`FaqSection` utilise des `<details>/<summary>` natifs : accessible au clavier,
+ouvrable sans JavaScript, indexable. Elle répond à ce qui bloque réellement un
+propriétaire (qui paie la publicité, à quoi il s'engage, qui porte le mandat,
+confidentialité, délais, sélectivité).
+
+**Aucune condition économique chiffrée n'y figure** — ni seuil, ni partage, ni
+pourcentage : ce sont des paramètres contractuels versionnés (voir la
+constitution du projet), pas du contenu public. Un test le vérifie
+(`faq-section.test.tsx`), de même qu'aucun délai n'est promis.
 
 ## 5. Contenu et code
 

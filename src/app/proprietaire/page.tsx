@@ -4,9 +4,11 @@ import { Hero } from "@/components/mandate/landing/hero";
 import { Marquee } from "@/components/mandate/landing/marquee";
 import { StatementSection } from "@/components/mandate/landing/statement-section";
 import { ConstatSection } from "@/components/mandate/landing/constat-section";
+import { VitrineSection } from "@/components/mandate/landing/vitrine-section";
 import { SystemSection } from "@/components/mandate/landing/system-section";
 import { ModeleSection } from "@/components/mandate/landing/modele-section";
 import { ProofSection } from "@/components/mandate/landing/proof-section";
+import { FaqSection } from "@/components/mandate/landing/faq-section";
 import { FinalCtaSection } from "@/components/mandate/landing/final-cta-section";
 import { SiteFooter } from "@/components/mandate/landing/site-footer";
 import { StickyCta } from "@/components/mandate/landing/sticky-cta";
@@ -25,8 +27,9 @@ export const metadata: Metadata = {
  * Landing propriétaire (funnel Mandats).
  *
  * Une idée par écran, dans cet ordre : la promesse et le film (hero) → la phrase
- * signature → la preuve visuelle de l'écrin → le système → le modèle
- * économique → la preuve chiffrée → l'appel à l'action.
+ * signature → la preuve visuelle de l'écrin → l'écrin **ouvert en direct** → le
+ * système → le modèle économique → la preuve chiffrée → les objections → l'appel
+ * à l'action.
  *
  * Les sections « Avant / Avec Prodigio » et « Sélection & confidentialité » ont
  * été retirées : la première répétait le constat de l'écrin, la seconde disait
@@ -40,9 +43,11 @@ export default function ProprietairePage() {
       <StatementSection />
       <Marquee items={marqueeItems} tone="light" />
       <ConstatSection />
+      <VitrineSection />
       <SystemSection />
       <ModeleSection />
       <ProofSection />
+      <FaqSection />
       <FinalCtaSection />
       <SiteFooter />
       <StickyCta />

@@ -8,9 +8,15 @@ const tones: Record<Tone, string> = {
   // Bouton clair plein (sur fond sombre) — contraste maximal, très visible.
   contrast:
     "bg-text-on-dark text-wood-black border border-text-on-dark hover:bg-white",
-  // Bouton doré — accent premium fort pour la conversion.
+  // Bouton doré — accent premium fort pour la conversion. Dégradé vertical
+  // (matière plutôt qu'aplat), fine arête claire en haut, ombre colorée : le
+  // bouton se détache du fond au lieu d'y être posé.
   gold:
-    "text-wood-black border border-[color:var(--color-gold-soft)] bg-[color:var(--color-gold-soft)] hover:bg-white hover:border-white",
+    "text-wood-black border border-[color:var(--color-gold-soft)] " +
+    "bg-[linear-gradient(180deg,#e0cba3_0%,#cbb488_52%,#bda471_100%)] " +
+    "shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_14px_34px_-14px_rgba(203,180,136,0.65)] " +
+    "hover:bg-[linear-gradient(180deg,#ecdcba_0%,#dcc79c_52%,#cbb488_100%)] " +
+    "hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_18px_44px_-14px_rgba(203,180,136,0.8)]",
   // Contour clair sur sombre.
   "ghost-dark":
     "border border-ivory/70 text-ivory hover:bg-ivory hover:text-wood-black",
