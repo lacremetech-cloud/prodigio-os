@@ -9,6 +9,7 @@ import {
 } from "@/modules/calendar/actions";
 import { appointmentResultOptions } from "@/modules/calendar/labels";
 import type { EstimationAppointmentStatus } from "@/lib/supabase/types";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Actions sur un rendez-vous d'estimation depuis la fiche : ouvrir dans Google,
@@ -47,7 +48,7 @@ export function AppointmentActions({
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
     setError(null);
     start(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       if (res.ok) {
         setMode("idle");
         router.refresh();

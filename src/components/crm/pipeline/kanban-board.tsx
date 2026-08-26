@@ -9,6 +9,7 @@ import { evaluateMove, isProtectedTarget, type KanbanLead } from "@/modules/crm/
 import { moveLeadStage } from "@/modules/crm/data/mutations";
 import { cssVarRef, stageVisual } from "@/modules/crm/status-visuals";
 import type { CSSProperties } from "react";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Kanban glisser-déposer. Le déplacement passe par la mutation serveur existante
@@ -99,7 +100,7 @@ export function KanbanBoard({
     setLive(`${name} déplacé vers « ${stageLabels[toStage] ?? toStage} », enregistrement…`);
 
     startTransition(async () => {
-      const res = await moveLeadStage({ opportunityId, fromStage, toStage });
+      const res = await safeAction(() => moveLeadStage({ opportunityId, fromStage, toStage }));
       setSavingId(null);
       if (res.ok) {
         setLive(`${name} enregistré dans « ${stageLabels[toStage] ?? toStage} ».`);
@@ -117,7 +118,12 @@ export function KanbanBoard({
           delete next[opportunityId];
           return next;
         });
-        setNotice({ opportunityId, text: res.error ?? "Enregistrement impossible.", action: res.requiresAction });
+        setNotice({
+          opportunityId,
+          text: res.error ?? "Enregistrement impossible.",
+          // Idem : une panne technique ne propose aucune action métier.
+          action: "requiresAction" in res ? res.requiresAction : undefined,
+        });
         setLive(`Échec du déplacement : ${res.error ?? ""}`);
       }
     });

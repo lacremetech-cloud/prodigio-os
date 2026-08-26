@@ -14,6 +14,7 @@ import {
 import type { PropertyDocumentCategory, PropertyDocumentRow } from "@/lib/supabase/types";
 import { formatDateTime } from "@/modules/crm/format";
 import { FieldError, Saved, useAction } from "./shared";
+import { safeAction } from "@/modules/crm/safe-action";
 
 const CATEGORIES: PropertyDocumentCategory[] = [
   "mandat",
@@ -48,10 +49,9 @@ export function DocumentsManager({
   const openDocument = (documentId: string) => {
     setViewError(null);
     startViewing(async () => {
-      const res = await getPropertyAssetSignedUrlAction({
-        assetType: "document",
-        assetId: documentId,
-      });
+      const res = await safeAction(() =>
+        getPropertyAssetSignedUrlAction({ assetType: "document", assetId: documentId }),
+      );
       if (res.ok && res.url) window.open(res.url, "_blank", "noopener,noreferrer");
       else setViewError(res.error ?? "Impossible d’ouvrir le document.");
     });

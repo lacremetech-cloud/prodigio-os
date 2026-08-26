@@ -8,6 +8,7 @@ import {
   selectCalendarAction,
 } from "@/modules/calendar/actions";
 import type { GoogleCalendarEntry } from "@/modules/calendar/google/client";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Gestion cliente de la connexion Google Calendar : sélection du calendrier
@@ -68,7 +69,7 @@ export function CalendarConnectionManager({
     setError(null);
     setNotice(null);
     start(async () => {
-      const res = await selectCalendarAction({ calendarId, summary });
+      const res = await safeAction(() => selectCalendarAction({ calendarId, summary }));
       if (res.ok) {
         setNotice("Calendrier d'estimation mis à jour.");
         router.refresh();
@@ -85,7 +86,7 @@ export function CalendarConnectionManager({
     setError(null);
     setNotice(null);
     start(async () => {
-      const res = await disconnectCalendarAction();
+      const res = await safeAction(() => disconnectCalendarAction());
       if (res.ok) {
         router.refresh();
       } else {

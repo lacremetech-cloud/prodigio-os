@@ -23,6 +23,7 @@ import {
   stageLabels,
 } from "@/modules/crm/labels";
 import { PIPELINE_STAGES } from "@/modules/crm/labels";
+import { safeAction } from "@/modules/crm/safe-action";
 
 export interface MemberOption {
   userId: string;
@@ -40,7 +41,7 @@ function useAction() {
     setError(null);
     setDone(false);
     start(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       if (res.ok) {
         setDone(true);
         onOk?.();

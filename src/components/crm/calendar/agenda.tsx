@@ -34,6 +34,7 @@ import {
   type AgendaFilters,
   type AgendaView,
 } from "@/modules/calendar/agenda";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /** Légende discrète des statuts (couleur + icône + libellé). */
 function AgendaLegend() {
@@ -463,7 +464,7 @@ function EventDrawer({
   const run = async (fn: () => Promise<{ ok: boolean; error?: string }>) => {
     setError(null);
     setPending(true);
-    const res = await fn();
+    const res = await safeAction(fn);
     setPending(false);
     if (res.ok) {
       setMode("idle");

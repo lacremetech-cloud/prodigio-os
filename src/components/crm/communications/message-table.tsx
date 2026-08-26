@@ -22,6 +22,7 @@ import {
   type MessageStatus,
 } from "@/modules/communications";
 import { cancelMessageAction, retryMessageAction } from "@/modules/communications/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Tableau des communications. L'utilisateur doit comprendre **immédiatement** :
@@ -83,7 +84,7 @@ export function MessageTable({
     if (busyId) return;
     setBusyId(id);
     startTransition(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       setFeedback(res.ok ? "Action enregistrée." : (res.error ?? "Action impossible."));
       setBusyId(null);
       if (res.ok) router.refresh();
