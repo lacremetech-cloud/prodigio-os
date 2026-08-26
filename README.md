@@ -133,8 +133,9 @@ docs/assets/crm/       # captures desktop/mobile du CRM (PII réelle masquée)
 Design system : variables CSS (palette ivoire / noir bois / or vieilli, fond
 onyx immersif, espacements, rayons, transitions) dans `src/app/globals.css` ;
 polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
-éditoriaux), **Cinzel** (signature/intertitres capitales), **Josefin Sans**
-(textes et interface).
+éditoriaux ; graisses 500/600 normal + italique, et 700 normal pour le titre du
+hero propriétaire) et **Inter** (tout le reste : textes, interface, signature ;
+graisses 400/500/600).
 
 ## Documentation fondatrice
 

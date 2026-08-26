@@ -157,6 +157,9 @@ pas, elle n'a rien à faire sur la page.
 - **L'annotation manuscrite** « En moins de 5 min, on vous explique tout. » et
   sa flèche courbe désignent le film. Formulation validée : ne pas la réécrire,
   ne pas la supprimer (`hero.test.tsx` la verrouille).
+- **Graisse du titre** : `h1, h2, h3` fixe `font-weight: 500` par une règle
+  d'élément **hors couche** — un utilitaire `font-bold` ne la bat pas. Le titre
+  du hero reprend sa graisse (700) dans `.hero-title`, en CSS.
 - **Rappel permanent** (`StickyCta`) : barre basse sur mobile, bouton flottant
   sur ordinateur, effacé à l'approche du CTA final.
 - **Réassurance** sous chaque bouton : « Questionnaire d'une minute · Étude

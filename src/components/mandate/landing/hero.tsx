@@ -59,7 +59,7 @@ export function Hero() {
         </Reveal>
 
         <Reveal variant="rise" delayMs={60} className="-mt-1">
-          <h1 className="hero-title text-balance font-semibold text-[1.75rem] leading-[1.1] text-ivory min-[420px]:text-[2rem] sm:text-[2.4rem] sm:leading-[1.08] lg:text-[2.85rem]">
+          <h1 className="hero-title text-balance text-[1.75rem] leading-[1.1] text-ivory min-[420px]:text-[2rem] sm:text-[2.4rem] sm:leading-[1.08] lg:text-[2.85rem]">
             {hero.title}
           </h1>
         </Reveal>

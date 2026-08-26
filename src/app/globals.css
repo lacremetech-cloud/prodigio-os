@@ -343,6 +343,12 @@ html.js .reveal.reveal-rise.is-visible {
 .hero-media {
   max-width: 48rem;
 }
+/* La règle d'élément `h1, h2, h3` plus haut fixe la graisse à 500 hors couche :
+   un utilitaire `font-bold` ne la battrait pas. Le titre du hero est le seul à
+   demander davantage de présence, il la reprend ici. */
+.hero-title {
+  font-weight: 700;
+}
 @media (max-height: 900px) {
   .hero-fit {
     gap: 1rem;
