@@ -30,6 +30,7 @@ import type {
   MandateDocumentRow,
   MandateRow,
 } from "@/lib/supabase/types";
+import { safeAction } from "@/modules/crm/safe-action";
 
 // --- Hook d'action partagé ---------------------------------------------------
 function useAction() {
@@ -42,7 +43,7 @@ function useAction() {
     setError(null);
     setDone(false);
     start(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       if (res.ok) {
         setDone(true);
         onOk?.(res);
@@ -736,7 +737,7 @@ export function DocumentsManager({
   const openDocument = (documentId: string) => {
     setViewError(null);
     startViewing(async () => {
-      const res = await getDocumentSignedUrlAction({ documentId });
+      const res = await safeAction(() => getDocumentSignedUrlAction({ documentId }));
       if (res.ok && res.url) {
         window.open(res.url, "_blank", "noopener,noreferrer");
       } else {

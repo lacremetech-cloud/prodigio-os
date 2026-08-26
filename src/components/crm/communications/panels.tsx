@@ -13,6 +13,7 @@ import {
   processOutboxAction,
   scheduleRemindersAction,
 } from "@/modules/communications/actions";
+import { safeAction } from "@/modules/crm/safe-action";
 
 /**
  * Panneaux opérationnels du studio : file d'attente et état des fournisseurs.
@@ -36,7 +37,7 @@ function useAction() {
     if (busy) return;
     setBusy(true);
     startTransition(async () => {
-      const res = await fn();
+      const res = await safeAction(fn);
       setFeedback(res.ok ? (res.info ?? "Action enregistrée.") : (res.error ?? "Action impossible."));
       setBusy(false);
       if (res.ok) router.refresh();
