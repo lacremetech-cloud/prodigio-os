@@ -9,6 +9,10 @@ pas cet objectif l'affaiblit.
 
 ## 1. Principes éditoriaux
 
+0. **La page dit ce que dit la VSL.** Le texte reprend les formulations du
+   script de la vidéo — jusqu'au **libellé du bouton**, que la voix off
+   prononce. Le visiteur qui regarde puis lit ne doit rencontrer aucune
+   dissonance. Toute évolution du script se répercute dans `copy.ts`.
 1. **Une idée par écran, jamais deux fois la même.** Chaque section apporte une
    information neuve. Une idée déjà exprimée ne revient pas sous d'autres mots.
 2. **La revendication d'abord, la justification ensuite.** Le titre affirme, le
@@ -23,7 +27,7 @@ pas cet objectif l'affaiblit.
 
 | Ordre | Section | Fond | Ce qu'elle apporte |
 |---|---|---|---|
-| 1 | **Hero** | photo assombrie | La promesse **et le film**. Titre, VSL, action — rien d'autre. |
+| 1 | **Hero** | photo assombrie | La promesse **et le film**. Titre, invitation à regarder, VSL, action — rien d'autre. |
 | 2 | **La différence** (`StatementSection`) | onyx | La phrase signature : « Prodigio ne met pas votre bien en vente. Prodigio le vend. » |
 | 3 | **Marquee** | ivoire | Respiration ; les mots-clés du positionnement. |
 | 4 | **L'écrin** (`ConstatSection`) | ivoire | La **preuve visuelle** : fiche d'agence classique ↔ site dédié, carte d'identité, brochure. |
@@ -38,13 +42,16 @@ hero) ; les titres de section sont des `H2`.
 
 ## 3. Appel à l'action
 
-- **Libellé unique** : « Voir si mon bien est éligible » (variante courte en
-  en-tête : « Vérifier mon éligibilité »). Le même libellé est utilisé sur la
-  page d'accueil publique — voir [11-PUBLIC-HOME.md](11-PUBLIC-HOME.md).
+- **Libellé unique** : « Vérifier l'éligibilité de mon bien » — **exactement la
+  phrase prononcée à la fin de la VSL**, pour que le bouton soit celui que la
+  voix off annonce. Variante courte en en-tête : « Vérifier mon éligibilité ».
+  Le même libellé est utilisé sur la page d'accueil publique — voir
+  [11-PUBLIC-HOME.md](11-PUBLIC-HOME.md).
 - **Une seule couleur d'action** : le doré (`tone="gold"`). Aucun bouton
   fantôme : un contour transparent ne se lit pas comme un bouton.
 - **Au-dessus de la ligne de flottaison** : la VSL **et** le CTA du hero sont
-  visibles sans défiler, sur ordinateur (1440 × 800 compris) comme sur mobile.
+  visibles sans défiler, jusqu'en 1440 × 768 (l'écrin vidéo se resserre alors
+  automatiquement) comme sur mobile.
   C'est la contrainte qui gouverne le hero : tout bloc supplémentaire (badge,
   paragraphe, annotation) repousse le bouton hors de l'écran, donc il n'y en a
   pas.
@@ -52,8 +59,8 @@ hero) ; les titres de section sont des `H2`.
   collant prend le relais dès le hero dépassé, **sur mobile (barre basse) comme
   sur ordinateur (bouton flottant)**, et s'efface à l'approche du CTA final pour
   ne jamais le doubler.
-- **Réassurance** systématiquement sous le bouton : « 1 minute · Confidentiel ·
-  Sans engagement ».
+- **Réassurance** systématiquement sous le bouton : « Questionnaire d'une
+  minute · Étude confidentielle » (formulation de la VSL).
 
 ## 4. Ce qui a été retiré, et pourquoi
 
@@ -63,11 +70,11 @@ hero) ; les titres de section sont des `H2`.
 | Section « Sélection & confidentialité » | Disait ce que porte déjà le CTA final, avec le même bouton — les deux sont fusionnées. |
 | Défilement horizontal épinglé du Système | Occupait 4 hauteurs d'écran (un tiers de la page) pour 4 phrases, sans aucun CTA visible pendant tout ce défilement. |
 | Badge « Système avancé pour bien d'exception » | Jargon, au-dessus du titre qui dit déjà mieux la même chose. |
-| Sous-titre et annotation manuscrite du hero | Chaque ligne en plus repoussait la VSL et le CTA hors du premier écran. |
+| Sous-titre explicatif et flèche manuscrite du hero | Remplacés par **une seule ligne** d'invitation (« Cinq minutes pour voir la différence. ») : elle situe le film sans repousser le bouton hors du premier écran. |
 | Fond flouté de la hero (miniature de la VSL) | Un flou n'est pas une image : brume brune sans profondeur. Remplacé par une photographie nette voilée. |
 | Capture d'écran de dossier de fichiers publicitaires | Visuel de back-office, incompatible avec le positionnement montré à un propriétaire. |
 
-Résultat : **671 → ~340 mots**, **10 750 → 5 890 px** de hauteur sur ordinateur,
+Résultat : **671 → ~360 mots**, **10 750 → 6 050 px** de hauteur sur ordinateur,
 à information égale — et la VSL reste la première chose que l'on voit.
 
 ## 5. Contenu et code

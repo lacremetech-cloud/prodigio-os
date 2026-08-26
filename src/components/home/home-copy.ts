@@ -25,7 +25,7 @@ export const homeCopy = {
       "propriétés d'exception. Nous transformons chaque bien sélectionné en une " +
       "marque singulière, finançons sa visibilité et allons chercher ses futurs " +
       "acquéreurs en France comme à l'étranger.",
-    ctaPrimary: "Voir si mon bien est éligible",
+    ctaPrimary: "Vérifier l'éligibilité de mon bien",
     ctaSecondary: "Découvrir le Système Prodigio",
     ctaSub: "1 minute · Confidentiel · Sans engagement",
     scrollCue: "Choisir mon accès",

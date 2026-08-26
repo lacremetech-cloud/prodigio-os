@@ -1,18 +1,21 @@
 /**
- * Contenu éditorial de la landing propriétaire (v3 — resserrage éditorial).
- * Isolé du contenu du parcours (`analysis`) pour ne pas toucher au quiz.
+ * Contenu éditorial de la landing propriétaire.
  *
- * Principe : **une idée par écran, jamais deux fois la même**. Chaque bloc
- * apporte une information neuve ; les redites (constat répété, listes
- * « avant/après », rappels de sélection) ont été supprimées.
+ * Le texte est aligné sur le **script de la VSL** : la page dit ce que dit la
+ * vidéo, avec les mêmes mots-clés et le même libellé de bouton, pour que le
+ * visiteur qui regarde puis lit ne rencontre aucune dissonance.
+ *
+ * Principes : une idée par écran, jamais deux fois la même ; une affirmation
+ * concrète plutôt qu'un adjectif ; aucune promesse chiffrée hors du cas réel
+ * documenté (et son avertissement).
  */
 
-/** Libellé d'action unique sur toute la page (nav, hero, CTA final, CTA collant). */
-export const CTA_PRIMARY = "Voir si mon bien est éligible";
+/** Libellé d'action unique — **le même que celui prononcé dans la VSL**. */
+export const CTA_PRIMARY = "Vérifier l'éligibilité de mon bien";
 /** Variante courte, réservée à l'en-tête (contrainte de largeur). */
 export const CTA_NAV = "Vérifier mon éligibilité";
-export const MICROCOPY = "Analyse confidentielle — environ 1 minute";
-export const CTA_SUB = "1 minute · Confidentiel · Sans engagement";
+export const MICROCOPY = "Questionnaire d'une minute · Étude confidentielle";
+export const CTA_SUB = "Questionnaire d'une minute · Étude confidentielle";
 
 export const marqueeItems = [
   "Immobilier d'exception",
@@ -26,15 +29,18 @@ export const hero = {
   tagline: "Immobilier d'exception",
   titleLine1: "Votre propriété mérite",
   titleLine2: "plus qu'une annonce.",
+  /** Invitation à regarder le film — sous le titre, au-dessus de l'écrin. */
+  vslNote: "Cinq minutes pour voir la différence.",
 } as const;
 
-/** Moment signature — la phrase que le client aime. */
+/** Moment signature — le cœur émotionnel, repris de la VSL. */
 export const statement = {
   kicker: "La différence",
   line1: "Prodigio ne met pas votre bien en vente.",
   line2: "Prodigio le vend.",
   support:
-    "Nous ne publions pas une annonce en attendant l'acheteur. Nous allons le chercher.",
+    "Ce n'est plus l'acheteur qui cherche le bien. C'est le bien qui vient " +
+    "trouver son acheteur.",
 } as const;
 
 export const constat = {
@@ -42,8 +48,9 @@ export const constat = {
   kicker: "L'écrin",
   title: "Vos biens méritent un meilleur écrin.",
   body:
-    "Sur les portails, une demeure d'exception devient une annonce ordinaire. " +
-    "Un bien rare mérite son propre récit.",
+    "Une surface, un nombre de pièces, quelques photographies, une description. " +
+    "Et juste à côté, des dizaines d'autres biens auxquels le vôtre est " +
+    "immédiatement comparé.",
 } as const;
 
 /** Comparaison en deux parties : agences classiques ↔ mise en marché Prodigio. */
@@ -51,14 +58,16 @@ export const ecrin = {
   classique: {
     label: "Partout ailleurs",
     title: "La même fiche, partout.",
-    text: "Un prix, quelques photos, un formulaire. Le même format pour tous les biens.",
+    text:
+      "Les outils pour vendre un bien n'ont presque pas changé. Le vôtre devient " +
+      "une annonce de plus.",
   },
   prodigio: {
     label: "Avec Prodigio",
     title: "Une marque. Un site dédié.",
     text:
-      "Une page dédiée, une carte d'identité, une brochure confidentielle. " +
-      "Votre bien retrouve sa singularité.",
+      "Un film, des photographies, une narration, un site entièrement consacré " +
+      "à votre bien. Il n'est plus mélangé aux autres : il devient le seul sujet.",
     captions: {
       ecrinProdigio: "Site dédié au bien",
       ecrinIdentite: "Carte d'identité",
@@ -72,30 +81,33 @@ export const systeme = {
   kicker: "Le Système Prodigio",
   titleLine1: "Nous n'attendons pas le coup de cœur.",
   titleLine2: "Nous le provoquons.",
+  lead:
+    "Dans l'immobilier d'exception, on n'achète pas des mètres carrés. " +
+    "On achète une sensation.",
   phases: [
     {
       n: "I",
       title: "Comprendre",
-      lead: "L'étude au sniper",
-      text: "Qui achètera ce bien, où il vit, ce qui le décide.",
+      lead: "Un ciblage chirurgical",
+      text: "Qui achètera ce bien, où il vit, ce qui le fera basculer.",
     },
     {
       n: "II",
       title: "Concevoir",
       lead: "Une marque, pas une fiche",
-      text: "Un récit et une identité, pas une fiche technique.",
+      text: "On ne vend pas un chalet en montagne comme une villa en bord de mer.",
     },
     {
       n: "III",
       title: "Produire",
       lead: "Film, image, narration",
-      text: "Captation, écrin éditorial, site dédié. 1 bien, 1 univers.",
+      text: "Un écrin entier pour un seul bien : votre propriété devient le sujet.",
     },
     {
       n: "IV",
       title: "Acquérir",
       lead: "Aller chercher l'acheteur",
-      text: "Campagnes ciblées en France et à l'étranger, puis qualification.",
+      text: "Le bon message, sur le bon écran, devant la bonne personne.",
     },
   ],
 } as const;
@@ -106,20 +118,22 @@ export const modele = {
   title: "Nous finançons la visibilité.",
   emphasis: "Rémunérés au résultat.",
   text:
-    "Sur les biens éligibles, nous avançons les campagnes d'acquisition. " +
-    "Notre intérêt est le vôtre : la vente.",
+    "Nous avons assez confiance dans le système pour avancer le budget de " +
+    "diffusion des biens éligibles. Notre intérêt est le vôtre : la vente.",
 } as const;
 
 export const preuve = {
   index: "04",
   kicker: "La preuve",
   title: "Un cas réel, présenté sans promesse.",
-  intro: "De l'exposition à la signature.",
+  intro:
+    "Un chalet proposé à 1,6 million d'euros, à Font-Romeu. Quatorze jours de " +
+    "campagne.",
   stats: [
-    { value: 312, suffix: "", label: "demandes générées en 14 jours" },
+    { value: 312, suffix: "", label: "demandes générées" },
     { value: 172, suffix: "", label: "budgets déclarés" },
     { value: 23, suffix: "", label: "acquéreurs à plus de 1 M€" },
-    { value: 6, suffix: "", label: "visites organisées" },
+    { value: 6, suffix: "", label: "visites qualifiées" },
     { value: 1, suffix: "", label: "vente" },
   ],
   disclaimer:
@@ -130,10 +144,11 @@ export const preuve = {
 /** Fin de page : la sélectivité et l'appel à l'action, réunis en un seul écran. */
 export const finalCta = {
   eyebrow: "Sélection & confidentialité",
-  title: "Votre propriété est-elle éligible ?",
+  titleLine1: "Votre propriété mérite mieux qu'une annonce.",
+  titleLine2: "Elle mérite une stratégie à sa mesure.",
   text:
-    "Nous ne travaillons pas avec toutes les propriétés. Chaque demande fait " +
-    "l'objet d'une analyse confidentielle.",
+    "Nous ne sélectionnons pas toutes les propriétés — uniquement celles pour " +
+    "lesquelles nous pouvons construire une stratégie à la hauteur.",
 } as const;
 
 export const footer = {

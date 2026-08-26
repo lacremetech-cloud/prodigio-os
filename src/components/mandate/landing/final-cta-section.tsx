@@ -39,8 +39,10 @@ export function FinalCtaSection() {
           <p className="eyebrow text-gold-soft">{finalCta.eyebrow}</p>
         </Reveal>
         <Reveal variant="rise" delayMs={90}>
-          <h2 className="mt-8 max-w-2xl text-balance text-4xl leading-[1.06] text-ivory sm:text-5xl lg:text-6xl">
-            {finalCta.title}
+          <h2 className="mt-8 max-w-3xl text-balance text-[2rem] leading-[1.1] text-ivory sm:text-4xl lg:text-5xl">
+            {finalCta.titleLine1}
+            <br />
+            <span className="text-gold-soft">{finalCta.titleLine2}</span>
           </h2>
         </Reveal>
         <Reveal delayMs={200}>

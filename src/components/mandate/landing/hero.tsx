@@ -10,10 +10,10 @@ import { CTA_PRIMARY, CTA_SUB, hero } from "./copy";
 /**
  * Hero — la VSL est la pièce maîtresse : le visiteur arrive dessus.
  *
- * Trois éléments, et rien d'autre, pour qu'ils tiennent **tous sur le premier
- * écran** (la vidéo ET le bouton) : le titre, le film, l'action. Chaque bloc
- * supplémentaire — badge, paragraphe, annotation — repoussait le CTA sous la
- * ligne de flottaison ; c'est pour cela qu'ils ne sont pas revenus.
+ * Quatre éléments, et rien d'autre, pour qu'ils tiennent **tous sur le premier
+ * écran** (la vidéo ET le bouton) : le titre, l'invitation à regarder, le film,
+ * l'action. Tout bloc supplémentaire repousserait le CTA sous la ligne de
+ * flottaison — c'est la contrainte qui gouverne ce hero.
  *
  * Le fond est une photographie nette voilée par un dégradé vertical : de la
  * profondeur derrière l'écrin vidéo, sans halo doré qui salirait le titre.
@@ -43,21 +43,34 @@ export function Hero() {
 
       <LandingNav />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-6 pb-10 pt-24 text-center sm:gap-7 sm:px-8 sm:pt-28">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-6 pb-6 pt-20 text-center sm:gap-6 sm:pb-8 sm:pt-24 sm:px-8 sm:pt-28">
         <Reveal variant="rise">
-          <h1 className="text-balance text-[1.9rem] leading-[1.08] text-ivory min-[420px]:text-[2.2rem] sm:text-[2.6rem] sm:leading-[1.06] lg:text-[3.1rem]">
+          <h1 className="text-balance text-[1.9rem] leading-[1.08] text-ivory min-[420px]:text-[2.2rem] sm:text-[2.6rem] sm:leading-[1.06] lg:text-[2.9rem]">
             {hero.titleLine1}
             <br />
             {hero.titleLine2}
           </h1>
         </Reveal>
 
+        {/* Invitation à regarder — une ligne, pas un paragraphe. */}
+        <Reveal delayMs={80} className="-mt-2 sm:-mt-3">
+          <p className="font-display text-lg italic leading-tight text-gold-soft sm:text-xl">
+            {hero.vslNote}
+          </p>
+        </Reveal>
+
         {/* Le film — pièce maîtresse, immédiatement visible. */}
-        <Reveal variant="scale" delayMs={120}>
+        {/* Sur un écran court (portable 768 px), l'écrin se resserre pour que la
+            réassurance sous le bouton reste visible sans défiler. */}
+        <Reveal
+          variant="scale"
+          delayMs={160}
+          className="mx-auto w-full [@media(max-height:840px)]:max-w-2xl"
+        >
           <HeroVsl />
         </Reveal>
 
-        <Reveal delayMs={240} className="flex flex-col items-center gap-3">
+        <Reveal delayMs={280} className="flex flex-col items-center gap-3">
           <LandingCta
             href={ANALYSE_ROUTE}
             tone="gold"

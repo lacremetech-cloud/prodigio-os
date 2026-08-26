@@ -26,8 +26,13 @@ export function SystemSection() {
             <span className="text-gold-soft">{systeme.titleLine2}</span>
           </h2>
         </Reveal>
+        <Reveal delayMs={160}>
+          <p className="mt-7 max-w-xl text-pretty text-lg leading-relaxed text-text-on-dark-muted">
+            {systeme.lead}
+          </p>
+        </Reveal>
 
-        <ol className="mt-16 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="mt-14 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
           {systeme.phases.map((phase, i) => (
             <Reveal as="li" key={phase.n} variant="rise" delayMs={i * 90}>
               <span
