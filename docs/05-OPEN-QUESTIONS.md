@@ -16,6 +16,7 @@ des **paramètres configurables**, jamais comme des constantes codées en dur.
 | 2 | **Entité portant les mandats** | Une **entité immobilière habilitée**, **à confirmer contractuellement**. Héritage Patrimoine (Cyril Gallon) envisagé, entité exacte à valider. | Validité juridique des mandats. |
 | 3 | **Carte professionnelle et habilitations** | L'agence partenaire disposerait des autorisations nécessaires (à confirmer précisément). | Validité juridique des actes. |
 | 4 | **Périmètre géographique initial** | À définir (zone(s) de lancement). | Ciblage publicitaire, périmètre partenaire. |
+| 4 bis | **Ancienneté annoncée publiquement** | **Non validée.** La landing propriétaire avance « plus de 25 ans dans l'immobilier » (`EXPERIENCE_LABEL`, [`src/config/credentials.ts`](../src/config/credentials.ts), surchargeable par `NEXT_PUBLIC_EXPERIENCE_LABEL`). Peut devenir « plus de 20 ans ». | Crédibilité, loyauté de l'information commerciale. |
 
 ## B. Modèle économique (paramètres configurables et versionnés)
 
