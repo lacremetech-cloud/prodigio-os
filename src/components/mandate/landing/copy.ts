@@ -40,7 +40,8 @@ export const MICROCOPY = "Questionnaire d'une minute · Étude confidentielle ·
 export const hero = {
   brand: "PRODIGIO",
   tagline: "Immobilier d'exception",
-  eyebrow: "L'immobilier d'exception, autrement",
+  /** Cartouche d'ouverture : le nom de la méthode, en capitales. */
+  badge: SYSTEM_NAME,
   title:
     "Et si, au lieu d'attendre votre acheteur pendant des mois, nous allions " +
     "le chercher ?",

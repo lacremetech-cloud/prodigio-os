@@ -13,7 +13,7 @@ import { CTA_PRIMARY, CTA_SUB, hero } from "./copy";
  * La headline domine : c'est elle qui doit rester en tête si le visiteur ne lit
  * rien d'autre. Aucun paragraphe explicatif : une seule ligne sous le titre.
  *
- * Hiérarchie verrouillée : eyebrow, titre, sous-titre, annotation manuscrite,
+ * Hiérarchie verrouillée : cartouche, titre, sous-titre, annotation manuscrite,
  * film, action. Rien d'autre — pas de second paragraphe explicatif, pas de
  * bandeau. Le « comment » est révélé progressivement par la VSL et les sections
  * suivantes.
@@ -47,8 +47,15 @@ export function Hero() {
       <LandingNav />
 
       <div className="hero-fit mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-6 pb-4 pt-20 text-center sm:gap-6 sm:px-8 sm:pt-24">
-        <Reveal>
-          <p className="eyebrow text-gold-soft">{hero.eyebrow}</p>
+        {/* Cartouche d'ouverture — un reflet lumineux le balaie par
+            intermittence (`.badge-shine`). */}
+        <Reveal className="flex justify-center">
+          <span className="badge-shine inline-flex max-w-full items-center gap-2 rounded-full border border-[color:var(--color-gold)]/35 bg-[color:var(--color-gold)]/[0.08] px-3.5 py-1.5 sm:px-4">
+            <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-gold-soft" />
+            <span className="whitespace-nowrap font-signature text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-gold-soft min-[420px]:text-[0.66rem] min-[420px]:tracking-[0.18em] sm:text-[0.72rem] sm:tracking-[0.22em]">
+              {hero.badge}
+            </span>
+          </span>
         </Reveal>
 
         <Reveal variant="rise" delayMs={60} className="-mt-1">

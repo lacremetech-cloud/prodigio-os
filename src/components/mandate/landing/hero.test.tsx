@@ -32,6 +32,13 @@ describe("Hero", () => {
     expect(titles[0]?.textContent).toBe(hero.title);
   });
 
+  it("ouvre sur le cartouche du Système Prodigio, avec son reflet", () => {
+    const { container } = render(<Hero />);
+    const cartouche = container.querySelector(".badge-shine");
+    expect(cartouche?.textContent).toContain(hero.badge);
+    expect(hero.badge).toBe(SYSTEM_NAME);
+  });
+
   it("nomme la méthode dans le sous-titre et la met en valeur", () => {
     const { container } = render(<Hero />);
     expect(heroText(container)).toContain(

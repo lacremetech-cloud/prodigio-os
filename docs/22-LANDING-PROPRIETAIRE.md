@@ -44,6 +44,9 @@ valeur typographiquement dès le sous-titre du hero, puis repris en surtitre du
 système, de la sélectivité et de la FAQ. C'est ce nom qui doit rester en tête,
 pas le vocabulaire des outils.
 
+Il ouvre la page en capitales, dans un **cartouche** qu'un reflet lumineux
+balaie par intermittence (`.badge-shine`) — pas en surtitre plat.
+
 ### Zéro jargon face au propriétaire
 
 Le propriétaire doit penser *« ils ont une manière différente de trouver mon
@@ -97,7 +100,7 @@ cela que la section création arrive **après** la Big Idea, et non avant.
 
 | # | Section | Fond | Ce qu'elle apporte |
 |---|---|---|---|
-| 1 | **Hero** | photo assombrie | La question qui installe la Big Idea, le nom de la méthode, l'annotation manuscrite, le film, l'action. |
+| 1 | **Hero** | photo assombrie | Le cartouche « SYSTÈME PRODIGIO™ », la question qui installe la Big Idea, l'annotation manuscrite, le film, l'action. |
 | 2 | **Preuve immédiate** (`ProofStripSection`) | onyx | 4 nombres. La crédibilité avant l'argumentaire. |
 | 3 | **L'angle mort** (`AudienceSection`) | onyx | « Et tous les autres ? », puis où se trouve l'attention + maquette d'une publicité. |
 | 4 | **La création** (`CreationSection`) | ivoire | « Votre propriété mérite mieux qu'une annonce » : annonce classique ↔ écrin Prodigio, en images. |
