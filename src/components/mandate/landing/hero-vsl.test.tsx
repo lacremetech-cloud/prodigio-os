@@ -1,70 +1,65 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
-import {
-  HeroVsl,
-  shouldShowPlayFallback,
-  shouldShowSoundButton,
-} from "./hero-vsl";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { HeroVsl } from "./hero-vsl";
 
-// next/image → simple <img> (évite le runtime Next dans jsdom).
 vi.mock("next/image", () => ({
-  default: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
+  default: ({ src, alt }: { src: string; alt: string }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} className={className} />
+    <img src={src} alt={alt} />
   ),
 }));
 
 afterEach(() => cleanup());
 
-describe("HeroVsl — logique d'affichage", () => {
-  it("propose le son uniquement pendant la lecture muette", () => {
-    expect(shouldShowSoundButton("playing")).toBe(true);
-    expect(shouldShowSoundButton("idle")).toBe(false);
-    expect(shouldShowSoundButton("sound")).toBe(false);
-    expect(shouldShowSoundButton("blocked")).toBe(false);
-  });
-
-  it("propose la lecture de secours uniquement si l'autoplay est bloqué", () => {
-    expect(shouldShowPlayFallback("blocked")).toBe(true);
-    expect(shouldShowPlayFallback("idle")).toBe(false);
-    expect(shouldShowPlayFallback("playing")).toBe(false);
-  });
-});
-
-describe("HeroVsl — rendu", () => {
-  it("intègre la VSL (iframe nocookie, autoplay muet, playsinline, sans habillage)", () => {
+describe("HeroVsl — un seul geste", () => {
+  it("expose l'écrin comme un unique bouton : toute la zone est cliquable", () => {
     render(<HeroVsl />);
-    const iframe = document.querySelector("iframe");
+    const triggers = screen.getAllByRole("button");
+    expect(triggers.length).toBe(1);
+  });
+
+  it("n'ouvre aucun lecteur tant que rien n'est cliqué (aucune lecture auto)", () => {
+    const { container } = render(<HeroVsl />);
+    expect(container.querySelector("iframe")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("ouvre l'expérience agrandie dès le premier clic, avec le son", () => {
+    const { container } = render(<HeroVsl />);
+    fireEvent.click(screen.getByRole("button"));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+
+    const iframe = container.querySelector("iframe");
     expect(iframe).not.toBeNull();
-    const src = iframe!.getAttribute("src") ?? "";
-    expect(src).toContain("youtube-nocookie.com/embed/rgH1uqNdvHs");
-    expect(src).toContain("autoplay=1");
-    expect(src).toContain("mute=1");
-    expect(src).toContain("playsinline=1");
-    expect(src).toContain("controls=0");
-    expect(src).toContain("enablejsapi=1");
-    // Attribut autorisant l'autoplay.
-    expect(iframe!.getAttribute("allow") ?? "").toContain("autoplay");
+    // Le film démarre seul et audible : pas de « lire puis chercher le son ».
+    expect(iframe?.getAttribute("src")).toContain("autoplay=1");
+    expect(iframe?.getAttribute("src")).toContain("mute=0");
   });
 
-  it("affiche des repères cinématographiques discrets", () => {
+  it("se ferme avec la touche Échap", () => {
     render(<HeroVsl />);
-    expect(screen.getByText(/Scene 01/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("affiche un bouton de lecture de secours si l'autoplay ne démarre pas", () => {
-    vi.useFakeTimers();
-    try {
-      render(<HeroVsl />);
-      act(() => {
-        vi.advanceTimersByTime(3000);
-      });
-      expect(
-        screen.getByRole("button", { name: /Lancer le film de présentation/i }),
-      ).toBeTruthy();
-    } finally {
-      vi.useRealTimers();
-    }
+  it("restaure la position de défilement à la fermeture (aucun saut)", () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(window, "scrollY", { value: 1240, writable: true });
+    Object.defineProperty(window, "scrollTo", { value: scrollTo, writable: true });
+
+    render(<HeroVsl />);
+    fireEvent.click(screen.getByRole("button"));
+    // Le corps est figé à l'offset courant pendant la lecture.
+    expect(document.body.style.top).toBe("-1240px");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(scrollTo).toHaveBeenCalledWith(0, 1240);
+    expect(document.body.style.position).toBe("");
   });
 });

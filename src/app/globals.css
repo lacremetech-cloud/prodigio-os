@@ -369,3 +369,35 @@ html.js .reveal.reveal-rise.is-visible {
   }
   .badge-shine::after { opacity: 0; }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Schémas « Visibilité ≠ Acquisition »                                        */
+/* -------------------------------------------------------------------------- */
+/* Le trait se dessine à la révélation : la courbe organique retombe, la boucle
+   Prodigio se referme. Sans JavaScript (ou sous mouvement réduit), le tracé est
+   affiché complet — le sens ne dépend jamais de l'animation. */
+html.js .pg-draw {
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+}
+html.js .reveal.is-visible .pg-draw {
+  animation: pg-stroke 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+html.js .reveal.is-visible .pg-draw-loop {
+  animation-duration: 1900ms;
+  animation-delay: 160ms;
+}
+
+@keyframes pg-stroke {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js .pg-draw {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+    animation: none !important;
+  }
+}

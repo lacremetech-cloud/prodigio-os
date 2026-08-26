@@ -2,9 +2,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { CountUp, easeOutExpo } from "@/components/ui/count-up";
-import { StatementSection } from "./statement-section";
-import { ProofSection } from "./proof-section";
-import { preuve, statement } from "./copy";
+import { PreuveFlash } from "./preuve-flash";
+import { CaseStudySection } from "./case-study-section";
+import { ManifesteSection } from "./manifeste-section";
+import { FaqSection } from "./faq-section";
+import { caseStudy, faq, manifeste, preuveFlash } from "./copy";
 
 afterEach(() => cleanup());
 
@@ -24,27 +26,64 @@ describe("easeOutExpo", () => {
 });
 
 describe("CountUp", () => {
-  it("affiche la valeur finale (rendu SSR / no-JS friendly)", () => {
+  it("affiche la valeur finale (rendu SSR / sans JavaScript)", () => {
     render(<CountUp value={312} />);
     expect(screen.getByText("312")).toBeTruthy();
   });
 });
 
-describe("StatementSection", () => {
-  it("porte la phrase signature « Prodigio le vend »", () => {
-    render(<StatementSection />);
-    expect(screen.getByText(statement.line1)).toBeTruthy();
-    expect(screen.getByText(/le vend\./i)).toBeTruthy();
+describe("PreuveFlash", () => {
+  it("pose les chiffres du cas réel juste après la hero", () => {
+    render(<PreuveFlash />);
+    for (const stat of preuveFlash.stats) {
+      expect(screen.getByText(stat.label)).toBeTruthy();
+    }
+    expect(screen.getByText(preuveFlash.microcopy)).toBeTruthy();
   });
 });
 
-describe("ProofSection", () => {
-  it("affiche tous les paliers de l'entonnoir", () => {
-    render(<ProofSection />);
-    for (const stat of preuve.stats) {
+describe("CaseStudySection", () => {
+  it("déroule l'entonnoir et conserve le disclaimer", () => {
+    render(<CaseStudySection />);
+    for (const stat of caseStudy.stats) {
       expect(screen.getByText(stat.label)).toBeTruthy();
     }
-    // Valeurs animées : rendu initial = valeur finale.
-    expect(screen.getByText("312")).toBeTruthy();
+    expect(screen.getByText(caseStudy.climax.label)).toBeTruthy();
+    // La preuve n'est jamais présentée comme une garantie.
+    expect(screen.getByText(caseStudy.disclaimer)).toBeTruthy();
+  });
+});
+
+describe("ManifesteSection", () => {
+  it("énonce le positionnement « traditionnel + Système Prodigio »", () => {
+    render(<ManifesteSection />);
+    expect(screen.getByText(manifeste.expertise.label)).toBeTruthy();
+    expect(screen.getByText(manifeste.systeme.label)).toBeTruthy();
+    expect(screen.getByText(manifeste.resultat)).toBeTruthy();
+  });
+});
+
+describe("FaqSection", () => {
+  it("rend chaque question dans un repliable natif (utilisable sans JS)", () => {
+    const { container } = render(<FaqSection />);
+    expect(container.querySelectorAll("details").length).toBe(faq.items.length);
+    for (const item of faq.items) {
+      expect(screen.getByText(item.q)).toBeTruthy();
+    }
+  });
+});
+
+describe("Positionnement — interdits de ton", () => {
+  it("ne caricature jamais les agences traditionnelles", () => {
+    const { container } = render(
+      <>
+        <ManifesteSection />
+        <FaqSection />
+      </>,
+    );
+    const texte = container.textContent ?? "";
+    for (const interdit of ["la même fiche", "annonce ordinaire", "partout ailleurs"]) {
+      expect(texte.toLowerCase()).not.toContain(interdit);
+    }
   });
 });
