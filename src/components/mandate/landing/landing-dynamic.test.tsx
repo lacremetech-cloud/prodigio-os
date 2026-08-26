@@ -2,9 +2,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { CountUp, easeOutExpo } from "@/components/ui/count-up";
-import { StatementSection } from "./statement-section";
-import { ProofSection } from "./proof-section";
-import { preuve, statement } from "./copy";
+import { ProofStripSection } from "./proof-strip-section";
+import { BigIdeaSection } from "./big-idea-section";
+import { ComparaisonSection } from "./comparaison-section";
+import { bigIdea, comparaison, proofStrip } from "./copy";
 
 afterEach(() => cleanup());
 
@@ -30,21 +31,31 @@ describe("CountUp", () => {
   });
 });
 
-describe("StatementSection", () => {
-  it("porte la phrase signature « Prodigio le vend »", () => {
-    render(<StatementSection />);
-    expect(screen.getByText(statement.line1)).toBeTruthy();
-    expect(screen.getByText(/le vend\./i)).toBeTruthy();
+describe("ProofStripSection", () => {
+  it("affiche la preuve chiffrée immédiatement lisible", () => {
+    render(<ProofStripSection />);
+    for (const stat of proofStrip.stats) {
+      expect(screen.getByText(stat.label)).toBeTruthy();
+    }
+    expect(screen.getByText("312")).toBeTruthy();
   });
 });
 
-describe("ProofSection", () => {
-  it("affiche tous les paliers de l'entonnoir", () => {
-    render(<ProofSection />);
-    for (const stat of preuve.stats) {
-      expect(screen.getByText(stat.label)).toBeTruthy();
-    }
-    // Valeurs animées : rendu initial = valeur finale.
-    expect(screen.getByText("312")).toBeTruthy();
+describe("BigIdeaSection", () => {
+  it("oppose la demande existante aux nouvelles intentions", () => {
+    render(<BigIdeaSection />);
+    expect(screen.getByText(bigIdea.traditional.outcome)).toBeTruthy();
+    expect(screen.getByText(bigIdea.prodigio.outcome)).toBeTruthy();
+  });
+});
+
+describe("ComparaisonSection", () => {
+  it("reste additive : la commercialisation traditionnelle n'est jamais dénigrée", () => {
+    const { container } = render(<ComparaisonSection />);
+    const texte = container.textContent ?? "";
+    expect(texte).toContain(comparaison.punchLine1);
+    expect(texte).toContain(comparaison.punchLine2);
+    // Aucune formule accusatrice envers la profession.
+    expect(texte).not.toMatch(/dépassé|obsolèt|ne font rien|ne fonctionne plus/i);
   });
 });

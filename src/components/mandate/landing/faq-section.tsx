@@ -1,5 +1,4 @@
 import { Reveal } from "@/components/ui/reveal";
-import { SectionMarker } from "./section-marker";
 import { faq } from "./copy";
 
 /**
@@ -13,13 +12,13 @@ import { faq } from "./copy";
  */
 export function FaqSection() {
   return (
-    <section className="bg-ivory px-6 py-24 text-wood-black sm:px-10 sm:py-32 lg:px-16">
+    <section className="bg-ivory px-6 py-20 text-wood-black sm:px-10 sm:py-28 lg:px-16">
       <div className="mx-auto max-w-3xl">
         <Reveal>
-          <SectionMarker index={faq.index} label={faq.kicker} />
+          <p className="eyebrow text-[color:var(--color-gold)]">{faq.eyebrow}</p>
         </Reveal>
         <Reveal variant="rise" delayMs={80}>
-          <h2 className="mt-7 text-balance text-3xl leading-[1.12] sm:text-4xl">
+          <h2 className="mt-6 text-balance text-3xl leading-[1.12] sm:text-4xl">
             {faq.title}
           </h2>
         </Reveal>

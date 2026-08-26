@@ -1,6 +1,5 @@
 import { Reveal } from "@/components/ui/reveal";
 import { SHOWCASE } from "@/config/showcase";
-import { SectionMarker } from "./section-marker";
 import { vitrine } from "./copy";
 
 interface LivePreviewProps {
@@ -76,21 +75,18 @@ function LivePreview({ src, label, hint, openLabel, title }: LivePreviewProps) {
  */
 export function VitrineSection() {
   return (
-    <section className="bg-ivory-muted px-6 py-24 text-wood-black sm:px-10 sm:py-32 lg:px-16">
+    <section className="bg-ivory-muted px-6 py-20 text-wood-black sm:px-10 sm:py-28 lg:px-16">
       <div className="mx-auto max-w-6xl">
         <Reveal>
-          <SectionMarker index={vitrine.index} label={vitrine.kicker} />
+          <p className="eyebrow text-[color:var(--color-gold)]">{vitrine.eyebrow}</p>
         </Reveal>
         <Reveal variant="rise" delayMs={80}>
-          <h2 className="mt-7 max-w-2xl text-balance text-3xl leading-[1.12] sm:text-4xl lg:text-[2.75rem]">
+          <h2 className="mt-6 max-w-2xl text-balance text-3xl leading-[1.12] sm:text-4xl lg:text-[2.75rem]">
             {vitrine.title}
           </h2>
         </Reveal>
         <Reveal delayMs={180}>
-          <p className="mt-7 max-w-xl text-pretty text-lg leading-relaxed text-text-secondary">
-            {vitrine.body}
-          </p>
-          <p className="mt-3 font-signature text-xs uppercase tracking-[0.24em] text-[color:var(--color-gold)]">
+          <p className="mt-6 font-signature text-xs uppercase tracking-[0.24em] text-[color:var(--color-gold)]">
             {SHOWCASE.name} · {SHOWCASE.place}
           </p>
         </Reveal>
