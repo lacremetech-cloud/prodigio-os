@@ -1,3 +1,4 @@
+import { CTA_LABEL, CTA_LABEL_SHORT } from "@/config/cta";
 import { EXPERIENCE_LABEL, SYSTEM_NAME } from "@/config/credentials";
 
 /**
@@ -28,10 +29,14 @@ import { EXPERIENCE_LABEL, SYSTEM_NAME } from "@/config/credentials";
  *   aucune condition économique chiffrée (paramètres contractuels versionnés).
  */
 
-/** Libellé d'action unique — la phrase prononcée à la fin de la VSL. */
-export const CTA_PRIMARY = "Vérifier l'éligibilité de mon bien";
+/**
+ * Libellé d'action unique. Il n'est **pas** figé ici : les formulations en
+ * attente d'arbitrage vivent dans `@/config/cta`, sélectionnables par variable
+ * d'environnement, et la variante active accompagne chaque `cta_click`.
+ */
+export const CTA_PRIMARY = CTA_LABEL;
 /** Variante courte, réservée à l'en-tête (contrainte de largeur). */
-export const CTA_NAV = "Vérifier mon éligibilité";
+export const CTA_NAV = CTA_LABEL_SHORT;
 /** Réassurance courte, sous le CTA du hero. */
 export const CTA_SUB = "Questionnaire d'une minute · Étude confidentielle · Sans engagement";
 /** Réassurance complète, sous les CTA de fin de page. */
@@ -54,6 +59,10 @@ export const hero = {
     "vite, au prix qu'il mérite.",
   /** Annotation manuscrite qui désigne le film. Formulation validée — ne pas réécrire. */
   vslNote: "En moins de 5 min, on vous explique tout.",
+  /** Invitation portée par l'affiche du film, sur l'image elle-même. */
+  vslInvite: `Découvrez comment le ${SYSTEM_NAME} va chercher activement l'acheteur de votre bien.`,
+  /** Repère de durée — ⚠️ à ajuster lors du montage de la VSL définitive. */
+  vslDuration: "4 min",
 } as const;
 
 /** Preuve immédiate — comprise en trois secondes, juste après la VSL. */
@@ -183,13 +192,17 @@ export const transparence = {
 export const caseStudy = {
   eyebrow: "Font-Romeu · 1,6 M€",
   title: "Nous n'avons pas attendu son acheteur.",
+  /**
+   * L'entonnoir, dans l'ordre. `n` porte les paliers chiffrés (animés) ;
+   * `value` porte les paliers écrits. Le dernier est le climax.
+   */
   steps: [
-    { value: "14 jours", label: "de campagne" },
-    { value: "312", label: "demandes" },
-    { value: "172", label: "budgets déclarés" },
-    { value: "23", label: "budgets > 1 M€" },
-    { value: "6", label: "visites" },
-    { value: "Vendu", label: "" },
+    { n: null, value: "14 jours", label: "de campagne" },
+    { n: 312, value: null, label: "demandes" },
+    { n: 172, value: null, label: "budgets déclarés" },
+    { n: 23, value: null, label: "acquéreurs · budget > 1 M€" },
+    { n: 6, value: null, label: "visites qualifiées" },
+    { n: null, value: "1 vente", label: "" },
   ],
   conclusion:
     "Nous avons créé les conditions pour que le chalet trouve son acheteur.",

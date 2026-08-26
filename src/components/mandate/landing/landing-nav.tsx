@@ -22,6 +22,7 @@ export function LandingNav() {
           href={ANALYSE_ROUTE}
           tone="gold"
           size="lg"
+          location="nav"
           className="!min-h-[2.9rem] !px-6 !py-3 text-sm"
         >
           {CTA_NAV}

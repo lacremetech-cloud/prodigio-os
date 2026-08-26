@@ -197,29 +197,29 @@ html.js .reveal {
   opacity: 0;
 }
 html.js .reveal.is-visible {
-  animation: pg-reveal-up 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pg-reveal-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--reveal-delay, 0ms);
 }
 /* Variantes de révélation (relief) */
 html.js .reveal.reveal-blur.is-visible {
-  animation: pg-reveal-blur 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pg-reveal-blur 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--reveal-delay, 0ms);
 }
 html.js .reveal.reveal-scale.is-visible {
-  animation: pg-reveal-scale 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pg-reveal-scale 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--reveal-delay, 0ms);
 }
 html.js .reveal.reveal-rise.is-visible {
-  animation: pg-reveal-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pg-reveal-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--reveal-delay, 0ms);
 }
 
 @keyframes pg-reveal-up {
-  from { opacity: 0; transform: translateY(34px); }
+  from { opacity: 0; transform: translateY(22px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes pg-reveal-blur {
-  from { opacity: 0; transform: translateY(26px); filter: blur(12px); }
+  from { opacity: 0; transform: translateY(18px); filter: blur(9px); }
   to { opacity: 1; transform: none; filter: blur(0); }
 }
 @keyframes pg-reveal-scale {
@@ -227,7 +227,7 @@ html.js .reveal.reveal-rise.is-visible {
   to { opacity: 1; transform: none; }
 }
 @keyframes pg-reveal-rise {
-  from { opacity: 0; transform: translateY(64px) scale(0.985); }
+  from { opacity: 0; transform: translateY(38px) scale(0.99); }
   to { opacity: 1; transform: none; }
 }
 
@@ -273,12 +273,12 @@ html.js .reveal.reveal-rise.is-visible {
   animation: pg-sheen 900ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Halo doré pulsant très discret (accents) */
-@keyframes pg-glow {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.9; }
-}
-.animate-glow { animation: pg-glow 3.6s ease-in-out infinite; }
+/* Halo doré derrière un accent. **Fixe** : une pulsation permanente attire
+   l'œil en continu et fait « landing d'infoproduit ». Il ne réagit qu'au
+   survol du bouton qu'il accompagne, via `.cta-halo`. */
+.cta-halo { opacity: 0.42; transition: opacity 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+.cta-halo-host:hover .cta-halo,
+.cta-halo-host:focus-within .cta-halo { opacity: 0.75; }
 
 /* ---------------------------------------------------------------------------
    Écrin vidéo (VSL) — profondeur et matière.
@@ -327,9 +327,12 @@ html.js .reveal.reveal-rise.is-visible {
     transparent 62%
   );
   background-size: 260% 100%;
-  animation: pg-sheen 9s ease-in-out infinite;
+  animation: pg-vsl-sheen 9s ease-in-out infinite;
 }
-@keyframes pg-sheen {
+/* Nom distinct de `pg-sheen` (reflet des boutons) : deux `@keyframes` de même
+   nom se remplacent, et la dernière déclarée gagnait — le reflet des boutons
+   se retrouvait animé sur `background-position` au lieu de `transform`. */
+@keyframes pg-vsl-sheen {
   0%, 62% { background-position: 180% 0; }
   84%, 100% { background-position: -80% 0; }
 }
@@ -473,7 +476,6 @@ html.js .reveal.reveal-rise.is-visible {
   }
   .marquee-track,
   .vsl-frame::after,
-  .animate-glow,
   .animate-scroll-cue,
   .badge-shine::after,
   .cta-shine:hover::after,
@@ -482,4 +484,5 @@ html.js .reveal.reveal-rise.is-visible {
   }
   .badge-shine::after,
   .vsl-frame::after { opacity: 0; }
+  .cta-halo { transition: none; }
 }

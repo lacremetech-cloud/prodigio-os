@@ -108,12 +108,12 @@ export function Hero() {
         </Reveal>
 
         <Reveal delayMs={260} className="flex flex-col items-center gap-3">
-          <div className="relative w-full max-w-md sm:w-auto">
+          <div className="cta-halo-host relative w-full max-w-md sm:w-auto">
             <span
               aria-hidden="true"
-              className="animate-glow pointer-events-none absolute -inset-4 -z-10 rounded-full bg-[radial-gradient(60%_60%_at_50%_50%,rgba(203,180,136,0.55)_0%,rgba(203,180,136,0)_70%)] blur-xl"
+              className="cta-halo pointer-events-none absolute -inset-4 -z-10 rounded-full bg-[radial-gradient(60%_60%_at_50%_50%,rgba(203,180,136,0.55)_0%,rgba(203,180,136,0)_70%)] blur-xl"
             />
-            <LandingCta href={ANALYSE_ROUTE} tone="gold" size="lg" className="w-full">
+            <LandingCta href={ANALYSE_ROUTE} tone="gold" size="lg" location="hero" className="w-full">
               {CTA_PRIMARY}
             </LandingCta>
           </div>

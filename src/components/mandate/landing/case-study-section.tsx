@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { CountUp } from "@/components/ui/count-up";
 import { Reveal } from "@/components/ui/reveal";
 import { media } from "@/lib/media";
 import { caseStudy } from "./copy";
@@ -6,9 +7,17 @@ import { caseStudy } from "./copy";
 /**
  * Case study — la démonstration complète du mécanisme, en entonnoir.
  *
- * Chaque palier apparaît en cascade au défilement ; le dernier (la vente) est
- * mis en relief. L'avertissement reste attaché aux chiffres : un cas réel n'est
- * pas une promesse.
+ * Chaque palier se révèle **quand il arrive à l'écran**, pas selon un décalage
+ * fixe : le rythme est celui du défilement du visiteur, jamais celui d'une
+ * minuterie. Une règle dorée sous chaque palier se raccourcit à mesure que
+ * l'entonnoir se resserre — c'est elle qui fait comprendre le tri, sans une
+ * ligne d'explication.
+ *
+ * Les compteurs sont volontairement **courts** : le chiffre est lisible avant
+ * la fin de l'animation, jamais après.
+ *
+ * L'avertissement reste attaché aux chiffres : un cas réel n'est pas une
+ * promesse.
  */
 export function CaseStudySection() {
   const last = caseStudy.steps.length - 1;
@@ -46,39 +55,56 @@ export function CaseStudySection() {
         <ol className="mt-16">
           {caseStudy.steps.map((step, i) => {
             const isLast = i === last;
+            // L'entonnoir se resserre d'un palier à l'autre. La largeur suit le
+            // rang plutôt que les valeurs : de 312 à 1, une échelle
+            // proportionnelle écraserait tout le bas du tri.
+            const share = 1 - i * 0.15;
+
             return (
               <Reveal
                 as="li"
-                key={step.value}
+                key={step.label + (step.value ?? step.n)}
                 variant="rise"
-                delayMs={i * 110}
-                className="border-t border-border-strong-dark/40 py-6 first:border-t-0"
+                className={isLast ? "pt-10" : "pt-6"}
               >
                 <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
                   <span
                     className={`font-display leading-none ${
                       isLast
-                        ? "text-4xl text-gold-soft sm:text-5xl"
+                        ? "text-5xl text-gold-soft sm:text-7xl"
                         : "text-3xl text-ivory sm:text-4xl"
                     }`}
                   >
-                    {step.value}
+                    {step.n !== null ? (
+                      <CountUp value={step.n} durationMs={700} />
+                    ) : (
+                      step.value
+                    )}
                   </span>
                   {step.label ? (
                     <span className="text-sm text-text-on-dark-muted">{step.label}</span>
                   ) : null}
                 </div>
+
+                {/* La règle de l'entonnoir : elle se raccourcit à chaque tri. */}
+                <span
+                  aria-hidden="true"
+                  className={`mt-5 block h-px origin-left transition-none ${
+                    isLast ? "bg-gold-soft/70" : "bg-border-strong-dark/50"
+                  }`}
+                  style={{ width: `${Math.round(share * 100)}%` }}
+                />
               </Reveal>
             );
           })}
         </ol>
 
-        <Reveal variant="rise" delayMs={160}>
+        <Reveal variant="rise" delayMs={80}>
           <p className="mt-14 max-w-2xl text-balance font-display text-2xl leading-snug text-ivory sm:text-3xl">
             {caseStudy.conclusion}
           </p>
         </Reveal>
-        <Reveal delayMs={220}>
+        <Reveal delayMs={140}>
           <p className="mt-10 max-w-2xl text-sm leading-relaxed text-ivory/45">
             {caseStudy.disclaimer}
           </p>

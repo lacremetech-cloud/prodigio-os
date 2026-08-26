@@ -165,7 +165,82 @@ pas, elle n'a rien à faire sur la page.
 - **Réassurance** sous chaque bouton : « Questionnaire d'une minute · Étude
   confidentielle · Sans engagement ».
 
-## 6. Points de vigilance
+## 6. Mouvement et interactions
+
+**Le mouvement a une fonction ou il n'existe pas.** Guider le regard, matérialiser
+une différence, renforcer une preuve. Rien de décoratif.
+
+- **Durées** : 380–560 ms pour les révélations, 200–300 ms pour les retours au
+  geste. Easing unique : `cubic-bezier(0.22, 1, 0.36, 1)`.
+- **Propriétés animées** : `transform` et `opacity` uniquement. Jamais
+  `width`, `height`, `top` ni `left` — ce sont les reflows qui font tomber le
+  taux de rafraîchissement.
+- **Rien ne bouge tout seul.** Pas de halo pulsé, pas de rebond : le halo doré
+  (`.cta-halo`) est fixe et ne s'intensifie qu'au survol du bouton qu'il
+  accompagne. Un bouton qui s'agite en permanence se lit comme une
+  sollicitation, pas comme une invitation.
+- **Un seul nom par animation.** Deux `@keyframes` homonymes se remplacent
+  silencieusement : le reflet de l'écrin vidéo (`pg-vsl-sheen`) et celui des
+  boutons (`pg-sheen`) portent des noms distincts pour cette raison.
+- **Six moments seulement** portent un vrai geste : le hero et son film, le
+  passage annonce → écrin, le Système, l'engagement, l'entonnoir du cas réel,
+  le tableau de bord. Tout le reste respire.
+- **`prefers-reduced-motion`** neutralise l'ensemble ; le contenu reste
+  intégralement lisible, et la page fonctionne sans JavaScript.
+
+### Le film
+
+L'affiche du hero est **entièrement cliquable** — pas un bouton à viser, puis un
+plein écran à chercher. Un seul geste ouvre `VslModal` : lecture immédiate
+**avec le son** (le geste du visiteur l'autorise), fenêtre quasi plein écran,
+plein écran natif demandé en plus sur mobile lorsque le navigateur l'accepte.
+
+- **Aucune iframe YouTube, aucun script d'API sur le premier écran** : le lecteur
+  est chargé à l'ouverture (`next/dynamic`). Le hero n'attend qu'une image.
+  `hero-vsl.test.tsx` échoue si une iframe réapparaît au chargement.
+- **Retour sans saut** : le défilement est gelé par `position: fixed` (et non
+  `overflow: hidden`, qui perd la position sur mobile) puis restitué à
+  l'identique. La progression du film est mémorisée et reprise (`start`).
+- **Clavier** : `Escape` ferme, le focus part sur le bouton de fermeture et
+  **revient à l'affiche** à la fermeture. Réserve connue : une fois le focus
+  entré dans l'iframe du lecteur, aucun piège à focus ne peut le retenir — c'est
+  la limite de tout lecteur tiers ; le bouton de fermeture est donc placé en
+  tête d'ordre de tabulation.
+
+### Appels à l'action
+
+- **Un seul chemin** vers le questionnaire (`ANALYSE_ROUTE`) pour tous les
+  boutons, rappel collant compris. Aucune seconde logique d'ouverture.
+- **Libellé testable** : les formulations candidates vivent dans
+  [`src/config/cta.ts`](../src/config/cta.ts) et se sélectionnent par
+  `NEXT_PUBLIC_CTA_VARIANT`. Aucune n'est déclarée gagnante ; la variante active
+  accompagne chaque `cta_click`.
+- **Trois retours au geste** : survol (soulèvement de 2 px + reflet traversant),
+  appui (`active:scale-[0.985]`), focus clavier (anneau visible).
+- **Rappel collant** : il s'efface dès qu'un bouton principal est réellement à
+  l'écran — observé sur les boutons eux-mêmes (`data-cta-primary`,
+  `IntersectionObserver`) plutôt que déduit d'une distance en pixels. Masqué, il
+  est `inert` : il ne capte pas le focus clavier. Zone sûre du système respectée.
+
+## 7. Mesure du parcours
+
+[`src/lib/analytics.ts`](../src/lib/analytics.ts) — couche **sans dépendance**,
+poussée dans `window.dataLayer`. Elle mesure : visite → lecture du film
+(`hero_vsl_play`, `_25`, `_50`, `_75`, `_complete`) → `cta_click` (avec
+l'emplacement et la variante de libellé) → `eligibility_started` →
+`eligibility_step_completed` (numéro d'étape) → `eligibility_submitted`.
+
+> ⚠️ **Aucune donnée personnelle, aucune réponse au questionnaire** ne transite
+> par la mesure. Les charges utiles sont typées et ne contiennent que des
+> identifiants d'emplacement, des numéros d'étape et des paliers de lecture. Un
+> test (`use-analyse-machine.test.tsx`) échoue si une réponse ou une coordonnée
+> apparaît dans `dataLayer`.
+
+Le **contrat de données du CRM n'est pas concerné** : la mesure est en lecture
+seule vis-à-vis du funnel, et un test de non-régression verrouille les clés, les
+valeurs et la clé d'idempotence transmises à l'action serveur.
+
+## 8. Points de vigilance
 
 - **Statistiques d'audience** (`audience.stats`) : les volumes affichés doivent
   être rattachés à une **source vérifiable et datée** avant mise en production.
@@ -182,7 +257,7 @@ pas, elle n'a rien à faire sur la page.
   Pages intégrées, jamais recopiées ; chargement paresseux ; aperçu rendu en
   1280 px puis réduit de moitié pour montrer la version bureau.
 
-## 7. Contenu et code
+## 9. Contenu et code
 
 - **Tout le texte** vit dans `src/components/mandate/landing/copy.ts`. Aucun
   libellé en dur dans les composants — condition de l'internationalisation.
@@ -200,7 +275,7 @@ pas, elle n'a rien à faire sur la page.
 - **Attribution** : `AttributionCapture` reste monté en tête de page. La refonte
   éditoriale ne touche ni la soumission, ni le quiz d'analyse.
 
-## 8. Accessibilité
+## 10. Accessibilité
 
 - Le voile du hero garde un contraste confortable sur la photographie.
 - Les images décoratives sont `aria-hidden` ; l'écrin vidéo conserve ses

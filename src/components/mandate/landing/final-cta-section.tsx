@@ -45,12 +45,12 @@ export function FinalCtaSection() {
           </p>
         </Reveal>
         <Reveal delayMs={260} className="mt-12 flex w-full flex-col items-center gap-4">
-          <div className="relative w-full max-w-xl">
+          <div className="cta-halo-host relative w-full max-w-xl">
             <span
               aria-hidden="true"
-              className="animate-glow pointer-events-none absolute -inset-4 -z-10 rounded-full bg-[radial-gradient(60%_60%_at_50%_50%,rgba(203,180,136,0.5)_0%,rgba(203,180,136,0)_70%)] blur-xl"
+              className="cta-halo pointer-events-none absolute -inset-4 -z-10 rounded-full bg-[radial-gradient(60%_60%_at_50%_50%,rgba(203,180,136,0.5)_0%,rgba(203,180,136,0)_70%)] blur-xl"
             />
-            <LandingCta href={ANALYSE_ROUTE} tone="gold" size="xl" className="w-full">
+            <LandingCta href={ANALYSE_ROUTE} tone="gold" size="xl" location="footer" className="w-full">
               {CTA_PRIMARY}
             </LandingCta>
           </div>
