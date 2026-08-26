@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { AttributionCapture } from "@/components/mandate/attribution-capture";
 import { Hero } from "@/components/mandate/landing/hero";
-import { VslSection } from "@/components/mandate/landing/vsl-section";
 import { Marquee } from "@/components/mandate/landing/marquee";
 import { StatementSection } from "@/components/mandate/landing/statement-section";
 import { ConstatSection } from "@/components/mandate/landing/constat-section";
@@ -25,7 +24,7 @@ export const metadata: Metadata = {
 /**
  * Landing propriétaire (funnel Mandats).
  *
- * Une idée par écran, dans cet ordre : la promesse (hero) → le film → la phrase
+ * Une idée par écran, dans cet ordre : la promesse et le film (hero) → la phrase
  * signature → la preuve visuelle de l'écrin → le système → le modèle
  * économique → la preuve chiffrée → l'appel à l'action.
  *
@@ -38,7 +37,6 @@ export default function ProprietairePage() {
     <main className="bg-ivory">
       <AttributionCapture />
       <Hero />
-      <VslSection />
       <StatementSection />
       <Marquee items={marqueeItems} tone="light" />
       <ConstatSection />

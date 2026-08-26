@@ -26,14 +26,6 @@ export const hero = {
   tagline: "Immobilier d'exception",
   titleLine1: "Votre propriété mérite",
   titleLine2: "plus qu'une annonce.",
-  subtitle: "Nous ne la mettons pas en vente. Nous allons chercher l'acheteur.",
-  scrollCue: "Le film",
-} as const;
-
-/** Écrin vidéo — sorti de la hero pour laisser l'action au-dessus de la ligne de flottaison. */
-export const vsl = {
-  kicker: "Le film",
-  title: "Le système en cinq minutes.",
 } as const;
 
 /** Moment signature — la phrase que le client aime. */
