@@ -44,6 +44,11 @@ export function FinalCtaSection() {
             {finalCta.subtitle}
           </p>
         </Reveal>
+        <Reveal variant="rise" delayMs={220}>
+          <p className="mt-8 font-display text-2xl leading-snug text-gold-soft sm:text-3xl">
+            {finalCta.closing}
+          </p>
+        </Reveal>
         <Reveal delayMs={260} className="mt-12 flex w-full flex-col items-center gap-4">
           <div className="cta-halo-host relative w-full max-w-xl">
             <span

@@ -4,35 +4,39 @@ import { EXPERIENCE_LABEL, SYSTEM_NAME } from "@/config/credentials";
 /**
  * Contenu éditorial de la landing propriétaire.
  *
- * **Big Idea : le Système Prodigio va chercher l'acheteur.** Prodigio ne
- * remplace pas les portails, le réseau ni le fichier acquéreurs — il ajoute ce
- * qui manque : aller chercher activement les bons acheteurs.
+ * **La doctrine, en une ligne :** expertise immobilière traditionnelle **plus**
+ * Système Prodigio™. Prodigio ne se positionne jamais *contre* l'immobilier de
+ * prestige — il ajoute une capacité que celui-ci n'a pas : aller chercher les
+ * acheteurs qui ne cherchent pas encore.
  *
- * **Trois promesses, et rien d'autre :** vendre plus vite, trouver les bons
- * acheteurs, défendre la valeur du bien. Jamais de délai ni de prix garantis —
- * « au prix qu'il mérite » est une promesse de valorisation, pas un engagement
- * contractuel.
+ * **Deux marchés.** Le marché **actif** (déjà en recherche : portails, fichiers
+ * acquéreurs, réseau, alertes) est très bien travaillé par les meilleures
+ * agences, et Prodigio s'en sert aussi. Le marché **latent** — le patrimoine, le
+ * budget, le profil, le timing, mais pas encore la recherche — n'est atteint par
+ * personne. C'est celui-là que le Système va chercher.
  *
- * **Zéro jargon face au propriétaire.** Pas de « lead », « funnel », « avatar »,
- * « ciblage », « acquisition digitale » : chaque notion marketing est traduite
- * en bénéfice immobilier. Il doit penser « ils ont une manière différente de
- * trouver mon acheteur », pas « ils ont une belle machine publicitaire ».
+ * **Deux thèses de rupture, jamais des attaques :**
+ * 1. *Le coup de cœur peut précéder la recherche.*
+ * 2. *Visibilité ≠ acquisition.* Une publication est diffusée ; une campagne
+ *    Prodigio apprend.
  *
  * Règles d'écriture :
+ * - **La VSL explique, la landing démontre et rassure.** Ne jamais transcrire le
+ *   film : le visiteur qui l'a regardé ne doit pas relire la même chose.
  * - Le visiteur qui ne lit **que les grands titres** doit comprendre l'offre.
- *   L'enchaînement des `title` de ce fichier raconte l'histoire complète.
- * - Montrer plutôt qu'expliquer : si une idée demande trois paragraphes, elle
- *   est mal posée.
- * - Jamais de caricature de la profession immobilière. L'adversaire est la
- *   commercialisation **passive**, pas l'agent immobilier.
- * - Aucune statistique inventée, aucun pays inventé, aucun délai promis,
- *   aucune condition économique chiffrée (paramètres contractuels versionnés).
+ * - La cible connaît le métier. **Aucune caricature des agences de prestige** —
+ *   elles ont des fichiers acquéreurs, des réseaux, des partenaires, de belles
+ *   images et une vraie présence sociale. Tout cela fonctionne.
+ * - Aucun jargon marketing, aucun vocabulaire d'achat média face au
+ *   propriétaire : on vend une commercialisation immobilière.
+ * - Aucune statistique inventée, aucun délai promis, aucune condition
+ *   économique chiffrée (paramètres contractuels versionnés).
  */
 
 /**
- * Libellé d'action unique. Il n'est **pas** figé ici : les formulations en
- * attente d'arbitrage vivent dans `@/config/cta`, sélectionnables par variable
- * d'environnement, et la variante active accompagne chaque `cta_click`.
+ * Libellé d'action unique. Les formulations candidates vivent dans
+ * `@/config/cta`, sélectionnables par variable d'environnement, et la variante
+ * active accompagne chaque `cta_click`.
  */
 export const CTA_PRIMARY = CTA_LABEL;
 /** Variante courte, réservée à l'en-tête (contrainte de largeur). */
@@ -65,9 +69,14 @@ export const hero = {
   vslDuration: "4 min",
 } as const;
 
-/** Preuve immédiate — comprise en trois secondes, juste après la VSL. */
+/**
+ * Preuve immédiate — quatre nombres, rien d'autre.
+ *
+ * Son unique rôle est de provoquer « d'accord… comment ? ». Tout ce qui
+ * expliquerait ici affaiblirait la question.
+ */
 export const proofStrip = {
-  eyebrow: "Une campagne Prodigio",
+  eyebrow: "Le système en action",
   title: "14 jours de campagne.",
   stats: [
     { value: 312, label: "demandes" },
@@ -79,36 +88,80 @@ export const proofStrip = {
 } as const;
 
 /**
- * L'angle mort — puis où se trouve l'attention.
+ * Le marché invisible — la section la plus courte et la plus conceptuelle.
  *
- * Une seule section : le constat (« et tous les autres ? »), les volumes
- * d'audience, la portée géographique. La comparaison détaillée avec la
- * commercialisation traditionnelle vit plus bas ; elle n'a pas à être faite
- * deux fois.
- *
- * ⚠️ Les deux volumes ci-dessous sont des données publiques d'audience.
- * `sourceNote` doit être **confirmée** (source et millésime exacts) avant toute
- * mise en production : aucune statistique ne doit être publiée sans référence
- * vérifiable.
+ * Elle ne démontre rien : elle installe une question que le propriétaire ne
+ * s'était pas posée. La démonstration vient juste après.
  */
-export const audience = {
-  eyebrow: "Mettre en vente n'est pas commercialiser",
-  title: "Votre bien est visible par ceux qui le cherchent.",
-  emphasis: "Et tous les autres ?",
+export const marcheInvisible = {
+  eyebrow: "Le marché invisible",
+  title: "Et ceux qui pourraient acheter votre bien… sans encore le chercher ?",
+  traits: ["Le patrimoine.", "Le budget.", "Le profil.", "Le timing."],
+  body: "Ils ne savent simplement pas encore que votre propriété existe.",
+  statement: "Le coup de cœur peut précéder la recherche.",
+} as const;
+
+/**
+ * Marché actif + marché latent — le positionnement, énoncé sans opposition.
+ *
+ * ⚠️ La colonne « marché actif » décrit le travail réel des meilleures agences,
+ * **et Prodigio s'en sert aussi**. Aucune formule accusatoire n'a sa place ici :
+ * un test échoue si l'une réapparaît.
+ */
+export const marches = {
+  eyebrow: "Deux marchés",
+  title: "Les meilleures agences savent déjà très bien travailler le marché actif.",
   body:
-    "Les méthodes traditionnelles touchent les acheteurs déjà en recherche. " +
-    "Beaucoup d'autres ont le budget et l'envie, mais ne cherchent pas encore.",
-  subtitle: "Votre acheteur est peut-être déjà devant nous.",
-  stats: [
-    { value: "51,5 M", label: "d'identités actives sur les réseaux sociaux en France" },
-    { value: "5,79 Md", label: "dans le monde" },
-  ],
-  punch:
-    "Pourquoi attendre qu'il cherche votre bien quand nous pouvons le lui " +
-    "présenter ?",
-  reach: "France · Europe · International",
-  reachNote: "En France comme à l'étranger, lorsque le profil du bien le justifie.",
-  sourceNote: "Sources : données publiques d'audience des réseaux sociaux.",
+    "Fichiers acquéreurs qualifiés, partenaires, réseau, portails, off-market, " +
+    "images soignées, présence sur les réseaux sociaux.",
+  aside: "Tout cela fonctionne. Et nous l'utilisons également.",
+  actif: {
+    label: "Marché actif",
+    hint: "Ceux qui cherchent déjà",
+    items: ["Fichiers acquéreurs", "Partenaires", "Réseau", "Portails", "Alertes"],
+  },
+  latent: {
+    label: "Marché latent",
+    hint: "Ceux qui ne cherchent pas encore",
+    items: ["Le patrimoine", "Le budget", "Le profil", "Le timing"],
+  },
+  punchLine1: "Nous ne remplaçons pas ce qui fonctionne.",
+  punchLine2: "Nous allons chercher ceux qui ne cherchent pas encore.",
+} as const;
+
+/**
+ * Visibilité ≠ acquisition — l'un des deux messages les plus importants.
+ *
+ * ⚠️ Ne jamais écrire que les réseaux sociaux ou l'organique « ne marchent
+ * pas ». Ils marchent. La question n'est pas le nombre de vues : c'est qui les a
+ * faites, et ce que la diffusion a appris.
+ *
+ * Les 50 000 vues sont une **hypothèse de raisonnement**, jamais un résultat
+ * Prodigio — la formulation doit le laisser évident.
+ */
+export const acquisition = {
+  eyebrow: "Visibilité ≠ acquisition",
+  title: "50 000 vues. Mais combien d'acheteurs ?",
+  body:
+    "Une belle vidéo peut atteindre des dizaines de milliers de personnes. " +
+    "C'est excellent pour la visibilité. Reste la seule question qui compte pour " +
+    "vous : combien avaient le budget, le profil et l'intérêt pour votre bien ?",
+  publication: {
+    label: "Une publication",
+    items: ["Vues", "Engagement", "Un pic, puis plus rien"],
+  },
+  campagne: {
+    label: `Une campagne ${SYSTEM_NAME}`,
+    items: [
+      "Profils",
+      "Demandes",
+      "Budgets déclarés",
+      "Angles testés",
+      "Moyens reconcentrés",
+    ],
+  },
+  punchLine1: "Une publication est diffusée.",
+  punchLine2: "Une campagne Prodigio apprend.",
   adMock: {
     sponsored: "Sponsorisé",
     caption: "Une propriété d'exception vient d'arriver sur le marché.",
@@ -117,12 +170,50 @@ export const audience = {
   },
 } as const;
 
-/** Création — la raison d'être de l'écrin : donner envie de regarder. */
+/** Le système, en sept temps. Sept lignes, pas sept pavés. */
+export const systeme = {
+  eyebrow: SYSTEM_NAME,
+  title: "Une stratégie construite autour d'un seul bien : le vôtre.",
+  phases: [
+    { n: "01", title: "Comprendre", text: "Le bien, son marché, son acheteur." },
+    { n: "02", title: "Positionner", text: "Identifier ce qui peut créer le déclic." },
+    { n: "03", title: "Créer", text: "Construire son univers." },
+    { n: "04", title: "Diffuser", text: "Aller chercher activement son marché." },
+    { n: "05", title: "Apprendre", text: "Comprendre ce que les données révèlent." },
+    { n: "06", title: "Optimiser", text: "Concentrer les moyens sur ce qui fonctionne." },
+    { n: "07", title: "Qualifier", text: "Projet · délai · budget." },
+  ],
+  outcome: { from: "Visites qualifiées", to: "Vente" },
+} as const;
+
+/**
+ * Création — le positionnement, pas la jolie image.
+ *
+ * « Nous faisons de belles photos » ne différencie rien : les meilleures agences
+ * en font aussi. Ce qui différencie, c'est le travail en amont — trouver l'angle
+ * qui fera désirer ce bien-là, auprès de ces profils-là.
+ */
 export const creation = {
-  eyebrow: "La création",
-  title: "Votre propriété mérite mieux qu'une annonce.",
-  subtitle: "Pour attirer le bon acheteur, encore faut-il lui donner envie de s'arrêter.",
-  disciplines: ["Film", "Photographie", "Storytelling", "Expérience digitale"],
+  eyebrow: "Avant la diffusion",
+  title: "Nous ne cherchons pas seulement à montrer votre bien.",
+  emphasis: "Nous cherchons l'angle qui le fera désirer.",
+  triggers: [
+    "Une vue.",
+    "Une architecture.",
+    "Un art de vivre.",
+    "Un emplacement.",
+    "Un potentiel patrimonial.",
+    "Un rendement.",
+  ],
+  body: "Chaque propriété possède ses propres déclencheurs.",
+  chain: [
+    "Positionnement",
+    "Film",
+    "Photographie",
+    "Site dédié",
+    "Brochure",
+    "Créations publicitaires",
+  ],
   punch: "Chaque propriété devient son propre univers.",
   classique: { label: "Annonce immobilière classique" },
   prodigio: {
@@ -138,62 +229,49 @@ export const creation = {
 /** Vitrine — l'écrin d'un bien réel, ouvert en direct dans la page. */
 export const vitrine = {
   eyebrow: "L'écrin, en vrai",
-  title: "Ouvrez-le. C'est un bien réel.",
-  site: { label: "Le site dédié", hint: "Parcourez la page du bien", open: "Ouvrir le site" },
+  title: "Ne nous croyez pas sur parole. Ouvrez-le.",
+  site: { label: "Le site dédié", hint: "Parcourir l'expérience", open: "Ouvrir le site" },
   brochure: {
-    label: "La brochure confidentielle",
-    hint: "Tournez les pages",
+    label: "La brochure",
+    hint: "Feuilleter la brochure",
     open: "Feuilleter en grand",
   },
 } as const;
 
-/** Le système, en six temps. Six lignes, pas six pavés. */
-export const systeme = {
-  eyebrow: SYSTEM_NAME,
-  title: "Une stratégie construite autour d'un seul bien : le vôtre.",
-  phases: [
-    { n: "01", title: "Comprendre", text: "Le bien et son marché." },
-    { n: "02", title: "Créer", text: "Créer le désir." },
-    { n: "03", title: "Diffuser", text: "Aller chercher son marché." },
-    { n: "04", title: "Qualifier", text: "Projet · délai · budget." },
-    { n: "05", title: "Visiter", text: "Les profils pertinents." },
-    { n: "06", title: "Vendre", text: "" },
-  ],
-} as const;
-
-/** Skin in the game — l'argument économique, en rupture visuelle. */
+/**
+ * Skin in the game — l'argument économique, en rupture visuelle.
+ *
+ * Trois familles de postes engagés, puis la **diffusion** en climax : c'est le
+ * poste que le propriétaire ne voit jamais, et le seul qui décide si son bien
+ * est vu.
+ *
+ * ⚠️ Vocabulaire de commercialisation immobilière, jamais d'achat média : ni
+ * CPC, ni CPM, ni ROAS, ni nom de régie.
+ */
 export const engagement = {
   eyebrow: "Notre engagement",
   title: "Nous ne nous contentons pas de prendre votre mandat.",
   reveal: "Nous investissons dans sa réussite.",
-  /**
-   * Ce que Prodigio engage réellement sur un bien sélectionné. La **diffusion**
-   * ferme la liste et porte le poids visuel : c'est le poste que le propriétaire
-   * ne voit jamais, et le seul qui décide si son bien est vu.
-   *
-   * ⚠️ Vocabulaire de commercialisation immobilière, jamais d'achat média : ni
-   * CPC, ni CPM, ni ROAS, ni nom de régie. On vend une mise en marché, pas une
-   * prestation publicitaire.
-   */
-  items: [
-    "Photographie",
-    "Production vidéo",
-    "Site dédié",
-    "Brochure",
-    "Création publicitaire",
+  groups: [
+    { label: "Production", items: ["Film", "Photographie", "Montage"] },
+    { label: "Expérience", items: ["Site dédié", "Brochure", "Créations"] },
+    { label: "Diffusion", items: ["Campagnes", "Tests", "Budget de diffusion"] },
   ],
   climax: {
-    label: "Diffusion",
-    text: "Le budget qui décide si votre bien est vu — ou pas.",
+    label: "Et surtout, nous finançons la diffusion.",
+    text:
+      "Aller chercher activement le marché d'une propriété demande un véritable " +
+      "budget. Prodigio l'engage.",
   },
   punch: "Nos intérêts sont alignés : vendre.",
   note: "Rémunération au succès, selon les conditions prévues au mandat.",
 } as const;
 
-/** Transparence — le propriétaire voit ce qui est fait pour vendre son bien. */
+/** La data — le propriétaire voit son marché réagir. */
 export const transparence = {
-  eyebrow: "Transparence",
-  title: "Ne vous demandez plus ce qui est fait pour vendre votre bien.",
+  eyebrow: "La data",
+  title: "Voyez votre marché réagir.",
+  intro: "La commercialisation de votre propriété devient mesurable.",
   metrics: [
     { label: "Personnes touchées" },
     { label: "Demandes" },
@@ -201,7 +279,7 @@ export const transparence = {
     { label: "Profils qualifiés" },
     { label: "Visites" },
   ],
-  body: "Suivez la commercialisation. Comprenez le marché. Mesurez l'intérêt.",
+  body: "Suivez la commercialisation. Comprenez la réaction du marché. Mesurez l'intérêt réel.",
   /** Mention obligatoire : l'interface est une illustration, pas un résultat. */
   disclaimer: "Illustration d'interface — les valeurs présentées sont fictives.",
 } as const;
@@ -218,7 +296,7 @@ export const caseStudy = {
     { n: null, value: "14 jours", label: "de campagne" },
     { n: 312, value: null, label: "demandes" },
     { n: 172, value: null, label: "budgets déclarés" },
-    { n: 23, value: null, label: "acquéreurs · budget > 1 M€" },
+    { n: 23, value: null, label: "acquéreurs · budget déclaré > 1 M€" },
     { n: 6, value: null, label: "visites qualifiées" },
     { n: null, value: "1 vente", label: "" },
   ],
@@ -229,45 +307,26 @@ export const caseStudy = {
     "la stratégie déployée, et ne constituent pas une garantie de performance.",
 } as const;
 
-/** Comparaison — additive, jamais accusatrice. */
-export const comparaison = {
-  eyebrow: "Ce que nous ajoutons",
-  traditional: {
-    label: "Commercialisation traditionnelle",
-    items: ["Portails", "Réseau", "Fichier acquéreurs", "Expertise immobilière"],
-  },
-  prodigio: {
-    label: "Prodigio",
-    intro: "Tout cela, plus :",
-    items: [
-      "Acquisition active",
-      "Campagnes dédiées",
-      "Expérience propre au bien",
-      "Qualification",
-      "Data",
-      "Diffusion internationale lorsque pertinente",
-    ],
-  },
-  body: "Les méthodes traditionnelles fonctionnent. Prodigio leur ajoute une dimension.",
-  punchLine1: "Nous ne remplaçons pas ce qui fonctionne.",
-  punchLine2: "Nous ajoutons ce qui manque.",
-} as const;
-
-/** Sélectivité — la montée en gamme avant le dernier CTA. */
+/**
+ * Sélectivité — elle découle de l'investissement, elle ne le précède pas.
+ *
+ * L'enchaînement est le nerf de la fin de page : *nous investissons réellement,
+ * donc nous ne pouvons pas tout accepter, donc vérifiez.*
+ */
 export const selection = {
-  eyebrow: SYSTEM_NAME,
-  title: `Toutes les propriétés n'intègrent pas le ${SYSTEM_NAME}`,
-  emphasis: "Et c'est volontaire.",
+  eyebrow: "Sélectif par nature",
+  title: "Nous investissons dans chaque propriété.",
+  emphasis: "Nous ne pouvons donc pas toutes les accepter.",
   body:
-    "Nous sélectionnons les propriétés pour lesquelles nous pensons pouvoir " +
-    "construire une stratégie capable de faire la différence.",
+    "Chaque bien est étudié selon sa valeur, son potentiel de mise en marché et " +
+    `l'existence d'un marché que le ${SYSTEM_NAME} peut réellement activer.`,
   criteria: ["Valeur", "Potentiel", "Marché"],
 } as const;
 
 /** FAQ — lever les dernières objections, rien de plus. */
 export const faq = {
   eyebrow: "Questions fréquentes",
-  title: "Avant de nous confier votre bien.",
+  title: "Ce que vous voudrez probablement savoir avant de nous confier votre propriété.",
   items: [
     {
       q: `Combien coûte le ${SYSTEM_NAME} ?`,
@@ -281,7 +340,15 @@ export const faq = {
       a:
         "Nous. C'est le sens du modèle : si nous vous demandons de nous confier " +
         "votre bien, nous devons être prêts à investir nous-mêmes dans sa " +
-        "réussite.",
+        "réussite — production, expérience et diffusion comprises.",
+    },
+    {
+      q: "En quoi est-ce différent d'être présent sur les réseaux sociaux ?",
+      a:
+        "Une publication cherche de la visibilité ; une campagne cherche des " +
+        "acheteurs. Nous testons plusieurs angles, nous observons quels profils " +
+        "réagissent réellement, puis nous concentrons les moyens sur ce qui " +
+        "fonctionne pour votre bien.",
     },
     {
       q: "Dois-je confier mon bien en exclusivité ?",
@@ -308,10 +375,11 @@ export const faq = {
   ],
 } as const;
 
-/** Dernier écran — une propriété plein cadre, une question, un geste. */
+/** Dernier écran — la boucle se referme sur la question d'ouverture. */
 export const finalCta = {
   title: "Votre futur acheteur est peut-être déjà là.",
-  subtitle: "Faisons en sorte que votre bien arrive jusqu'à lui.",
+  subtitle: "Il ne sait simplement pas encore que votre propriété existe.",
+  closing: "À nous de créer la rencontre.",
   brand: "PRODIGIO",
   brandLine: "Votre bien mérite mieux qu'une annonce.",
 } as const;

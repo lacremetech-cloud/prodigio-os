@@ -199,14 +199,14 @@ graisses 400/500/600).
   fondation des automatisations. **Envoi désactivé** : aucun e-mail, aucun SMS
   n'est émis, aucun contact n'est importé, la base légale reste à valider.
 - [docs/22-LANDING-PROPRIETAIRE.md](docs/22-LANDING-PROPRIETAIRE.md) — Landing
-  propriétaire `/proprietaire` : la Big Idea (**le Système Prodigio™ va chercher
-  l'acheteur**, jamais au détriment de la profession immobilière), les trois
-  promesses (vendre plus vite, trouver les bons acheteurs, défendre la valeur du
-  bien), les principes éditoriaux (lecture en trente secondes, zéro jargon, ne
-  jamais rallonger la page), la structure des quatorze sections, le système
-  d'appel à l'action et les points de vigilance (statistiques à sourcer,
-  ancienneté annoncée à confirmer, interface d'illustration, exclusivité en
-  FAQ).
+  propriétaire `/proprietaire` : la doctrine (**expertise immobilière + Système
+  Prodigio™**, jamais contre la profession), les deux marchés (actif et latent),
+  les deux thèses (« le coup de cœur peut précéder la recherche », « visibilité
+  ≠ acquisition »), les principes éditoriaux (la VSL explique, la page démontre ;
+  lecture en trente secondes ; zéro jargon), la structure des quinze sections, le
+  système d'appel à l'action, le mouvement et la mesure du parcours, et les
+  points de vigilance (ancienneté annoncée à confirmer, interface
+  d'illustration, exclusivité en FAQ).
 - [docs/23-RESILIENCE-ACTIONS.md](docs/23-RESILIENCE-ACTIONS.md) — Résilience des
   actions serveur du CRM : une action qui échoue affiche un message et
   **conserve la saisie**, au lieu de remplacer l'écran. Analyse de l'incident du

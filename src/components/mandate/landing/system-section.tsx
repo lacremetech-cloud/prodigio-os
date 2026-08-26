@@ -63,6 +63,17 @@ export function SystemSection() {
             </Reveal>
           ))}
         </ol>
+
+        {/* Ce à quoi la séquence aboutit. Deux mots, pas une promesse. */}
+        <Reveal variant="rise" delayMs={80}>
+          <p className="mt-16 flex flex-wrap items-baseline gap-x-5 gap-y-2 pl-8 font-display sm:pl-10">
+            <span className="text-2xl text-ivory sm:text-3xl">{systeme.outcome.from}</span>
+            <span aria-hidden="true" className="text-xl text-gold-soft/60">
+              →
+            </span>
+            <span className="text-3xl text-gold-soft sm:text-5xl">{systeme.outcome.to}</span>
+          </p>
+        </Reveal>
       </div>
     </section>
   );

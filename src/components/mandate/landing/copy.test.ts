@@ -57,13 +57,27 @@ describe("Copy de la landing propriétaire", () => {
     expect(TEXTE).not.toMatch(/honoraires de \d/i);
   });
 
-  it("accompagne toute statistique d'audience d'une mention de source", () => {
-    expect(copy.audience.sourceNote).toMatch(/source/i);
-  });
-
   it("présente les interfaces illustratives comme telles", () => {
     expect(copy.transparence.disclaimer).toMatch(/illustration/i);
-    expect(copy.audience.adMock.note).toMatch(/illustration/i);
+    expect(copy.acquisition.adMock.note).toMatch(/illustration/i);
     expect(copy.caseStudy.disclaimer).toMatch(/ne constituent pas une garantie/i);
+  });
+
+  it("donne raison aux meilleures agences avant de se différencier", () => {
+    // La cible connaît le métier : prétendre que le marché actif est mal
+    // travaillé décrédibiliserait Prodigio. La section « deux marchés » doit
+    // reconnaître explicitement ce qui fonctionne.
+    expect(copy.marches.aside).toMatch(/fonctionne/i);
+    expect(copy.marches.aside).toMatch(/nous l'utilisons/i);
+    expect(copy.marches.punchLine1).toMatch(/ne remplaçons pas/i);
+  });
+
+  it("ne dit jamais que la visibilité ou l'organique ne fonctionne pas", () => {
+    const visibilite = chaines(copy.acquisition).join(" ");
+    expect(visibilite).not.toMatch(
+      /ne (fonctionne|marche)nt? (pas|plus)|inutile|sert à rien|inefficace/i,
+    );
+    // La thèse est une distinction, pas une négation.
+    expect(copy.acquisition.punchLine2).toMatch(/apprend/i);
   });
 });

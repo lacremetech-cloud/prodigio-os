@@ -22,11 +22,13 @@ export const CTA_VARIANTS = {
     label: "Faire étudier mon bien",
     short: "Faire étudier mon bien",
   },
-  decouvrir: {
-    label: "Découvrir ce que Prodigio peut faire pour mon bien",
-    short: "Ce que Prodigio peut faire",
-  },
 } as const;
+
+/**
+ * ⚠️ « Découvrir ce que Prodigio peut faire pour mon bien » a été **écarté** :
+ * trop long, et il promet une découverte là où la fin de page promet une
+ * vérification d'éligibilité. Ne pas le réintroduire sans arbitrage.
+ */
 
 export type CtaVariantKey = keyof typeof CTA_VARIANTS;
 

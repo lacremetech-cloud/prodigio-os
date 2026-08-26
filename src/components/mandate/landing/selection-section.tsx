@@ -12,7 +12,7 @@ import { CTA_PRIMARY, MICROCOPY, selection } from "./copy";
  */
 export function SelectionSection() {
   return (
-    <section className="grain relative isolate overflow-hidden bg-onyx px-6 py-24 text-ivory sm:px-10 sm:py-32 lg:px-16">
+    <section className="grain relative isolate overflow-hidden bg-onyx px-6 py-20 text-ivory sm:px-10 sm:py-28 lg:px-16">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
@@ -30,8 +30,10 @@ export function SelectionSection() {
             {selection.title}
           </h2>
         </Reveal>
+        {/* Le « donc » de la page : nous investissons, donc nous ne pouvons
+            pas tout accepter. C'est cet enchaînement qui légitime le CTA. */}
         <Reveal variant="rise" delayMs={220}>
-          <p className="mt-3 font-display text-3xl leading-[1.1] text-gold-soft sm:text-4xl md:text-[2.9rem]">
+          <p className="mt-3 text-balance font-display text-3xl leading-[1.1] text-gold-soft sm:text-4xl md:text-[2.9rem]">
             {selection.emphasis}
           </p>
         </Reveal>

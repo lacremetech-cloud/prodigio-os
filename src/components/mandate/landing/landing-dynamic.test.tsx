@@ -3,9 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { CountUp, easeOutExpo } from "@/components/ui/count-up";
 import { ProofStripSection } from "./proof-strip-section";
-import { AudienceSection } from "./audience-section";
-import { ComparaisonSection } from "./comparaison-section";
-import { audience, comparaison, proofStrip } from "./copy";
+import { MarcheInvisibleSection } from "./marche-invisible-section";
+import { AcquisitionSection } from "./acquisition-section";
+import { MarchesSection } from "./marches-section";
+import { acquisition, marcheInvisible, marches, proofStrip } from "./copy";
 
 afterEach(() => cleanup());
 
@@ -41,29 +42,48 @@ describe("ProofStripSection", () => {
   });
 });
 
-describe("AudienceSection", () => {
-  it("pose l'angle mort avant la mesure de l'audience", () => {
-    const { container } = render(<AudienceSection />);
+describe("MarcheInvisibleSection", () => {
+  it("pose la question du marché latent, sans rien démontrer", () => {
+    const { container } = render(<MarcheInvisibleSection />);
     const texte = container.textContent ?? "";
-    expect(screen.getByText(audience.emphasis)).toBeTruthy();
-    expect(texte).toContain(audience.punch);
-    // Le constat vise la commercialisation passive, jamais la profession.
-    expect(texte).not.toMatch(/dépassé|obsolèt|ne font rien|ne fonctionne plus/i);
-  });
-
-  it("ne publie jamais de statistique sans mention de source", () => {
-    const { container } = render(<AudienceSection />);
-    expect(container.textContent ?? "").toContain(audience.sourceNote);
+    expect(screen.getByText(marcheInvisible.statement)).toBeTruthy();
+    expect(texte).toContain(marcheInvisible.body);
+    for (const trait of marcheInvisible.traits) {
+      expect(screen.getByText(trait)).toBeTruthy();
+    }
   });
 });
 
-describe("ComparaisonSection", () => {
-  it("reste additive : la commercialisation traditionnelle n'est jamais dénigrée", () => {
-    const { container } = render(<ComparaisonSection />);
+describe("MarchesSection", () => {
+  it("donne raison au marché actif avant d'ajouter le marché latent", () => {
+    const { container } = render(<MarchesSection />);
     const texte = container.textContent ?? "";
-    expect(texte).toContain(comparaison.punchLine1);
-    expect(texte).toContain(comparaison.punchLine2);
+    expect(texte).toContain(marches.aside);
+    expect(texte).toContain(marches.punchLine1);
+    expect(texte).toContain(marches.punchLine2);
     // Aucune formule accusatrice envers la profession.
     expect(texte).not.toMatch(/dépassé|obsolèt|ne font rien|ne fonctionne plus/i);
+  });
+
+  it("présente les deux marchés côte à côte, aucun n'étant escamoté", () => {
+    render(<MarchesSection />);
+    expect(screen.getByText(marches.actif.label)).toBeTruthy();
+    expect(screen.getByText(marches.latent.label)).toBeTruthy();
+    for (const item of marches.actif.items) {
+      expect(screen.getByText(item)).toBeTruthy();
+    }
+  });
+});
+
+describe("AcquisitionSection", () => {
+  it("oppose la nature des objets, jamais leur valeur", () => {
+    const { container } = render(<AcquisitionSection />);
+    const texte = container.textContent ?? "";
+    expect(texte).toContain(acquisition.punchLine1);
+    expect(texte).toContain(acquisition.punchLine2);
+    // On ne dit jamais que l'organique ou les réseaux sociaux ne marchent pas.
+    expect(texte).not.toMatch(/ne (fonctionne|marche)nt? (pas|plus)|inefficace/i);
+    // La maquette publicitaire reste annoncée comme une illustration.
+    expect(texte).toContain(acquisition.adMock.note);
   });
 });

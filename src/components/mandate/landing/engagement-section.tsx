@@ -43,32 +43,41 @@ export function EngagementSection() {
           </p>
         </Reveal>
 
-        {/* Les postes engagés, l'un après l'autre. */}
-        <ul className="mx-auto mt-16 max-w-md">
-          {engagement.items.map((item, i) => (
-            <Reveal
-              as="li"
-              key={item}
-              delayMs={i * 70}
-              className="border-b border-ivory/10 py-3.5 text-[0.95rem] text-ivory/75"
-            >
-              {item}
+        {/* Les postes engagés, par famille. */}
+        <ul className="mx-auto mt-16 grid max-w-3xl gap-10 sm:grid-cols-3 sm:gap-8">
+          {engagement.groups.map((group, i) => (
+            <Reveal as="li" key={group.label} delayMs={i * 90}>
+              <span
+                aria-hidden="true"
+                className="mx-auto block h-px w-10 bg-[color:var(--color-gold-soft)]/50"
+              />
+              <span className="mt-5 block font-signature text-xs uppercase tracking-[0.24em] text-gold-soft">
+                {group.label}
+              </span>
+              <span className="mt-4 block space-y-1.5">
+                {group.items.map((item) => (
+                  <span key={item} className="block text-[0.95rem] text-ivory/75">
+                    {item}
+                  </span>
+                ))}
+              </span>
             </Reveal>
           ))}
-
-          {/* La diffusion — dernière, et de loin la plus lourde. */}
-          <Reveal as="li" variant="rise" delayMs={140} className="pt-10">
-            <span className="block font-display text-[2.2rem] leading-none text-gold-soft sm:text-5xl">
-              {engagement.climax.label}
-            </span>
-            <span className="mx-auto mt-4 block max-w-sm text-balance text-sm leading-relaxed text-ivory/70">
-              {engagement.climax.text}
-            </span>
-          </Reveal>
         </ul>
 
+        {/* La diffusion — le poste que le propriétaire ne voit jamais, et le
+            seul qui décide si son bien est vu. */}
+        <Reveal variant="rise" delayMs={120}>
+          <p className="mx-auto mt-20 max-w-2xl text-balance font-display text-[1.9rem] leading-[1.14] text-gold-soft sm:text-4xl lg:text-[2.75rem]">
+            {engagement.climax.label}
+          </p>
+          <p className="mx-auto mt-6 max-w-lg text-balance leading-relaxed text-ivory/70">
+            {engagement.climax.text}
+          </p>
+        </Reveal>
+
         <Reveal delayMs={120}>
-          <p className="mt-16 font-display text-2xl leading-snug text-gold-soft sm:text-3xl">
+          <p className="mt-16 font-display text-2xl leading-snug text-ivory sm:text-3xl">
             {engagement.punch}
           </p>
           <p className="mt-6 text-[0.78rem] leading-relaxed text-ivory/45">

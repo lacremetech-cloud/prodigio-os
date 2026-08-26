@@ -28,6 +28,11 @@ export function TransparenceSection() {
             {transparence.title}
           </h2>
         </Reveal>
+        <Reveal delayMs={130}>
+          <p className="mt-5 max-w-xl text-pretty leading-relaxed text-text-on-dark-muted">
+            {transparence.intro}
+          </p>
+        </Reveal>
 
         <Reveal delayMs={160}>
           <div className="dash-panel mt-12 overflow-hidden border border-border-dark bg-onyx-soft shadow-[0_40px_90px_-36px_rgba(0,0,0,0.9)]">

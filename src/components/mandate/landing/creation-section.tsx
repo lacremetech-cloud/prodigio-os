@@ -68,12 +68,20 @@ export function CreationSection() {
           <Reveal variant="rise" delayMs={70}>
             <h2 className="mt-6 text-balance text-3xl leading-[1.12] sm:text-4xl lg:text-[2.9rem]">
               {creation.title}
+              <br />
+              <span className="text-[color:var(--color-gold)]">{creation.emphasis}</span>
             </h2>
           </Reveal>
+          {/* Les déclencheurs — ce qui, dans CE bien, peut provoquer le désir. */}
           <Reveal delayMs={150}>
-            <p className="mt-6 text-pretty text-lg leading-relaxed text-text-secondary">
-              {creation.subtitle}
-            </p>
+            <ul className="mt-8 flex flex-wrap gap-x-7 gap-y-2">
+              {creation.triggers.map((trigger) => (
+                <li key={trigger} className="text-lg leading-snug text-text-secondary">
+                  {trigger}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-7 text-pretty text-lg leading-relaxed">{creation.body}</p>
           </Reveal>
         </div>
 
@@ -122,17 +130,25 @@ export function CreationSection() {
           </Reveal>
         </div>
 
+        {/* La chaîne de production, du positionnement aux créations. */}
         <Reveal delayMs={120}>
-          <ul className="mt-16 flex flex-wrap justify-center gap-x-10 gap-y-3">
-            {creation.disciplines.map((d) => (
+          <ol className="mt-16 flex flex-wrap items-center justify-center gap-x-4 gap-y-3">
+            {creation.chain.map((step, i) => (
               <li
-                key={d}
-                className="font-signature text-xs uppercase tracking-[0.24em] text-text-secondary"
+                key={step}
+                className="flex items-center gap-4 font-signature text-xs uppercase tracking-[0.24em] text-text-secondary"
               >
-                {d}
+                {i > 0 ? (
+                  <span aria-hidden="true" className="text-[color:var(--color-gold)]/50">
+                    →
+                  </span>
+                ) : null}
+                <span className={i === 0 ? "text-[color:var(--color-gold)]" : undefined}>
+                  {step}
+                </span>
               </li>
             ))}
-          </ul>
+          </ol>
         </Reveal>
 
         <Reveal variant="rise" delayMs={180}>

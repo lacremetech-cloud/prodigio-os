@@ -6,56 +6,78 @@ amener à `/proprietaire/analyse` (le parcours d'éligibilité).
 
 ---
 
-## 1. La Big Idea : le Système Prodigio™ va chercher l'acheteur
+## 1. La doctrine : expertise immobilière **+** Système Prodigio™
 
-C'est le socle de toute la page, et la seule idée qu'un visiteur pressé doit
-emporter. Elle est posée dès la première ligne :
+Prodigio ne se positionne **jamais contre** l'immobilier de prestige. Il ajoute.
 
-> Et si, au lieu d'attendre votre acheteur pendant des mois, nous allions le
-> chercher ?
+> EXPERTISE IMMOBILIÈRE TRADITIONNELLE **+** SYSTÈME PRODIGIO™
 
-La commercialisation traditionnelle — portails, moteurs de recherche, réseau,
-fichier acquéreurs — capte une **demande existante** : des personnes déjà en
-recherche. Prodigio n'y substitue rien ; il **ajoute une couche** : aller
-chercher l'attention d'acheteurs qui ne cherchent pas encore.
+La cible connaît le métier : dirigeants, entrepreneurs, investisseurs,
+propriétaires patrimoniaux. Écrire que « les agences prennent trois photos et
+attendent » est **faux** et décrédibilise Prodigio. Les meilleures agences ont
+des fichiers acquéreurs qualifiés, des partenaires, du réseau, des portails, de
+l'off-market, parfois une diffusion internationale, des photographes, des
+vidéastes et une vraie présence sociale. **Tout cela fonctionne, et Prodigio s'en
+sert aussi.**
 
-La phrase conceptuelle centrale :
+### Deux marchés
 
-> Ce n'est plus seulement l'acheteur qui cherche le bien.
-> C'est le bien qui vient trouver son acheteur.
+| | Le marché **actif** | Le marché **latent** |
+|---|---|---|
+| Qui | Ceux qui cherchent déjà | Ceux qui ne cherchent pas encore |
+| Signes | Portails, alertes, fichiers acquéreurs, appels aux agences | Le patrimoine, le budget, le profil, le timing |
+| Qui l'atteint | Les meilleures agences, très bien | Personne |
 
-### Trois promesses, et rien d'autre
+L'insight qui tient toute la page :
 
-Toute la page se ramène à trois bénéfices. Une section qui n'en sert aucun n'a
-pas sa place :
+> Dans l'immobilier d'exception, **le coup de cœur peut précéder la recherche.**
 
-1. **Vendre plus vite.**
-2. **Trouver les bons acheteurs.**
-3. **Défendre la valeur du bien.**
+Un acheteur peut découvrir une propriété qu'il ne cherchait pas, se projeter,
+puis développer une intention. C'est ce marché-là que le Système va chercher —
+**en plus** du marché actif, jamais à sa place.
 
-« Au prix qu'il mérite » est une promesse de **valorisation**, jamais un
-engagement de prix ou de délai.
+### Visibilité ≠ acquisition
+
+Deuxième thèse, aussi importante que la première, et aussi délicate : **ne jamais
+écrire que les réseaux sociaux ou l'organique ne fonctionnent pas.** Ils
+fonctionnent. La question est ailleurs :
+
+- Parmi 50 000 vues, combien pouvaient réellement acheter cette propriété ?
+- Et qu'a-t-on **appris** de ces 50 000 vues pour mieux la commercialiser demain ?
+
+> Une publication est diffusée.
+> **Une campagne Prodigio apprend.**
+
+Une campagne teste plusieurs angles, produit de la donnée sur les profils qui
+réagissent, puis reconcentre les moyens. Les 50 000 vues du titre sont une
+**hypothèse de raisonnement**, jamais un résultat Prodigio.
+
+### Prodigio investit
+
+Production (film, photographie, montage), expérience (site dédié, brochure,
+créations) et surtout **diffusion**. Le propriétaire doit comprendre : *« ils ne
+prennent pas simplement mon mandat, ils mettent eux aussi de l'argent sur la
+table »*. C'est ce qui justifie la sélectivité — et donc le CTA.
+
+⚠️ Vocabulaire de commercialisation immobilière, **jamais d'achat média** : ni
+CPC, ni CPM, ni ROAS, ni nom de régie. « Budget de diffusion », pas « budget
+média ».
 
 ### Le territoire de marque
 
 La méthode porte un nom : **Système Prodigio™** (`SYSTEM_NAME`, dans
-[`src/config/credentials.ts`](../src/config/credentials.ts)). Il est mis en
-valeur typographiquement dès le sous-titre du hero, puis repris en surtitre du
-système, de la sélectivité et de la FAQ. C'est ce nom qui doit rester en tête,
-pas le vocabulaire des outils.
-
-Il ouvre la page en capitales, dans un **cartouche** qu'un reflet lumineux
-balaie par intermittence (`.badge-shine`) — pas en surtitre plat.
+[`src/config/credentials.ts`](../src/config/credentials.ts)). Il ouvre la page en
+capitales, dans un **cartouche** qu'un reflet lumineux balaie par intermittence
+(`.badge-shine`) — pas en surtitre plat.
 
 ### Zéro jargon face au propriétaire
 
-Le propriétaire doit penser *« ils ont une manière différente de trouver mon
-acheteur »*, pas *« ils ont une belle machine publicitaire »*. Les mots
-« avatar », « lead », « funnel », « tunnel de vente », « Meta Ads », « ciblage »,
-« retargeting », « acquisition digitale » sont **proscrits** de la page : chaque
+Les mots « avatar », « lead », « funnel », « tunnel de vente », « Meta Ads »,
+« ciblage », « retargeting », « acquisition digitale » sont **proscrits** : chaque
 notion technique est traduite en bénéfice immobilier. Le test
 [`copy.test.ts`](../src/components/mandate/landing/copy.test.ts) échoue si l'un
-d'eux réapparaît.
+d'eux réapparaît — et aussi si une formule accusatoire envers la profession, ou
+une négation de la valeur de l'organique, se glisse dans le copy.
 
 ### L'ancienneté est un paramètre, pas une constante
 
@@ -66,19 +88,6 @@ affirmation **n'est pas validée** : elle vit dans `EXPERIENCE_LABEL`
 toucher au moindre composant — voir
 [05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md).
 
-**Règle absolue : jamais de caricature de la profession immobilière.** On
-n'écrit pas « les agences ne font rien », « les portails ne fonctionnent plus »,
-« les méthodes traditionnelles sont dépassées ». L'adversaire est la
-commercialisation **passive**, pas l'agent immobilier. La formule qui clôt la
-comparaison le dit : *« Nous ne remplaçons pas ce qui fonctionne. Nous ajoutons
-ce qui manque. »* Un test (`landing-dynamic.test.tsx`) échoue si un terme
-accusatoire réapparaît dans cette section.
-
-La création n'est **pas** l'innovation principale : elle est le moteur créatif
-que l'acquisition active exige. Pour arrêter l'attention de quelqu'un qui ne
-cherchait rien, encore faut-il lui donner une raison de regarder. C'est pour
-cela que la section création arrive **après** la Big Idea, et non avant.
-
 ## 2. Principes éditoriaux
 
 1. **La lecture en trente secondes.** Un visiteur qui ne lit que les grands
@@ -87,8 +96,9 @@ cela que la section création arrive **après** la Big Idea, et non avant.
 2. **Montrer plutôt qu'expliquer.** Si une idée demande trois paragraphes, elle
    est mal posée.
 3. **Une idée par écran, jamais deux fois la même.**
-4. **La page dit ce que dit la VSL**, jusqu'au libellé du bouton que la voix off
-   prononce.
+4. **La VSL explique ; la page démontre et rassure.** Le libellé du bouton reste
+   celui que la voix off prononce, mais la page n'est jamais une transcription :
+   le visiteur qui a regardé le film ne doit pas relire la même chose.
 5. **Rien d'inventé** : aucune statistique sans source, aucun pays inventé,
    aucun délai promis, aucune condition économique chiffrée (ce sont des
    paramètres contractuels versionnés — voir la constitution du projet).
@@ -98,45 +108,57 @@ cela que la section création arrive **après** la Big Idea, et non avant.
 
 ## 3. Structure
 
+Le mouvement d'ensemble : **question → preuve → problème → positionnement →
+mécanisme → démonstration → engagement → preuve → sélection → action.**
+
 | # | Section | Fond | Ce qu'elle apporte |
 |---|---|---|---|
-| 1 | **Hero** | photo assombrie | Le cartouche « SYSTÈME PRODIGIO™ », la question qui installe la Big Idea, l'annotation manuscrite, le film, l'action. |
-| 2 | **Preuve immédiate** (`ProofStripSection`) | onyx | 4 nombres. La crédibilité avant l'argumentaire. |
-| 3 | **L'angle mort** (`AudienceSection`) | onyx | « Et tous les autres ? », puis où se trouve l'attention + maquette d'une publicité. |
-| 4 | **La création** (`CreationSection`) | ivoire | « Votre propriété mérite mieux qu'une annonce » : annonce classique ↔ écrin Prodigio, en images. |
-| 5 | **L'écrin, en vrai** (`VitrineSection`) | ivoire sourd | Le site du bien et sa brochure **ouverts en direct** (iframes). |
-| 6 | **Le Système** (`SystemSection`) | onyx | Six temps, six lignes. |
-| 7 | **Notre engagement** (`EngagementSection`) | bois noir | *Skin in the game* : Prodigio finance la commercialisation. |
-| 8 | **Transparence** (`TransparenceSection`) | onyx | Illustration d'interface de suivi. |
-| 9 | **Case study** (`CaseStudySection`) | onyx + photo | L'entonnoir complet de Font-Romeu, jusqu'à « Vendu ». |
-| 10 | **Comparaison** (`ComparaisonSection`) | ivoire | Additive : « tout cela, plus… ». |
-| 11 | **Sélectivité** (`SelectionSection`) | onyx | La montée en gamme, puis le CTA. |
-| 12 | **FAQ** (`FaqSection`) | ivoire | Cinq objections, pas une de plus. |
-| 13 | **Dernier écran** (`FinalCtaSection`) | photo plein cadre | Une question, un geste, la signature de marque. |
-| 14 | **Pied de page** (`SiteFooter`) | bois noir | Positionnement honnête, mentions. |
+| 1 | **Hero** (`Hero`) | photo assombrie | Le cartouche « SYSTÈME PRODIGIO™ », la question d'ouverture, l'annotation manuscrite, le film, l'action. |
+| 2 | **Preuve immédiate** (`ProofStripSection`) | onyx | 4 nombres. Son seul rôle : provoquer « d'accord… comment ? ». |
+| 3 | **Le marché invisible** (`MarcheInvisibleSection`) | onyx | Ne démontre rien : installe une question que le propriétaire ne s'était pas posée. |
+| 4 | **Deux marchés** (`MarchesSection`) | ivoire | Donne raison au marché actif, puis nomme le marché latent. Traitement égal des deux colonnes. |
+| 5 | **Visibilité ≠ acquisition** (`AcquisitionSection`) | onyx | Une publication ↔ une campagne. La maquette publicitaire y trouve sa place. |
+| 6 | **Le Système** (`SystemSection`) | onyx | Sept temps le long d'un rail, puis « visites qualifiées → vente ». |
+| 7 | **Avant la diffusion** (`CreationSection`) | ivoire | Le positionnement, pas la jolie image : l'angle qui fera désirer *ce* bien. |
+| 8 | **L'écrin, en vrai** (`VitrineSection`) | ivoire sourd | Le site du bien et sa brochure **ouverts en direct** (iframes). |
+| 9 | **Notre engagement** (`EngagementSection`) | bois noir | Production · Expérience · Diffusion, puis la diffusion en climax. |
+| 10 | **La data** (`TransparenceSection`) | onyx | « Voyez votre marché réagir » — illustration d'interface. |
+| 11 | **Case study** (`CaseStudySection`) | onyx + photo | L'entonnoir complet de Font-Romeu, jusqu'à « 1 vente ». |
+| 12 | **Sélectif par nature** (`SelectionSection`) | onyx | Le « donc » de la page : nous investissons, donc nous ne pouvons pas tout accepter. |
+| 13 | **FAQ** (`FaqSection`) | ivoire | Six objections, pas une de plus. |
+| 14 | **Dernier écran** (`FinalCtaSection`) | photo plein cadre | La boucle se referme sur la question d'ouverture. |
+| 15 | **Pied de page** (`SiteFooter`) | bois noir | Positionnement honnête, mentions. |
 
 ## 4. La lecture en trente secondes
 
 L'enchaînement des titres, tel qu'il doit rester :
 
 ```
-Et si, au lieu d'attendre votre acheteur pendant des mois, nous allions le chercher ?
+Et si, au lieu d'attendre votre acheteur, nous allions le chercher ?
 → 14 jours de campagne. (312 · 23 · 6 · 1)
-→ Votre bien est visible par ceux qui le cherchent. Et tous les autres ?
-→ Votre propriété mérite mieux qu'une annonce.
-→ Ouvrez-le. C'est un bien réel.
+→ Et ceux qui pourraient acheter votre bien… sans encore le chercher ?
+→ Les meilleures agences savent déjà très bien travailler le marché actif.
+→ 50 000 vues. Mais combien d'acheteurs ?
 → Une stratégie construite autour d'un seul bien : le vôtre.
+→ Nous cherchons l'angle qui le fera désirer.
+→ Ne nous croyez pas sur parole. Ouvrez-le.
 → Nous ne nous contentons pas de prendre votre mandat. Nous investissons dans sa réussite.
-→ Ne vous demandez plus ce qui est fait pour vendre votre bien.
+→ Voyez votre marché réagir.
 → Nous n'avons pas attendu son acheteur.
-→ Nous ne remplaçons pas ce qui fonctionne. Nous ajoutons ce qui manque.
-→ Toutes les propriétés n'intègrent pas le Système Prodigio™.
+→ Nous investissons dans chaque propriété. Nous ne pouvons donc pas toutes les accepter.
 → Votre futur acheteur est peut-être déjà là.
 → Vérifier l'éligibilité de mon bien.
 ```
 
 Toute section ajoutée doit trouver sa place dans cette phrase. Si elle n'y entre
 pas, elle n'a rien à faire sur la page.
+
+### Le double test de lecture
+
+1. Un visiteur qui **ne regarde pas** la VSL doit comprendre la proposition de
+   valeur en ne lisant que ces titres.
+2. Un visiteur qui **regarde** la VSL ne doit pas avoir l'impression que la page
+   lui répète le film.
 
 ## 5. Appel à l'action
 
@@ -292,9 +314,11 @@ valeurs et la clé d'idempotence transmises à l'action serveur.
 
 ## 8. Points de vigilance
 
-- **Statistiques d'audience** (`audience.stats`) : les volumes affichés doivent
-  être rattachés à une **source vérifiable et datée** avant mise en production.
-  `audience.sourceNote` est aujourd'hui générique — c'est un point ouvert.
+- **Aucune statistique d'audience n'est plus publiée.** Les volumes « 51,5 M » et
+  « 5,79 Md », faute de source vérifiable et datée, ont disparu avec la section
+  qui les portait. Ne pas les réintroduire sans référence.
+- **« 50 000 vues »** est une **hypothèse de raisonnement**, jamais un résultat
+  Prodigio : la formulation doit le laisser évident.
 - **Interface de suivi** (`TransparenceSection`) : n'affiche **aucune valeur**,
   uniquement les indicateurs, et porte la mention « illustration d'interface ».
   Ne jamais y mettre de chiffres fictifs : ils passeraient pour des résultats.
