@@ -319,6 +319,39 @@ Fichier rattaché au dossier.
 
 ---
 
+## Deux portes d'entrée pour un bien
+
+Un bien entre dans la Fabrique par **l'une ou l'autre** de ces portes, jamais les
+deux. La colonne `properties.commercialization_origin` le dit explicitement, et
+une contrainte garantit la cohérence.
+
+| | `mandat_prodigio` | `bien_partenaire` |
+|---|---|---|
+| Origine | Un **mandat signé** confié à Prodigio | Un **partenaire propriétaire** de son bien |
+| `opportunity_id` | renseigné | **nul** |
+| `mandate_id` | renseigné | **nul** |
+| Créé par | `crm_handoff_create_property(mandate_id)` | `crm_property_create_partner(org, nom)` |
+| Garde | premium validé + mandat signé + porteuse + document signé | décisionnaire (`crm_can_decide`) |
+
+**Pourquoi la seconde porte existe.** Un **marchand de biens lui-même agent
+immobilier** vend ses propres biens : il n'a personne à qui confier un mandat.
+Prodigio l'assiste en commercialisation — création, landings, campagnes — et lui
+transmet les acquéreurs générés, qu'il traite dans le CRM.
+
+> ⚠️ Cette porte ne **contourne** pas le mandat : elle reconnaît qu'il n'y en a
+> pas. On ne fabrique jamais un mandat de complaisance ni une opportunité fictive
+> pour satisfaire une contrainte technique — ce serait inventer un fait
+> contractuel, ce que la constitution du projet interdit.
+
+**Accès.** `crm_property_access` couvre les deux cas : l'opérateur Prodigio voit
+tout ; l'agent immobilier voit les biens du dossier auquel il est affecté **ou**
+les biens de l'**organisation porteuse** dont il est membre. C'est cette seconde
+branche qui donne au partenaire l'accès à ses propres biens.
+
+L'accès aux **dossiers acquéreurs** est indépendant : il passe par
+`buyer_assignments` (affectation explicite) ou par le bien. Un partenaire peut
+donc traiter ses acquéreurs sans qu'aucune opportunité n'existe.
+
 ## Relations principales (cardinalités décidées pour le MVP)
 
 - **Organisation** 1 — N **OrganizationMembership** N — 1 **Utilisateur**
@@ -329,7 +362,7 @@ Fichier rattaché au dossier.
   (N-N, avec fonction).
 - **Opportunité** 1 — N **OpportunityAssignment** N — 1 **Utilisateur**
   (N-N, avec responsabilité).
-- **Opportunité** 1 — 1 **Bien candidat**.
+- **Opportunité** 1 — 1 **Bien candidat** *(uniquement pour les biens entrés par la porte `mandat_prodigio` ; un bien partenaire n'a pas d'opportunité)*.
 - **Opportunité** 1 — 1 **Stade** courant ; 1 — 1 **Segment** courant
   (**dimensions séparées**) ; segmentation via **Décision de segment**.
 - **FunnelSubmission** 1 — 0..1 **Opportunité** et 0..1 **Contact** (résultat de
