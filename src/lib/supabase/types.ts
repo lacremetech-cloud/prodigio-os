@@ -439,14 +439,23 @@ export type PropertyStatus =
   | "suspendu"
   | "archive";
 
+/** Porte d'entrée du bien dans la Fabrique — voir docs/03-DOMAIN-MODEL.md. */
+export type PropertyCommercializationOrigin =
+  | "mandat_prodigio"
+  | "partenaire_commercialisation";
+
 export type PropertyRow = {
   id: string;
   created_at: string;
   updated_at: string;
   organization_id: string;
-  opportunity_id: string;
-  mandate_id: string;
+  // Nuls pour un bien partenaire (`partenaire_commercialisation`) : ce bien
+  // n'est issu d'aucun mandat Prodigio. La cohérence (mandat+opportunité OU
+  // organisation porteuse) est garantie par une contrainte en base.
+  opportunity_id: string | null;
+  mandate_id: string | null;
   holder_organization_id: string | null;
+  commercialization_origin: PropertyCommercializationOrigin;
   status: PropertyStatus;
   created_by: string | null;
   // Identité (Fabrique de biens V1) — additive.
@@ -1572,6 +1581,15 @@ export interface Database {
         Returns: Json;
       };
       // --- V1 Fabrique de biens ---
+      /**
+       * Crée un bien partenaire (sans mandat ni opportunité). Idempotente par
+       * (organisation porteuse, nom de projet) : `already: true` quand le bien
+       * existait déjà. Réservée aux décisionnaires.
+       */
+      crm_property_create_partner: {
+        Args: { p_holder_organization_id: string; p_project_name: string };
+        Returns: { ok: boolean; id: string; already: boolean };
+      };
       crm_property_access: { Args: { p_property_id: string }; Returns: boolean };
       crm_property_can_edit: { Args: { p_property_id: string }; Returns: boolean };
       crm_property_update_identity: {

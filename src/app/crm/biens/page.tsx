@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { requireCrmSession } from "@/modules/crm/auth/session";
+import { canDecideMandate } from "@/modules/crm/auth/roles";
 import { listProperties, type PropertyPortfolioItem } from "@/modules/properties/factory/queries";
 import {
   productionKindLabels,
@@ -65,7 +66,8 @@ export default async function PropertiesPortfolioPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireCrmSession("/crm/biens");
+  const session = await requireCrmSession("/crm/biens");
+  const canCreate = canDecideMandate(session.roles);
   const sp = await searchParams;
   const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] ?? "" : v ?? "");
   const filters: Filters = {
@@ -84,13 +86,20 @@ export default async function PropertiesPortfolioPage({
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
-      <SectionTitle eyebrow="Fabrique de biens" title="Portefeuille des biens" />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <SectionTitle eyebrow="Fabrique de biens" title="Portefeuille des biens" />
+        {canCreate ? (
+          <Link href="/crm/biens/nouveau" className="crm-btn crm-btn--sm">
+            Créer un bien à partir d’un brief
+          </Link>
+        ) : null}
+      </div>
 
       {all.length === 0 ? (
         <EmptyState
           icon="◆"
           title="Aucun bien pour le moment"
-          hint="Les biens apparaissent ici automatiquement dès qu’un mandat signé est transformé en bien depuis son dossier."
+          hint="Un bien apparaît ici dès qu’un mandat signé est transformé en bien depuis son dossier — ou, pour un bien détenu par une organisation partenaire, dès qu’il est créé à partir d’un brief."
         />
       ) : (
         <>
