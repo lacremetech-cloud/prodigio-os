@@ -325,13 +325,20 @@ Un bien entre dans la Fabrique par **l'une ou l'autre** de ces portes, jamais le
 deux. La colonne `properties.commercialization_origin` le dit explicitement, et
 une contrainte garantit la cohérence.
 
-| | `mandat_prodigio` | `bien_partenaire` |
+| | `mandat_prodigio` | `partenaire_commercialisation` |
 |---|---|---|
 | Origine | Un **mandat signé** confié à Prodigio | Un **partenaire propriétaire** de son bien |
 | `opportunity_id` | renseigné | **nul** |
 | `mandate_id` | renseigné | **nul** |
 | Créé par | `crm_handoff_create_property(mandate_id)` | `crm_property_create_partner(org, nom)` |
+| Organisation porteuse | facultative | **obligatoire** |
 | Garde | premium validé + mandat signé + porteuse + document signé | décisionnaire (`crm_can_decide`) |
+
+**L'invariant est porté par la base, pas par l'application.** Une contrainte
+`CHECK` interdit tout état intermédiaire, et la clé étrangère de l'organisation
+porteuse est en `ON DELETE RESTRICT` : une organisation qui porte encore des
+biens ne se supprime pas. Aucun bien ne peut donc exister sans mandat **ni**
+organisation porteuse.
 
 **Pourquoi la seconde porte existe.** Un **marchand de biens lui-même agent
 immobilier** vend ses propres biens : il n'a personne à qui confier un mandat.
