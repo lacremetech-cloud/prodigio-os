@@ -226,8 +226,22 @@ export function BriefFactory({
   const analysis = result?.analysis;
   const resolution = result?.organization;
   const organizationReady = Boolean(organizationId || newOrganizationName.trim());
-  const canSubmit =
-    !previewBlocked && !pending && form.projectName.trim().length > 0 && organizationReady;
+
+  /**
+   * Ce qui empêche la création, dit à l'endroit où l'on clique. Un bouton
+   * désactivé sans raison à côté de lui est une impasse : le bandeau de
+   * prévisualisation est en haut de page, hors de vue une fois la fiche
+   * remplie. On répète donc le motif sous le bouton.
+   */
+  const blockingReason: string | null = previewBlocked
+    ? "Cet environnement est une prévisualisation, reliée à la base réelle : la création y est refusée. Rien ne manque à votre fiche — rejouez-la sur l’environnement de production."
+    : !form.projectName.trim()
+      ? "Le nom du bien est obligatoire."
+      : !organizationReady
+        ? "Sélectionnez une organisation porteuse, ou saisissez-en une à enregistrer."
+        : null;
+
+  const canSubmit = !blockingReason && !pending;
 
   return (
     <div className="flex flex-col gap-5">
@@ -532,6 +546,12 @@ export function BriefFactory({
               {pending ? "Création en cours…" : "Créer le bien en brouillon"}
             </button>
           </div>
+
+          {blockingReason ? (
+            <p role="status" className="crm-wrap text-xs text-[var(--crm-text-faint)]">
+              {blockingReason}
+            </p>
+          ) : null}
         </section>
       ) : null}
 

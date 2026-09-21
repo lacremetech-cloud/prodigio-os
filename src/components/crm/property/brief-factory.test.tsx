@@ -213,4 +213,38 @@ describe("BriefFactory — prévisualisation Vercel", () => {
     const submit = screen.getByRole("button", { name: "Créer le bien en brouillon" });
     expect(submit.hasAttribute("disabled")).toBe(true);
   });
+
+  it("dit le motif du refus À CÔTÉ du bouton, pas seulement en haut de page", async () => {
+    await goToPreview(true);
+    // Le bandeau est hors de vue une fois la fiche remplie : sans ce rappel, le
+    // bouton est une impasse. On vérifie aussi qu'il dissipe le doute « il me
+    // manque quelque chose ? ».
+    // Deux `status` en preview : le bandeau en haut, le motif sous le bouton.
+    const statuses = screen.getAllByRole("status");
+    const reason = statuses[statuses.length - 1];
+    expect(reason?.textContent).toMatch(/prévisualisation/i);
+    expect(reason?.textContent).toMatch(/Rien ne manque à votre fiche/i);
+  });
+});
+
+describe("BriefFactory — motif de blocage hors preview", () => {
+  it("nomme l'organisation porteuse manquante", async () => {
+    await goToPreview();
+    fireEvent.change(screen.getByLabelText(/Organisation existante/), { target: { value: "" } });
+    expect(screen.getByRole("status").textContent).toMatch(/organisation porteuse/i);
+  });
+
+  it("nomme le nom de bien manquant", async () => {
+    await goToPreview();
+    fireEvent.change(screen.getByLabelText(/Nom du bien/), { target: { value: "  " } });
+    expect(screen.getByRole("status").textContent).toMatch(/nom du bien est obligatoire/i);
+  });
+
+  it("n'affiche aucun motif quand la fiche est prête", async () => {
+    await goToPreview();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Créer le bien en brouillon" }).hasAttribute("disabled"),
+    ).toBe(false);
+  });
 });
