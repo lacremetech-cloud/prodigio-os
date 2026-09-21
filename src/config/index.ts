@@ -3,6 +3,7 @@ export {
   parseEnv,
   isSupabaseConfigured,
   isSupabaseAdminConfigured,
+  isPreviewDeployment,
   canonicalSiteUrl,
   safeInternalPath,
   isTurnstileConfigured,

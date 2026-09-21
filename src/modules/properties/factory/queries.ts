@@ -166,8 +166,13 @@ export async function getPropertyCockpit(id: string): Promise<PropertyCockpit | 
       .eq("entity_id", id)
       .order("created_at", { ascending: false })
       .limit(60),
-    supabase.from("opportunities").select("*").eq("id", property.opportunity_id).maybeSingle(),
-    supabase.from("mandates").select("*").eq("id", property.mandate_id).maybeSingle(),
+    // Un bien partenaire n'a ni opportunité ni mandat : on n'interroge pas.
+    property.opportunity_id
+      ? supabase.from("opportunities").select("*").eq("id", property.opportunity_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    property.mandate_id
+      ? supabase.from("mandates").select("*").eq("id", property.mandate_id).maybeSingle()
+      : Promise.resolve({ data: null }),
     property.holder_organization_id
       ? supabase
           .from("organizations")

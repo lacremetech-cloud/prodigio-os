@@ -18,6 +18,13 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
 
+  // Fourni automatiquement par Vercel : « production », « preview » ou
+  // « development ». Sert UNIQUEMENT à refuser, sur les déploiements de
+  // prévisualisation, les écritures qui créeraient de vraies données de
+  // production (organisations, biens). Optionnelle : hors Vercel, elle est
+  // absente et aucune restriction n'est appliquée.
+  VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
+
   // --- Supabase (base + dépôt de demande publique) ---
   // Toutes optionnelles : l'application démarre sans elles. La capture des
   // demandes est simplement désactivée tant que l'URL et la clé publiable ne
@@ -451,4 +458,17 @@ export function safeInternalPath(
   // Doit commencer par un seul « / » et ne pas être un chemin protocol-relative.
   if (!t.startsWith("/") || t.startsWith("//") || t.startsWith("/\\")) return fallback;
   return t;
+}
+
+/**
+ * Vrai sur un déploiement de **prévisualisation** Vercel. Les previews partagent
+ * la base de production : on y refuse donc explicitement les écritures qui
+ * créeraient de vraies données (organisation porteuse, bien). Ce n'est **pas**
+ * un « mode test » masqué — le refus est visible, motivé, et n'a aucun effet en
+ * production ni en développement local.
+ */
+export function isPreviewDeployment(
+  source: Pick<Env, "VERCEL_ENV"> = env,
+): boolean {
+  return source.VERCEL_ENV === "preview";
 }

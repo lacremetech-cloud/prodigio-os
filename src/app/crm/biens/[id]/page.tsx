@@ -335,9 +335,19 @@ export default async function PropertyCockpitPage({
                   {cockpit.mandate.signed_at ? ` · signé le ${formatDate(cockpit.mandate.signed_at)}` : ""}
                 </p>
               ) : null}
-              <Link href={`/crm/mandats/${p.opportunity_id}`} className="crm-btn crm-btn--sm mt-1 self-start">
-                Ouvrir le dossier (mandat)
-              </Link>
+              {p.opportunity_id ? (
+                <Link
+                  href={`/crm/mandats/${p.opportunity_id}`}
+                  className="crm-btn crm-btn--sm mt-1 self-start"
+                >
+                  Ouvrir le dossier (mandat)
+                </Link>
+              ) : (
+                <p className="text-[12px] text-[var(--crm-text-faint)]">
+                  Bien détenu par l’organisation porteuse, commercialisé sans mandat Prodigio :
+                  aucun dossier de mandat rattaché.
+                </p>
+              )}
             </div>
           </Section>
 
