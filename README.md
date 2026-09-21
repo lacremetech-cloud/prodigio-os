@@ -201,6 +201,11 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   actions serveur du CRM : une action qui échoue affiche un message et
   **conserve la saisie**, au lieu de remplacer l'écran. Analyse de l'incident du
   25 août, correctif `safeAction`, portée et garde-fous.
+- [docs/24-FABRIQUE-BRIEF.md](docs/24-FABRIQUE-BRIEF.md) — Fabrique : créer un
+  bien **à partir d'un brief**, pour un bien détenu par une organisation
+  partenaire et commercialisé **sans mandat Prodigio**. Analyseur déterministe
+  (aucune IA), parcours en quatre temps, organisation porteuse obligatoire,
+  permissions et refus d'écriture depuis une prévisualisation.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
