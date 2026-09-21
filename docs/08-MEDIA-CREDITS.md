@@ -36,7 +36,7 @@ tailles responsives.
 | `cat-domaine.webp` | Carte « Domaine ou propriété de caractère » | Unsplash | Carnet de Voyage d'Alex | Unsplash License | https://unsplash.com/photos/bb0rqQ_1yxg |
 | `cat-autre.webp` | Carte « Autre propriété » | Unsplash | Roger Starnes Sr | Unsplash License | https://unsplash.com/photos/Ph06_YFjRu0 |
 | `ambiance-1.webp` | Ambiance analyse (arches en pierre) | Unsplash | Claudio Poggio | Unsplash License | https://unsplash.com/photos/-jBfdyEFH_E |
-| `ambiance-2.webp` | Ambiance / section sélectivité (façade Bordeaux) | Unsplash | Clément ROY | Unsplash License | https://unsplash.com/photos/aZCRwzwYrL4 |
+| `ambiance-2.webp` | Ambiance analyse + CTA final (façade Bordeaux) | Unsplash | Clément ROY | Unsplash License | https://unsplash.com/photos/aZCRwzwYrL4 |
 | `confirmation.webp` | Écran de confirmation (rive au crépuscule) | Unsplash | Howard Walsh | Unsplash License | https://unsplash.com/photos/puiEPnbtF9k |
 
 ## Licences
