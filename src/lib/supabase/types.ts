@@ -617,6 +617,12 @@ export type PublicationStatus =
 
 export type PropertyPublicConfigRow = {
   property_id: string;
+  /** Collecte des demandes acquéreur — INDÉPENDANTE de `publication_status`. */
+  buyer_form_status: "inactif" | "actif";
+  /** Destination remise après un dépôt valide ; jamais exposée avant. */
+  buyer_form_brochure_url: string | null;
+  /** Origines autorisées à embarquer le formulaire (`frame-ancestors`). */
+  buyer_form_allowed_origins: string[];
   created_at: string;
   updated_at: string;
   slug: string | null;
@@ -1579,6 +1585,29 @@ export interface Database {
       crm_register_partner_organization: {
         Args: { p_name: string; p_slug: string };
         Returns: Json;
+      };
+      // --- Formulaire acquéreur universel ---
+      /** Contexte MINIMAL du formulaire ; NULL si slug inconnu ou formulaire fermé. */
+      buyer_form_context: { Args: { p_slug: string }; Returns: Json };
+      /** Adresse de la brochure, délivrée contre un intérêt réellement enregistré. */
+      buyer_form_brochure: {
+        Args: { p_slug: string; p_interest_id: string };
+        Returns: string | null;
+      };
+      crm_property_set_buyer_form: {
+        Args: {
+          p_property_id: string;
+          p_slug?: string | null;
+          p_status?: string | null;
+          p_brochure_url?: string | null;
+          p_allowed_origins?: string[] | null;
+        };
+        Returns: {
+          ok: boolean;
+          slug: string | null;
+          buyer_form_status: string;
+          publication_status: string;
+        };
       };
       // --- V1 Fabrique de biens ---
       /**

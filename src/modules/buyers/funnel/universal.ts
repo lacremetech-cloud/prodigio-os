@@ -26,12 +26,17 @@ export const BUYER_BUDGET_CHOICES = [
 ] as const;
 export type BuyerBudgetChoice = (typeof BUYER_BUDGET_CHOICES)[number];
 
+/** Question de l'écran 1, au mot près. Elle porte le « si oui » : le budget
+ *  n'est pas demandé seul, il est la suite d'une question sur l'existence même
+ *  d'un projet. « Non, je n'ai pas de projet » est une réponse pleine. */
+export const BUDGET_QUESTION = "Avez-vous un projet ? Si oui, quel est votre budget ?";
+
 export const BUDGET_CHOICE_LABELS: Record<BuyerBudgetChoice, string> = {
-  aucun_projet: "Je n'ai pas de projet d'achat",
-  "500k_1m": "500 000 € à 1 M€",
-  "1m_2m": "1 M€ à 2 M€",
-  "2m_3m": "2 M€ à 3 M€",
-  plus_3m: "Plus de 3 M€",
+  aucun_projet: "Non, je n'ai pas de projet",
+  "500k_1m": "Oui, entre 500 000 € et 1 million d'euros",
+  "1m_2m": "Oui, entre 1 et 2 millions d'euros",
+  "2m_3m": "Oui, entre 2 et 3 millions d'euros",
+  plus_3m: "Plus de 3 millions d'euros",
 };
 
 /**
@@ -66,23 +71,36 @@ export const universalStepOneSchema = z.object({
   budgetChoice: budgetChoiceSchema,
 });
 
-/** Écran 2 — la prise de contact. */
+/**
+ * Écran 2 — la prise de contact. **Quatre champs obligatoires, pas un de plus.**
+ *
+ * Aucune case marketing obligatoire, et aucun consentement marketing implicite :
+ * la demande de brochure doit aboutir même si la personne refuse toute
+ * utilisation marketing ultérieure. L'accord marketing est donc **facultatif**,
+ * décoché par défaut, et ne conditionne jamais l'envoi. Le traitement de la
+ * demande elle-même repose sur la demande de la personne, pas sur cette case.
+ */
 export const universalStepTwoSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis.").max(80),
   lastName: z.string().trim().min(1, "Nom requis.").max(80),
   emailRaw: z.string().trim().min(1, "E-mail requis.").max(180),
   phoneRaw: z.string().trim().min(1, "Téléphone requis.").max(40),
   phoneCountry: z.string().trim().length(2).toUpperCase().default(DEFAULT_PHONE_COUNTRY),
-  consent: z.literal(true, {
-    message: "Votre accord est nécessaire pour être recontacté.",
-  }),
+  /** Facultatif et NON bloquant. `false` est une réponse recevable. */
+  marketingOptIn: z.boolean().optional().default(false),
 });
 
 export const universalBuyerAnswersSchema = universalStepOneSchema
   .extend(universalStepTwoSchema.shape)
   .extend({
-    // Honeypot : doit rester vide. Défense faible ; Turnstile reste la garde.
-    company: z.string().max(0).optional().default(""),
+    /**
+     * Pot de miel. Le schéma l'ACCEPTE rempli, volontairement : c'est l'action
+     * serveur qui le repère et renvoie un accusé « ok » silencieux. Le rejeter
+     * ici en erreur de validation apprendrait au robot qu'il a été repéré, et
+     * lui indiquerait quoi changer. Défense faible de toute façon — Turnstile
+     * reste la vraie garde.
+     */
+    company: z.string().max(200).optional().default(""),
   });
 
 export type UniversalBuyerAnswers = z.infer<typeof universalBuyerAnswersSchema>;

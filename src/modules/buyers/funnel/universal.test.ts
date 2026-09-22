@@ -10,12 +10,12 @@ import {
   universalStepTwoSchema,
 } from "./universal";
 
+/** Les QUATRE champs obligatoires de l'écran 2, et rien d'autre. */
 const CONTACT = {
   firstName: "Camille",
   lastName: "Durand",
   emailRaw: "camille@example.test",
   phoneRaw: "+33 6 12 34 56 78",
-  consent: true as const,
 };
 
 describe("vocabulaire de budget", () => {
@@ -97,11 +97,24 @@ describe("validation", () => {
     expect(universalStepOneSchema.safeParse({ budgetChoice: "a_definir" }).success).toBe(false);
   });
 
-  it("exige un accord explicite pour recontacter", () => {
-    expect(universalStepTwoSchema.safeParse({ ...CONTACT, consent: false }).success).toBe(false);
-    const sans: Record<string, unknown> = { ...CONTACT };
-    delete sans.consent;
-    expect(universalStepTwoSchema.safeParse(sans).success).toBe(false);
+  it("n'exige AUCUNE case marketing : quatre champs suffisent", () => {
+    // La demande de brochure doit aboutir même si la personne refuse toute
+    // utilisation marketing ultérieure. Aucune case n'est donc bloquante.
+    expect(universalStepTwoSchema.safeParse(CONTACT).success).toBe(true);
+  });
+
+  it("traite le refus marketing comme une réponse recevable, pas comme une erreur", () => {
+    const refus = universalStepTwoSchema.safeParse({ ...CONTACT, marketingOptIn: false });
+    const accord = universalStepTwoSchema.safeParse({ ...CONTACT, marketingOptIn: true });
+    expect(refus.success).toBe(true);
+    expect(accord.success).toBe(true);
+    expect(refus.success && refus.data.marketingOptIn).toBe(false);
+    expect(accord.success && accord.data.marketingOptIn).toBe(true);
+  });
+
+  it("laisse l'accord marketing à FAUX par défaut — jamais de consentement implicite", () => {
+    const parsed = universalStepTwoSchema.safeParse(CONTACT);
+    expect(parsed.success && parsed.data.marketingOptIn).toBe(false);
   });
 
   it("exige nom, prénom, e-mail et téléphone", () => {
@@ -110,12 +123,16 @@ describe("validation", () => {
     }
   });
 
-  it("rejette un dépôt dont le pot de miel est rempli", () => {
+  it("ACCEPTE un pot de miel rempli au niveau du schéma — le piège se referme ailleurs", () => {
+    // Rejeter ici apprendrait au robot qu'il a été repéré, et lui dirait quoi
+    // corriger. L'action serveur renvoie un accusé « ok » silencieux et
+    // n'enregistre rien : c'est elle qui tient le piège.
     const parsed = universalBuyerAnswersSchema.safeParse({
       budgetChoice: "1m_2m",
       ...CONTACT,
       company: "robot",
     });
-    expect(parsed.success).toBe(false);
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.company).toBe("robot");
   });
 });
