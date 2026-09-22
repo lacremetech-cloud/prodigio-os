@@ -1,17 +1,25 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AttributionCapture } from "@/components/mandate/attribution-capture";
-import { getPublishedProperty } from "@/modules/buyers/public/public-queries";
-import { BuyerFunnel } from "@/components/public/buyer/buyer-funnel";
+import { getBuyerFormContext } from "@/modules/buyers/public/public-queries";
+import { UniversalBuyerForm } from "@/components/public/buyer/universal-form";
 
 /**
- * Funnel Acquéreur : `/bien/[slug]/interet`. N'est accessible que pour un bien
- * PUBLIÉ (sinon 404 propre). **Jamais indexé** (noindex, follow off) : les pages
- * de dépôt acquéreur ne doivent pas apparaître dans les moteurs.
+ * Formulaire acquéreur universel : `/bien/[slug]/interet`.
+ *
+ * La route répond dès que le **formulaire est actif**, que la vitrine Prodigio
+ * soit publiée ou non : une annonce peut vivre ailleurs et devoir collecter des
+ * demandes sans que la page Prodigio existe. Sinon, 404 propre.
+ *
+ * Tant que la vitrine n'est pas publiée, la page ne révèle **rien du bien** :
+ * ni nom, ni prix, ni adresse, ni contenu non validé. Elle n'affiche que le
+ * formulaire. Le visiteur arrive d'une annonce qui, elle, présente déjà le bien.
+ *
+ * **Jamais indexée** : une page de dépôt n'a rien à faire dans un moteur.
  */
 
 export const metadata: Metadata = {
-  title: "Manifester mon intérêt",
+  title: "Demander la brochure",
   robots: { index: false, follow: false },
 };
 
@@ -21,15 +29,17 @@ interface PageProps {
 
 export default async function BuyerInterestPage({ params }: PageProps) {
   const { slug } = await params;
-  const snapshot = await getPublishedProperty(slug);
-  if (!snapshot) notFound();
-
-  const propertyName = snapshot.content.public_name?.trim() || "Cette propriété";
+  const context = await getBuyerFormContext(slug);
+  if (!context) notFound();
 
   return (
     <>
       <AttributionCapture />
-      <BuyerFunnel slug={snapshot.slug} propertyName={propertyName} />
+      <UniversalBuyerForm
+        slug={context.slug}
+        propertyName={context.publicName}
+        brochureAvailable={context.brochureAvailable}
+      />
     </>
   );
 }
