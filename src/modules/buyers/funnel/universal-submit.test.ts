@@ -41,7 +41,6 @@ const REQUEST = {
     emailRaw: "camille@example.test",
     phoneRaw: "0612345678",
     phoneCountry: "FR",
-    marketingOptIn: false,
   },
   context: { idempotencyKey: "abcdefgh12345678", submittedAt: "2026-09-22T09:00:00.000Z" },
   turnstileToken: "token",
@@ -65,15 +64,15 @@ describe("submitUniversalInterestAction", () => {
     expect(h.rpc.mock.calls[1]?.[0]).toBe("buyer_form_brochure");
   });
 
-  it("aboutit même quand la personne refuse le marketing", async () => {
+  it("aboutit alors qu'aucun consentement marketing n'est recueilli", async () => {
     h.rpc.mockResolvedValueOnce({ data: { accepted: true, created: true, interest_id: "i-2" }, error: null });
     h.rpc.mockResolvedValueOnce({ data: "https://exemple.test/b.pdf", error: null });
-    const res = await submitUniversalInterestAction({
-      ...REQUEST,
-      answers: { ...REQUEST.answers, marketingOptIn: false },
-    });
+    const res = await submitUniversalInterestAction(REQUEST);
     expect(res.ok).toBe(true);
+    // Demande enregistrée ET brochure remise, sans le moindre accord marketing.
     expect(res.ok && res.brochureUrl).toBeTruthy();
+    const payload = h.rpc.mock.calls[0]?.[1] as { payload: Record<string, unknown> };
+    expect(payload.payload.consent_given).toBe(false);
   });
 
   it("ne dépose RIEN si Turnstile refuse", async () => {

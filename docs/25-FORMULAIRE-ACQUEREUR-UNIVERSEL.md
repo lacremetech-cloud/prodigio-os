@@ -78,17 +78,40 @@ projet, ni financement. Le formulaire est court par décision, pas par oubli.
 
 ### Écran 2 — la prise de contact
 
-Quatre champs obligatoires, et rien d'autre : **Prénom, Nom, E-mail,
-Téléphone**. Plus le texte d'information sur l'usage des données.
+Quatre champs, et rien d'autre : **Prénom, Nom, E-mail, Téléphone**. Plus une
+information de confidentialité **courte**, affichée sous les champs.
 
-**Aucune case marketing obligatoire, aucun consentement implicite.** L'accord
-marketing est une case **facultative, décochée**, qui ne conditionne rien : la
-demande de brochure aboutit exactement pareil qu'on l'accepte ou qu'on la
-refuse. Le refus est consigné comme une réponse, pas comme une erreur.
+**Aucune case. Ni obligatoire, ni précochée, ni facultative.** Cette première
+version ne recueille **aucun consentement marketing**, et n'en fabrique donc
+aucun. Afficher une information n'est pas demander un accord.
 
-Le traitement de la demande repose sur la demande elle-même ; l'usage marketing
-ultérieur repose sur la case. Les deux sont consignés séparément dans
-`consent_proof`.
+Le refus ou l'absence de consentement marketing n'empêche jamais
+l'enregistrement de la demande, la création ou la mise à jour du contact, la
+création de l'intérêt, ni l'accès à la brochure — vérifié : `submit_buyer_interest`
+ne pose **aucune garde** sur `consent_given`, qui ne pilote que
+`privacy_records.choice`.
+
+### Une réserve à connaître
+
+Le contrat existant impose `consent_given boolean`. On y écrit donc `false`,
+seule valeur honnête quand rien n'a été demandé. En base, `false` devient
+`privacy_records.choice = 'refuse'` — qui se lit « la personne a refusé », alors
+qu'en réalité **on ne lui a rien demandé**. Le modèle ne sait pas distinguer les
+deux cas.
+
+Plutôt que de laisser cette ambiguïté, `consent_proof` porte la distinction en
+clair :
+
+```json
+{ "given": false,
+  "marketing_consent_requested": false,
+  "note": "Aucun consentement marketing n'a été demandé par ce formulaire.",
+  "notice_displayed": true }
+```
+
+Un lecteur futur — audit, demande d'accès, reprise du modèle — ne s'y trompera
+pas. Si un consentement marketing devient nécessaire, il faudra un geste
+explicite, distinct de ce formulaire.
 
 Il n'y a **jamais** de troisième écran — `UNIVERSAL_STEPS` en déclare deux, et
 un test le vérifie.
@@ -198,19 +221,21 @@ renvoient que le strict nécessaire.
 ## 9. Tests
 
 - `universal.test.ts` — vocabulaire disjoint des anciennes bandes, bornes,
-  deux écrans et jamais trois, quatre champs suffisants, aucun consentement
-  implicite, pot de miel accepté par le schéma (le piège se referme ailleurs).
+  deux écrans et jamais trois, quatre champs et rien d'autre dans le schéma,
+  un `marketingOptIn` envoyé par un client est **écarté**, pot de miel accepté
+  par le schéma (le piège se referme ailleurs).
 - `universal-payload.test.ts` — `budget_choice` jamais dans `budget_band`,
-  brut séparé du normalisé, attribution complète, refus marketing consigné
-  sans bloquer.
+  brut séparé du normalisé, attribution complète, aucun consentement marketing
+  fabriqué, notice courte.
 - `universal-submit.test.ts` — aucun dépôt sans Turnstile, brochure jamais
   délivrée sans intérêt réel, accusé neutre, pot de miel silencieux, code de
   budget étranger refusé sans rapprochement.
 - `embed-policy.test.ts` — origines normalisées ou écartées, `'self'` toujours
   présent, `*` jamais produit.
 - `universal-form.test.tsx` — le parcours réel : question exacte, cinq
-  réponses, aucune autre question, quatre champs, brochure remise, nom du bien
-  non divulgué, saisie conservée en cas d'échec.
+  réponses, aucune autre question, quatre champs et **zéro case**, notice
+  courte sans case, brochure remise, nom du bien non divulgué, saisie
+  conservée en cas d'échec.
 
 Migrations rejouées sur base PostgreSQL vierge, invariants prouvés en
 transaction annulée (voir le message de commit).

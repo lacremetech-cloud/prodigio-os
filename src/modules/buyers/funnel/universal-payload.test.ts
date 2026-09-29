@@ -11,7 +11,6 @@ const BASE = {
     emailRaw: "  Camille.Durand@Example.TEST ",
     phoneRaw: "06 12 34 56 78",
     phoneCountry: "FR",
-    marketingOptIn: false,
   },
   context: {
     idempotencyKey: "abcdefgh12345678",
@@ -77,20 +76,29 @@ describe("buildUniversalPayload", () => {
     expect(build().funnel_version).toBe(UNIVERSAL_FUNNEL_VERSION);
   });
 
-  it("consigne le refus marketing SANS empêcher la demande", () => {
-    const refus = build({ answers: { marketingOptIn: false } });
-    expect(refus.consent_given).toBe(true);
-    expect((refus.consent_proof as Record<string, unknown>).marketing_opt_in).toBe(false);
+  it("ne fabrique AUCUN consentement marketing", () => {
+    const payload = build();
+    // `false` est la seule valeur honnête : rien n'a été demandé.
+    expect(payload.consent_given).toBe(false);
+    const proof = payload.consent_proof as Record<string, unknown>;
+    expect(proof.given).toBe(false);
+    expect(proof.marketing_consent_requested).toBe(false);
+    // La distinction « refusé » / « jamais demandé » est écrite noir sur blanc,
+    // parce que `privacy_records.choice` ne sait pas la porter.
+    expect(String(proof.note)).toMatch(/jamais|aucun/i);
+  });
 
-    const accord = build({ answers: { marketingOptIn: true } });
-    expect((accord.consent_proof as Record<string, unknown>).marketing_opt_in).toBe(true);
-    // La demande est traitée à l'identique dans les deux cas.
-    expect(accord.consent_given).toBe(refus.consent_given);
+  it("ne laisse pas un client fabriquer un accord marketing", () => {
+    const payload = build({ answers: { marketingOptIn: true } });
+    expect(payload.consent_given).toBe(false);
+    expect(JSON.stringify(payload)).not.toContain("marketing_opt_in");
   });
 
   it("garde la trace de la notice affichée", () => {
     const payload = build();
     expect(payload.consent_notice_version).toBeTruthy();
     expect(String(payload.consent_notice_text)).toContain("brochure");
+    // Courte : une information, pas un pavé juridique.
+    expect(String(payload.consent_notice_text).length).toBeLessThan(220);
   });
 });

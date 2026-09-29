@@ -97,24 +97,24 @@ describe("validation", () => {
     expect(universalStepOneSchema.safeParse({ budgetChoice: "a_definir" }).success).toBe(false);
   });
 
-  it("n'exige AUCUNE case marketing : quatre champs suffisent", () => {
-    // La demande de brochure doit aboutir même si la personne refuse toute
-    // utilisation marketing ultérieure. Aucune case n'est donc bloquante.
-    expect(universalStepTwoSchema.safeParse(CONTACT).success).toBe(true);
-  });
-
-  it("traite le refus marketing comme une réponse recevable, pas comme une erreur", () => {
-    const refus = universalStepTwoSchema.safeParse({ ...CONTACT, marketingOptIn: false });
-    const accord = universalStepTwoSchema.safeParse({ ...CONTACT, marketingOptIn: true });
-    expect(refus.success).toBe(true);
-    expect(accord.success).toBe(true);
-    expect(refus.success && refus.data.marketingOptIn).toBe(false);
-    expect(accord.success && accord.data.marketingOptIn).toBe(true);
-  });
-
-  it("laisse l'accord marketing à FAUX par défaut — jamais de consentement implicite", () => {
+  it("se contente des quatre champs : aucune case n'existe", () => {
     const parsed = universalStepTwoSchema.safeParse(CONTACT);
-    expect(parsed.success && parsed.data.marketingOptIn).toBe(false);
+    expect(parsed.success).toBe(true);
+    // Le schéma ne porte QUE les quatre champs et le pays du téléphone.
+    expect(Object.keys(parsed.success ? parsed.data : {}).sort()).toEqual([
+      "emailRaw",
+      "firstName",
+      "lastName",
+      "phoneCountry",
+      "phoneRaw",
+    ]);
+  });
+
+  it("ne conserve aucun champ de consentement marketing, même si on en envoie un", () => {
+    const parsed = universalStepTwoSchema.safeParse({ ...CONTACT, marketingOptIn: true });
+    expect(parsed.success).toBe(true);
+    // Un client malveillant ne peut pas fabriquer un accord qui n'existe pas.
+    expect(parsed.success && "marketingOptIn" in parsed.data).toBe(false);
   });
 
   it("exige nom, prénom, e-mail et téléphone", () => {

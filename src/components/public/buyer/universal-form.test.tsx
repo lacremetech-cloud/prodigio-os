@@ -36,7 +36,7 @@ function renderForm(props: Partial<Parameters<typeof UniversalBuyerForm>[0]> = {
   );
 }
 
-async function fillAndSubmit(marketing = false) {
+async function fillAndSubmit() {
   fireEvent.click(screen.getByLabelText("Oui, entre 1 et 2 millions d’euros".replace("’", "'")));
   fireEvent.click(screen.getByRole("button", { name: /continuer/i }));
   await waitFor(() => screen.getByLabelText("Prénom"));
@@ -44,7 +44,6 @@ async function fillAndSubmit(marketing = false) {
   fireEvent.change(screen.getByLabelText("Nom"), { target: { value: "Durand" } });
   fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "c@example.test" } });
   fireEvent.change(screen.getByLabelText("Téléphone"), { target: { value: "0612345678" } });
-  if (marketing) fireEvent.click(screen.getByRole("checkbox"));
   fireEvent.click(screen.getByRole("button", { name: /recevoir la brochure/i }));
 }
 
@@ -79,7 +78,7 @@ describe("écran 1", () => {
 });
 
 describe("écran 2", () => {
-  it("n'affiche que les quatre champs obligatoires", async () => {
+  it("n'affiche que les quatre champs, et AUCUNE case", async () => {
     renderForm();
     fireEvent.click(screen.getByLabelText("Non, je n'ai pas de projet"));
     fireEvent.click(screen.getByRole("button", { name: /continuer/i }));
@@ -87,20 +86,22 @@ describe("écran 2", () => {
     for (const champ of ["Prénom", "Nom", "E-mail", "Téléphone"]) {
       expect(screen.getByLabelText(champ)).toBeTruthy();
     }
-    // Une seule case, et elle est facultative.
-    const cases = screen.getAllByRole("checkbox");
-    expect(cases).toHaveLength(1);
-    expect((cases[0] as HTMLInputElement).checked).toBe(false);
+    // Ni obligatoire, ni précochée, ni facultative : il n'y en a pas.
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 
-  it("affiche l'information sur l'usage des données", async () => {
+  it("affiche une information de confidentialité courte, sans case à cocher", async () => {
     renderForm();
     fireEvent.click(screen.getByLabelText("Non, je n'ai pas de projet"));
     fireEvent.click(screen.getByRole("button", { name: /continuer/i }));
     await waitFor(() => screen.getByLabelText("Prénom"));
-    expect(screen.getByText(/conservées par Prodigio/i)).toBeTruthy();
-    expect(screen.getByText(/ne sont pas cédées à des tiers/i)).toBeTruthy();
+    const notice = screen.getByText(/ne sont pas cédées à des tiers/i);
+    expect(notice).toBeTruthy();
+    expect(notice.querySelector("input")).toBeNull();
+    expect((notice.textContent ?? "").length).toBeLessThan(220);
   });
+
+
 
   it("permet de revenir à l'écran 1", async () => {
     renderForm();
@@ -113,22 +114,15 @@ describe("écran 2", () => {
 });
 
 describe("envoi", () => {
-  it("transmet la réponse exacte et aboutit SANS accord marketing", async () => {
+  it("transmet la réponse exacte, sans aucun champ de consentement", async () => {
     renderForm();
-    await fillAndSubmit(false);
+    await fillAndSubmit();
     await waitFor(() => expect(submit).toHaveBeenCalled());
     const payload = submit.mock.calls[0]?.[0] as { answers: Record<string, unknown> };
     expect(payload.answers.budgetChoice).toBe("1m_2m");
-    expect(payload.answers.marketingOptIn).toBe(false);
+    expect("marketingOptIn" in payload.answers).toBe(false);
+    expect(JSON.stringify(payload)).not.toMatch(/marketing/i);
     await waitFor(() => screen.getByRole("link", { name: /accéder à la brochure/i }));
-  });
-
-  it("consigne l'accord marketing quand il est donné", async () => {
-    renderForm();
-    await fillAndSubmit(true);
-    await waitFor(() => expect(submit).toHaveBeenCalled());
-    const payload = submit.mock.calls[0]?.[0] as { answers: Record<string, unknown> };
-    expect(payload.answers.marketingOptIn).toBe(true);
   });
 
   it("donne accès à la brochure immédiatement après validation", async () => {

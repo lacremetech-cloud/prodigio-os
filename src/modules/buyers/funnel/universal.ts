@@ -72,13 +72,17 @@ export const universalStepOneSchema = z.object({
 });
 
 /**
- * Écran 2 — la prise de contact. **Quatre champs obligatoires, pas un de plus.**
+ * Écran 2 — la prise de contact. **Quatre champs, et rien d'autre.**
  *
- * Aucune case marketing obligatoire, et aucun consentement marketing implicite :
- * la demande de brochure doit aboutir même si la personne refuse toute
- * utilisation marketing ultérieure. L'accord marketing est donc **facultatif**,
- * décoché par défaut, et ne conditionne jamais l'envoi. Le traitement de la
- * demande elle-même repose sur la demande de la personne, pas sur cette case.
+ * Aucune case : ni obligatoire, ni précochée, ni facultative. Cette première
+ * version ne recueille **aucun consentement marketing**, et n'en fabrique donc
+ * aucun. Une information de confidentialité courte est affichée, sans case à
+ * cocher — l'afficher n'est pas demander un accord.
+ *
+ * Conséquence assumée en base : `consent_given` part à `false`. La demande,
+ * le contact, l'intérêt et la brochure aboutissent malgré tout — rien n'est
+ * conditionné à ce champ (vérifié dans `submit_buyer_interest`, qui ne pose
+ * aucune garde dessus).
  */
 export const universalStepTwoSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis.").max(80),
@@ -86,8 +90,6 @@ export const universalStepTwoSchema = z.object({
   emailRaw: z.string().trim().min(1, "E-mail requis.").max(180),
   phoneRaw: z.string().trim().min(1, "Téléphone requis.").max(40),
   phoneCountry: z.string().trim().length(2).toUpperCase().default(DEFAULT_PHONE_COUNTRY),
-  /** Facultatif et NON bloquant. `false` est une réponse recevable. */
-  marketingOptIn: z.boolean().optional().default(false),
 });
 
 export const universalBuyerAnswersSchema = universalStepOneSchema

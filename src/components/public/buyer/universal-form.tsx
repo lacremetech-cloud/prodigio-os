@@ -25,10 +25,10 @@ import { notifyParentHeight } from "./embed-bridge";
 /**
  * Formulaire acquéreur **universel** — deux écrans, et jamais un troisième.
  *
- * Écran 1 : une seule question, celle qui qualifie. Écran 2 : quatre champs
- * obligatoires, l'information sur l'usage des données, et un accord marketing
- * **facultatif** qui ne conditionne rien. Une personne qui refuse toute
- * utilisation marketing reçoit la brochure exactement comme les autres.
+ * Écran 1 : une seule question, celle qui qualifie. Écran 2 : quatre champs, et
+ * une information de confidentialité courte. **Aucune case** — ni obligatoire,
+ * ni précochée, ni facultative : cette version ne recueille aucun consentement
+ * marketing, et n'en fabrique donc aucun.
  *
  * Aucun e-mail ni SMS n'est déclenché : la brochure est remise à l'écran.
  */
@@ -40,7 +40,6 @@ interface Draft {
   emailRaw: string;
   phoneRaw: string;
   phoneCountry: string;
-  marketingOptIn: boolean;
   company: string;
 }
 
@@ -56,7 +55,6 @@ const emptyDraft: Draft = {
   emailRaw: "",
   phoneRaw: "",
   phoneCountry: "FR",
-  marketingOptIn: false,
   company: "",
 };
 
@@ -133,7 +131,6 @@ export function UniversalBuyerForm({
       emailRaw: draft.emailRaw,
       phoneRaw: draft.phoneRaw,
       phoneCountry: draft.phoneCountry,
-      marketingOptIn: draft.marketingOptIn,
     });
     if (!stepTwo.success) {
       const next: Record<string, string> = {};
@@ -320,20 +317,8 @@ export function UniversalBuyerForm({
               </label>
             </div>
 
+            {/* Information, pas demande d'accord : aucune case, nulle part. */}
             <p className="uf-note">{UNIVERSAL_PRIVACY_NOTICE}</p>
-
-            {/* Facultatif, décoché, et sans effet sur l'envoi. */}
-            <label className="uf-check">
-              <input
-                type="checkbox"
-                checked={draft.marketingOptIn}
-                onChange={(e) => set("marketingOptIn")(e.target.checked)}
-              />
-              <span>
-                J’accepte de recevoir d’autres biens susceptibles de m’intéresser.{" "}
-                <em>Facultatif — votre demande aboutit sans cette case.</em>
-              </span>
-            </label>
 
             {TURNSTILE_SITE_KEY ? (
               <TurnstileWidget

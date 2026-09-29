@@ -77,12 +77,14 @@ export type UniversalSubmitResult =
 
 type Json = Record<string, unknown>;
 
-/** Texte d'information affiché sous les champs — conservé comme preuve. */
+/**
+ * Information de confidentialité — **courte et non bloquante**. Affichée sous
+ * les champs, sans case à cocher : l'afficher informe, cela ne demande pas un
+ * accord. Conservée telle quelle comme preuve de ce qui a été montré.
+ */
 export const UNIVERSAL_PRIVACY_NOTICE =
-  "Vos coordonnées sont utilisées pour répondre à votre demande et vous transmettre " +
-  "la brochure de ce bien. Elles sont conservées par Prodigio et l'agence porteuse " +
-  "du bien, ne sont pas cédées à des tiers, et vous pouvez demander leur " +
-  "rectification ou leur effacement à tout moment.";
+  "Vos coordonnées servent uniquement à répondre à votre demande et à vous " +
+  "transmettre la brochure. Elles ne sont pas cédées à des tiers.";
 
 export function buildUniversalPayload(request: UniversalSubmissionRequest): Json {
   const { answers, context, slug } = request;
@@ -99,7 +101,6 @@ export function buildUniversalPayload(request: UniversalSubmissionRequest): Json
       phone: answers.phoneRaw,
       phone_country: answers.phoneCountry,
     },
-    marketing_opt_in: answers.marketingOptIn === true,
   };
 
   const normalizedAnswers = {
@@ -111,7 +112,6 @@ export function buildUniversalPayload(request: UniversalSubmissionRequest): Json
       phone: phoneNormalized,
       phone_country: answers.phoneCountry,
     },
-    marketing_opt_in: answers.marketingOptIn === true,
   };
 
   const last = context.lastTouch;
@@ -136,10 +136,16 @@ export function buildUniversalPayload(request: UniversalSubmissionRequest): Json
     contact_phone: phoneNormalized,
     contact_phone_raw: answers.phoneRaw,
 
-    // La demande elle-même vaut accord pour y répondre ; elle ne vaut PAS accord
-    // marketing. Les deux sont consignés séparément, et un refus marketing
-    // n'empêche jamais la remise de la brochure.
-    consent_given: true,
+    // AUCUN consentement marketing n'est recueilli par ce formulaire — donc
+    // aucun n'est fabriqué. `false` est la seule valeur honnête que le contrat
+    // existant (`boolean not null`) permette d'écrire.
+    //
+    // Réserve à connaître : en base, `false` devient `privacy_records.choice =
+    // 'refuse'`, qui se lit « la personne a refusé » alors qu'en réalité on ne
+    // lui a rien demandé. Le modèle ne sait pas distinguer les deux. On le dit
+    // donc explicitement dans `consent_proof`, pour qu'un lecteur futur ne s'y
+    // trompe pas.
+    consent_given: false,
     consent_notice_version: UNIVERSAL_CONSENT_NOTICE_VERSION,
     consent_notice_text: UNIVERSAL_PRIVACY_NOTICE,
 
@@ -158,9 +164,12 @@ export function buildUniversalPayload(request: UniversalSubmissionRequest): Json
 
     consent_proof: {
       purpose: "reponse_demande_et_brochure",
-      given: true,
-      marketing_opt_in: answers.marketingOptIn === true,
+      given: false,
+      // Distinction que `privacy_records.choice` ne sait pas porter.
+      marketing_consent_requested: false,
+      note: "Aucun consentement marketing n'a été demandé par ce formulaire.",
       notice_version: UNIVERSAL_CONSENT_NOTICE_VERSION,
+      notice_displayed: true,
       at: last?.at ?? context.submittedAt,
     },
   };
