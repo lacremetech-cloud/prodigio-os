@@ -76,21 +76,28 @@ describe("buildUniversalPayload", () => {
     expect(build().funnel_version).toBe(UNIVERSAL_FUNNEL_VERSION);
   });
 
-  it("ne fabrique AUCUN consentement marketing", () => {
+  it("dit qu'AUCUNE question n'a été posée — ni accord, ni refus", () => {
     const payload = build();
-    // `false` est la seule valeur honnête : rien n'a été demandé.
-    expect(payload.consent_given).toBe(false);
-    const proof = payload.consent_proof as Record<string, unknown>;
-    expect(proof.given).toBe(false);
-    expect(proof.marketing_consent_requested).toBe(false);
-    // La distinction « refusé » / « jamais demandé » est écrite noir sur blanc,
-    // parce que `privacy_records.choice` ne sait pas la porter.
-    expect(String(proof.note)).toMatch(/jamais|aucun/i);
+    // `consent_requested: false` fait écrire NULL et `choice = 'non_demande'`
+    // en base. Un `false` aurait signifié « demandé puis refusé » : faux.
+    expect(payload.consent_requested).toBe(false);
+    expect(payload.consent_given).toBeNull();
+  });
+
+  it("n'invente aucune opposition, et ne compense plus par une note", () => {
+    const proof = build().consent_proof as Record<string, unknown>;
+    // La preuve est factuelle : ce qui a été affiché, quand. La sémantique est
+    // portée par les colonnes, pas par un commentaire libre.
+    expect(proof.notice_displayed).toBe(true);
+    expect(proof.notice_version).toBeTruthy();
+    expect("given" in proof).toBe(false);
+    expect("note" in proof).toBe(false);
   });
 
   it("ne laisse pas un client fabriquer un accord marketing", () => {
     const payload = build({ answers: { marketingOptIn: true } });
-    expect(payload.consent_given).toBe(false);
+    expect(payload.consent_given).toBeNull();
+    expect(payload.consent_requested).toBe(false);
     expect(JSON.stringify(payload)).not.toContain("marketing_opt_in");
   });
 

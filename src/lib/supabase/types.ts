@@ -112,7 +112,8 @@ export type FunnelSubmissionRow = {
   contact_phone: string | null;
   contact_preference: string | null;
   contact_recall_preference: string | null;
-  consent_given: boolean;
+  /** `true` accordé, `false` demandé puis refusé, `null` JAMAIS demandé. */
+  consent_given: boolean | null;
   consent_notice_version: string | null;
   utm_source: string | null;
   utm_medium: string | null;
@@ -732,7 +733,8 @@ export type BuyerInterestRow = {
   contact_phone_raw: string | null;
   contact_preference: string | null;
   contact_recall_preference: string | null;
-  consent_given: boolean;
+  /** `true` accordé, `false` demandé puis refusé, `null` JAMAIS demandé. */
+  consent_given: boolean | null;
   consent_notice_version: string | null;
   utm_source: string | null;
   utm_medium: string | null;

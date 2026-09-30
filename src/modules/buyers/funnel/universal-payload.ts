@@ -136,16 +136,13 @@ export function buildUniversalPayload(request: UniversalSubmissionRequest): Json
     contact_phone: phoneNormalized,
     contact_phone_raw: answers.phoneRaw,
 
-    // AUCUN consentement marketing n'est recueilli par ce formulaire — donc
-    // aucun n'est fabriqué. `false` est la seule valeur honnête que le contrat
-    // existant (`boolean not null`) permette d'écrire.
-    //
-    // Réserve à connaître : en base, `false` devient `privacy_records.choice =
-    // 'refuse'`, qui se lit « la personne a refusé » alors qu'en réalité on ne
-    // lui a rien demandé. Le modèle ne sait pas distinguer les deux. On le dit
-    // donc explicitement dans `consent_proof`, pour qu'un lecteur futur ne s'y
-    // trompe pas.
-    consent_given: false,
+    // Ce formulaire ne POSE PAS la question du consentement marketing. Il ne
+    // faut donc enregistrer ni accord, ni refus : `consent_requested: false`
+    // fait écrire `consent_given = NULL` et `privacy_records.choice =
+    // 'non_demande'` — un état neutre, distinct de `refuse`. Aucune opposition
+    // n'est inventée.
+    consent_requested: false,
+    consent_given: null,
     consent_notice_version: UNIVERSAL_CONSENT_NOTICE_VERSION,
     consent_notice_text: UNIVERSAL_PRIVACY_NOTICE,
 
@@ -162,12 +159,12 @@ export function buildUniversalPayload(request: UniversalSubmissionRequest): Json
     last_touch: context.lastTouch,
     user_agent: context.userAgent,
 
+    // Preuve FACTUELLE de ce qui s'est passé : l'information a été affichée, à
+    // telle date. Elle ne compense plus rien — la sémantique est désormais
+    // portée par les colonnes elles-mêmes (`consent_given` NULL, `choice`
+    // `non_demande`).
     consent_proof: {
       purpose: "reponse_demande_et_brochure",
-      given: false,
-      // Distinction que `privacy_records.choice` ne sait pas porter.
-      marketing_consent_requested: false,
-      note: "Aucun consentement marketing n'a été demandé par ce formulaire.",
       notice_version: UNIVERSAL_CONSENT_NOTICE_VERSION,
       notice_displayed: true,
       at: last?.at ?? context.submittedAt,

@@ -79,10 +79,11 @@ export const universalStepOneSchema = z.object({
  * aucun. Une information de confidentialité courte est affichée, sans case à
  * cocher — l'afficher n'est pas demander un accord.
  *
- * Conséquence assumée en base : `consent_given` part à `false`. La demande,
- * le contact, l'intérêt et la brochure aboutissent malgré tout — rien n'est
- * conditionné à ce champ (vérifié dans `submit_buyer_interest`, qui ne pose
- * aucune garde dessus).
+ * En base, l'absence de question s'écrit `consent_given = NULL` et
+ * `privacy_records.choice = 'non_demande'` — jamais `refuse`, qui affirmerait
+ * une opposition que personne n'a exprimée. La demande, le contact, l'intérêt
+ * et la brochure aboutissent de toute façon : rien n'est conditionné à ce
+ * champ (`submit_buyer_interest` ne pose aucune garde dessus).
  */
 export const universalStepTwoSchema = z.object({
   firstName: z.string().trim().min(1, "Prénom requis.").max(80),

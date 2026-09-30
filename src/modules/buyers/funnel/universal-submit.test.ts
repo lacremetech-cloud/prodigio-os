@@ -72,7 +72,9 @@ describe("submitUniversalInterestAction", () => {
     // Demande enregistrée ET brochure remise, sans le moindre accord marketing.
     expect(res.ok && res.brochureUrl).toBeTruthy();
     const payload = h.rpc.mock.calls[0]?.[1] as { payload: Record<string, unknown> };
-    expect(payload.payload.consent_given).toBe(false);
+    // Ni accord ni refus : la question n'a pas été posée.
+    expect(payload.payload.consent_given).toBeNull();
+    expect(payload.payload.consent_requested).toBe(false);
   });
 
   it("ne dépose RIEN si Turnstile refuse", async () => {

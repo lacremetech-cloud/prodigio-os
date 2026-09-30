@@ -91,26 +91,35 @@ création de l'intérêt, ni l'accès à la brochure — vérifié : `submit_buy
 ne pose **aucune garde** sur `consent_given`, qui ne pilote que
 `privacy_records.choice`.
 
-### Une réserve à connaître
+### « Non demandé » n'est pas « refusé »
 
-Le contrat existant impose `consent_given boolean`. On y écrit donc `false`,
-seule valeur honnête quand rien n'a été demandé. En base, `false` devient
-`privacy_records.choice = 'refuse'` — qui se lit « la personne a refusé », alors
-qu'en réalité **on ne lui a rien demandé**. Le modèle ne sait pas distinguer les
-deux cas.
+Le modèle ne connaissait que trois états (`accorde`, `refuse`, `retire`) et un
+`consent_given boolean not null`. Une absence de question s'y enregistrait donc
+en `refuse` / `false` — une donnée **fausse**, pas une imprécision : elle
+affirme un acte d'opposition que la personne n'a jamais posé, sur un dossier
+qu'elle venait elle-même d'ouvrir.
 
-Plutôt que de laisser cette ambiguïté, `consent_proof` porte la distinction en
-clair :
+Correctif additif (`20260930090000_consent_non_demande_v1.sql`) :
 
-```json
-{ "given": false,
-  "marketing_consent_requested": false,
-  "note": "Aucun consentement marketing n'a été demandé par ce formulaire.",
-  "notice_displayed": true }
-```
+| | Avant | Après |
+|---|---|---|
+| `privacy_records.choice` | `refuse` | **`non_demande`** (quatrième état) |
+| `buyer_interests.consent_given` | `false` | **`NULL`** (contrainte relâchée) |
+| `do_not_contact` | `false` | `false` — aucune opposition inventée |
+| `notice_version` / `notice_text` | renseignés | renseignés — **l'information affichée reste tracée, séparément du choix** |
 
-Un lecteur futur — audit, demande d'accès, reprise du modèle — ne s'y trompera
-pas. Si un consentement marketing devient nécessaire, il faudra un geste
+Les trois états existants gardent leur sens : `accorde` et `refuse` supposent
+qu'une question a été posée, `retire` une rétractation. `non_demande` dit qu'il
+n'y a pas eu de question.
+
+Le déclencheur est un champ de payload, `consent_requested`. **Absent ⇒ `true`** :
+le funnel V1, qui affiche bien une case, garde son comportement au bit près.
+
+Aucun risque d'autorisation accidentelle : `src/modules/communications/policy.ts`
+exige un `accorde` **positif** pour toute finalité marketing. Un `non_demande`
+n'autorise rien.
+
+Si un consentement marketing devient nécessaire un jour, il faudra un geste
 explicite, distinct de ce formulaire.
 
 Il n'y a **jamais** de troisième écran — `UNIVERSAL_STEPS` en déclare deux, et
@@ -225,8 +234,9 @@ renvoient que le strict nécessaire.
   un `marketingOptIn` envoyé par un client est **écarté**, pot de miel accepté
   par le schéma (le piège se referme ailleurs).
 - `universal-payload.test.ts` — `budget_choice` jamais dans `budget_band`,
-  brut séparé du normalisé, attribution complète, aucun consentement marketing
-  fabriqué, notice courte.
+  brut séparé du normalisé, attribution complète, `consent_requested: false` et
+  `consent_given: null` (ni accord ni refus), preuve factuelle sans note
+  compensatoire, notice courte.
 - `universal-submit.test.ts` — aucun dépôt sans Turnstile, brochure jamais
   délivrée sans intérêt réel, accusé neutre, pot de miel silencieux, code de
   budget étranger refusé sans rapprochement.
