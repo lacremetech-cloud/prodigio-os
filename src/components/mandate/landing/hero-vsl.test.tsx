@@ -1,11 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import {
-  HeroVsl,
-  shouldShowPlayFallback,
-  shouldShowSoundButton,
-} from "./hero-vsl";
+import { HeroVsl } from "./hero-vsl";
+import { hero } from "./copy";
 
 // next/image → simple <img> (évite le runtime Next dans jsdom).
 vi.mock("next/image", () => ({
@@ -15,56 +12,44 @@ vi.mock("next/image", () => ({
   ),
 }));
 
+// next/dynamic → composant inerte : la fenêtre du film n'est pas testée ici.
+vi.mock("next/dynamic", () => ({
+  default: () => function Stub() {
+    return <div data-testid="vsl-modal" />;
+  },
+}));
+
 afterEach(() => cleanup());
 
-describe("HeroVsl — logique d'affichage", () => {
-  it("propose le son uniquement pendant la lecture muette", () => {
-    expect(shouldShowSoundButton("playing")).toBe(true);
-    expect(shouldShowSoundButton("idle")).toBe(false);
-    expect(shouldShowSoundButton("sound")).toBe(false);
-    expect(shouldShowSoundButton("blocked")).toBe(false);
-  });
-
-  it("propose la lecture de secours uniquement si l'autoplay est bloqué", () => {
-    expect(shouldShowPlayFallback("blocked")).toBe(true);
-    expect(shouldShowPlayFallback("idle")).toBe(false);
-    expect(shouldShowPlayFallback("playing")).toBe(false);
-  });
-});
-
-describe("HeroVsl — rendu", () => {
-  it("intègre la VSL (iframe nocookie, autoplay muet, playsinline, sans habillage)", () => {
+describe("HeroVsl — affiche du film", () => {
+  it("ne charge aucune iframe ni script YouTube sur le premier écran", () => {
     render(<HeroVsl />);
-    const iframe = document.querySelector("iframe");
-    expect(iframe).not.toBeNull();
-    const src = iframe!.getAttribute("src") ?? "";
-    expect(src).toContain("youtube-nocookie.com/embed/rgH1uqNdvHs");
-    expect(src).toContain("autoplay=1");
-    expect(src).toContain("mute=1");
-    expect(src).toContain("playsinline=1");
-    expect(src).toContain("controls=0");
-    expect(src).toContain("enablejsapi=1");
-    // Attribut autorisant l'autoplay.
-    expect(iframe!.getAttribute("allow") ?? "").toContain("autoplay");
+    // Le premier écran ne doit peser qu'une image : le lecteur n'arrive qu'au
+    // clic. C'est la garantie de performance la plus importante de la page.
+    expect(document.querySelector("iframe")).toBeNull();
+    expect(document.querySelector('script[src*="youtube"]')).toBeNull();
   });
 
-  it("affiche des repères cinématographiques discrets", () => {
+  it("rend toute la surface cliquable, et non un simple bouton de lecture", () => {
+    const { container } = render(<HeroVsl />);
+    const buttons = container.querySelectorAll("button");
+    expect(buttons).toHaveLength(1);
+    const surface = buttons[0]!;
+    expect(surface.className).toContain("aspect-video");
+    expect(surface.className).toContain("w-full");
+    expect(surface.getAttribute("aria-label")).toMatch(/lire le film/i);
+  });
+
+  it("porte l'invitation et le repère de durée sur l'affiche", () => {
     render(<HeroVsl />);
-    expect(screen.getByText(/Scene 01/i)).toBeTruthy();
+    expect(screen.getByText(hero.vslInvite)).toBeTruthy();
+    expect(screen.getByText(hero.vslDuration)).toBeTruthy();
   });
 
-  it("affiche un bouton de lecture de secours si l'autoplay ne démarre pas", () => {
-    vi.useFakeTimers();
-    try {
-      render(<HeroVsl />);
-      act(() => {
-        vi.advanceTimersByTime(3000);
-      });
-      expect(
-        screen.getByRole("button", { name: /Lancer le film de présentation/i }),
-      ).toBeTruthy();
-    } finally {
-      vi.useRealTimers();
-    }
+  it("n'ouvre la fenêtre du film qu'après un geste du visiteur", () => {
+    const { container } = render(<HeroVsl />);
+    expect(screen.queryByTestId("vsl-modal")).toBeNull();
+    act(() => container.querySelector("button")!.click());
+    expect(screen.getByTestId("vsl-modal")).toBeTruthy();
   });
 });
