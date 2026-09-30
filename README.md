@@ -206,6 +206,15 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   partenaire et commercialisé **sans mandat Prodigio**. Analyseur déterministe
   (aucune IA), parcours en quatre temps, organisation porteuse obligatoire,
   permissions et refus d'écriture depuis une prévisualisation.
+- [docs/25-FORMULAIRE-ACQUEREUR-UNIVERSEL.md](docs/25-FORMULAIRE-ACQUEREUR-UNIVERSEL.md) —
+  Formulaire acquéreur **universel** : deux écrans, quatre champs, embarquable
+  sur une annonce hébergée ailleurs. Collecte **découplée** de la publication de
+  la vitrine, vocabulaire de budget conservé sans conversion, brochure remise
+  contre un dépôt réel, protections `frame-ancestors` et `postMessage`.
+- [docs/26-CONFIGURATION-JEAN-JAURES.md](docs/26-CONFIGURATION-JEAN-JAURES.md) —
+  Configuration du formulaire acquéreur pour la Villa Jean Jaurès : valeurs,
+  marche à suivre depuis l'interface de production, et ordre des opérations.
+  **Préparée, non appliquée.**
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

@@ -9,6 +9,8 @@ import {
   listAssignableMembers,
 } from "@/modules/properties/factory/queries";
 import { getPublicExperience, listBuyerInterests } from "@/modules/buyers/public/queries";
+import { BuyerFormSettings } from "@/components/crm/property/buyer-form-settings";
+import { canonicalSiteUrl } from "@/config";
 import { listBuyersForProperty } from "@/modules/buyers/crm/queries";
 import {
   PublicConfigForm,
@@ -218,6 +220,22 @@ export default async function PropertyCockpitPage({
               propertyId={p.id}
               canEdit={canEdit}
               canDecide={canDecide}
+            />
+          </Section>
+
+          <Section
+            title="Formulaire acquéreur"
+            subtitle="Collecter des demandes depuis une annonce hébergée ailleurs, sans publier la vitrine Prodigio. Identifiant public, brochure, domaines autorisés et code d’intégration."
+          >
+            <BuyerFormSettings
+              propertyId={p.id}
+              siteUrl={canonicalSiteUrl()}
+              initialSlug={publicExperience.config?.slug ?? null}
+              initialStatus={publicExperience.config?.buyer_form_status ?? "inactif"}
+              initialBrochureUrl={publicExperience.config?.buyer_form_brochure_url ?? null}
+              initialOrigins={publicExperience.config?.buyer_form_allowed_origins ?? []}
+              publicationStatus={publicExperience.config?.publication_status ?? "brouillon"}
+              canActivate={canDecide}
             />
           </Section>
 
