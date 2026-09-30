@@ -42,14 +42,22 @@ export function notifyParentHeight(node: HTMLElement | null): void {
   }
 }
 
-/** Extrait du code d'intégration remis dans le cockpit. */
+/**
+ * Code d'intégration remis dans le cockpit.
+ *
+ * Le message de hauteur n'est accepté que s'il provient de l'iframe elle-même
+ * (`e.source === f.contentWindow`) : sans ce contrôle, n'importe quelle fenêtre
+ * capable de joindre la page hôte pourrait lui dicter la hauteur du cadre.
+ */
 export function buildEmbedSnippet(formUrl: string): string {
-  return `<iframe src="${formUrl}" title="Demander la brochure" loading="lazy" style="width:100%;border:0;min-height:520px" ></iframe>
+  return `<iframe id="prodigio-form" src="${formUrl}" title="Demander la brochure" loading="lazy" style="width:100%;border:0;min-height:520px;display:block"></iframe>
 <script>
   window.addEventListener("message", function (e) {
     if (!e.data || e.data.type !== "${EMBED_MESSAGE_TYPE}") return;
-    var f = document.querySelector('iframe[src="${formUrl}"]');
-    if (f && typeof e.data.height === "number") f.style.height = e.data.height + "px";
+    var f = document.getElementById("prodigio-form");
+    if (!f || e.source !== f.contentWindow) return;
+    if (typeof e.data.height !== "number" || e.data.height <= 0) return;
+    f.style.height = e.data.height + "px";
   });
 </script>`;
 }
