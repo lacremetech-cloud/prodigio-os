@@ -391,9 +391,21 @@ html.js .reveal.reveal-rise.is-visible {
   background: var(--uf-bg);
   color: var(--uf-fg);
   font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
-  padding: 20px 16px;
-  min-height: 100%;
+  padding: 24px 16px;
+  /* Consulté en direct, le formulaire doit remplir l'écran : sans cela le fond
+     de l'application réapparaît sous la carte. En iframe, le parent ajuste la
+     hauteur au contenu et cette règle n'a aucun effet visible. */
+  min-height: 100dvh;
   box-sizing: border-box;
+}
+
+/* Le formulaire vit chez un tiers : il ne doit hériter d'AUCUN style de la page
+   qui l'entoure, ni d'une règle globale de l'application. La règle `h1,h2,h3`
+   de ce fichier n'est pas calquée (`@layer`) et gagnerait donc sur les
+   utilitaires — on la neutralise explicitement à l'intérieur du formulaire. */
+.uf-root :is(h1, h2, h3, legend) {
+  font-family: inherit;
+  letter-spacing: 0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -507,6 +519,43 @@ html.js .reveal.reveal-rise.is-visible {
 }
 .uf-check input { accent-color: var(--uf-accent); margin-top: 0.15rem; flex: none; }
 .uf-check em { font-style: normal; opacity: 0.85; }
+
+/* `PhoneField` est partagé avec le reste de l'application et porte ses propres
+   classes. Plutôt que de le modifier (il sert ailleurs), on aligne son rendu
+   sur celui du formulaire, ici et nulle part ailleurs. */
+.uf-root .relative > label,
+.uf-root label > span:first-child {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--uf-muted);
+  margin: 0;
+}
+.uf-root input[type="tel"],
+.uf-root input[inputmode="tel"] {
+  font-size: 0.9375rem;
+  color: var(--uf-fg);
+}
+.uf-root .relative > div {
+  margin-top: 0.3rem;
+  border-color: var(--uf-line);
+  border-radius: 0.5rem;
+  min-height: 3rem;
+  box-shadow: none;
+  background: var(--uf-bg);
+}
+
+/* Le message d'erreur de `PhoneField` porte sa propre couleur, pensée pour un
+   fond sombre. Sur ce formulaire clair, elle paraît délavée à côté des trois
+   autres : on l'aligne, ici seulement. */
+.uf-root .relative > p {
+  font-size: 0.8125rem;
+  color: var(--uf-danger);
+  margin-top: 0.3rem;
+}
+.uf-root .relative:has(> p) > div {
+  border-color: var(--uf-danger);
+}
 
 .uf-error { margin: 0; font-size: 0.8125rem; color: var(--uf-danger); }
 
