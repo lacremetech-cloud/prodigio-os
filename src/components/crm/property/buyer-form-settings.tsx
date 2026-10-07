@@ -8,15 +8,21 @@ import { buildEmbedSnippet } from "@/components/public/buyer/embed-bridge";
 import { FieldError, TextArea, TextField } from "./shared";
 
 /**
- * Bloc « Formulaire acquéreur » du cockpit : identifiant public, activation,
- * brochure, domaines autorisés, et le code à coller.
+ * Bloc « Formulaire acquéreur » du cockpit.
  *
- * Il ne publie jamais la vitrine — c'est dit à l'écran, et garanti en base.
+ * Parcours visé : un bien existe → on obtient un code à coller. Rien d'autre
+ * n'est demandé. L'identifiant public est **pré-rempli** depuis le nom du bien
+ * (modifiable), et tout le reste — brochure, domaines autorisés — est
+ * facultatif et replié.
+ *
+ * Il ne publie jamais la vitrine Prodigio : c'est dit à l'écran, et garanti en
+ * base (`crm_property_set_buyer_form` ne touche pas `publication_status`).
  */
 export function BuyerFormSettings({
   propertyId,
   siteUrl,
   initialSlug,
+  suggestedSlug,
   initialStatus,
   initialBrochureUrl,
   initialOrigins,
@@ -27,6 +33,8 @@ export function BuyerFormSettings({
   /** Origine canonique du site, pour composer l'URL remise à l'utilisateur. */
   siteUrl: string;
   initialSlug: string | null;
+  /** Identifiant proposé d'après le nom du bien, quand aucun n'est encore posé. */
+  suggestedSlug: string;
   initialStatus: string;
   initialBrochureUrl: string | null;
   initialOrigins: string[];
@@ -36,7 +44,7 @@ export function BuyerFormSettings({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [slug, setSlug] = useState(initialSlug ?? "");
+  const [slug, setSlug] = useState(initialSlug ?? suggestedSlug);
   const [status, setStatus] = useState(initialStatus);
   const [brochureUrl, setBrochureUrl] = useState(initialBrochureUrl ?? "");
   const [origins, setOrigins] = useState(initialOrigins.join("\n"));
@@ -45,10 +53,16 @@ export function BuyerFormSettings({
   const [rejected, setRejected] = useState<string[]>([]);
   const [copied, setCopied] = useState<"url" | "code" | null>(null);
 
+  /** Replié par défaut : on ne déplie que si quelque chose y est déjà réglé. */
+  const optionsOpen = Boolean(initialBrochureUrl) || initialOrigins.length > 0;
+
   const formUrl = useMemo(
     () => (slug.trim() ? `${siteUrl.replace(/\/$/, "")}/bien/${slug.trim()}/interet` : ""),
     [siteUrl, slug],
   );
+
+  /** L'identifiant affiché n'est pas encore enregistré : il faut le dire. */
+  const slugPending = slug.trim() !== "" && slug.trim() !== (initialSlug ?? "");
 
   async function copy(what: "url" | "code") {
     const text = what === "url" ? formUrl : buildEmbedSnippet(formUrl);
@@ -101,65 +115,73 @@ export function BuyerFormSettings({
         </span>
       </div>
 
-      <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
-        Ces réglages ne publient pas la vitrine Prodigio (actuellement :{" "}
-        <strong>{publicationStatus}</strong>). Le formulaire peut collecter des demandes
-        depuis une annonce hébergée ailleurs, sans que la page Prodigio soit en ligne.
-      </p>
-
       <TextField
         label="Identifiant public (slug)"
         value={slug}
         onChange={setSlug}
         placeholder="villa-jean-jaures"
       />
-
-      <TextField
-        label="Destination de la brochure"
-        value={brochureUrl}
-        onChange={setBrochureUrl}
-        placeholder="https://…"
-      />
       <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
-        Remise à l’écran immédiatement après une demande valide. Jamais exposée avant :
-        deviner l’identifiant public ne suffit pas à l’obtenir.
+        Proposé d’après le nom du bien, modifiable. C’est le même identifiant que
+        celui de la vitrine Prodigio — un seul par bien.
       </p>
-
-      <TextArea
-        label="Domaines autorisés à intégrer le formulaire"
-        value={origins}
-        onChange={setOrigins}
-        rows={3}
-        placeholder={"https://villa-jeanjaures-cassis.vercel.app\nhttps://www.exemple.fr"}
-      />
-      <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
-        Une origine par ligne, schéma compris. Laissé vide, aucun site tiers ne peut
-        encadrer la page — elle reste consultable en direct.
-      </p>
-      {rejected.length ? (
-        <p role="alert" className="crm-wrap text-xs text-[var(--crm-danger)]">
-          Écartées, car inexploitables comme origine : {rejected.join(" · ")}
-        </p>
-      ) : null}
 
       {formUrl ? (
         <div className="flex flex-col gap-2">
-          <span className="crm-label">Adresse du formulaire</span>
+          <span className="crm-label">Code à coller dans votre landing</span>
           <code className="crm-wrap text-[11px]">{formUrl}</code>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="crm-btn crm-btn--sm" onClick={() => void copy("url")}>
-              {copied === "url" ? "Copié" : "Copier l’adresse"}
-            </button>
             <button type="button" className="crm-btn crm-btn--sm" onClick={() => void copy("code")}>
               {copied === "code" ? "Copié" : "Copier le code d’intégration"}
             </button>
+            <button type="button" className="crm-btn crm-btn--sm" onClick={() => void copy("url")}>
+              {copied === "url" ? "Copié" : "Copier l’adresse seule"}
+            </button>
           </div>
+          {slugPending ? (
+            <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
+              Cette adresse ne répondra qu’une fois les réglages enregistrés.
+            </p>
+          ) : null}
         </div>
       ) : (
         <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
-          Définissez un identifiant public pour obtenir l’adresse à intégrer.
+          Donnez un identifiant public pour obtenir le code à coller.
         </p>
       )}
+
+      <details open={optionsOpen} className="flex flex-col gap-3">
+        <summary className="crm-label cursor-pointer">Réglages facultatifs</summary>
+        <div className="mt-3 flex flex-col gap-3">
+          <TextField
+            label="Destination de la brochure"
+            value={brochureUrl}
+            onChange={setBrochureUrl}
+            placeholder="https://…"
+          />
+          <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
+            Remise à l’écran immédiatement après une demande valide. Jamais exposée
+            avant : deviner l’identifiant public ne suffit pas à l’obtenir.
+          </p>
+
+          <TextArea
+            label="Domaines autorisés à intégrer le formulaire"
+            value={origins}
+            onChange={setOrigins}
+            rows={3}
+            placeholder={"https://villa-jeanjaures-cassis.vercel.app\nhttps://www.exemple.fr"}
+          />
+          <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
+            Une origine par ligne, schéma compris. Laissé vide, aucun site tiers ne
+            peut encadrer la page — elle reste consultable en direct.
+          </p>
+          {rejected.length ? (
+            <p role="alert" className="crm-wrap text-xs text-[var(--crm-danger)]">
+              Écartées, car inexploitables comme origine : {rejected.join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      </details>
 
       <FieldError error={error} />
       {saved ? (
@@ -192,6 +214,11 @@ export function BuyerFormSettings({
           </span>
         )}
       </div>
+
+      <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
+        Ces réglages ne publient pas la vitrine Prodigio (actuellement :{" "}
+        <strong>{publicationStatus}</strong>).
+      </p>
     </section>
   );
 }
