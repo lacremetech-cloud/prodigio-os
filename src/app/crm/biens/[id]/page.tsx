@@ -11,7 +11,6 @@ import {
 import { getPublicExperience, listBuyerInterests } from "@/modules/buyers/public/queries";
 import { BuyerFormSettings } from "@/components/crm/property/buyer-form-settings";
 import { canonicalSiteUrl } from "@/config";
-import { slugify } from "@/lib/slug";
 import { listBuyersForProperty } from "@/modules/buyers/crm/queries";
 import {
   PublicConfigForm,
@@ -43,9 +42,6 @@ import type { PropertyStatus } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Cockpit du bien" };
 
-/** Libellé de repli quand le bien n’a pas encore de nom exploitable. */
-const FALLBACK_NAME = "Bien sans nom";
-
 function displayName(p: {
   project_name: string | null;
   property_type: string | null;
@@ -53,7 +49,7 @@ function displayName(p: {
 }): string {
   if (p.project_name?.trim()) return p.project_name;
   const parts = [p.property_type?.trim(), p.location_city?.trim()].filter(Boolean);
-  return parts.length ? parts.join(" · ") : FALLBACK_NAME;
+  return parts.length ? parts.join(" · ") : "Bien sans nom";
 }
 
 export default async function PropertyCockpitPage({
@@ -112,12 +108,6 @@ export default async function PropertyCockpitPage({
     .filter(Boolean)
     .join(", ");
 
-  // Identifiant public proposé d'après le nom du bien, pour que créer un
-  // formulaire ne demande aucune saisie. Jamais dérivé du libellé de repli :
-  // mieux vaut un champ vide qu'un identifiant absurde.
-  const named = displayName(p);
-  const suggestedSlug = named === FALLBACK_NAME ? "" : slugify(named);
-
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
       {/* Fil d'Ariane */}
@@ -171,36 +161,6 @@ export default async function PropertyCockpitPage({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
         {/* Colonne principale */}
         <div className="flex min-w-0 flex-col gap-5">
-          <Section
-            title="Formulaire acquéreur"
-            subtitle="Le code à coller dans votre landing. Les demandes arrivent juste en dessous. Ne publie pas la vitrine Prodigio."
-          >
-            <BuyerFormSettings
-              propertyId={p.id}
-              siteUrl={canonicalSiteUrl()}
-              initialSlug={publicExperience.config?.slug ?? null}
-              suggestedSlug={suggestedSlug}
-              initialStatus={publicExperience.config?.buyer_form_status ?? "inactif"}
-              initialBrochureUrl={publicExperience.config?.buyer_form_brochure_url ?? null}
-              initialOrigins={publicExperience.config?.buyer_form_allowed_origins ?? []}
-              publicationStatus={publicExperience.config?.publication_status ?? "brouillon"}
-              canActivate={canDecide}
-            />
-          </Section>
-
-          <Section
-            title="Intérêts acquéreurs (soumissions)"
-            subtitle="Les demandes déposées via le formulaire, conservées telles quelles."
-          >
-            <BuyerInterestsPanel
-              propertyId={p.id}
-              summary={buyerInterests}
-              canOperate={canOperateRole}
-              canViewContacts={canViewContacts}
-              highlightId={highlightInterest}
-            />
-          </Section>
-
           <Section title="Identité du bien">
             <IdentityForm property={p} canEdit={canEdit} />
           </Section>
@@ -263,6 +223,21 @@ export default async function PropertyCockpitPage({
             />
           </Section>
 
+          <Section
+            title="Formulaire acquéreur"
+            subtitle="Collecter des demandes depuis une annonce hébergée ailleurs, sans publier la vitrine Prodigio. Identifiant public, brochure, domaines autorisés et code d’intégration."
+          >
+            <BuyerFormSettings
+              propertyId={p.id}
+              siteUrl={canonicalSiteUrl()}
+              initialSlug={publicExperience.config?.slug ?? null}
+              initialStatus={publicExperience.config?.buyer_form_status ?? "inactif"}
+              initialBrochureUrl={publicExperience.config?.buyer_form_brochure_url ?? null}
+              initialOrigins={publicExperience.config?.buyer_form_allowed_origins ?? []}
+              publicationStatus={publicExperience.config?.publication_status ?? "brouillon"}
+              canActivate={canDecide}
+            />
+          </Section>
 
           <Section
             title="Médias publics"
@@ -288,6 +263,18 @@ export default async function PropertyCockpitPage({
             <PropertyBuyersPanel rows={propertyBuyers} />
           </Section>
 
+          <Section
+            title="Intérêts acquéreurs (soumissions)"
+            subtitle="Les soumissions d'origine déposées sur la page publique, conservées telles quelles."
+          >
+            <BuyerInterestsPanel
+              propertyId={p.id}
+              summary={buyerInterests}
+              canOperate={canOperateRole}
+              canViewContacts={canViewContacts}
+              highlightId={highlightInterest}
+            />
+          </Section>
 
           <Section
             title="Communications"

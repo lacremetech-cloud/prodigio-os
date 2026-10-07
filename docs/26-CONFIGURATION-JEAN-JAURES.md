@@ -22,17 +22,13 @@ organisation porteuse **JCA**, statut `preparation_a_lancer`.
 
 ## 2. Comment la réaliser
 
-Cockpit du bien → bloc **« Formulaire acquéreur »**, désormais **le premier
-bloc de la page** :
+Cockpit du bien → bloc **« Formulaire acquéreur »** :
 
-1. l'identifiant public est **déjà pré-rempli** d'après le nom du bien
-   (`villa-jean-jaures`) — le vérifier, le corriger si besoin ;
-2. déplier **« Réglages facultatifs »** pour la brochure et le domaine autorisé ;
-3. **Enregistrer les réglages** — et s'arrêter là ;
-4. **ne pas** cliquer sur « Ouvrir la collecte ».
-
-> Le « Slug public » du bloc **Expérience publique** est **le même champ** :
-> un seul identifiant par bien, modifiable depuis l'un ou l'autre bloc.
+1. renseigner l'identifiant public ;
+2. renseigner la destination de la brochure ;
+3. déclarer le domaine autorisé (une origine par ligne) ;
+4. **Enregistrer les réglages** — et s'arrêter là ;
+5. **ne pas** cliquer sur « Ouvrir la collecte ».
 
 L'action passe par `crm_property_set_buyer_form`, qui ne touche **jamais**
 `publication_status` et consigne dans le journal d'audit que la publication n'a

@@ -7,8 +7,6 @@
  * n'a lieu qu'à la confirmation explicite, jamais au clic sur « Analyser ».
  */
 
-import { foldText, slugify } from "@/lib/slug";
-
 export interface OrganizationCandidate {
   id: string;
   name: string;
@@ -27,13 +25,26 @@ export type OrganizationResolution =
   | { status: "a_enregistrer"; name: string; slug: string };
 
 /** Minuscule sans accent — comparaison de libellés uniquement. */
-const fold = foldText;
+function fold(input: string): string {
+  return input
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[  ]/g, " ")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
 
 /**
  * Identifiant stable dérivé du nom : minuscules, sans accent, tirets. Conforme
  * au nettoyage appliqué en base par `crm_register_partner_organization`.
  */
-export const slugifyOrganization = slugify;
+export function slugifyOrganization(name: string): string {
+  return fold(name)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
 
 /**
  * Confronte le nom lu dans le brief à l'annuaire des organisations connues.

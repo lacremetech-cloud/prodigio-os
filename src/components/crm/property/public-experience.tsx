@@ -165,10 +165,6 @@ export function PublicConfigForm({
         <TextField label="Slug public (ex. villa-belvedere)" value={slug} onChange={setSlug} placeholder="villa-belvedere" />
         <TextField label="Nom public du bien" value={publicName} onChange={setPublicName} placeholder="Villa Belvédère" />
       </div>
-      <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
-        Le slug public est le même identifiant que celui du formulaire acquéreur :
-        un seul par bien, modifiable depuis l’un ou l’autre bloc.
-      </p>
       <TextField label="Signature / accroche" value={tagline} onChange={setTagline} placeholder="Une ode à la lumière, au-dessus de la baie" />
       <TextArea label="Introduction" value={intro} onChange={setIntro} rows={3} placeholder="Le bien en quelques mots…" />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

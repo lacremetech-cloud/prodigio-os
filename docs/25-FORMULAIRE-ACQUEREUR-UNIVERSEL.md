@@ -194,26 +194,13 @@ légitime est déjà filtré en amont par `frame-ancestors`.
 
 ## 7. Réglages dans le cockpit
 
-Bloc « Formulaire acquéreur », **premier bloc de la fiche du bien**. Le
-parcours visé tient en deux gestes : un bien existe → on repart avec un code à
-coller.
+Bloc « Formulaire acquéreur », sur la fiche du bien :
 
-1. l'**identifiant public** est **pré-rempli** d'après le nom du bien
-   (`slugify`, côté serveur) ; il reste modifiable ;
-2. **copier le code d'intégration** (ou l'adresse seule) ;
-3. **Enregistrer les réglages** ;
-4. **ouvrir ou fermer la collecte** (réservé aux décisionnaires).
-
-Repliés sous **« Réglages facultatifs »**, dépliés d'office seulement s'ils
-sont déjà renseignés : la **destination de la brochure** et les **domaines
-autorisés**.
-
-L'identifiant public est **le même** que le « Slug public » du bloc
-*Expérience publique* : une seule colonne `property_public_config.slug`, dite
-comme telle aux deux endroits pour qu'on ne la cherche pas deux fois.
-
-Tant que l'identifiant affiché n'est pas enregistré, l'écran le signale :
-l'adresse copiée ne répondra qu'après enregistrement.
+1. définir ou vérifier l'**identifiant public** ;
+2. **ouvrir ou fermer la collecte** (réservé aux décisionnaires) ;
+3. renseigner la **destination de la brochure** ;
+4. déclarer les **domaines autorisés** ;
+5. **copier l'adresse** ou le **code d'intégration**.
 
 **Aucun de ces gestes ne publie la vitrine.** `crm_property_set_buyer_form` ne
 touche jamais `publication_status` — elle crée la configuration en `brouillon`
