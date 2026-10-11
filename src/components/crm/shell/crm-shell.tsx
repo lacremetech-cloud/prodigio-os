@@ -21,24 +21,62 @@ interface NavItem {
   exact?: boolean;
 }
 
-const NAV: NavItem[] = [
-  { href: "/crm", label: "Vue d’ensemble", icon: "◈", exact: true },
-  { href: "/crm/mandats", label: "Leads Mandats", icon: "☰" },
-  { href: "/crm/mandats/pipeline", label: "Pipeline", icon: "▤" },
-  { href: "/crm/acquereurs", label: "Acquéreurs", icon: "◉" },
-  { href: "/crm/biens", label: "Fabrique de biens", icon: "◆" },
-  { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
-  { href: "/crm/taches", label: "Tâches", icon: "✓" },
-  { href: "/crm/communications", label: "Communications", icon: "✉" },
-  { href: "/crm/parametres", label: "Paramètres", icon: "⚙" },
+interface NavGroup {
+  /** Titre de section. `null` pour les entrees qui n'en ont pas besoin. */
+  titre: string | null;
+  items: NavItem[];
+}
+
+/**
+ * Le menu suit les deux metiers du produit plutot que la liste a plat des
+ * ecrans : d'un cote les mandats (vendeurs), de l'autre les biens et leurs
+ * acquereurs. C'est la question que se pose l'utilisateur en arrivant, et
+ * « Acquereurs » cesse d'etre cherche ailleurs que sous « Biens ».
+ */
+const NAV_GROUPS: NavGroup[] = [
+  {
+    titre: null,
+    items: [{ href: "/crm", label: "Vue d’ensemble", icon: "◈", exact: true }],
+  },
+  {
+    titre: "Mandats",
+    items: [
+      { href: "/crm/mandats", label: "Leads", icon: "☰" },
+      { href: "/crm/mandats/pipeline", label: "Pipeline", icon: "▤" },
+    ],
+  },
+  {
+    titre: "Biens",
+    items: [
+      { href: "/crm/biens", label: "Fabrique de biens", icon: "◆" },
+      { href: "/crm/acquereurs", label: "Acquéreurs", icon: "◉" },
+    ],
+  },
+  {
+    titre: "Suivi",
+    items: [
+      { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
+      { href: "/crm/taches", label: "Tâches", icon: "✓" },
+      { href: "/crm/communications", label: "Communications", icon: "✉" },
+    ],
+  },
+  {
+    titre: null,
+    items: [{ href: "/crm/parametres", label: "Paramètres", icon: "⚙" }],
+  },
 ];
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.exact) return pathname === item.href;
+  // Le pipeline est une sous-route de /crm/mandats : on l'exclut pour que les
+  // deux entrees ne s'allument pas ensemble.
   if (item.href === "/crm/mandats") {
-    return pathname === "/crm/mandats" || pathname.startsWith("/crm/mandats/");
+    return (
+      (pathname === "/crm/mandats" || pathname.startsWith("/crm/mandats/")) &&
+      !pathname.startsWith("/crm/mandats/pipeline")
+    );
   }
-  // « Acquéreurs » couvre aussi son pipeline et ses fiches.
+  // « Acquereurs » couvre aussi son pipeline et ses fiches.
   if (item.href === "/crm/acquereurs") {
     return pathname === "/crm/acquereurs" || pathname.startsWith("/crm/acquereurs/");
   }
@@ -48,31 +86,40 @@ function isActive(pathname: string, item: NavItem): boolean {
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-col gap-1">
-      {NAV.map((item) => {
-        const active = isActive(pathname, item);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
-              active
-                ? "bg-[var(--crm-elevated)] text-[var(--crm-text)]"
-                : "text-[var(--crm-text-dim)] hover:bg-[var(--crm-panel-2)] hover:text-[var(--crm-text)]"
-            }`}
-          >
-            <span
-              aria-hidden
-              className={`text-[15px] ${active ? "text-[var(--crm-gold)]" : "text-[var(--crm-text-faint)]"}`}
-            >
-              {item.icon}
-            </span>
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav className="flex flex-col gap-5">
+      {NAV_GROUPS.map((groupe, i) => (
+        <div key={groupe.titre ?? `groupe-${i}`} className="flex flex-col gap-1">
+          {groupe.titre ? (
+            <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--crm-text-faint)]">
+              {groupe.titre}
+            </p>
+          ) : null}
+          {groupe.items.map((item) => {
+            const active = isActive(pathname, item);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
+                  active
+                    ? "bg-[var(--crm-elevated)] text-[var(--crm-text)]"
+                    : "text-[var(--crm-text-dim)] hover:bg-[var(--crm-panel-2)] hover:text-[var(--crm-text)]"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className={`text-[15px] ${active ? "text-[var(--crm-gold)]" : "text-[var(--crm-text-faint)]"}`}
+                >
+                  {item.icon}
+                </span>
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }
@@ -86,7 +133,7 @@ function Brand() {
       <span className="leading-tight">
         <span className="block text-sm font-semibold text-[var(--crm-text)]">Prodigio</span>
         <span className="block text-[10px] uppercase tracking-[0.2em] text-[var(--crm-text-faint)]">
-          CRM Mandats
+          Mandats &amp; Biens
         </span>
       </span>
     </Link>
