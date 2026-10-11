@@ -21,50 +21,58 @@ interface NavItem {
   exact?: boolean;
 }
 
-interface NavGroup {
-  /** Titre de section. `null` pour les entrees qui n'en ont pas besoin. */
-  titre: string | null;
-  items: NavItem[];
-}
+export type Univers = "mandats" | "biens";
 
 /**
- * Le menu suit les deux metiers du produit plutot que la liste a plat des
- * ecrans : d'un cote les mandats (vendeurs), de l'autre les biens et leurs
- * acquereurs. C'est la question que se pose l'utilisateur en arrivant, et
- * « Acquereurs » cesse d'etre cherche ailleurs que sous « Biens ».
+ * Le CRM couvre deux metiers : les mandats (vendeurs) et les biens avec leurs
+ * acquereurs. Un menu unique melangeait les deux, et on cherchait « Acquereurs »
+ * du cote des mandats. Chaque univers a donc son menu et sa couleur, et une
+ * bascule en haut dit en permanence ou l'on se trouve.
  */
-const NAV_GROUPS: NavGroup[] = [
-  {
-    titre: null,
-    items: [{ href: "/crm", label: "Vue d’ensemble", icon: "◈", exact: true }],
-  },
-  {
-    titre: "Mandats",
+const UNIVERS: Record<Univers, { label: string; accueil: string; items: NavItem[] }> = {
+  mandats: {
+    label: "Mandats",
+    accueil: "/crm/mandats",
     items: [
       { href: "/crm/mandats", label: "Leads", icon: "☰" },
       { href: "/crm/mandats/pipeline", label: "Pipeline", icon: "▤" },
     ],
   },
-  {
-    titre: "Biens",
+  biens: {
+    label: "Biens",
+    accueil: "/crm/biens",
     items: [
       { href: "/crm/biens", label: "Fabrique de biens", icon: "◆" },
       { href: "/crm/acquereurs", label: "Acquéreurs", icon: "◉" },
     ],
   },
-  {
-    titre: "Suivi",
-    items: [
-      { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
-      { href: "/crm/taches", label: "Tâches", icon: "✓" },
-      { href: "/crm/communications", label: "Communications", icon: "✉" },
-    ],
-  },
-  {
-    titre: null,
-    items: [{ href: "/crm/parametres", label: "Paramètres", icon: "⚙" }],
-  },
+};
+
+/** Ordre d'affichage de la bascule. */
+const ORDRE_UNIVERS: Univers[] = ["mandats", "biens"];
+
+/** Entrees communes aux deux univers : elles ne changent pas de couleur. */
+const NAV_HAUT: NavItem[] = [
+  { href: "/crm", label: "Vue d’ensemble", icon: "◈", exact: true },
 ];
+const NAV_BAS: NavItem[] = [
+  { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
+  { href: "/crm/taches", label: "Tâches", icon: "✓" },
+  { href: "/crm/communications", label: "Communications", icon: "✉" },
+  { href: "/crm/parametres", label: "Paramètres", icon: "⚙" },
+];
+
+/**
+ * L'univers se deduit de l'adresse, pas d'un etat memorise : un lien profond
+ * vers une fiche acquereur ouvre l'interface du bon cote, et un rechargement
+ * ne perd rien.
+ */
+export function universDeLaRoute(pathname: string): Univers {
+  if (pathname.startsWith("/crm/biens") || pathname.startsWith("/crm/acquereurs")) {
+    return "biens";
+  }
+  return "mandats";
+}
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.exact) return pathname === item.href;
@@ -83,44 +91,81 @@ function isActive(pathname: string, item: NavItem): boolean {
   return pathname === item.href || pathname.startsWith(item.href + "/");
 }
 
+function Lien({
+  item,
+  actif,
+  onNavigate,
+}: {
+  item: NavItem;
+  actif: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={actif ? "page" : undefined}
+      className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
+        actif
+          ? "bg-[var(--crm-elevated)] text-[var(--crm-text)]"
+          : "text-[var(--crm-text-dim)] hover:bg-[var(--crm-panel-2)] hover:text-[var(--crm-text)]"
+      }`}
+    >
+      <span
+        aria-hidden
+        className={`text-[15px] ${actif ? "text-[var(--crm-univers)]" : "text-[var(--crm-text-faint)]"}`}
+      >
+        {item.icon}
+      </span>
+      {item.label}
+    </Link>
+  );
+}
+
+function Bascule({ actif, onNavigate }: { actif: Univers; onNavigate?: () => void }) {
+  return (
+    <div className="crm-bascule" role="group" aria-label="Univers de travail">
+      {ORDRE_UNIVERS.map((cle) => (
+        <Link
+          key={cle}
+          href={UNIVERS[cle].accueil}
+          onClick={onNavigate}
+          aria-current={cle === actif}
+          className="crm-bascule__seg"
+        >
+          {UNIVERS[cle].label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const actif = universDeLaRoute(pathname);
+  const univers = UNIVERS[actif];
   return (
-    <nav className="flex flex-col gap-5">
-      {NAV_GROUPS.map((groupe, i) => (
-        <div key={groupe.titre ?? `groupe-${i}`} className="flex flex-col gap-1">
-          {groupe.titre ? (
-            <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--crm-text-faint)]">
-              {groupe.titre}
-            </p>
-          ) : null}
-          {groupe.items.map((item) => {
-            const active = isActive(pathname, item);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
-                  active
-                    ? "bg-[var(--crm-elevated)] text-[var(--crm-text)]"
-                    : "text-[var(--crm-text-dim)] hover:bg-[var(--crm-panel-2)] hover:text-[var(--crm-text)]"
-                }`}
-              >
-                <span
-                  aria-hidden
-                  className={`text-[15px] ${active ? "text-[var(--crm-gold)]" : "text-[var(--crm-text-faint)]"}`}
-                >
-                  {item.icon}
-                </span>
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
-    </nav>
+    <div className="flex flex-col gap-4">
+      <nav className="flex flex-col gap-1">
+        {NAV_HAUT.map((item) => (
+          <Lien key={item.href} item={item} actif={isActive(pathname, item)} onNavigate={onNavigate} />
+        ))}
+      </nav>
+
+      <Bascule actif={actif} onNavigate={onNavigate} />
+
+      <nav className="flex flex-col gap-1" aria-label={univers.label}>
+        {univers.items.map((item) => (
+          <Lien key={item.href} item={item} actif={isActive(pathname, item)} onNavigate={onNavigate} />
+        ))}
+      </nav>
+
+      <nav className="flex flex-col gap-1 border-t border-[var(--crm-line-soft)] pt-4">
+        {NAV_BAS.map((item) => (
+          <Lien key={item.href} item={item} actif={isActive(pathname, item)} onNavigate={onNavigate} />
+        ))}
+      </nav>
+    </div>
   );
 }
 
@@ -177,6 +222,8 @@ export function CrmShell({
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  // L'univers actif teinte toute la coquille via `--crm-univers`.
+  const univers = universDeLaRoute(usePathname());
   const rootRef = useRef<HTMLDivElement>(null);
   const primary = roles.find((r) => r in roleLabels) as CrmRole | undefined;
   const name = email ?? "Utilisateur";
@@ -188,6 +235,7 @@ export function CrmShell({
       ref={rootRef}
       className="crm-root flex min-h-dvh"
       data-crm-theme={ssrTheme}
+      data-crm-univers={univers}
       style={{ colorScheme: ssrTheme }}
       suppressHydrationWarning
     >
