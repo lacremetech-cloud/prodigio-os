@@ -6,7 +6,7 @@ du fait métier :
 | Ce qu'on suit            | Événement Meta         | Déclencheur réel                               |
 | ------------------------ | ---------------------- | ---------------------------------------------- |
 | Prospect                 | `Lead`                 | une demande est déposée depuis un tunnel       |
-| Inscription terminée     | `CompleteRegistration` | le dossier passe en qualification « qualifié » |
+| Inscription terminée     | `CompleteRegistration` | le dossier entre à l’étape « En discussion »   |
 | Rendez-vous programmé    | `Schedule`             | le dossier entre à l'étape « Visite »          |
 
 ## Pourquoi côté serveur
@@ -65,8 +65,8 @@ l'améliorer.
 Chaque événement porte un `event_id` déterministe :
 
 - `lead-<id de la demande>` — une demande, une conversion ;
-- `qualifie-<id du dossier>` — un dossier ne se qualifie qu'une fois, une
-  requalification ne recompte pas ;
+- `qualifie-<id du dossier>` — un dossier n'entre en discussion qu'une fois ;
+  y revenir plus tard ne recompte pas la conversion ;
 - `visite-<id du dossier>-<date>` — un retour en visite des mois plus tard est
   une vraie seconde conversion ; glisser la carte deux fois le même jour n'en
   est pas une.
@@ -78,7 +78,7 @@ devra réutiliser ces mêmes identifiants pour que Meta dédoublonne.
 
 Aucun appel n'est bloquant : tout part après la réponse, et les erreurs sont
 avalées avec un simple avertissement. Un Meta injoignable ne retarde pas un
-dépôt, ne fait pas échouer une qualification, ne bloque pas un déplacement de
+dépôt, ne fait pas échouer un changement d’étape, ne bloque pas un déplacement de
 carte.
 
 Un événement sans e-mail, téléphone ni `fbclid` n'est **pas** envoyé : il serait

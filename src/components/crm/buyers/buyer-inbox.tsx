@@ -5,21 +5,15 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Chip, EmptyState } from "@/components/crm/ui";
 import { cssVarRef } from "@/modules/crm/status-visuals";
+import { ContactRapide, numeroAppelable } from "./contact-rapide";
 import { formatDateTime, timeSince } from "@/modules/crm/format";
 import {
-  buyerQualificationLabels,
-  buyerRecommendedPriorityLabels,
-  buyerRecommendedPriorityVisual,
   buyerStageLabels,
   buyerStageVisual,
   BUYER_PIPELINE_STAGES,
 } from "@/modules/buyers/crm/labels";
 import { budgetBandBounds } from "@/modules/buyers/crm/criteria";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
-import type {
-  BuyerQualificationStatus,
-  BuyerRecommendedPriority,
-} from "@/lib/supabase/types";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -94,8 +88,6 @@ export function BuyerInbox({
   const [search, setSearch] = useState("");
   const [signal, setSignal] = useState<(typeof SIGNAL_FILTERS)[number]["value"]>("tous");
   const [stage, setStage] = useState<string>("tous");
-  const [qualification, setQualification] = useState<string>("tous");
-  const [priority, setPriority] = useState<string>("tous");
   const [budget, setBudget] = useState<string>("tous");
   const [owner, setOwner] = useState<string>("tous");
   const [property, setProperty] = useState<string>("tous");
@@ -116,8 +108,6 @@ export function BuyerInbox({
         if (!hay.includes(needle)) return false;
       }
       if (stage !== "tous" && r.stage !== stage) return false;
-      if (qualification !== "tous" && r.qualificationStatus !== qualification) return false;
-      if (priority !== "tous" && r.recommendedPriority !== priority) return false;
       if (owner !== "tous") {
         if (owner === "aucun" ? !r.unassigned : !r.assigneeIds.includes(owner)) return false;
       }
@@ -150,7 +140,7 @@ export function BuyerInbox({
       sorted.sort((a, b) => (b.lastInterestAt ?? "").localeCompare(a.lastInterestAt ?? ""));
     }
     return sorted;
-  }, [rows, search, signal, stage, qualification, priority, budget, owner, property, sort]);
+  }, [rows, search, signal, stage, budget, owner, property, sort]);
 
   const counters = useMemo(
     () => ({
@@ -232,19 +222,6 @@ export function BuyerInbox({
               label: buyerStageLabels[s] ?? s,
             })),
           ]} />
-          <Select label="Qualification" value={qualification} onChange={setQualification} options={[
-            { value: "tous", label: "Toutes" },
-            ...(Object.keys(buyerQualificationLabels) as BuyerQualificationStatus[]).map((k) => ({
-              value: k,
-              label: buyerQualificationLabels[k],
-            })),
-          ]} />
-          <Select label="Priorité" value={priority} onChange={setPriority} options={[
-            { value: "tous", label: "Toutes" },
-            ...(Object.keys(buyerRecommendedPriorityLabels) as BuyerRecommendedPriority[]).map(
-              (k) => ({ value: k, label: buyerRecommendedPriorityLabels[k] }),
-            ),
-          ]} />
           <Select label="Budget" value={budget} onChange={setBudget}
             options={BUDGET_FILTERS.map((b) => ({ value: b.value, label: b.label }))} />
           <Select label="Responsable" value={owner} onChange={setOwner} options={[
@@ -277,16 +254,33 @@ export function BuyerInbox({
   );
 }
 
+/**
+ * Tuile de compteur. Elle etait posee sur la surface douce, a meme la toile :
+ * deux gris a un pour cent l'un de l'autre, le chiffre flottait dans le vide.
+ * C'est une CARTE blanche, avec un filet de la couleur du compteur — on voit
+ * la tuile, puis le chiffre, puis ce qu'il compte.
+ *
+ * Un compteur a zero n'est jamais mis en couleur : zero « en retard » est une
+ * bonne nouvelle, pas une alerte.
+ */
 function Counter({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  const vif = Boolean(accent) && value > 0;
   return (
-    <div className="flex flex-col gap-0.5 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2">
+    <div
+      className="crm-panel flex flex-col gap-0.5 px-3.5 py-3"
+      style={
+        accent
+          ? ({ borderInlineStartWidth: "3px", borderInlineStartColor: cssVarRef(accent) } as CSSProperties)
+          : undefined
+      }
+    >
       <span
-        className="text-lg font-semibold tabular-nums text-[var(--crm-text)]"
-        style={accent ? ({ color: cssVarRef(accent) } as CSSProperties) : undefined}
+        className="text-[1.5rem] font-bold leading-tight tabular-nums text-[var(--crm-text)]"
+        style={vif ? ({ color: cssVarRef(accent as string) } as CSSProperties) : undefined}
       >
         {value}
       </span>
-      <span className="text-[11px] text-[var(--crm-text-faint)]">{label}</span>
+      <span className="crm-kpi__label crm-wrap">{label}</span>
     </div>
   );
 }
@@ -326,54 +320,14 @@ function Select({
  * « •••• masque » sinon. Les boutons d'appel n'ont donc de sens que sur une
  * valeur reellement lisible.
  */
-function numeroAppelable(masque: string | null): string | null {
-  if (!masque || masque.includes("masqu")) return null;
-  const compact = masque.replace(/[^\d+]/g, "");
-  return compact.length >= 6 ? compact : null;
-}
-
-/**
- * Trois gestes, un doigt : appeler, envoyer un SMS, ouvrir WhatsApp. Sur un
- * telephone, c'est tout ce qu'un commercial fait d'un lead qui vient d'arriver.
- * WhatsApp veut le numero sans le plus ni les espaces.
- */
-function ContactRapide({ numero }: { numero: string }) {
-  const wa = numero.replace(/\D/g, "");
-  const actions: { href: string; label: string; icone: string }[] = [
-    { href: `tel:${numero}`, label: "Appeler", icone: "✆" },
-    { href: `sms:${numero}`, label: "SMS", icone: "✉" },
-    { href: `https://wa.me/${wa}`, label: "WhatsApp", icone: "●" },
-  ];
-  return (
-    <div className="relative z-10 mt-2 flex flex-wrap gap-1.5">
-      {actions.map((a) => (
-        <a
-          key={a.label}
-          href={a.href}
-          {...(a.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-          onClick={(e) => e.stopPropagation()}
-          className="crm-btn crm-btn--sm crm-btn--ghost min-h-[38px]"
-          aria-label={`${a.label} au ${numero}`}
-        >
-          <span aria-hidden>{a.icone}</span> {a.label}
-        </a>
-      ))}
-    </div>
-  );
-}
-
 function BuyerRow({ row }: { row: BuyerInboxRow }) {
   const stageV = buyerStageVisual(row.stage);
   const appelable = numeroAppelable(row.phoneMasked);
-  const prioV = row.recommendedPriority
-    ? buyerRecommendedPriorityVisual[row.recommendedPriority as BuyerRecommendedPriority]
-    : null;
-
   return (
     /* La carte entiere ouvre la fiche. Seul le nom etait un lien : on cliquait
        sur la carte et rien ne se passait. Le lien s'etire en couche invisible
        sur toute la carte, et les actions de contact repassent au-dessus. */
-    <li className="relative rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5 transition-colors hover:border-[var(--crm-line-strong)] focus-within:border-[var(--crm-univers)]">
+    <li className="relative rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5 transition-colors hover:border-[var(--crm-line-hover)] focus-within:border-[var(--crm-univers)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Link
@@ -391,7 +345,7 @@ function BuyerRow({ row }: { row: BuyerInboxRow }) {
             {[row.phoneMasked, row.emailMasked].filter(Boolean).join(" · ") ||
               "Coordonnées non renseignées"}
           </p>
-          {appelable ? <ContactRapide numero={appelable} /> : null}
+          {appelable ? <ContactRapide numero={appelable} className="mt-2" /> : null}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -402,16 +356,6 @@ function BuyerRow({ row }: { row: BuyerInboxRow }) {
             <span aria-hidden>{stageV.icon}</span>
             {stageV.label}
           </span>
-          {prioV && row.recommendedPriority ? (
-            <span
-              className="crm-chip crm-chip--accent"
-              style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(prioV.cssVar) } as CSSProperties}
-              title="Recommandation opérationnelle dérivée du scoring — ce n’est pas la qualification humaine."
-            >
-              <span aria-hidden>{prioV.icon}</span>
-              {buyerRecommendedPriorityLabels[row.recommendedPriority as BuyerRecommendedPriority]}
-            </span>
-          ) : null}
         </div>
       </div>
 
@@ -423,16 +367,6 @@ function BuyerRow({ row }: { row: BuyerInboxRow }) {
         {row.noNextAction ? <Chip variant="danger">○ Sans prochaine action</Chip> : null}
         {row.unassigned ? <Chip variant="danger">☰ Non affecté</Chip> : null}
         {row.highPotential ? <Chip variant="ok">★ Fort potentiel</Chip> : null}
-        <span className="text-[var(--crm-text-faint)]">
-          Qualification :{" "}
-          {buyerQualificationLabels[row.qualificationStatus as BuyerQualificationStatus] ??
-            row.qualificationStatus}
-        </span>
-        {row.bestScore != null ? (
-          <span className="tabular-nums text-[var(--crm-text-faint)]" title="Meilleur score automatique du funnel (≠ qualification humaine)">
-            Score {row.bestScore}/100
-          </span>
-        ) : null}
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--crm-text-faint)]">

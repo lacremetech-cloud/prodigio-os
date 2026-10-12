@@ -382,10 +382,6 @@ function Card({
             </p>
           </Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--crm-text-dim)]">
-            <span className="tabular-nums" title="Meilleur score automatique du funnel">
-              Score {card.bestScore ?? "—"}
-            </span>
-            <span title="Qualification validée par un humain">{card.qualificationLabel}</span>
             {card.interestCount > 1 ? <span>{card.interestCount} intérêts</span> : null}
             {card.unassigned ? <Chip variant="danger">Non affecté</Chip> : null}
             {card.overdue ? <Chip variant="danger">En retard</Chip> : null}
