@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/modules/crm/auth/actions";
@@ -165,9 +166,14 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <Link href="/crm" className="flex items-center gap-2.5">
-      <span className="crm-brand-badge">
-        P
-      </span>
+      <Image
+        src="/images/brand/marque-prodigio.png"
+        alt=""
+        width={64}
+        height={64}
+        className="crm-brand-badge"
+        priority
+      />
       <span className="leading-tight">
         <span className="block text-sm font-semibold text-[var(--crm-text)]">Prodigio</span>
         <span className="block text-[10px] uppercase tracking-[0.2em] text-[var(--crm-text-faint)]">
