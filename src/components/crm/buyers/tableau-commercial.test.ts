@@ -46,9 +46,9 @@ describe("compterPourCommercial", () => {
 
   it("compte les visites sur le stade du pipeline", () => {
     const c = compterPourCommercial([
-      dossier({ stage: "visite_planifiee" }),
-      dossier({ stage: "visite_a_planifier" }),
-      dossier({ stage: "suivi_apres_visite" }),
+      dossier({ stage: "visite" }),
+      dossier({ stage: "en_discussion" }),
+      dossier({ stage: "offre" }),
     ]);
     expect(c.visitesPlanifiees).toBe(1);
   });
@@ -57,11 +57,11 @@ describe("compterPourCommercial", () => {
     // Un dossier perdu ne demande plus rien : le faire figurer gonflerait une
     // liste de travail qui doit rester exacte.
     const c = compterPourCommercial([
-      dossier({ lastInterestAt: maintenant, overdue: true, stage: "visite_planifiee" }),
+      dossier({ lastInterestAt: maintenant, overdue: true, stage: "visite" }),
       dossier({
         lastInterestAt: maintenant,
         overdue: true,
-        stage: "visite_planifiee",
+        stage: "visite",
         outcome: "perdu",
       }),
     ]);

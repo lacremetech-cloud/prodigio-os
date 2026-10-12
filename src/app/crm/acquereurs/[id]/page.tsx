@@ -94,7 +94,7 @@ export default async function BuyerProfilePage({
   const prioV = profile.recommended_priority
     ? buyerRecommendedPriorityVisual[profile.recommended_priority]
     : null;
-  const isClosed = profile.pipeline_stage === "acquereur_gagne" || profile.pipeline_stage === "perdu";
+  const isClosed = profile.pipeline_stage === "gagne" || profile.pipeline_stage === "perdu";
 
   const interestProperties = [
     ...new Map(

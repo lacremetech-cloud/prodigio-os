@@ -769,15 +769,12 @@ export type BuyerInterestRow = {
 /** Étape COMMERCIALE du pipeline acquéreur (distincte du pipeline Mandats). */
 export type BuyerPipelineStage =
   | "nouveau"
-  | "a_contacter"
-  | "contact_en_cours"
-  | "qualifie"
-  | "bien_a_proposer"
-  | "visite_a_planifier"
-  | "visite_planifiee"
-  | "suivi_apres_visite"
-  | "offre_en_cours"
-  | "acquereur_gagne"
+  | "a_rappeler"
+  | "en_discussion"
+  | "visite"
+  | "offre"
+  | "vivier"
+  | "gagne"
   | "perdu";
 
 /** Qualification validée par un HUMAIN (jamais déduite d'un score). */

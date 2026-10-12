@@ -23,29 +23,38 @@ import type {
 // --- Étapes du pipeline acquéreur (ordre = progression) ----------------------
 export const BUYER_PIPELINE_STAGES: readonly BuyerPipelineStage[] = [
   "nouveau",
-  "a_contacter",
-  "contact_en_cours",
-  "qualifie",
-  "bien_a_proposer",
-  "visite_a_planifier",
-  "visite_planifiee",
-  "suivi_apres_visite",
-  "offre_en_cours",
-  "acquereur_gagne",
+  "a_rappeler",
+  "en_discussion",
+  "visite",
+  "offre",
+  "vivier",
+  "gagne",
   "perdu",
 ] as const;
 
+/**
+ * Huit colonnes, chacune repondant a « quelle est ma prochaine action ».
+ *
+ * Il y en avait onze, dont quatre — a contacter, contact en cours, qualifie,
+ * bien a proposer — decrivaient un seul moment reel : on lui parle. Au-dela de
+ * sept ou huit colonnes, chacun invente sa propre regle de rangement et le
+ * tableau cesse de dire la verite.
+ *
+ * « Visite » couvre a planifier, planifiee et le suivi d'apres-visite : c'est
+ * la date portee par la carte qui les distingue, pas trois colonnes.
+ *
+ * « Vivier » est la reponse a un besoin que rien ne couvrait : la personne qui
+ * n'achetera pas CE bien mais qu'on rappellera au suivant. Elle finissait en
+ * « Perdu », qui l'enterrait.
+ */
 export const buyerStageLabels: Record<string, string> = {
   nouveau: "Nouveau",
-  a_contacter: "À contacter",
-  contact_en_cours: "Contact en cours",
-  qualifie: "Qualifié",
-  bien_a_proposer: "Bien à proposer",
-  visite_a_planifier: "Visite à planifier",
-  visite_planifiee: "Visite planifiée",
-  suivi_apres_visite: "Suivi après visite",
-  offre_en_cours: "Offre en cours",
-  acquereur_gagne: "Acquéreur gagné",
+  a_rappeler: "À rappeler",
+  en_discussion: "En discussion",
+  visite: "Visite",
+  offre: "Offre",
+  vivier: "Vivier",
+  gagne: "Gagné",
   perdu: "Perdu",
 };
 
@@ -54,17 +63,15 @@ export const BUYER_KANBAN_COLUMNS: readonly BuyerPipelineStage[] = BUYER_PIPELIN
 
 const BUYER_STAGE_VISUALS: Record<string, { cssVar: string; icon: string }> = {
   nouveau: { cssVar: "--crm-st-nouveau", icon: "✦" },
-  a_contacter: { cssVar: "--crm-st-a_contacter", icon: "☎" },
-  contact_en_cours: { cssVar: "--crm-st-contact", icon: "◗" },
-  qualifie: { cssVar: "--crm-st-qualifie", icon: "◎" },
-  bien_a_proposer: { cssVar: "--crm-st-estimation", icon: "◈" },
-  visite_a_planifier: { cssVar: "--crm-st-a_contacter", icon: "◷" },
-  visite_planifiee: { cssVar: "--crm-st-rdv_planifie", icon: "◷" },
-  suivi_apres_visite: { cssVar: "--crm-st-rdv_realise", icon: "◆" },
-  offre_en_cours: { cssVar: "--crm-st-proposition", icon: "✎" },
-  acquereur_gagne: { cssVar: "--crm-st-signe", icon: "✔" },
+  a_rappeler: { cssVar: "--crm-st-a_contacter", icon: "☎" },
+  en_discussion: { cssVar: "--crm-st-contact", icon: "◗" },
+  visite: { cssVar: "--crm-st-rdv_planifie", icon: "◷" },
+  offre: { cssVar: "--crm-st-proposition", icon: "✎" },
+  vivier: { cssVar: "--crm-st-qualifie", icon: "◈" },
+  gagne: { cssVar: "--crm-st-signe", icon: "✔" },
   perdu: { cssVar: "--crm-st-perdu", icon: "✕" },
 };
+
 
 export function buyerStageVisual(stage: string): {
   cssVar: string;
