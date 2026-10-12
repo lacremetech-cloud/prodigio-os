@@ -138,6 +138,7 @@ export const roleLabels: Record<CrmRole, string> = {
   manager: "Manager",
   setter: "Setter",
   agent_immobilier: "Agent immobilier",
+  commercial: "Commercial du bien",
   partenaire_lecture: "Partenaire (lecture)",
 };
 

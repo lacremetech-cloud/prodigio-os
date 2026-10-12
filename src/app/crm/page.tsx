@@ -15,6 +15,9 @@ import { contactName, timeSince } from "@/modules/crm/format";
 import { maskContactValue } from "@/modules/crm/auth/roles";
 import { propertyLabel, valueBandLabel } from "@/modules/crm/labels";
 import { EmptyState, StageBadge } from "@/components/crm/ui";
+import { TableauCommercial } from "@/components/crm/buyers/tableau-commercial";
+import { loadBuyerList } from "@/modules/buyers/crm/queries";
+import { canOperate, hasAnyRole } from "@/modules/crm/auth/roles";
 
 export const metadata: Metadata = { title: "Vue d’ensemble" };
 
@@ -120,6 +123,26 @@ function PrioritySection({
 export default async function OverviewPage() {
   const session = await requireCrmSession();
   const canView = canViewContactDetails(session.roles);
+
+  /* Un commercial n'a rien a faire dans le tableau de bord des mandats : il ne
+     les voit pas, et ses chiffres a lui sont ailleurs. Il arrive ici apres sa
+     connexion, c'est donc ici que son ecran doit vivre. */
+  if (hasAnyRole(session.roles, ["commercial"]) && !canOperate(session.roles)) {
+    const { items } = await loadBuyerList(canView);
+    return (
+      <div className="flex flex-col gap-6">
+        <header>
+          <p className="crm-eyebrow">Aujourd&rsquo;hui</p>
+          <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">Vos acqu&eacute;reurs</h1>
+          <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
+            Les demandes arriv&eacute;es sur les biens qui vous sont confi&eacute;s.
+          </p>
+        </header>
+        <TableauCommercial items={items} />
+      </div>
+    );
+  }
+
   const { leads, contactedOpportunityIds } = await loadLeadBundle();
   const m = computeOverviewMetrics(leads, contactedOpportunityIds);
 

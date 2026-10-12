@@ -13,6 +13,7 @@ export const CRM_ROLES = [
   "manager",
   "setter",
   "agent_immobilier",
+  "commercial",
   "partenaire_lecture",
 ] as const;
 
@@ -33,6 +34,7 @@ export const ASSIGNABLE_ROLES: CrmRole[] = [
   "manager",
   "setter",
   "agent_immobilier",
+  "commercial",
 ];
 
 /** Vrai si le rôle peut être attribué via l'interface en V1. */
@@ -53,6 +55,8 @@ export const ROLE_PERMISSIONS: Record<CrmRole, string> = {
     "Traitement des leads : appels, activités, tâches, changements de stade. Aucune gestion d'utilisateurs.",
   agent_immobilier:
     "Accès en lecture aux seuls dossiers qui lui sont explicitement affectés (qualification, estimation, suivi). Aucune visibilité sur les autres dossiers.",
+  commercial:
+    "Traite les demandes acquéreur des seuls biens qui lui sont confiés : appels, notes, qualification, pipeline, visites. Aucun accès aux mandats, aux honoraires ni aux autres biens. Convient à un partenaire extérieur à l'agence.",
   partenaire_lecture:
     "Lecture seule, limitée aux dossiers explicitement partagés avec son organisation, coordonnées masquées. Préparé — non attribuable en V1.",
 };
