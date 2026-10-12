@@ -34,9 +34,15 @@ describe("pipeline acquéreurs — colonnes", () => {
     }
   });
 
-  it("le cycle commence par « nouveau » et se termine par « perdu »", () => {
+  it("le cycle va de « nouveau » a « perdu », et « vivier » ferme le tableau", () => {
     expect(BUYER_KANBAN_COLUMNS[0]).toBe("nouveau");
-    expect(BUYER_KANBAN_COLUMNS.at(-1)).toBe("perdu");
+    // Le cycle de vente se termine sur un resultat : gagne, puis perdu.
+    expect(BUYER_KANBAN_COLUMNS.at(-3)).toBe("gagne");
+    expect(BUYER_KANBAN_COLUMNS.at(-2)).toBe("perdu");
+    /* « Vivier » n'est pas une etape du cycle mais une reserve : on y range
+       qui n'achetera pas CE bien. Il vient donc apres le resultat, en bout de
+       tableau, pour ne pas s'intercaler dans la progression. */
+    expect(BUYER_KANBAN_COLUMNS.at(-1)).toBe("vivier");
   });
 });
 

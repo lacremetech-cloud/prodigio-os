@@ -27,9 +27,9 @@ export const BUYER_PIPELINE_STAGES: readonly BuyerPipelineStage[] = [
   "en_discussion",
   "visite",
   "offre",
-  "vivier",
   "gagne",
   "perdu",
+  "vivier",
 ] as const;
 
 /**
@@ -53,9 +53,9 @@ export const buyerStageLabels: Record<string, string> = {
   en_discussion: "En discussion",
   visite: "Visite",
   offre: "Offre",
-  vivier: "Vivier",
   gagne: "Gagné",
   perdu: "Perdu",
+  vivier: "Vivier",
 };
 
 /** Colonnes du Kanban Acquéreurs : toutes les étapes, dans l'ordre du cycle. */
@@ -67,9 +67,9 @@ const BUYER_STAGE_VISUALS: Record<string, { cssVar: string; icon: string }> = {
   en_discussion: { cssVar: "--crm-st-contact", icon: "◗" },
   visite: { cssVar: "--crm-st-rdv_planifie", icon: "◷" },
   offre: { cssVar: "--crm-st-proposition", icon: "✎" },
-  vivier: { cssVar: "--crm-st-qualifie", icon: "◈" },
   gagne: { cssVar: "--crm-st-signe", icon: "✔" },
   perdu: { cssVar: "--crm-st-perdu", icon: "✕" },
+  vivier: { cssVar: "--crm-st-qualifie", icon: "◈" },
 };
 
 
