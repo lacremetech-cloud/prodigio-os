@@ -1,5 +1,8 @@
 "use server";
 
+import { after } from "next/server";
+import { alerterNouvelleDemande } from "../notifications/universal-notify";
+
 import {
   env,
   isSupabaseConfigured,
@@ -113,6 +116,38 @@ export async function submitUniversalInterestAction(
     // accusé neutre (bien inconnu, formulaire inactif) n'en porte aucune.
     let brochureUrl: string | null = null;
     if (result.created === true && typeof result.interest_id === "string") {
+      /* Alerte Slack dans #alertes-acquereurs. Programmee APRES la reponse :
+         le visiteur n'attend jamais Slack, et sa demande est deja enregistree.
+         Les scores sont relus en base plutot que recalcules ici, pour que
+         l'alerte dise exactement ce que le CRM affichera. */
+      const interetId = result.interest_id;
+      const alerte = async () => {
+        const { data: ligne } = await supabase
+          .from("buyer_interests")
+          .select("overall_score, priority, budget_score, property_id, buyer_profile_id")
+          .eq("id", interetId)
+          .maybeSingle();
+        await alerterNouvelleDemande({
+          request,
+          interestId: interetId,
+          propertyId: ligne?.property_id ?? "",
+          propertyName: null,
+          buyerProfileId: ligne?.buyer_profile_id ?? null,
+          score: ligne
+            ? {
+                overall: ligne.overall_score ?? null,
+                priority: ligne.priority ?? null,
+                budget: ligne.budget_score ?? null,
+              }
+            : null,
+        });
+      };
+      try {
+        after(() => alerte());
+      } catch {
+        void alerte();
+      }
+
       const { data: url } = await supabase.rpc("buyer_form_brochure", {
         p_slug: request.slug,
         p_interest_id: result.interest_id,
