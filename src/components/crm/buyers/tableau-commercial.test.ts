@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compterPourCommercial } from "./tableau-commercial";
+import { aTraiterEnPriorite, compterPourCommercial } from "./tableau-commercial";
 import type { BuyerListItem } from "@/modules/buyers/crm/queries";
 
 /** Dossier minimal : seuls les champs que le comptage regarde sont renseignés. */
@@ -9,9 +9,11 @@ function dossier(p: {
   outcome?: string | null;
   overdue?: boolean;
   noNextAction?: boolean;
+  id?: string;
 }): BuyerListItem {
   return {
     profile: {
+      id: p.id ?? "x",
       last_interest_at: p.lastInterestAt ?? null,
       pipeline_stage: p.stage ?? "nouveau",
       outcome: p.outcome ?? null,
@@ -66,5 +68,33 @@ describe("compterPourCommercial", () => {
       sansAction: 0,
       dossiers: 1,
     });
+  });
+});
+
+describe("aTraiterEnPriorite", () => {
+  it("fait passer le retard avant l’absence d’action", () => {
+    // L'échéance avait été prise et elle est dépassée : c'est plus urgent
+    // qu'un dossier pour lequel rien n'a encore été promis.
+    const l = aTraiterEnPriorite([
+      dossier({ id: "sans", noNextAction: true }),
+      dossier({ id: "retard", overdue: true }),
+    ]);
+    expect(l.map((d) => d.profile.id)).toEqual(["retard", "sans"]);
+  });
+
+  it("classe les plus fraîches d’abord à urgence égale", () => {
+    const l = aTraiterEnPriorite([
+      dossier({ id: "vieux", noNextAction: true, lastInterestAt: hier }),
+      dossier({ id: "frais", noNextAction: true, lastInterestAt: maintenant }),
+    ]);
+    expect(l.map((d) => d.profile.id)).toEqual(["frais", "vieux"]);
+  });
+
+  it("laisse de côté ce qui est à jour, et ce qui est clos", () => {
+    const l = aTraiterEnPriorite([
+      dossier({ id: "ok" }),
+      dossier({ id: "clos", overdue: true, outcome: "perdu" }),
+    ]);
+    expect(l).toEqual([]);
   });
 });

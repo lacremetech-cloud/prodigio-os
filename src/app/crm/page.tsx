@@ -30,15 +30,23 @@ interface Kpi {
   icon: string;
   critical?: boolean; // met en avant un état critique (>0)
   soon?: boolean;
+  /**
+   * Liste qui contient EXACTEMENT les dossiers comptés. Absent quand aucune
+   * liste ne correspond au chiffre : un compteur qui ouvre autre chose que ce
+   * qu'il annonce vaut moins qu'un compteur qu'on ne peut pas cliquer.
+   */
+  href?: string;
 }
 
 function KpiCard({ kpi }: { kpi: Kpi }) {
   const accent = kpi.critical ? "var(--crm-danger)" : `var(${kpi.accent})`;
-  return (
-    <div
-      className="crm-panel crm-kpi flex flex-col gap-1 p-4 crm-fade-in"
-      style={{ ["--kpi-accent" as keyof React.CSSProperties]: accent } as React.CSSProperties}
-    >
+  const style = { ["--kpi-accent" as keyof React.CSSProperties]: accent } as React.CSSProperties;
+  const classe = `crm-panel crm-kpi flex flex-col gap-1 p-4 crm-fade-in${
+    kpi.href ? " crm-kpi--ouvrable" : ""
+  }`;
+
+  const contenu = (
+    <>
       <span className="flex items-start justify-between gap-3">
         <span className="crm-kpi__label crm-wrap">{kpi.label}</span>
         <span className="crm-kpi__icon text-sm" aria-hidden>{kpi.icon}</span>
@@ -54,6 +62,21 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
         </span>
       )}
       {kpi.hint ? <span className="text-[11px] text-[var(--crm-text-faint)]">{kpi.hint}</span> : null}
+    </>
+  );
+
+  // Pas de composant polymorphe : `href` est obligatoire sur `Link`, et le
+  // rendre optionnel par un spread fait mentir le typage.
+  if (kpi.href) {
+    return (
+      <Link href={kpi.href} className={classe} style={style}>
+        {contenu}
+      </Link>
+    );
+  }
+  return (
+    <div className={classe} style={style}>
+      {contenu}
     </div>
   );
 }
@@ -154,10 +177,14 @@ export default async function OverviewPage() {
   const kpis: Kpi[] = [
     { label: "Nouveaux aujourd’hui", value: m.newToday, accent: "--crm-st-nouveau", icon: "✦" },
     { label: "Nouveaux (7 jours)", value: m.newLast7Days, accent: "--crm-info", icon: "▤" },
-    { label: "Non affectés", value: m.unassigned, accent: "--crm-warning", icon: "⚠", critical: m.unassigned > 0 },
-    { label: "À rappeler aujourd’hui", value: m.toRecallToday, accent: "--crm-warning", icon: "☎" },
-    { label: "Tâches en retard", value: m.overdueTasks, accent: "--crm-danger", icon: "!", critical: m.overdueTasks > 0 },
-    { label: "Fort potentiel", value: m.highPotential, accent: "--crm-success", icon: "★" },
+    { label: "Non affectés", value: m.unassigned, accent: "--crm-warning", icon: "⚠", critical: m.unassigned > 0,
+      href: "/crm/mandats?filter=non_affecte" },
+    { label: "À rappeler aujourd’hui", value: m.toRecallToday, accent: "--crm-warning", icon: "☎",
+      href: "/crm/mandats?filter=a_rappeler" },
+    { label: "Tâches en retard", value: m.overdueTasks, accent: "--crm-danger", icon: "!", critical: m.overdueTasks > 0,
+      href: "/crm/mandats?filter=en_retard" },
+    { label: "Fort potentiel", value: m.highPotential, accent: "--crm-success", icon: "★",
+      href: "/crm/mandats?filter=fort_potentiel" },
     {
       label: "Taux de contact",
       value: m.contactRate == null ? "—" : `${m.contactRate}%`,
