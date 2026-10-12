@@ -1275,3 +1275,39 @@
   border-color: var(--kpi-accent, var(--crm-univers));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--kpi-accent, var(--crm-univers)) 25%, transparent);
 }
+
+/* ------------------------------------------------- Selecteur de periode */
+/*
+ * Presélections de periode au-dessus du graphique qu'elles gouvernent. Un
+ * segment enclenche se voit par son fond ET par `aria-pressed` : jamais par la
+ * seule couleur.
+ */
+.crm-periodes {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--crm-line);
+  border-radius: 999px;
+  background: var(--crm-panel-2);
+}
+.crm-periodes__choix {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--crm-text-dim);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.crm-periodes__choix:hover {
+  color: var(--crm-text);
+  background: var(--crm-hover);
+}
+.crm-periodes__choix[aria-pressed="true"] {
+  color: var(--crm-sur-vif);
+  background: var(--crm-univers);
+}
+.crm-periodes__choix:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--crm-panel), 0 0 0 4px var(--crm-univers);
+}

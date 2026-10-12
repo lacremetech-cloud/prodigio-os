@@ -56,6 +56,14 @@ export interface BuyerListItem {
 export interface BuyerListBundle {
   items: BuyerListItem[];
   members: Map<string, MemberInfo>;
+  /**
+   * Instant de chargement (ISO). Les composants qui raisonnent sur « ce qui est
+   * en retard » ou « les trente derniers jours » le lisent ici plutôt que
+   * d'interroger l'horloge pendant leur rendu : côté client, un rendu serveur
+   * et un rendu navigateur séparés par un passage de minuit ne donneraient pas
+   * le même graphique, et l'hydratation casserait.
+   */
+  chargeA: string;
   counters: {
     total: number;
     nouveaux: number;
@@ -188,6 +196,7 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
   return {
     items,
     members,
+    chargeA: new Date(now).toISOString(),
     counters: {
       total: items.length,
       nouveaux: items.filter((i) => i.profile.pipeline_stage === "nouveau").length,

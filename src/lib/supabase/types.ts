@@ -1297,6 +1297,16 @@ export interface Database {
           status: string;
         }[];
       };
+      /** Photos de profil des membres de l'organisation. Fonction dédiée : élargir
+          `crm_list_members` aurait imposé un `drop function`, donc une fenêtre
+          pendant laquelle toute page qui l'appelle échoue. */
+      crm_list_member_avatars: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          avatar_url: string | null;
+        }[];
+      };
       crm_assign_opportunity: {
         Args: { p_opportunity_id: string; p_user_id: string; p_responsibility?: string };
         Returns: Json;

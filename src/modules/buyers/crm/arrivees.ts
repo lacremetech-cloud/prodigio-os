@@ -30,8 +30,23 @@ function cleJour(d: Date): string {
  * Les jours sans arrivée valent zéro : les omettre tasserait le graphique et
  * ferait passer un creux pour une continuité.
  */
+/**
+ * Les seules données que la courbe a besoin de connaître : une date de création
+ * par dossier.
+ *
+ * La courbe est un composant client (la période se change sans aller-retour
+ * serveur). Lui passer les dossiers entiers enverrait au navigateur la ligne
+ * contact BRUTE — e-mail et téléphone non masqués, que le rôle ait le droit de
+ * les voir ou non. On n'envoie que des dates.
+ */
+export function datesDArrivee(items: BuyerListItem[]): string[] {
+  return items
+    .map((i) => i.profile.created_at)
+    .filter((d): d is string => Boolean(d));
+}
+
 export function arriveesParJour(
-  items: BuyerListItem[],
+  dates: string[],
   jours: number,
   now: number = Date.now(),
 ): JourArrivees[] {
@@ -46,8 +61,7 @@ export function arriveesParJour(
     cases.set(cleJour(d), 0);
   }
 
-  for (const item of items) {
-    const brut = item.profile.created_at;
+  for (const brut of dates) {
     if (!brut) continue;
     const d = new Date(brut);
     if (Number.isNaN(d.getTime())) continue;
@@ -70,17 +84,17 @@ export function arriveesParJour(
  * « +∞ % » n'apprend rien. L'appelant écrit alors « première période ».
  */
 export function variationArrivees(
-  items: BuyerListItem[],
+  dates: string[],
   jours: number,
   now: number = Date.now(),
 ): number | null {
-  const courante = arriveesParJour(items, jours, now).reduce((t, j) => t + j.nombre, 0);
+  const courante = arriveesParJour(dates, jours, now).reduce((t, j) => t + j.nombre, 0);
 
   const finPrecedente = new Date(now);
   finPrecedente.setHours(0, 0, 0, 0);
   finPrecedente.setDate(finPrecedente.getDate() - jours);
   const precedente = arriveesParJour(
-    items,
+    dates,
     jours,
     finPrecedente.getTime() + 23 * 3600 * 1000,
   ).reduce((t, j) => t + j.nombre, 0);
