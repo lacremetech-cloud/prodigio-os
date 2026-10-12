@@ -1219,3 +1219,45 @@
 .crm-compteur:disabled {
   cursor: default;
 }
+
+/* ------------------------------------------------------ Barre de graphique */
+/*
+ * Une barre d'arrivees. Le conteneur aligne les barres en bas ; chaque barre
+ * tire sa hauteur de `--h`. Un jour sans arrivee garde un filet au ras de
+ * l'axe, sinon un creux se confond avec la fin du graphique.
+ */
+.crm-barre {
+  position: relative;
+  height: 100%;
+  border-radius: 3px 3px 0 0;
+}
+.crm-barre::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: var(--h, 0%);
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--crm-vif-nouveau);
+}
+/* Jour sans arrivee : un trait au ras de l'axe, de la couleur des filets. En
+   couleur d'arrivee, il se lisait comme une arrivee. */
+.crm-barre[data-vide="oui"]::after {
+  background: var(--crm-line);
+}
+
+/* Compteur du tableau de bord Mandats qui ouvre sa liste. Seuls ceux dont un
+   filtre reprend exactement la definition en portent : un compteur qui ouvre
+   autre chose que ce qu'il annonce vaut moins qu'un compteur fixe. */
+.crm-kpi--ouvrable {
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.crm-kpi--ouvrable:hover {
+  border-color: var(--kpi-accent, var(--crm-line-hover));
+}
+.crm-kpi--ouvrable:focus-visible {
+  outline: none;
+  border-color: var(--kpi-accent, var(--crm-univers));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--kpi-accent, var(--crm-univers)) 25%, transparent);
+}
