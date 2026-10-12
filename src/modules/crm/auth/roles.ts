@@ -133,6 +133,11 @@ export function canViewContactDetails(roles: readonly string[]): boolean {
     "manager",
     "setter",
     "agent_immobilier",
+    // Le commercial rappelle les gens : masquer leur numero rendait son
+    // compte inutilisable. La base l'autorisait deja
+    // (`crm_can_view_contact_details`), et elle ne lui montre que les
+    // acquereurs de ses biens.
+    "commercial",
   ]);
 }
 

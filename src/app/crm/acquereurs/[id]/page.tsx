@@ -30,7 +30,8 @@ import { Chip, SectionTitle } from "@/components/crm/ui";
 import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { CopyableValue } from "@/components/crm/copyable";
-import { ContactRapide, numeroAppelable } from "@/components/crm/buyers/contact-rapide";
+import { ContactRapide } from "@/components/crm/buyers/contact-rapide";
+import { numeroAppelable } from "@/modules/buyers/crm/telephone";
 import { PlanifierVisite } from "@/components/crm/buyers/planifier-visite";
 import {
   BuyerActivityForm,

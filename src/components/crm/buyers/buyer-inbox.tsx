@@ -5,7 +5,8 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Chip, EmptyState } from "@/components/crm/ui";
 import { cssVarRef } from "@/modules/crm/status-visuals";
-import { ContactRapide, numeroAppelable } from "./contact-rapide";
+import { ContactRapide } from "./contact-rapide";
+import { numeroAppelable } from "@/modules/buyers/crm/telephone";
 import { formatDateTime, timeSince } from "@/modules/crm/format";
 import {
   buyerStageLabels,
