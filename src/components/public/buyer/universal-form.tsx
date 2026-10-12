@@ -105,9 +105,19 @@ export function UniversalBuyerForm({
     notifyParentHeight(rootRef.current);
   }, [step, status, errors, brochureUrl]);
 
+  /**
+   * Le jeton vit dans une ref (lue au moment de l'envoi) ET dans un etat (pour
+   * que le bouton sache s'il peut partir). Sans ce second exemplaire, le
+   * formulaire laissait envoyer avant que Turnstile ait répondu : le serveur
+   * refusait, l'internaute voyait une erreur générique, et rien n'était
+   * enregistré. L'attente est désormais visible plutôt que subie.
+   */
+  const [tokenPret, setTokenPret] = useState(false);
   const setTurnstileToken = useCallback((token: string | null) => {
     turnstileTokenRef.current = token;
+    setTokenPret(token !== null);
   }, []);
+  const verificationRequise = Boolean(TURNSTILE_SITE_KEY);
 
   const set = <K extends keyof Draft>(key: K) => (value: Draft[K]) =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -164,6 +174,14 @@ export function UniversalBuyerForm({
     if (!request.success) {
       setStatus("error");
       setErrorMessage("Votre saisie n'a pas pu être validée. Vérifiez les champs.");
+      return;
+    }
+
+    if (verificationRequise && turnstileTokenRef.current === null) {
+      setStatus("error");
+      setErrorMessage(
+        "La vérification de sécurité n'est pas terminée. Patientez un instant, puis réessayez.",
+      );
       return;
     }
 
@@ -344,9 +362,13 @@ export function UniversalBuyerForm({
               <button
                 type="submit"
                 className="uf-btn uf-btn--primary"
-                disabled={status === "submitting"}
+                disabled={status === "submitting" || (verificationRequise && !tokenPret)}
               >
-                {status === "submitting" ? "Envoi…" : "Recevoir la brochure"}
+                {status === "submitting"
+                  ? "Envoi…"
+                  : verificationRequise && !tokenPret
+                    ? "Vérification…"
+                    : "Recevoir la brochure"}
               </button>
             </div>
           </form>
