@@ -14,8 +14,12 @@ import { memberDisplayName } from "@/modules/crm/data/queries";
 import { buyerAuditEventLabels, buyerStageVisual } from "@/modules/buyers/crm/labels";
 import { formatCents } from "@/modules/buyers/crm/criteria";
 import {
+  BUDGET_CHOICE_LABELS,
+  BUDGET_QUESTION,
+  type BuyerBudgetChoice,
+} from "@/modules/buyers/funnel/universal";
+import {
   availabilityLabels,
-  budgetBandLabels,
   contactPreferenceLabels,
   decisionModeLabels,
   financingLabels,
@@ -31,6 +35,7 @@ import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { CopyableValue } from "@/components/crm/copyable";
 import { ContactRapide } from "@/components/crm/buyers/contact-rapide";
+import type { BuyerInterestRow } from "@/lib/supabase/types";
 import { numeroAppelable } from "@/modules/buyers/crm/telephone";
 import { PlanifierVisite } from "@/components/crm/buyers/planifier-visite";
 import {
@@ -106,7 +111,7 @@ export default async function BuyerProfilePage({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="crm-eyebrow">Dossier acquéreur</p>
-            <h1 className="mt-1 crm-wrap text-2xl font-semibold text-[var(--crm-text)]">
+            <h1 className="mt-1 crm-wrap text-[30px] font-bold leading-tight text-[var(--crm-text)]">
               {detail.name}
             </h1>
             <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
@@ -156,17 +161,20 @@ export default async function BuyerProfilePage({
             <SectionTitle eyebrow="Personne" title="Identité et coordonnées" />
             <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
               <Field label="Nom">{detail.name}</Field>
-              <Field label="Téléphone">
-                {detail.phone ? (
-                  <CopyableValue
-                    value={detail.phone}
-                    copyable={canViewContacts ? detail.phone : null}
-                    href={canViewContacts ? `tel:${detail.phone}` : undefined}
-                  />
-                ) : (
-                  "—"
-                )}
-              </Field>
+              <div className="min-w-0">
+                <dt className="crm-label">Téléphone</dt>
+                <dd className="crm-wrap text-[19px] font-bold tracking-[0.01em] text-[var(--crm-text)]">
+                  {detail.phone ? (
+                    <CopyableValue
+                      value={detail.phone}
+                      copyable={canViewContacts ? detail.phone : null}
+                      href={canViewContacts ? `tel:${detail.phone}` : undefined}
+                    />
+                  ) : (
+                    "Non renseigné"
+                  )}
+                </dd>
+              </div>
               <Field label="E-mail">
                 {detail.email ? (
                   <CopyableValue
@@ -224,26 +232,16 @@ export default async function BuyerProfilePage({
                       </Chip>
                     </div>
 
-                    {/* Réponses détaillées du funnel */}
-                    <dl className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
-                      <Field label="Projet" small>{label(projectNatureLabels, i.project_nature) ?? "—"}</Field>
-                      <Field label="Budget déclaré" small>{label(budgetBandLabels, i.budget_band) ?? "—"}</Field>
-                      <Field label="Financement" small>{label(financingLabels, i.financing) ?? "—"}</Field>
-                      <Field label="Horizon" small>{label(purchaseHorizonLabels, i.purchase_horizon) ?? "—"}</Field>
-                      <Field label="Disponibilité" small>{label(availabilityLabels, i.availability) ?? "—"}</Field>
-                      <Field label="Décision" small>{label(decisionModeLabels, i.decision_mode) ?? "—"}</Field>
-                      <Field label="Résidence" small>
-                        {[i.residence_area, i.residence_country].filter(Boolean).join(", ") || "—"}
-                      </Field>
-                      <Field label="Préférence de contact" small>
-                        {[
-                          label(contactPreferenceLabels, i.contact_preference),
-                          label(recallPreferenceLabels, i.contact_recall_preference),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
-                      </Field>
-                    </dl>
+                    {/* La reponse au questionnaire. Le budget est mis en avant :
+                        c'est la seule question posee par le formulaire, et la
+                        premiere chose qu'on veut savoir avant d'appeler. */}
+                    <ReponseBudget choix={i.budget_choice} />
+
+                    {/* Les autres champs ne sont renseignes que par l'ancien
+                        formulaire. Les afficher vides alignait huit tirets qui
+                        n'apprenaient rien : on ne montre que ce qui a ete
+                        reellement repondu. */}
+                    <ReponsesComplementaires interet={i} />
 
 
                     {/* Attribution marketing de CETTE soumission */}
@@ -427,6 +425,82 @@ export default async function BuyerProfilePage({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * La reponse au questionnaire budget — la seule question posee par le
+ * formulaire, et la premiere chose qu'on veut savoir avant d'appeler.
+ *
+ * Elle etait lue dans `budget_band`, un champ que le formulaire universel ne
+ * remplit JAMAIS : la fiche affichait donc un tiret alors que la reponse etait
+ * bien en base, dans `budget_choice`. On rappelle aussi la question posee :
+ * « pas de projet » est une reponse pleine, pas une absence de reponse.
+ */
+function ReponseBudget({ choix }: { choix: string | null }) {
+  if (!choix) return null;
+  const libelle = BUDGET_CHOICE_LABELS[choix as BuyerBudgetChoice] ?? choix;
+  const sansProjet = choix === "aucun_projet";
+  return (
+    <div
+      className="crm-panel mt-3 p-3.5"
+      style={{
+        ["--chip-accent" as keyof CSSProperties]: sansProjet
+          ? "var(--crm-st-neutre)"
+          : "var(--crm-st-signe)",
+      } as CSSProperties}
+    >
+      <p className="crm-label">{BUDGET_QUESTION}</p>
+      <p
+        className="crm-wrap mt-1 text-[17px] font-bold leading-snug"
+        style={{
+          color: sansProjet ? "var(--crm-text-dim)" : "var(--crm-st-signe)",
+        }}
+      >
+        {libelle}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Champs de l'ANCIEN formulaire. Le formulaire universel ne les demande pas :
+ * les afficher vides alignait huit tirets qui n'apprenaient rien. On ne montre
+ * donc que ce qui a ete reellement repondu, et rien du tout sinon.
+ */
+function ReponsesComplementaires({
+  interet: i,
+}: {
+  interet: BuyerInterestRow;
+}) {
+  const lignes: { label: string; valeur: string }[] = [];
+  const ajouter = (label: string, valeur: string | null | undefined) => {
+    if (valeur) lignes.push({ label, valeur });
+  };
+  ajouter("Projet", label(projectNatureLabels, i.project_nature));
+  ajouter("Financement", label(financingLabels, i.financing));
+  ajouter("Horizon", label(purchaseHorizonLabels, i.purchase_horizon));
+  ajouter("Disponibilité", label(availabilityLabels, i.availability));
+  ajouter("Décision", label(decisionModeLabels, i.decision_mode));
+  ajouter("Résidence", [i.residence_area, i.residence_country].filter(Boolean).join(", "));
+  ajouter(
+    "Préférence de contact",
+    [
+      label(contactPreferenceLabels, i.contact_preference),
+      label(recallPreferenceLabels, i.contact_recall_preference),
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  );
+  if (lignes.length === 0) return null;
+  return (
+    <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {lignes.map((l) => (
+        <Field key={l.label} label={l.label} small>
+          {l.valeur}
+        </Field>
+      ))}
+    </dl>
   );
 }
 

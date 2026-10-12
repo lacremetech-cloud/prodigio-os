@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Chip } from "@/components/crm/ui";
-import { cssVarRef } from "@/modules/crm/status-visuals";
+import { cssVarRef, vifVar } from "@/modules/crm/status-visuals";
 import {
   BUYER_KANBAN_COLUMNS,
   buyerStageLabels,
@@ -235,23 +235,27 @@ export function BuyerKanbanBoard({
               key={col}
               className="crm-kanban-col flex flex-col"
               style={
-                { ["--col-accent" as keyof CSSProperties]: cssVarRef(visual.cssVar) } as CSSProperties
+                {
+                  ["--col-accent" as keyof CSSProperties]: cssVarRef(visual.cssVar),
+                  ["--col-vif" as keyof CSSProperties]: cssVarRef(vifVar(visual.cssVar)),
+                } as CSSProperties
               }
             >
-              <div className="crm-kanban-head mb-2">
-                <h2 className="crm-kanban-head__pastille min-w-0">
+              <div className="crm-kanban-head">
+                <h2 className="crm-kanban-head__pastille">
                   <span aria-hidden>{visual.icon}</span>
                   <span className="crm-ellipsis">{visual.label}</span>
+                  {protectedCol ? (
+                    <span
+                      title="Colonne pilotée par une action métier dédiée (confirmation, motif, audit)"
+                      aria-label="Colonne pilotée par une action dédiée"
+                      className="shrink-0 opacity-80"
+                    >
+                      🔒
+                    </span>
+                  ) : null}
                 </h2>
                 <span className="crm-kanban-head__compte">{items.length}</span>
-                {protectedCol ? (
-                  <span
-                    title="Colonne pilotée par une action métier dédiée (confirmation, motif, audit)"
-                    className="shrink-0 text-[var(--crm-text-faint)]"
-                  >
-                    🔒
-                  </span>
-                ) : null}
               </div>
               <div
                 className={`crm-kanban-dropzone crm-kanban-zone flex min-h-[120px] flex-col gap-2 rounded-[12px] p-2 ${
@@ -366,7 +370,7 @@ function Card({
           <Link href={`/crm/acquereurs/${card.buyerProfileId}`} className="min-w-0">
             <div className="flex items-center gap-2">
               <span
-                className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]"
+                className="crm-ellipsis text-[15px] font-bold text-[var(--crm-text)]"
                 title={card.name}
               >
                 {card.name}

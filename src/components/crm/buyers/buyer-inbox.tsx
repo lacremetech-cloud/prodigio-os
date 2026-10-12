@@ -293,7 +293,7 @@ function BuyerRow({ row }: { row: BuyerInboxRow }) {
         <div className="min-w-0 flex-1">
           <Link
             href={`/crm/acquereurs/${row.buyerProfileId}`}
-            className="crm-wrap text-sm font-medium text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-univers)]"
+            className="crm-wrap text-[16px] font-bold text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-univers)]"
           >
             {row.name}
           </Link>

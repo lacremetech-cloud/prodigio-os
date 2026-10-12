@@ -79,6 +79,23 @@
   --crm-st-signe: #54c98a;              /* vert émeraude */
   --crm-st-perdu: #d98a8a;              /* rouge atténué */
   --crm-st-neutre: #8b8e97;             /* gris */
+  /* ------------------------------------------------------------------ Aplats
+   * Deux echelles, et c'est la distinction qui manquait : une couleur de TEXTE
+   * doit etre sombre pour se lire sur blanc, un APLAT doit etre vif et porter
+   * du blanc. Les memes valeurs servaient aux deux — d'ou des bandeaux ternes,
+   * couleur de texte etalee sur toute une largeur. Ici, un cran plus clair
+   * pour tenir sur le noir.
+   */
+  --crm-vif-nouveau: #818cf8;
+  --crm-vif-a_contacter: #f59e0b;
+  --crm-vif-contact: #06b6d4;
+  --crm-vif-qualifie: #a78bfa;
+  --crm-vif-rdv_planifie: #818cf8;
+  --crm-vif-proposition: #fb923c;
+  --crm-vif-signe: #22c55e;
+  --crm-vif-perdu: #fb7185;
+  --crm-vif-neutre: #94a3b8;
+  --crm-sur-vif: #0b0b0d;
 }
 
 /*
@@ -148,6 +165,17 @@
   --crm-st-signe: #136c34;
   --crm-st-perdu: #c62828;
   --crm-st-neutre: #616c7e;
+  /* Aplats : vifs, et ils portent du blanc. Voir la note du theme sombre. */
+  --crm-vif-nouveau: #4f46e5;
+  --crm-vif-a_contacter: #b45309;
+  --crm-vif-contact: #0e7490;
+  --crm-vif-qualifie: #7c3aed;
+  --crm-vif-rdv_planifie: #4f46e5;
+  --crm-vif-proposition: #c2410c;
+  --crm-vif-signe: #15803d;
+  --crm-vif-perdu: #e11d48;
+  --crm-vif-neutre: #64748b;
+  --crm-sur-vif: #ffffff;
 }
 
 /* ------------------------------------------------------------------ Layout */
@@ -622,42 +650,61 @@
  * statut devient une pastille PLEINE, et la colonne porte un lavis de sa
  * couleur — on voit ou l'on est avant d'avoir lu.
  */
+/*
+ * En-tete de colonne : un BANDEAU plein, pleine largeur, pas une pastille.
+ *
+ * Une pastille posee sur un fond clair laisse le regard chercher la limite de
+ * la colonne. Un bandeau la dessine. Le libelle y est en blanc sur une couleur
+ * VIVE (`--crm-vif-*`), jamais sur une couleur de texte : c'est ce qui rendait
+ * les bandeaux ternes.
+ */
 .crm-kanban-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 2px;
-}
-/* Ceinture et bretelles : les glyphes portent deja un selecteur de rendu
-   texte (U+FE0E), ceci couvre les navigateurs qui respectent la propriete. */
-.crm-root [aria-hidden] {
-  font-variant-emoji: text;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 12px 12px 0 0;
+  background: var(--col-vif, var(--crm-vif-neutre));
+  color: var(--crm-sur-vif);
 }
 .crm-kanban-head__pastille {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: var(--col-accent, var(--crm-text-dim));
-  color: var(--crm-on-accent);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
+  color: inherit;
 }
 .crm-kanban-head__compte {
+  flex: none;
+  min-width: 1.5rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.22);
+  text-align: center;
   font-size: 13px;
-  font-weight: 700;
-  color: var(--crm-text-dim);
+  font-weight: 800;
+  color: inherit;
   font-variant-numeric: tabular-nums;
 }
-/* Lavis de colonne : assez pour distinguer, jamais assez pour genrer la carte. */
-.crm-kanban-zone {
-  background: color-mix(in srgb, var(--col-accent, var(--crm-line)) 7%, var(--crm-panel));
-  border: 1px solid color-mix(in srgb, var(--col-accent, var(--crm-line)) 22%, transparent);
+.crm-root[data-crm-theme="light"] .crm-kanban-head__compte {
+  background: rgb(255 255 255 / 0.26);
 }
+/*
+ * Le corps de colonne prolonge le bandeau : meme teinte, tres diluee, et pas
+ * de coin arrondi en haut pour que les deux ne forment qu'un bloc.
+ */
+.crm-kanban-zone {
+  background: color-mix(in srgb, var(--col-vif, var(--crm-line)) 9%, var(--crm-panel));
+  border: 1px solid color-mix(in srgb, var(--col-vif, var(--crm-line)) 26%, transparent);
+  border-top: none;
+  border-radius: 0 0 12px 12px !important;
+}
+
 
 /* --------------------------------------------------- Lisibilité du contenu */
 /*
