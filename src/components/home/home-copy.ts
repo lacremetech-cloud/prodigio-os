@@ -25,7 +25,7 @@ export const homeCopy = {
       "propriétés d'exception. Nous transformons chaque bien sélectionné en une " +
       "marque singulière, finançons sa visibilité et allons chercher ses futurs " +
       "acquéreurs en France comme à l'étranger.",
-    ctaPrimary: "Tester l'éligibilité de ma propriété",
+    ctaPrimary: "Vérifier l'éligibilité de mon bien",
     ctaSecondary: "Découvrir le Système Prodigio",
     ctaSub: "1 minute · Confidentiel · Sans engagement",
     scrollCue: "Choisir mon accès",
@@ -73,7 +73,7 @@ export const homeCopy = {
         "Vous envisagez la vente d'une propriété d'exception ? Découvrez la " +
         "méthode Prodigio et demandez une première analyse de votre projet.",
       linkSystem: "Découvrir le système",
-      linkEligibility: "Tester mon éligibilité",
+      linkEligibility: "Vérifier mon éligibilité",
     },
     secure: {
       label: "Espace sécurisé",

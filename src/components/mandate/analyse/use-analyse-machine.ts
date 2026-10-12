@@ -16,6 +16,7 @@ import {
   type StoredAttribution,
   type ValueBand,
 } from "@/modules/mandates/funnel";
+import { track } from "@/lib/analytics";
 import type { AppreciationKey } from "@/modules/mandates/scoring";
 import { submitMandateFunnelAction } from "@/modules/mandates/funnel/submit";
 
@@ -307,6 +308,7 @@ export function useAnalyseMachine(): AnalyseMachine {
           turnstileToken: turnstileTokenRef.current,
         });
         if (result.ok) {
+          track({ event: "eligibility_submitted" });
           setAppreciation(result.appreciation);
           setStatus("done");
           setDirection(1);
@@ -345,7 +347,12 @@ export function useAnalyseMachine(): AnalyseMachine {
     setErrors({});
   }, []);
 
-  const start = useCallback(() => goToStep(FIRST_STEP, 1), [goToStep]);
+  const start = useCallback(() => {
+    // Mesure seule : aucune réponse, aucune donnée personnelle n'accompagne
+    // l'événement. Le contrat de données du CRM n'est pas concerné.
+    track({ event: "eligibility_started" });
+    goToStep(FIRST_STEP, 1);
+  }, [goToStep]);
 
   // Navigation SANS effet de bord dans un updater `setStep` : on lit `step` de la
   // clôture (à jour via les dépendances). Sous React StrictMode (dev), les
@@ -370,6 +377,8 @@ export function useAnalyseMachine(): AnalyseMachine {
       return;
     }
     setErrors({});
+    // Seul le NUMÉRO de l'étape est mesuré, jamais son contenu.
+    track({ event: "eligibility_step_completed", step });
     if (step === LAST_STEP) {
       void submit(draft); // la confirmation est déclenchée par submit()
       return;

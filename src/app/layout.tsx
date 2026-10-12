@@ -12,7 +12,8 @@ import { site } from "@/lib/site";
 // DEUX familles maîtrisées, identiques à l'existant (mêmes variables CSS, mêmes
 // graisses/styles) :
 //  - Cormorant Garamond : GRANDS titres éditoriaux uniquement (serif de luxe) —
-//    graisses 500/600, normal + italique.
+//    graisses 500/600 normal + italique, et 700 normal (titre du hero
+//    propriétaire, qui demande davantage de présence).
 //  - Inter : tout le reste — textes, questions, choix, formulaires, boutons,
 //    signature et intertitres — graisses 400/500/600.
 const cormorant = localFont({
@@ -23,6 +24,7 @@ const cormorant = localFont({
     { path: "./fonts/cormorant-garamond-latin-500-italic.woff2", weight: "500", style: "italic" },
     { path: "./fonts/cormorant-garamond-latin-600-normal.woff2", weight: "600", style: "normal" },
     { path: "./fonts/cormorant-garamond-latin-600-italic.woff2", weight: "600", style: "italic" },
+    { path: "./fonts/cormorant-garamond-latin-700-normal.woff2", weight: "700", style: "normal" },
   ],
 });
 

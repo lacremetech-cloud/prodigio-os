@@ -133,8 +133,9 @@ docs/assets/crm/       # captures desktop/mobile du CRM (PII réelle masquée)
 Design system : variables CSS (palette ivoire / noir bois / or vieilli, fond
 onyx immersif, espacements, rayons, transitions) dans `src/app/globals.css` ;
 polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
-éditoriaux), **Cinzel** (signature/intertitres capitales), **Josefin Sans**
-(textes et interface).
+éditoriaux ; graisses 500/600 normal + italique, et 700 normal pour le titre du
+hero propriétaire) et **Inter** (tout le reste : textes, interface, signature ;
+graisses 400/500/600).
 
 ## Documentation fondatrice
 
@@ -197,6 +198,15 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   d'éligibilité faisant autorité côté serveur, oppositions centralisées,
   fondation des automatisations. **Envoi désactivé** : aucun e-mail, aucun SMS
   n'est émis, aucun contact n'est importé, la base légale reste à valider.
+- [docs/22-LANDING-PROPRIETAIRE.md](docs/22-LANDING-PROPRIETAIRE.md) — Landing
+  propriétaire `/proprietaire` : la doctrine (**expertise immobilière + Système
+  Prodigio™**, jamais contre la profession), les deux marchés (actif et latent),
+  les deux thèses (« le coup de cœur peut précéder la recherche », « visibilité
+  ≠ acquisition »), les principes éditoriaux (la VSL explique, la page démontre ;
+  lecture en trente secondes ; zéro jargon), la structure des quinze sections, le
+  système d'appel à l'action, le mouvement et la mesure du parcours, et les
+  points de vigilance (ancienneté annoncée à confirmer, interface
+  d'illustration, exclusivité en FAQ).
 - [docs/23-RESILIENCE-ACTIONS.md](docs/23-RESILIENCE-ACTIONS.md) — Résilience des
   actions serveur du CRM : une action qui échoue affiche un message et
   **conserve la saisie**, au lieu de remplacer l'écran. Analyse de l'incident du
