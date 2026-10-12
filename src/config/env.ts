@@ -100,6 +100,19 @@ const envSchema = z.object({
   // est contrôlée à l'envoi (voir `isBuyerSlackConfigured`).
   SLACK_BUYER_LEADS_WEBHOOK_URL: z.string().min(1).optional(),
 
+  // --- Meta (API de conversions, remontee serveur des conversions publicitaires) ---
+  // Identifiant du pixel et jeton d'acces systeme de l'API de conversions.
+  // STRICTEMENT serveur : jamais prefixes `NEXT_PUBLIC_`, jamais renvoyes au
+  // client, jamais journalises. Le jeton donne le droit d'ecrire dans le pixel :
+  // il se revoque depuis le Business Manager et se traite comme un mot de passe.
+  // Absents (preview/dev) => aucune conversion n'est emise, le CRM fonctionne a
+  // l'identique. `META_CAPI_TEST_EVENT_CODE` n'est renseigne que le temps d'une
+  // verification dans l'outil « Evenements de test » : laisse en place, il
+  // ecarte les evenements des statistiques reelles.
+  META_CAPI_PIXEL_ID: z.string().min(1).optional(),
+  META_CAPI_ACCESS_TOKEN: z.string().min(1).optional(),
+  META_CAPI_TEST_EVENT_CODE: z.string().min(1).optional(),
+
   // --- Google Calendar (planification des rendez-vous d'estimation) ---
   // Identifiants OAuth du projet Google Cloud. Utilisés EXCLUSIVEMENT côté
   // serveur (construction de l'URL de consentement, échange du code, rafraîchi-
@@ -305,6 +318,23 @@ export function isEstimationSlackConfigured(
  * valeur. Absent (preview/dev) ⇒ alertes désactivées proprement, sans jamais
  * bloquer l'enregistrement de la demande.
  */
+/**
+ * API de conversions Meta configuree ? Les deux valeurs sont requises : un
+ * pixel sans jeton n'ecrit rien, un jeton sans pixel ne sait ou ecrire.
+ * Absente (preview/dev) => aucune conversion emise, et c'est voulu : on ne
+ * pollue pas les statistiques d'un compte publicitaire depuis une preview.
+ */
+export function isMetaCapiConfigured(
+  source: Pick<Env, "META_CAPI_PIXEL_ID" | "META_CAPI_ACCESS_TOKEN"> = env,
+): boolean {
+  const id = source.META_CAPI_PIXEL_ID;
+  const token = source.META_CAPI_ACCESS_TOKEN;
+  return (
+    typeof id === "string" && id.trim().length > 0 &&
+    typeof token === "string" && token.trim().length > 0
+  );
+}
+
 export function isBuyerSlackConfigured(
   source: Pick<Env, "SLACK_BUYER_LEADS_WEBHOOK_URL"> = env,
 ): boolean {

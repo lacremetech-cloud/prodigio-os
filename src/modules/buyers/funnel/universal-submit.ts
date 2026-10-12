@@ -2,6 +2,8 @@
 
 import { after } from "next/server";
 import { alerterNouvelleDemande } from "../notifications/universal-notify";
+import { conversionProspect } from "@/modules/analytics/meta/conversions";
+import { normalizePhone } from "@/modules/mandates/funnel/normalize";
 
 import {
   env,
@@ -121,6 +123,36 @@ export async function submitUniversalInterestAction(
          Les scores sont relus en base plutot que recalcules ici, pour que
          l'alerte dise exactement ce que le CRM affichera. */
       const interetId = result.interest_id;
+      /* Conversion « prospect » vers Meta. Emise ici et non par le pixel du
+         navigateur : bloqueurs, cookies tiers refuses et iOS en font disparaitre
+         une part importante. Les coordonnees sont hachees avant de partir. */
+      const conversion = async () => {
+        try {
+          const touche = request.context.lastTouch ?? request.context.firstTouch;
+          await conversionProspect({
+            interestId: interetId,
+            sourceUrl: request.context.originUrl ?? touche?.url ?? null,
+            identity: {
+              email: request.answers.emailRaw,
+              phone: normalizePhone(request.answers.phoneRaw, request.answers.phoneCountry),
+              firstName: request.answers.firstName,
+              lastName: request.answers.lastName,
+              country: request.answers.phoneCountry,
+              fbclid: touche?.fbclid ?? null,
+              clickedAt: touche?.at ?? null,
+              // Le navigateur du prospect : c'est le seul moment ou il est le
+              // sien. Les conversions suivantes partent du CRM, ou il serait
+              // celui du commercial.
+              clientUserAgent: request.context.userAgent ?? null,
+            },
+          });
+        } catch (cause) {
+          console.warn("conversion Meta non emise", {
+            name: cause instanceof Error ? cause.name : "unknown",
+          });
+        }
+      };
+
       const alerte = async () => {
         /* Une notification ne compromet jamais un depot : l'alerte avale ses
            propres erreurs. Sans cela, un Slack injoignable ou une lecture
@@ -152,10 +184,15 @@ export async function submitUniversalInterestAction(
           });
         }
       };
+      const suites = async () => {
+        // Independantes : une alerte Slack muette ne doit pas priver Meta de sa
+        // conversion, ni l'inverse.
+        await Promise.allSettled([alerte(), conversion()]);
+      };
       try {
-        after(() => alerte());
+        after(() => suites());
       } catch {
-        void alerte();
+        void suites();
       }
 
       const { data: url } = await supabase.rpc("buyer_form_brochure", {
