@@ -105,16 +105,9 @@ function Lien({
       href={item.href}
       onClick={onNavigate}
       aria-current={actif ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
-        actif
-          ? "bg-[var(--crm-elevated)] text-[var(--crm-text)]"
-          : "text-[var(--crm-text-dim)] hover:bg-[var(--crm-panel-2)] hover:text-[var(--crm-text)]"
-      }`}
+      className="crm-nav-item"
     >
-      <span
-        aria-hidden
-        className={`text-[15px] ${actif ? "text-[var(--crm-univers)]" : "text-[var(--crm-text-faint)]"}`}
-      >
+      <span aria-hidden className="crm-nav-item__icon">
         {item.icon}
       </span>
       {item.label}
@@ -172,7 +165,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <Link href="/crm" className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(203,180,136,0.4)] bg-[rgba(203,180,136,0.12)] text-sm font-semibold text-[var(--crm-gold)]">
+      <span className="crm-brand-badge">
         P
       </span>
       <span className="leading-tight">

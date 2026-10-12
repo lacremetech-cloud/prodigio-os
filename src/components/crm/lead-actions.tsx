@@ -218,7 +218,7 @@ export function ActivityForm({ opportunityId }: { opportunityId: string }) {
         />
       </label>
       <div className="flex items-center gap-3">
-        <button type="submit" className="crm-btn crm-btn--gold crm-btn--sm" disabled={pending}>
+        <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
           {pending ? "Enregistrement…" : "Ajouter l’activité"}
         </button>
         <FieldError error={error} />

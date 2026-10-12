@@ -51,12 +51,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={t.id}
             role="status"
-            className={`pointer-events-auto flex max-w-sm items-start gap-2.5 rounded-[10px] border px-4 py-3 text-sm shadow-[var(--shadow-lg)] crm-fade-in ${
+            className={`crm-toast pointer-events-auto flex max-w-sm items-start gap-2.5 rounded-[10px] px-4 py-3 text-sm crm-fade-in ${
               t.kind === "success"
-                ? "border-[rgba(120,190,150,0.4)] bg-[#12211a] text-[#c7ecd4]"
+                ? "crm-toast--ok"
                 : t.kind === "error"
-                  ? "border-[rgba(240,165,140,0.4)] bg-[#241512] text-[var(--color-danger-on-dark)]"
-                  : "border-[var(--crm-line)] bg-[var(--crm-panel-2)] text-[var(--crm-text)]"
+                  ? "crm-toast--danger"
+                  : ""
             }`}
           >
             <span aria-hidden className="mt-px text-[13px]">

@@ -20,7 +20,7 @@ export default function CrmError({
           Vos données sont intactes. Vous pouvez réessayer.
         </p>
       </div>
-      <button type="button" onClick={() => reset()} className="crm-btn crm-btn--gold crm-btn--sm">
+      <button type="button" onClick={() => reset()} className="crm-btn crm-btn--primaire crm-btn--sm">
         Réessayer
       </button>
     </div>

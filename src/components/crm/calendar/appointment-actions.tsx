@@ -130,7 +130,7 @@ export function AppointmentActions({
           </label>
           <button
             type="button"
-            className="crm-btn crm-btn--gold crm-btn--sm"
+            className="crm-btn crm-btn--primaire crm-btn--sm"
             onClick={submitReschedule}
             disabled={pending}
           >
@@ -146,7 +146,7 @@ export function AppointmentActions({
             <button
               key={opt.value}
               type="button"
-              className={`crm-btn crm-btn--sm ${status === opt.value ? "crm-btn--gold" : "crm-btn--ghost"}`}
+              className={`crm-btn crm-btn--sm ${status === opt.value ? "crm-btn--primaire" : "crm-btn--ghost"}`}
               onClick={() =>
                 run(() =>
                   setAppointmentResultAction({

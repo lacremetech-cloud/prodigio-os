@@ -202,7 +202,7 @@ export function BuyerFormSettings({
         {canActivate ? (
           <button
             type="button"
-            className={`crm-btn ${actif ? "" : "crm-btn--gold"}`}
+            className={`crm-btn ${actif ? "" : "crm-btn--primaire"}`}
             onClick={() => save(actif ? "inactif" : "actif")}
             disabled={pending || !slug.trim()}
           >

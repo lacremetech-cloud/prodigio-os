@@ -155,7 +155,7 @@ export function EstimationScheduler({
 
   return (
     <>
-      <button type="button" className="crm-btn crm-btn--gold" onClick={() => setOpen(true)}>
+      <button type="button" className="crm-btn crm-btn--primaire" onClick={() => setOpen(true)}>
         Planifier l’estimation
       </button>
 
@@ -232,7 +232,7 @@ export function EstimationScheduler({
                         type="button"
                         onClick={() => pickSlot(s)}
                         aria-pressed={active}
-                        className={`crm-btn crm-btn--sm ${active ? "crm-btn--gold" : "crm-btn--ghost"}`}
+                        className={`crm-btn crm-btn--sm ${active ? "crm-btn--primaire" : "crm-btn--ghost"}`}
                       >
                         {formatSlotTime(s.start, timezone)}
                       </button>
@@ -303,7 +303,7 @@ export function EstimationScheduler({
               </button>
               <button
                 type="button"
-                className="crm-btn crm-btn--gold crm-btn--sm"
+                className="crm-btn crm-btn--primaire crm-btn--sm"
                 onClick={confirmBooking}
                 disabled={pending || !selectedSlot}
               >

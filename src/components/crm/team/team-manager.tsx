@@ -140,7 +140,7 @@ function InviteForm({
         <button type="button" className="crm-btn crm-btn--ghost crm-btn--sm" onClick={onClose}>
           Annuler
         </button>
-        <button type="submit" className="crm-btn crm-btn--gold crm-btn--sm" disabled={pending}>
+        <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
           {pending ? "Envoi…" : "Envoyer l'invitation"}
         </button>
       </div>
@@ -333,7 +333,7 @@ function RowActions({ entry, onChanged }: { entry: TeamEntry; onChanged: () => v
           </button>
           <button
             type="button"
-            className={`crm-btn crm-btn--sm ${confirm?.danger ? "" : "crm-btn--gold"}`}
+            className={`crm-btn crm-btn--sm ${confirm?.danger ? "" : "crm-btn--primaire"}`}
             disabled={pending}
             onClick={() => {
               const c = confirm;
@@ -368,7 +368,7 @@ function MenuItem({
       onClick={onClick}
       className={`flex w-full items-center rounded-[7px] px-2.5 py-2 text-left text-sm transition-colors disabled:opacity-40 ${
         danger
-          ? "text-[var(--color-danger-on-dark)] hover:bg-[rgba(240,165,140,0.08)]"
+          ? "text-[var(--crm-danger)] hover:bg-[var(--crm-panel-2)]"
           : "text-[var(--crm-text)] hover:bg-[var(--crm-panel-2)]"
       }`}
     >
@@ -465,7 +465,7 @@ function TeamManagerInner({
         </div>
         <button
           type="button"
-          className="crm-btn crm-btn--gold"
+          className="crm-btn crm-btn--primaire"
           onClick={() => setInviteOpen(true)}
         >
           + Inviter un membre
@@ -475,7 +475,7 @@ function TeamManagerInner({
       {!adminConfigured ? (
         <div
           role="alert"
-          className="rounded-[12px] border border-[rgba(203,180,136,0.4)] bg-[rgba(203,180,136,0.08)] px-4 py-3 text-sm text-[var(--crm-text-dim)]"
+          className="crm-panel-2 rounded-[12px] px-4 py-3 text-sm text-[var(--crm-text-dim)]"
         >
           <p className="font-medium text-[var(--crm-gold)]">
             Envoi d’invitations désactivé — configuration serveur manquante

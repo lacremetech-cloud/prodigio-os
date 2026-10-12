@@ -98,7 +98,7 @@ export function CalendarConnectionManager({
   if (!connected) {
     return (
       <div className="flex flex-col gap-3">
-        <a href="/api/calendar/google/connect" className="crm-btn crm-btn--gold self-start">
+        <a href="/api/calendar/google/connect" className="crm-btn crm-btn--primaire self-start">
           Connecter Google Calendar
         </a>
         <p className="text-xs text-[var(--crm-text-faint)]">

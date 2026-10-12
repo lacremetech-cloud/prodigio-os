@@ -130,7 +130,7 @@ export function IdentityForm({
         <TextArea label="Détail signature / coup de cœur" value={signature} onChange={setSignature} placeholder="L’élément qui fait la différence…" />
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="crm-btn crm-btn--gold crm-btn--sm" disabled={pending}>
+        <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
           {pending ? "Enregistrement…" : "Enregistrer l’identité"}
         </button>
         <Saved show={done} />
@@ -224,7 +224,7 @@ export function PositioningForm({
           />
           <TextField label="Nom de marque du bien" value={brandName} onChange={setBrandName} />
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" className="crm-btn crm-btn--gold crm-btn--sm" disabled={pending}>
+            <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
               {pending ? "Enregistrement…" : "Enregistrer le positionnement"}
             </button>
             <Saved show={done} />
@@ -435,7 +435,7 @@ export function StatusReadinessPanel({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className={`crm-btn crm-btn--sm ${target === "pret_a_lancer" ? "crm-btn--gold" : ""}`}
+              className={`crm-btn crm-btn--sm ${target === "pret_a_lancer" ? "crm-btn--primaire" : ""}`}
               disabled={pending || target === status || !canApplyTarget}
               onClick={() =>
                 run(() =>

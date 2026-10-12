@@ -221,7 +221,7 @@ export function PublicConfigForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="crm-btn crm-btn--gold crm-btn--sm" disabled={pending}>
+        <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
           {pending ? "Enregistrement…" : "Enregistrer l’expérience publique"}
         </button>
         <Saved show={done} />
@@ -452,7 +452,7 @@ function PublicMediaCard({
           </button>
           <button
             type="button"
-            className={`crm-btn crm-btn--sm crm-btn--ghost ${m.approved ? "" : "crm-btn--gold"}`}
+            className={`crm-btn crm-btn--sm crm-btn--ghost ${m.approved ? "" : "crm-btn--primaire"}`}
             disabled={pending}
             onClick={() =>
               run(() =>
@@ -621,7 +621,7 @@ export function PublicationPanel({
           {!isPublished ? (
             <button
               type="button"
-              className="crm-btn crm-btn--gold crm-btn--sm"
+              className="crm-btn crm-btn--primaire crm-btn--sm"
               disabled={pending || !ready}
               onClick={() => run(() => publishPropertyAction({ propertyId }))}
             >

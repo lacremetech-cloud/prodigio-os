@@ -235,7 +235,7 @@ export function EstimationReportForm({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="crm-btn crm-btn--gold crm-btn--sm" disabled={pending}>
+        <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
           {pending ? "Enregistrement…" : report ? "Mettre à jour l’estimation" : "Enregistrer l’estimation"}
         </button>
         <Saved show={done} />
@@ -501,7 +501,7 @@ export function MandateManager({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="crm-btn crm-btn--gold crm-btn--sm"
+              className="crm-btn crm-btn--primaire crm-btn--sm"
               disabled={pending || noRule || !ruleId}
               onClick={() =>
                 run(() =>
@@ -558,7 +558,7 @@ export function MandateManager({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="crm-btn crm-btn--gold crm-btn--sm"
+              className="crm-btn crm-btn--primaire crm-btn--sm"
               disabled={pending || !mandateNumber || !signedAt || !signedDocId}
               onClick={() =>
                 run(() =>
@@ -892,7 +892,7 @@ export function PropertyHandoff({
     <div className="flex flex-wrap items-center gap-3">
       <button
         type="button"
-        className="crm-btn crm-btn--gold crm-btn--sm"
+        className="crm-btn crm-btn--primaire crm-btn--sm"
         disabled={pending || !mandateId}
         onClick={() =>
           run(

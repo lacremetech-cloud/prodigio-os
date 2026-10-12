@@ -154,7 +154,7 @@ export function EconomicRuleForm({ holders }: { holders: HolderOption[] }) {
         <textarea className="crm-textarea" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="crm-btn crm-btn--gold crm-btn--sm" disabled={pending}>
+        <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
           {pending ? "Enregistrement…" : "Créer la règle"}
         </button>
         {done ? <span className="text-xs crm-aging--frais">Enregistré</span> : null}
