@@ -48,15 +48,6 @@ describe("compterPourCommercial", () => {
     expect(c.sansAction).toBe(2);
   });
 
-  it("compte les visites sur le stade du pipeline", () => {
-    const c = compterPourCommercial([
-      dossier({ stage: "visite" }),
-      dossier({ stage: "en_discussion" }),
-      dossier({ stage: "offre" }),
-    ]);
-    expect(c.visitesPlanifiees).toBe(1);
-  });
-
   it("écarte les dossiers clos de tous les chiffres", () => {
     // Un dossier perdu ne demande plus rien : le faire figurer gonflerait une
     // liste de travail qui doit rester exacte.
@@ -73,7 +64,6 @@ describe("compterPourCommercial", () => {
       nouveauxAujourdhui: 1,
       enRetard: 1,
       sansAction: 0,
-      visitesPlanifiees: 1,
       dossiers: 1,
     });
   });

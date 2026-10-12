@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { BuyerListItem } from "@/modules/buyers/crm/queries";
 import { formatDateTime } from "@/modules/crm/format";
+import type { Visite } from "@/modules/buyers/crm/visites";
 
 /**
  * Tableau de bord d'un commercial, pensé pour un téléphone tenu d'une main.
@@ -37,7 +38,6 @@ export interface ChiffresCommercial {
   nouveauxAujourdhui: number;
   enRetard: number;
   sansAction: number;
-  visitesPlanifiees: number;
   dossiers: number;
 }
 
@@ -59,36 +59,8 @@ export function compterPourCommercial(items: BuyerListItem[]): ChiffresCommercia
     nouveauxAujourdhui: ouverts.filter((i) => memeJour(i.profile.last_interest_at)).length,
     enRetard: ouverts.filter((i) => i.overdue).length,
     sansAction: ouverts.filter((i) => i.noNextAction).length,
-    visitesPlanifiees: ouverts.filter((i) => i.profile.pipeline_stage === "visite").length,
     dossiers: ouverts.length,
   };
-}
-
-/**
- * Les visites a venir, deduites des dossiers deja charges.
- *
- * Une visite, dans ce CRM, c'est une tache a echeance plus l'etape « visite » :
- * c'est exactement ce qu'ecrit le formulaire « Planifier la visite ». On relit
- * donc le meme fait, sans deuxieme requete et sans table parallele qui
- * pourrait divergir du compteur juste au-dessus.
- *
- * Une visite deja passee n'est pas « a venir » : elle a lieu ou elle est
- * manquee, et elle remonte alors dans « En retard ».
- */
-export function prochainesVisites(
-  items: BuyerListItem[],
-  now: number = Date.now(),
-): BuyerListItem[] {
-  return items
-    .filter((i) => {
-      if (!encoreOuvert(i)) return false;
-      if (i.profile.pipeline_stage !== "visite") return false;
-      const quand = i.nextTask?.due_at;
-      if (!quand) return false;
-      const t = new Date(quand).getTime();
-      return !Number.isNaN(t) && t >= now;
-    })
-    .sort((a, b) => (a.nextTask?.due_at ?? "").localeCompare(b.nextTask?.due_at ?? ""));
 }
 
 /**
@@ -148,9 +120,16 @@ function Chiffre({
   );
 }
 
-export function TableauCommercial({ items }: { items: BuyerListItem[] }) {
+export function TableauCommercial({
+  items,
+  visites,
+}: {
+  items: BuyerListItem[];
+  /** Visites a venir, lues a la meme source que l'agenda des visites. */
+  visites: Visite[];
+}) {
   const c = compterPourCommercial(items);
-  const visites = prochainesVisites(items).slice(0, 5);
+  const prochaines = visites.slice(0, 5);
   return (
     <section className="flex flex-col gap-4">
       {/* Deux colonnes sur telephone, cinq au-dela : chaque chiffre reste
@@ -166,9 +145,9 @@ export function TableauCommercial({ items }: { items: BuyerListItem[] }) {
         <Chiffre valeur={c.sansAction} libelle="Sans action prévue" alerte
                  icone="☎︎" vif="--crm-vif-a_contacter"
                  href="/crm/acquereurs?signal=sans_action" />
-        <Chiffre valeur={c.visitesPlanifiees} libelle="Visites planifiées"
+        <Chiffre valeur={visites.length} libelle="Visites à venir"
                  icone="◷" vif="--crm-vif-rdv_planifie"
-                 href="/crm/acquereurs/pipeline" />
+                 href="/crm/visites" />
         <Chiffre valeur={c.dossiers} libelle="Dossiers en cours"
                  icone="◈" vif="--crm-vif-signe"
                  href="/crm/acquereurs" />
@@ -181,22 +160,22 @@ export function TableauCommercial({ items }: { items: BuyerListItem[] }) {
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-sm font-bold text-[var(--crm-text)]">Prochaines visites</h2>
           <Link
-            href="/crm/acquereurs/pipeline"
+            href="/crm/visites"
             className="text-xs font-medium text-[var(--crm-univers)] hover:underline"
           >
-            Tout voir
+            Tout l’agenda
           </Link>
         </div>
-        {visites.length === 0 ? (
+        {prochaines.length === 0 ? (
           <p className="rounded-[10px] border border-dashed border-[var(--crm-line)] px-3 py-5 text-center text-xs text-[var(--crm-text-faint)]">
             Aucune visite planifiée. Ouvrez une fiche pour en caler une.
           </p>
         ) : (
           <ul className="flex flex-col gap-1.5">
-            {visites.map((v) => (
-              <li key={v.profile.id}>
+            {prochaines.map((v) => (
+              <li key={v.taskId}>
                 <Link
-                  href={`/crm/acquereurs/${v.profile.id}`}
+                  href={`/crm/acquereurs/${v.buyerProfileId}`}
                   className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[var(--crm-line-hover)]"
                 >
                   <span className="min-w-0">
@@ -204,11 +183,11 @@ export function TableauCommercial({ items }: { items: BuyerListItem[] }) {
                       {v.name}
                     </span>
                     <span className="crm-ellipsis block text-[11px] text-[var(--crm-text-faint)]">
-                      {v.lastPropertyLabel ?? "Bien non précisé"}
+                      {v.propertyLabel ?? "Bien non précisé"}
                     </span>
                   </span>
                   <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--crm-text-dim)]">
-                    {v.nextTask?.due_at ? formatDateTime(v.nextTask.due_at) : ""}
+                    {formatDateTime(v.startsAt)}
                   </span>
                 </Link>
               </li>
