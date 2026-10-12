@@ -178,6 +178,14 @@ as $$
 $$;
 
 -- --- 6. Confier un bien, le retirer ------------------------------------------
+-- ETAT EN BASE (12/10/2026) : `crm_property_assign` est posee et fonctionne.
+-- `crm_property_unassign` ne l'est PAS : l'outil d'administration utilise ici
+-- se bloque sur toute creation de fonction dont le corps contient un `delete`
+-- (reproduit, le meme corps sans le `delete` passe instantanement). La base
+-- porte en attendant une version qui LEVE UNE EXCEPTION, pour qu'un retrait
+-- echoue visiblement plutot que de laisser croire qu'un acces a ete retire.
+-- La version ci-dessous est la bonne : elle s'installera au prochain passage
+-- des migrations.
 -- Réservé aux décisionnaires : ouvrir un bien à quelqu'un d'extérieur engage
 -- l'organisation, au même titre qu'activer un formulaire de collecte.
 create or replace function public.crm_property_assign(
