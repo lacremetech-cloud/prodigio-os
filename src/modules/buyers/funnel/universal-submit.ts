@@ -53,10 +53,21 @@ export async function submitUniversalInterestAction(
 
   const { turnstileToken, ...request } = parsed.data;
 
-  // Pot de miel : rempli => accusé « ok » silencieux, rien n'est enregistré.
-  if (request.answers.company && request.answers.company.length > 0) {
-    return { ok: true, brochureUrl: null };
-  }
+  /*
+   * Le pot de miel ne fait PLUS disparaitre la demande.
+   *
+   * Le champ est libelle « Societe » et porte autocomplete="off" — que Chrome
+   * ignore pour les champs d'adresse. Un navigateur equipe du profil de son
+   * utilisateur le remplit donc tout seul, et la demande d'un acquereur bien
+   * reel etait jetee en silence : ecran de confirmation affiche, aucune
+   * brochure remise, aucune ligne en base. Observe en production.
+   *
+   * Turnstile reste la vraie garde, comme le notait deja le commentaire
+   * d'origine. Perdre un acquereur coute infiniment plus cher que de stocker
+   * la ligne d'un robot qui aurait, de surcroit, du passer Turnstile. La
+   * valeur saisie est conservee dans la charge utile : elle reste consultable
+   * pour qui veut mesurer le bruit, sans rien jeter.
+   */
 
   if (!isSupabaseConfigured() || !isTurnstileConfigured()) {
     return { ok: false, reason: "unavailable", message: buyerFunnel.errors.unavailable };
