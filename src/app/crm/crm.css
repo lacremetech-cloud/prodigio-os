@@ -956,18 +956,23 @@
   color: var(--crm-text-faint);
 }
 
-/* Pastille de marque : pleine, pour tenir sur un fond clair comme sombre. */
+/*
+ * Marque Prodigio. Le visuel fourni est un carre NOIR a P blanc : parfait sur
+ * la barre laterale claire, invisible sur la sombre. On l'inverse donc en
+ * theme sombre — carre blanc, P noir — plutot que de poser un deuxieme
+ * fichier a tenir a jour. L'oeuvre reste la meme, seule sa polarite change.
+ */
 .crm-brand-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 2rem;
   height: 2rem;
   border-radius: 9px;
-  background: var(--crm-gold);
-  color: var(--crm-on-accent);
-  font-size: 13px;
-  font-weight: 700;
+  object-fit: contain;
+  flex: none;
+}
+/* Calque sur la declaration des tokens : le sombre est le defaut, et l'absence
+   d'attribut tombe donc du cote sombre. On inverse partout sauf en clair. */
+.crm-root:not([data-crm-theme="light"]) .crm-brand-badge {
+  filter: invert(1);
 }
 
 /* Bascule d'univers : deux segments dans une gouttiere. */
