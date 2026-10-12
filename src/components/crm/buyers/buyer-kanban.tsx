@@ -346,7 +346,7 @@ function Card({
   const targets = movableBuyerStages(currentStage);
   return (
     <div
-      className={`crm-panel-2 crm-kanban-card flex flex-col gap-2 p-3 ${
+      className={`crm-kanban-card flex flex-col gap-2 p-3 ${
         saving ? "crm-kanban-card--saving" : ""
       } ${grabbed ? "ring-1 ring-[var(--crm-gold)]" : ""}`}
       draggable={canMove && !saving && targets.length > 0}
@@ -400,7 +400,7 @@ function Card({
       </div>
 
       {grabbed ? (
-        <p className="rounded-[6px] bg-[var(--crm-panel)] px-2 py-1 text-[11px] text-[var(--crm-gold)]">
+        <p className="rounded-[6px] bg-[var(--crm-panel-2)] px-2 py-1 text-[11px] text-[var(--crm-gold)]">
           Cible : « {grabbedTarget} » — Entrée pour déposer, Échap pour annuler.
         </p>
       ) : null}
@@ -438,7 +438,7 @@ function Card({
       ) : null}
 
       {notice ? (
-        <div className="rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] p-2">
+        <div className="rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] p-2">
           <p className="crm-wrap text-[11px] text-[var(--crm-text-dim)]">{notice.text}</p>
           {notice.action ? (
             <Link

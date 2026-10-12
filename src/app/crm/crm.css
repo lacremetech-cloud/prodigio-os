@@ -995,8 +995,22 @@
   border-color: var(--crm-danger) !important;
   background: color-mix(in srgb, var(--crm-danger) 8%, var(--crm-panel));
 }
+/*
+ * La carte du pipeline est posee sur une colonne deja teintee de la couleur de
+ * l'etape. Peinte sur la surface douce, elle prenait cette teinte : le nom et
+ * le telephone se lisaient sur du gris-violet, alors que partout ailleurs une
+ * fiche est une carte BLANCHE.
+ *
+ * `--crm-elevated` est le token fait pour ça : blanc en theme clair, et plus
+ * CLAIR que la colonne en theme sombre, ou `--crm-panel` serait au contraire
+ * plus sombre que la zone et la carte disparaitrait.
+ */
 .crm-kanban-card {
   cursor: grab;
+  background: var(--crm-elevated);
+  border: 1px solid var(--crm-line);
+  border-radius: 12px;
+  box-shadow: var(--crm-shadow-sm);
 }
 .crm-kanban-card--dragging {
   opacity: 0.45;
