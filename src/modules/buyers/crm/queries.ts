@@ -3,14 +3,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { contactName } from "@/modules/crm/format";
 import { maskContactValue } from "@/modules/crm/auth/roles";
 import { getMembersMap, memberDisplayName, type MemberInfo } from "@/modules/crm/data/queries";
-import { parseMatchResult } from "./matching";
 import type { BuyerKanbanCard } from "./pipeline";
 import type {
   ActivityRow,
   AuditEventRow,
   BuyerAssignmentRow,
   BuyerInterestRow,
-  BuyerMatchResult,
   BuyerProfileRow,
   BuyerSearchCriteriaRow,
   ContactRow,
@@ -407,22 +405,6 @@ export async function getBuyerProfileDetail(
   };
 }
 
-/**
- * Suggestions de biens pour un dossier. Le calcul est fait EN BASE (versionné,
- * déterministe, explicable) : on ne fait que valider la forme du résultat.
- */
-export async function getBuyerMatches(
-  buyerProfileId: string,
-  limit = 10,
-): Promise<BuyerMatchResult> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("crm_buyer_property_matches", {
-    p_buyer_profile_id: buyerProfileId,
-    p_limit: limit,
-  });
-  if (error) return parseMatchResult(null);
-  return parseMatchResult(data);
-}
 
 /** Dossiers acquéreurs ayant manifesté un intérêt sur un bien donné (Fabrique). */
 export interface PropertyBuyerRow {

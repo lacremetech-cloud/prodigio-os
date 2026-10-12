@@ -9,19 +9,17 @@ import {
   canViewAudit,
   canViewContactDetails,
 } from "@/modules/crm/auth/roles";
-import { getBuyerMatches, getBuyerProfileDetail } from "@/modules/buyers/crm/queries";
+import { getBuyerProfileDetail } from "@/modules/buyers/crm/queries";
 import { memberDisplayName } from "@/modules/crm/data/queries";
 import {
   buyerAuditEventLabels,
   buyerCriteriaSourceLabels,
-  buyerMatchFactorLabels,
   buyerQualificationLabels,
   buyerRecommendedPriorityLabels,
   buyerRecommendedPriorityVisual,
   buyerStageVisual,
 } from "@/modules/buyers/crm/labels";
 import { formatBudgetRange, formatCents } from "@/modules/buyers/crm/criteria";
-import { explainMatch, matchConfidence, matchConfidenceLabels } from "@/modules/buyers/crm/matching";
 import {
   availabilityLabels,
   budgetBandLabels,
@@ -86,7 +84,6 @@ export default async function BuyerProfilePage({
   // Dossier inexistant OU non autorisé : dans les deux cas rien n'est révélé.
   if (!detail) notFound();
 
-  const matches = await getBuyerMatches(id, 8);
   const communications = await getMessagesForEntity("buyer_profile", id, {
     canViewDetails: canViewContacts,
   });
@@ -340,65 +337,6 @@ export default async function BuyerProfilePage({
                 ))}
               </ul>
             )}
-          </section>
-
-          {/* Matching */}
-          <section className="crm-panel p-4">
-            <SectionTitle
-              eyebrow={`Matching ${matches.version}`}
-              title="Biens suggérés"
-              action={<Chip variant="neutral">{buyerCriteriaSourceLabels[matches.criteria_source]}</Chip>}
-            />
-            {matches.items.length === 0 ? (
-              <p className="text-sm text-[var(--crm-text-dim)]">
-                Aucune suggestion : les critères de recherche ne permettent pas encore d’évaluer un
-                bien accessible. Complétez le budget, le type ou la localisation.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {matches.items.map((m) => (
-                  <li
-                    key={m.property_id}
-                    className="rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] p-3"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <Link
-                        href={`/crm/biens/${m.property_id}`}
-                        className="crm-wrap text-sm font-medium text-[var(--crm-text)] hover:text-[var(--crm-gold)]"
-                      >
-                        {m.name}
-                        {m.city ? (
-                          <span className="text-[var(--crm-text-faint)]"> · {m.city}</span>
-                        ) : null}
-                      </Link>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <span className="text-sm font-semibold tabular-nums text-[var(--crm-text)]">
-                          {m.score == null ? "—" : `${m.score}/100`}
-                        </span>
-                        <Chip variant="neutral">{matchConfidenceLabels[matchConfidence(m)]}</Chip>
-                      </div>
-                    </div>
-                    <p className="mt-1 crm-wrap text-[11px] text-[var(--crm-text-dim)]">
-                      {explainMatch(m)}
-                    </p>
-                    {m.missing.length > 0 ? (
-                      <p className="mt-0.5 text-[11px] text-[var(--crm-text-faint)]">
-                        Données manquantes :{" "}
-                        {m.missing.map((f) => buyerMatchFactorLabels[f]).join(", ")} — le score est
-                        calculé sur les seuls critères évaluables.
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
-              Matching déterministe et explicable, calculé côté serveur et versionné. Il utilise
-              uniquement des critères explicites (budget {matches.weights.budget} %, type{" "}
-              {matches.weights.type_de_bien} %, localisation {matches.weights.localisation} %,
-              disponibilité {matches.weights.disponibilite} %). C’est une recommandation : aucune
-              proposition n’est envoyée automatiquement.
-            </p>
           </section>
 
           {/* Activités & notes */}
