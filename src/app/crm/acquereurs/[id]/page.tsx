@@ -11,15 +11,8 @@ import {
 } from "@/modules/crm/auth/roles";
 import { getBuyerProfileDetail } from "@/modules/buyers/crm/queries";
 import { memberDisplayName } from "@/modules/crm/data/queries";
-import {
-  buyerAuditEventLabels,
-  buyerCriteriaSourceLabels,
-  buyerQualificationLabels,
-  buyerRecommendedPriorityLabels,
-  buyerRecommendedPriorityVisual,
-  buyerStageVisual,
-} from "@/modules/buyers/crm/labels";
-import { formatBudgetRange, formatCents } from "@/modules/buyers/crm/criteria";
+import { buyerAuditEventLabels, buyerStageVisual } from "@/modules/buyers/crm/labels";
+import { formatCents } from "@/modules/buyers/crm/criteria";
 import {
   availabilityLabels,
   budgetBandLabels,
@@ -33,25 +26,20 @@ import {
 import { activityOutcomeLabels, activityTypeLabels } from "@/modules/crm/labels";
 import { formatDateTime, timeSince } from "@/modules/crm/format";
 import { cssVarRef } from "@/modules/crm/status-visuals";
-import { Chip, ScoreMeter, SectionTitle } from "@/components/crm/ui";
+import { Chip, SectionTitle } from "@/components/crm/ui";
 import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { CopyableValue } from "@/components/crm/copyable";
+import { ContactRapide, numeroAppelable } from "@/components/crm/buyers/contact-rapide";
 import {
   BuyerActivityForm,
   BuyerAssignmentForm,
-  BuyerCriteriaForm,
   BuyerOfferForm,
   BuyerOutcomeForm,
-  BuyerQualificationForm,
   BuyerReopenForm,
   BuyerStageForm,
   BuyerTaskForm,
 } from "@/components/crm/buyers/buyer-actions";
-import type {
-  BuyerQualificationStatus,
-  BuyerRecommendedPriority,
-} from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Fiche acquéreur" };
 
@@ -87,13 +75,9 @@ export default async function BuyerProfilePage({
   const communications = await getMessagesForEntity("buyer_profile", id, {
     canViewDetails: canViewContacts,
   });
-  const { profile, criteria, interests, assignees, tasks, activities, auditEvents, members } =
-    detail;
+  const { profile, interests, assignees, tasks, activities, auditEvents, members } = detail;
 
   const stageV = buyerStageVisual(profile.pipeline_stage);
-  const prioV = profile.recommended_priority
-    ? buyerRecommendedPriorityVisual[profile.recommended_priority]
-    : null;
   const isClosed = profile.pipeline_stage === "gagne" || profile.pipeline_stage === "perdu";
 
   const interestProperties = [
@@ -106,6 +90,9 @@ export default async function BuyerProfilePage({
     userId,
     name: info.email ? info.email.split("@")[0] || info.email : `Membre ${userId.slice(0, 6)}`,
   }));
+
+  // Un numero masque n'est jamais composable : le composant le refuse.
+  const appelable = numeroAppelable(detail.phone);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
@@ -138,19 +125,6 @@ export default async function BuyerProfilePage({
               <span aria-hidden>{stageV.icon}</span>
               {stageV.label}
             </span>
-            {prioV && profile.recommended_priority ? (
-              <span
-                className="crm-chip crm-chip--accent"
-                style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(prioV.cssVar) } as CSSProperties}
-                title="Recommandation opérationnelle dérivée du scoring — distincte de la qualification humaine."
-              >
-                <span aria-hidden>{prioV.icon}</span>
-                {buyerRecommendedPriorityLabels[profile.recommended_priority as BuyerRecommendedPriority]}
-              </span>
-            ) : null}
-            <Chip variant={profile.qualification_status === "qualifie" ? "ok" : "neutral"}>
-              {buyerQualificationLabels[profile.qualification_status as BuyerQualificationStatus]}
-            </Chip>
           </div>
         </div>
       </header>
@@ -206,6 +180,7 @@ export default async function BuyerProfilePage({
                 {detail.contact ? `depuis le ${formatDateTime(detail.contact.created_at)}` : "—"}
               </Field>
             </dl>
+            {appelable ? <ContactRapide numero={appelable} className="mt-3" /> : null}
             <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
               Ce dossier réutilise la fiche contact existante de la personne. Si elle est aussi
               vendeuse, ses données issues du parcours vendeur restent intactes : elles ne sont
@@ -213,45 +188,9 @@ export default async function BuyerProfilePage({
             </p>
           </section>
 
-          {/* Critères de recherche */}
-          <section className="crm-panel p-4">
-            <SectionTitle
-              eyebrow="Recherche"
-              title="Critères de recherche"
-              action={
-                <Chip variant="neutral">
-                  {buyerCriteriaSourceLabels[criteria?.source ?? "absent"]}
-                </Chip>
-              }
-            />
-            <dl className="mb-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-              <Field label="Budget">
-                {formatBudgetRange(criteria?.budget_min_cents, criteria?.budget_max_cents)}
-              </Field>
-              <Field label="Types de biens">
-                {criteria?.property_types?.length ? criteria.property_types.join(", ") : "Non renseigné"}
-              </Field>
-              <Field label="Localisations">
-                {criteria?.locations?.length ? criteria.locations.join(", ") : "Non renseigné"}
-              </Field>
-              <Field label="Horizon d’achat">
-                {label(purchaseHorizonLabels, criteria?.purchase_horizon) ?? "Non renseigné"}
-              </Field>
-              <Field label="Financement">
-                {label(financingLabels, criteria?.financing) ?? "Non renseigné"}
-              </Field>
-              <Field label="Nature du projet">
-                {label(projectNatureLabels, criteria?.project_nature) ?? "Non renseigné"}
-              </Field>
-            </dl>
-            {canOperateBuyers ? (
-              <BuyerCriteriaForm buyerProfileId={profile.id} criteria={criteria} />
-            ) : null}
-          </section>
-
           {/* Intérêts par bien */}
           <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Manifestations" title="Intérêts par bien" />
+            <SectionTitle eyebrow="Demande" title="Ce que la personne a déclaré" />
             {interests.length === 0 ? (
               <p className="text-sm text-[var(--crm-text-dim)]">Aucun intérêt enregistré.</p>
             ) : (
@@ -304,20 +243,6 @@ export default async function BuyerProfilePage({
                       </Field>
                     </dl>
 
-                    {/* Scores et facteurs explicatifs (calculés en base) */}
-                    {i.overall_score != null ? (
-                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                        <ScoreMeter label="Global" score={i.overall_score} />
-                        <ScoreMeter label="Budget" score={i.budget_score} />
-                        <ScoreMeter label="Maturité" score={i.maturity_score} />
-                        <ScoreMeter label="Financement" score={i.financing_score} />
-                        <ScoreMeter label="Disponibilité" score={i.availability_score} />
-                      </div>
-                    ) : null}
-                    <p className="mt-1.5 text-[11px] text-[var(--crm-text-faint)]">
-                      Score automatique {i.score_version ?? "—"} — calculé côté serveur. C’est une
-                      aide à la priorisation, jamais une qualification ni une décision.
-                    </p>
 
                     {/* Attribution marketing de CETTE soumission */}
                     {[i.utm_source, i.utm_campaign, i.utm_term, i.utm_content].some(Boolean) ? (
@@ -410,22 +335,6 @@ export default async function BuyerProfilePage({
         {/* ------------------------------------------------- Colonne latérale */}
         <div className="flex flex-col gap-5">
           <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Décision" title="Qualification" />
-            {canOperateBuyers ? (
-              <BuyerQualificationForm
-                buyerProfileId={profile.id}
-                status={profile.qualification_status}
-                reason={profile.qualification_reason}
-              />
-            ) : (
-              <p className="text-sm text-[var(--crm-text-dim)]">
-                {buyerQualificationLabels[profile.qualification_status as BuyerQualificationStatus]}
-                {profile.qualification_reason ? ` — ${profile.qualification_reason}` : ""}
-              </p>
-            )}
-          </section>
-
-          <section className="crm-panel p-4">
             <SectionTitle eyebrow="Pipeline" title="Étape commerciale" />
             {canOperateBuyers ? (
               <BuyerStageForm buyerProfileId={profile.id} stage={profile.pipeline_stage} />
@@ -502,20 +411,6 @@ export default async function BuyerProfilePage({
             </p>
           </section>
 
-          {/* Points d'extension explicitement hors périmètre V1 */}
-          <section className="crm-panel p-4">
-            <SectionTitle eyebrow="À venir" title="Points d’extension" />
-            <ul className="flex flex-col gap-1 text-xs text-[var(--crm-text-dim)]">
-              <li>· Planification de visite (rattachée à l’Agenda existant)</li>
-              <li>· Suivi structuré des offres et contre-offres</li>
-              <li>· Envoi d’e-mails et de SMS depuis la fiche</li>
-              <li>· Proposition de biens suggérés à l’acquéreur</li>
-            </ul>
-            <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
-              Ces fonctions ne sont pas développées dans cette version : l’architecture les
-              prépare, sans anticiper leur comportement.
-            </p>
-          </section>
         </div>
       </div>
     </div>

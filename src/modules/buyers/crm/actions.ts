@@ -100,6 +100,14 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
     p_stage: parsed.data.stage,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+  if (parsed.data.stage === "en_discussion") {
+    /* Conversion « inscription terminee ». Elle etait accrochee a la
+       qualification, retiree de la fiche : un dossier etait qualifie deux fois,
+       une fois par son etape et une fois par un statut separe. L'equivalent
+       honnete est l'entree en discussion — quelqu'un a repondu, c'est une vraie
+       conversation, et c'est une decision humaine, jamais un score. */
+    enArrierePlan(() => conversionInscriptionTerminee(supabase, parsed.data.buyerProfileId));
+  }
   if (parsed.data.stage === "visite") {
     // Conversion « rendez-vous programme » : le fait metier, c'est l'entree en
     // visite. L'identifiant d'evenement porte la date, si bien qu'un aller-
@@ -159,11 +167,6 @@ export async function qualifyBuyerAction(input: unknown): Promise<ActionResult> 
     p_reason: d.reason ?? null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
-  if (d.status === "qualifie") {
-    // Conversion « inscription terminee » : une personne a valide que ce
-    // dossier en vaut la peine. C'est une decision humaine, jamais un score.
-    enArrierePlan(() => conversionInscriptionTerminee(supabase, d.buyerProfileId));
-  }
   revalidateBuyer(d.buyerProfileId);
   return { ok: true };
 }

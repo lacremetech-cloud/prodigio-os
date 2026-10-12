@@ -97,14 +97,18 @@
  */
 .crm-root[data-crm-theme="light"] {
   color-scheme: light;
-  /* Toile plus franche : a #f5f6f8, une carte blanche ne se detachait pas. */
-  --crm-bg: #eef1f5;
+  /* La toile et la surface douce ne se distinguaient quasiment pas (#eef1f5
+     contre #f1f3f7) : une tuile posee a meme la toile disparaissait dedans.
+     La toile descend d'un cran, la surface douce remonte. Elles ne servent
+     plus a la meme chose : la douce est un CREUX dans une carte blanche, la
+     toile est le fond sur lequel les cartes se posent. */
+  --crm-bg: #e8ecf2;
   --crm-panel: #ffffff;
-  --crm-panel-2: #f1f3f7;
+  --crm-panel-2: #f3f5f9;
   --crm-elevated: #ffffff;
   /* Traits visibles. A #e6e8ee, un champ blanc borde de blanc casse disparait
      sur une carte blanche — c'est la moitie du « ton sur ton ». */
-  --crm-line: #d7dce5;
+  --crm-line: #d2d8e2;
   --crm-line-soft: #e4e8ef;
   --crm-topbar: rgba(255, 255, 255, 0.92);
   /* Tous les tons de texte ci-dessous sont MESURES : chacun atteint au moins
@@ -114,10 +118,10 @@
      pourcentages et les textes d'invite des champs. */
   --crm-text: #0d121c;
   --crm-text-dim: #3f4a5c;
-  --crm-text-faint: #616c7e;
+  --crm-text-faint: #5a6473;
   --crm-shadow: 0 1px 2px rgba(13, 18, 28, 0.05), 0 12px 28px -16px rgba(13, 18, 28, 0.25);
   --crm-shadow-sm: 0 1px 2px rgba(13, 18, 28, 0.06);
-  --crm-hover: #eaedf3;
+  --crm-hover: #edf0f5;
   --crm-line-hover: #c3cad6;
   --crm-on-accent: #ffffff;
   --crm-accent-vers: #000000;

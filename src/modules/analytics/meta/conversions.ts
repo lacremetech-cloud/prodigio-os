@@ -5,7 +5,7 @@ import { envoyerConversionMeta, type MetaIdentity, type MetaSendOutcome } from "
  * Les trois conversions suivies par Prodigio, dans le vocabulaire Meta :
  *
  *   • prospect                → `Lead`
- *   • inscription terminée    → `CompleteRegistration`  (dossier qualifié)
+ *   • inscription terminée    → `CompleteRegistration`  (entrée en discussion)
  *   • rendez-vous programmé   → `Schedule`              (visite)
  *
  * Chacune est émise **à l'instant du fait métier**, pas à l'affichage d'une
@@ -86,7 +86,10 @@ export function conversionProspect(input: {
   });
 }
 
-/** `CompleteRegistration` — une personne a validé la qualification du dossier. */
+/**
+ * `CompleteRegistration` — le dossier entre en discussion : quelqu'un a répondu
+ * et la conversation est réelle. C'est une décision humaine, jamais un score.
+ */
 export async function conversionInscriptionTerminee(
   supabase: SupabaseClient,
   buyerProfileId: string,
@@ -95,8 +98,8 @@ export async function conversionInscriptionTerminee(
   if (!dossier) return { sent: false, reason: "sans_correspondance" };
   return envoyerConversionMeta({
     eventName: "CompleteRegistration",
-    // Un dossier ne se qualifie qu'une fois : l'identifiant du dossier suffit,
-    // et une requalification ne recompte pas la conversion.
+    // Un dossier n'entre en discussion qu'une fois : l'identifiant du dossier
+    // suffit, et y revenir plus tard ne recompte pas la conversion.
     eventId: `qualifie-${buyerProfileId}`,
     eventSourceUrl: dossier.sourceUrl,
     identity: dossier.identity,
