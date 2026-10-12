@@ -104,7 +104,7 @@ export default async function SettingsPage() {
               ouvrir Supabase.
             </p>
           </div>
-          <Link href="/crm/parametres/equipe" className="crm-btn crm-btn--gold shrink-0">
+          <Link href="/crm/parametres/equipe" className="crm-btn crm-btn--primaire shrink-0">
             Gérer l’équipe
           </Link>
         </section>
@@ -122,7 +122,7 @@ export default async function SettingsPage() {
               n’est codée en dur.
             </p>
           </div>
-          <Link href="/crm/parametres/regles-economiques" className="crm-btn crm-btn--gold shrink-0">
+          <Link href="/crm/parametres/regles-economiques" className="crm-btn crm-btn--primaire shrink-0">
             Configurer
           </Link>
         </section>

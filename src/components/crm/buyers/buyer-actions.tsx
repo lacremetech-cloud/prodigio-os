@@ -72,7 +72,7 @@ export function BuyerQualificationForm({
         </label>
         <button
           type="button"
-          className="crm-btn crm-btn--sm crm-btn--gold"
+          className="crm-btn crm-btn--sm crm-btn--primaire"
           disabled={pending}
           onClick={() =>
             run(() =>
@@ -438,7 +438,7 @@ export function BuyerOfferForm({ buyerProfileId, properties }: {
             Confirmer le passage du dossier en « Offre en cours » ? L’action est tracée dans le
             journal d’audit.
           </p>
-          <button type="button" className="crm-btn crm-btn--sm crm-btn--gold" disabled={pending} onClick={submit}>
+          <button type="button" className="crm-btn crm-btn--sm crm-btn--primaire" disabled={pending} onClick={submit}>
             Confirmer
           </button>
           <button
@@ -519,7 +519,7 @@ export function BuyerOutcomeForm({ buyerProfileId }: { buyerProfileId: string })
             Confirmer la clôture du dossier en « {outcome === "gagne" ? "gagné" : "perdu"} » ?
             L’action est tracée dans le journal d’audit.
           </p>
-          <button type="button" className="crm-btn crm-btn--sm crm-btn--gold" disabled={pending} onClick={submit}>
+          <button type="button" className="crm-btn crm-btn--sm crm-btn--primaire" disabled={pending} onClick={submit}>
             Confirmer
           </button>
           <button type="button" className="crm-btn crm-btn--sm crm-btn--ghost" onClick={() => setConfirming(false)}>

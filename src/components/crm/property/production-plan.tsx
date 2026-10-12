@@ -55,7 +55,7 @@ export function ProductionPlan({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="crm-btn crm-btn--gold crm-btn--sm"
+              className="crm-btn crm-btn--primaire crm-btn--sm"
               disabled={pending}
               onClick={() => run(() => seedProductionPlanAction({ propertyId }))}
             >

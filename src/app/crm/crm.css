@@ -30,6 +30,21 @@
   --crm-line: #2c2d34;
   --crm-line-soft: #212228;
   --crm-topbar: rgba(12, 12, 15, 0.82);
+  /* Elevation : dans le sombre, c'est la surface qui separe, pas l'ombre —
+     une ombre sur fond noir ne se voit pas. Les tokens existent quand meme,
+     pour que les composants n'aient jamais a savoir quel theme est actif. */
+  --crm-shadow: none;
+  --crm-shadow-sm: none;
+  --crm-hover: #23242b;
+  --crm-line-hover: #34353c;
+  /* Texte pose SUR l'accent (bouton plein). Sombre ici, l'or y etant clair ;
+     blanc en theme clair, ou il est fonce. Un bouton plein n'a jamais a
+     deviner la couleur de son propre libelle. */
+  --crm-on-accent: #1a1406;
+  /* Vers quoi un bouton plein se deplace au survol : plus clair sur fond
+     sombre, plus fonce sur fond clair. Dans les deux cas il s'appuie, au lieu
+     de s'eteindre. */
+  --crm-accent-vers: #ffffff;
   /* Textes (contraste AA sur les surfaces sombres) */
   --crm-text: #f5f4f2;
   --crm-text-dim: #c4c7ce;
@@ -66,41 +81,63 @@
   --crm-st-neutre: #8b8e97;             /* gris */
 }
 
+/*
+ * THEME CLAIR — refonte.
+ *
+ * L'ancien theme posait un beige (#f4f2ee) et des accents bruns : la teinte
+ * d'un papier, pas d'une interface, et tout y paraissait delave. Le principe
+ * ici est celui des interfaces modernes : une toile GRISE et FROIDE, des
+ * cartes BLANCHES qui s'en detachent par une ombre douce plutot que par un
+ * trait, et un texte presque noir. La hierarchie vient de l'elevation, pas de
+ * la multiplication des bordures.
+ *
+ * L'or reste l'accent de la marque cote Mandats. Cote Biens, l'azur devient un
+ * indigo franc : sur une toile froide, l'ancien bleu ardoise se confondait
+ * avec le gris.
+ */
 .crm-root[data-crm-theme="light"] {
   color-scheme: light;
-  --crm-bg: #f4f2ee;
+  --crm-bg: #f5f6f8;
   --crm-panel: #ffffff;
-  --crm-panel-2: #faf8f4;
+  --crm-panel-2: #f7f8fa;
   --crm-elevated: #ffffff;
-  --crm-line: #d8d4cb;
-  --crm-line-soft: #e7e3da;
-  --crm-topbar: rgba(255, 255, 255, 0.85);
-  --crm-text: #1d1c18;
-  --crm-text-dim: #55524b;
-  --crm-text-faint: #797569;
+  --crm-line: #e6e8ee;
+  --crm-line-soft: #eef0f4;
+  --crm-topbar: rgba(255, 255, 255, 0.88);
+  --crm-text: #131722;
+  --crm-text-dim: #596274;
+  --crm-text-faint: #88909f;
+  /* Ombres portees sur une base bleutee : une ombre grise pure grisaille le
+     blanc des cartes, une ombre legerement bleue le laisse propre. */
+  --crm-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 28px -16px rgba(17, 24, 39, 0.22);
+  --crm-shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
+  --crm-hover: #f2f4f7;
+  --crm-line-hover: #d9dde5;
+  --crm-on-accent: #ffffff;
+  --crm-accent-vers: #000000;
   --crm-gold: #8a6d34;
   --crm-gold-strong: #6f5626;
-  --crm-focus: #6f5626;
-  --crm-azur: #3d6a8c;
-  --crm-azur-strong: #2d5370;
+  --crm-focus: #4f5bd5;
+  --crm-azur: #4f5bd5;
+  --crm-azur-strong: #3b47bd;
   --crm-info: #2f6fd0;
-  --crm-success: #1f8a52;
-  --crm-warning: #9a6b16;
-  --crm-danger: #b23b3a;
+  --crm-success: #16a34a;
+  --crm-warning: #b45309;
+  --crm-danger: #dc2626;
   --crm-priority: #8a6d1f;
   --crm-st-nouveau: #2f6fd0;
-  --crm-st-a_contacter: #9a6b16;
-  --crm-st-contact: #0f8a90;
+  --crm-st-a_contacter: #b45309;
+  --crm-st-contact: #0e8a90;
   --crm-st-qualifie: #6d3fb0;
-  --crm-st-rdv_planifie: #4a52c4;
+  --crm-st-rdv_planifie: #4f5bd5;
   --crm-st-rdv_realise: #0d8f78;
   --crm-st-estimation: #0d8f78;
   --crm-st-eligibilite: #8a6d1f;
-  --crm-st-proposition: #c25a1e;
+  --crm-st-proposition: #c2410c;
   --crm-st-attente_signature: #7c47a6;
-  --crm-st-signe: #1f8a52;
-  --crm-st-perdu: #b23b3a;
-  --crm-st-neutre: #797569;
+  --crm-st-signe: #16a34a;
+  --crm-st-perdu: #dc2626;
+  --crm-st-neutre: #88909f;
 }
 
 /* ------------------------------------------------------------------ Layout */
@@ -131,7 +168,8 @@
 .crm-panel {
   background: var(--crm-panel);
   border: 1px solid var(--crm-line);
-  border-radius: 14px;
+  border-radius: 16px;
+  box-shadow: var(--crm-shadow-sm);
 }
 .crm-panel-2 {
   background: var(--crm-panel-2);
@@ -227,8 +265,10 @@
     transform 120ms ease;
 }
 .crm-btn:hover {
-  background: #23242b;
-  border-color: #34353c;
+  /* Etait code en dur sur deux gris sombres : en theme clair, survoler un
+     bouton le faisait virer au noir. */
+  background: var(--crm-hover);
+  border-color: var(--crm-line-hover);
 }
 .crm-btn:active {
   transform: translateY(1px);
@@ -237,14 +277,26 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
-.crm-btn--gold {
-  background: var(--crm-gold);
-  border-color: var(--crm-gold);
-  color: #1a1406;
+/*
+ * Bouton d'action principale. Deux corrections.
+ *
+ * Ses trois valeurs etaient codees en dur pour le theme sombre : en clair, l'or
+ * devient fonce et le libelle presque noir s'y perdait, tandis que le survol
+ * l'eclaircissait au lieu de l'appuyer.
+ *
+ * Il suit par ailleurs l'accent de l'UNIVERS et non plus l'or en toute
+ * circonstance. Cote Biens, un bouton brun au milieu d'une interface froide
+ * jurait ; et l'action principale est precisement l'endroit ou il est utile de
+ * voir, sans y penser, dans quel univers on travaille.
+ */
+.crm-btn--primaire {
+  background: var(--crm-univers);
+  border-color: var(--crm-univers);
+  color: var(--crm-on-accent);
 }
-.crm-btn--gold:hover {
-  background: #d8c39c;
-  border-color: #d8c39c;
+.crm-btn--primaire:hover {
+  background: color-mix(in srgb, var(--crm-univers) 84%, var(--crm-accent-vers));
+  border-color: color-mix(in srgb, var(--crm-univers) 84%, var(--crm-accent-vers));
 }
 .crm-btn--ghost {
   background: transparent;
@@ -333,7 +385,8 @@
 
 /* ---------------------------------------------------------------- Aging dot */
 .crm-aging--frais {
-  color: #9fe0b6;
+  /* Etait un vert menthe pale, illisible sur blanc. */
+  color: var(--crm-success);
 }
 .crm-aging--tiede {
   color: var(--crm-gold);
@@ -513,18 +566,33 @@
 }
 
 /* ------------------------------------------------------------ KPI (dashboard) */
+/*
+ * Le degrade et le filet lateral salissaient le blanc de la carte pour un
+ * signal tres faible. L'accent se porte mieux sur une pastille d'icone : il
+ * se lit d'un coup d'oeil et laisse la carte propre.
+ */
 .crm-kpi {
   position: relative;
   overflow: hidden;
-  border-inline-start: 3px solid var(--kpi-accent, var(--crm-line));
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--kpi-accent, var(--crm-line)) 9%, var(--crm-panel)),
-    var(--crm-panel) 62%
-  );
+  background: var(--crm-panel);
+}
+.crm-kpi__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--crm-text-faint);
 }
 .crm-kpi__icon {
-  color: var(--kpi-accent, var(--crm-gold));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 10px;
+  color: var(--kpi-accent, var(--crm-univers));
+  background: color-mix(in srgb, var(--kpi-accent, var(--crm-univers)) 13%, var(--crm-panel));
 }
 
 /* ------------------------------------------- Kanban : en-têtes de colonne teintés */
@@ -723,8 +791,8 @@
   box-shadow: inset 0 0 0 1px var(--crm-gold);
 }
 .crm-kanban-dropzone--blocked {
-  border-color: var(--color-danger-on-dark, #d98a8a) !important;
-  background: color-mix(in srgb, #d98a8a 8%, var(--crm-panel));
+  border-color: var(--crm-danger) !important;
+  background: color-mix(in srgb, var(--crm-danger) 8%, var(--crm-panel));
 }
 .crm-kanban-card {
   cursor: grab;
@@ -757,6 +825,75 @@
 .crm-root[data-crm-univers="biens"] {
   --crm-univers: var(--crm-azur);
   --crm-univers-strong: var(--crm-azur-strong);
+}
+
+/*
+ * Bandeau de notification. Les variantes etaient peintes en dur sur des verts
+ * et rouges tres sombres : en theme clair, un message de succes s'affichait en
+ * noir. Derivees de l'accent du role, elles suivent le theme sans y penser.
+ */
+.crm-toast {
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel);
+  color: var(--crm-text);
+  box-shadow: var(--shadow-lg);
+}
+.crm-toast--ok {
+  border-color: color-mix(in srgb, var(--crm-success) 45%, transparent);
+  background: color-mix(in srgb, var(--crm-success) 12%, var(--crm-panel));
+  color: color-mix(in srgb, var(--crm-success) 75%, var(--crm-text));
+}
+.crm-toast--danger {
+  border-color: color-mix(in srgb, var(--crm-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--crm-danger) 12%, var(--crm-panel));
+  color: color-mix(in srgb, var(--crm-danger) 75%, var(--crm-text));
+}
+
+/*
+ * Entree de menu. L'etat actif se posait sur `--crm-elevated`, qui vaut blanc
+ * en theme clair : la pastille disparaissait sur une barre laterale blanche.
+ * Il devient une pastille teintee de l'accent de l'univers — visible dans les
+ * deux themes, et le mot « actif » y est porte par la couleur ET la graisse.
+ */
+.crm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--crm-text-dim);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.crm-nav-item:hover {
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+}
+.crm-nav-item[aria-current="page"] {
+  background: color-mix(in srgb, var(--crm-univers) 12%, var(--crm-panel));
+  color: var(--crm-univers);
+  font-weight: 600;
+}
+.crm-nav-item__icon {
+  font-size: 15px;
+  color: var(--crm-text-faint);
+}
+.crm-nav-item[aria-current="page"] .crm-nav-item__icon {
+  color: inherit;
+}
+
+/* Pastille de marque : pleine, pour tenir sur un fond clair comme sombre. */
+.crm-brand-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background: var(--crm-gold);
+  color: var(--crm-on-accent);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* Bascule d'univers : deux segments dans une gouttiere. */

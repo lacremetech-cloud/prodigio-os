@@ -506,7 +506,7 @@ function EventDrawer({
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[var(--crm-line-soft)] pt-4">
-          <Link href={`/crm/mandats/${event.opportunityId}`} className="crm-btn crm-btn--gold crm-btn--sm">
+          <Link href={`/crm/mandats/${event.opportunityId}`} className="crm-btn crm-btn--primaire crm-btn--sm">
             Ouvrir le dossier
           </Link>
           {event.googleHtmlLink ? (
@@ -542,7 +542,7 @@ function EventDrawer({
             </label>
             <button
               type="button"
-              className="crm-btn crm-btn--gold crm-btn--sm"
+              className="crm-btn crm-btn--primaire crm-btn--sm"
               disabled={pending}
               onClick={() => {
                 const startDate = new Date(newStart);

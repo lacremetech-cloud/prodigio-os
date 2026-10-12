@@ -38,15 +38,15 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
       className="crm-panel crm-kpi flex flex-col gap-1 p-4 crm-fade-in"
       style={{ ["--kpi-accent" as keyof React.CSSProperties]: accent } as React.CSSProperties}
     >
-      <span className="flex items-center gap-2 text-xs text-[var(--crm-text-dim)]">
+      <span className="flex items-start justify-between gap-3">
+        <span className="crm-kpi__label crm-wrap">{kpi.label}</span>
         <span className="crm-kpi__icon text-sm" aria-hidden>{kpi.icon}</span>
-        <span className="crm-wrap">{kpi.label}</span>
       </span>
       {kpi.soon ? (
         <span className="mt-1 text-sm text-[var(--crm-text-faint)]">Bientôt disponible</span>
       ) : (
         <span
-          className="text-2xl font-semibold tabular-nums"
+          className="text-[1.75rem] font-semibold leading-tight tabular-nums"
           style={{ color: kpi.critical && Number(kpi.value) > 0 ? "var(--crm-danger)" : "var(--crm-text)" }}
         >
           {kpi.value}
@@ -63,7 +63,7 @@ function PriorityItem({ lead, canView, meta }: { lead: Lead; canView: boolean; m
   return (
     <Link
       href={`/crm/mandats/${lead.opportunityId}`}
-      className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[#34353c]"
+      className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[var(--crm-line-hover)]"
     >
       <div className="min-w-0">
         <p className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]" title={name}>{name}</p>

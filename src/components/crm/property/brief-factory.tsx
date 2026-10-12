@@ -277,7 +277,7 @@ export function BriefFactory({
           <div>
             <button
               type="button"
-              className="crm-btn crm-btn--gold"
+              className="crm-btn crm-btn--primaire"
               onClick={analyse}
               disabled={pending || brief.trim().length === 0}
             >
@@ -371,7 +371,7 @@ export function BriefFactory({
             </button>
             <button
               type="button"
-              className="crm-btn crm-btn--gold"
+              className="crm-btn crm-btn--primaire"
               onClick={() => setStep("preview")}
             >
               Prévisualiser la fiche
@@ -539,7 +539,7 @@ export function BriefFactory({
             </button>
             <button
               type="button"
-              className="crm-btn crm-btn--gold"
+              className="crm-btn crm-btn--primaire"
               onClick={confirmer}
               disabled={!canSubmit}
             >
@@ -564,7 +564,7 @@ export function BriefFactory({
               : "Le bien est créé en brouillon (préparation à lancer). Il n’est ni publié, ni diffusé."}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href={`/crm/biens/${created.propertyId}`} className="crm-btn crm-btn--gold">
+            <Link href={`/crm/biens/${created.propertyId}`} className="crm-btn crm-btn--primaire">
               Ouvrir le cockpit du bien
             </Link>
             <Link href="/crm/biens" className="crm-btn">

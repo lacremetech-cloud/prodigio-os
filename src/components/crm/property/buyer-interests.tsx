@@ -214,7 +214,7 @@ function InterestRow({
                 <button
                   key={s}
                   type="button"
-                  className={`crm-btn crm-btn--sm ${s === status ? "crm-btn--gold" : "crm-btn--ghost"}`}
+                  className={`crm-btn crm-btn--sm ${s === status ? "crm-btn--primaire" : "crm-btn--ghost"}`}
                   disabled={pending || s === status}
                   onClick={() =>
                     run(() => setBuyerInterestStatusAction({ propertyId, interestId: i.id, status: s }))
