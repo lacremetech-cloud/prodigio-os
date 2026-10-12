@@ -1,11 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canDecideMandate } from "@/modules/crm/auth/roles";
 import { evaluateBuyerMove } from "./pipeline";
+import {
+  conversionInscriptionTerminee,
+  conversionRendezVous,
+} from "@/modules/analytics/meta/conversions";
 
 /**
  * Actions serveur de MUTATION du CRM Acquéreurs. Elles délèguent aux fonctions
@@ -37,6 +42,28 @@ function humanize(code: string | undefined, message: string): string {
       return message || "Données invalides.";
     default:
       return message || "Une erreur est survenue. Réessayez.";
+  }
+}
+
+/**
+ * Lance un effet de bord APRES la reponse : une remontee de conversion ne doit
+ * jamais retarder l'action du commercial ni la faire echouer. Toute erreur est
+ * avalee ici — c'est de la mesure, pas du metier.
+ */
+function enArrierePlan(travail: () => Promise<unknown>): void {
+  const sur = async () => {
+    try {
+      await travail();
+    } catch (cause) {
+      console.warn("effet differe en echec", {
+        name: cause instanceof Error ? cause.name : "unknown",
+      });
+    }
+  };
+  try {
+    after(() => sur());
+  } catch {
+    void sur();
   }
 }
 
@@ -73,6 +100,12 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
     p_stage: parsed.data.stage,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+  if (parsed.data.stage === "visite") {
+    // Conversion « rendez-vous programme » : le fait metier, c'est l'entree en
+    // visite. L'identifiant d'evenement porte la date, si bien qu'un aller-
+    // retour de carte dans la meme journee ne compte pas deux fois.
+    enArrierePlan(() => conversionRendezVous(supabase, parsed.data.buyerProfileId));
+  }
   revalidateBuyer(parsed.data.buyerProfileId);
   return { ok: true };
 }
@@ -126,6 +159,11 @@ export async function qualifyBuyerAction(input: unknown): Promise<ActionResult> 
     p_reason: d.reason ?? null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+  if (d.status === "qualifie") {
+    // Conversion « inscription terminee » : une personne a valide que ce
+    // dossier en vaut la peine. C'est une decision humaine, jamais un score.
+    enArrierePlan(() => conversionInscriptionTerminee(supabase, d.buyerProfileId));
+  }
   revalidateBuyer(d.buyerProfileId);
   return { ok: true };
 }
