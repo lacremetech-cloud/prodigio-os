@@ -37,16 +37,6 @@ const BUDGET_FILTERS = [
   { value: "plus_3m", label: "> 3 M€" },
 ] as const;
 
-const SIGNAL_FILTERS = [
-  { value: "tous", label: "Tous" },
-  { value: "nouveau", label: "Nouveaux non traités" },
-  { value: "en_retard", label: "Rappel en retard" },
-  { value: "fort_potentiel", label: "Fort potentiel" },
-  { value: "sans_action", label: "Sans prochaine action" },
-  { value: "nouvel_interet", label: "Nouvel intérêt" },
-  { value: "non_affecte", label: "Non affectés" },
-] as const;
-
 /**
  * Un dossier correspond à une tranche de budget si sa fourchette de recherche
  * **recoupe** cette tranche (bornes absentes = non bornées). Un dossier dont le
@@ -86,7 +76,6 @@ export function BuyerInbox({
   members: { userId: string; name: string }[];
 }) {
   const [search, setSearch] = useState("");
-  const [signal, setSignal] = useState<(typeof SIGNAL_FILTERS)[number]["value"]>("tous");
   const [stage, setStage] = useState<string>("tous");
   const [budget, setBudget] = useState<string>("tous");
   const [owner, setOwner] = useState<string>("tous");
@@ -113,22 +102,7 @@ export function BuyerInbox({
       }
       if (property !== "tous" && r.lastPropertyId !== property) return false;
       if (bounds && !budgetOverlaps(r, bounds)) return false;
-      switch (signal) {
-        case "nouveau":
-          return r.stage === "nouveau";
-        case "en_retard":
-          return r.overdue;
-        case "fort_potentiel":
-          return r.highPotential;
-        case "sans_action":
-          return r.noNextAction;
-        case "nouvel_interet":
-          return r.newInterest;
-        case "non_affecte":
-          return r.unassigned;
-        default:
-          return true;
-      }
+      return true;
     });
 
     const sorted = [...filtered];
@@ -140,7 +114,7 @@ export function BuyerInbox({
       sorted.sort((a, b) => (b.lastInterestAt ?? "").localeCompare(a.lastInterestAt ?? ""));
     }
     return sorted;
-  }, [rows, search, signal, stage, budget, owner, property, sort]);
+  }, [rows, search, stage, budget, owner, property, sort]);
 
   const counters = useMemo(
     () => ({
@@ -191,20 +165,6 @@ export function BuyerInbox({
               <option value="activite">Dernière activité</option>
             </select>
           </label>
-        </div>
-
-        <div className="crm-tabs flex-wrap">
-          {SIGNAL_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              className={`crm-tab ${signal === f.value ? "crm-tab--active" : ""}`}
-              aria-pressed={signal === f.value}
-              onClick={() => setSignal(f.value)}
-            >
-              {f.label}
-            </button>
-          ))}
         </div>
 
         <div className="flex flex-wrap gap-2">
