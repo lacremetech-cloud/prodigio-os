@@ -6,10 +6,12 @@ import {
   canManageAppointments,
   canManageMembers,
   canOperate,
+  canTreatBuyers,
   canPlanEstimation,
   canViewAudit,
   canViewContactDetails,
   hasCrmAccess,
+  isCommercialOnly,
   isAssignableRole,
   maskContactValue,
   primaryRole,
@@ -101,5 +103,44 @@ describe("rôles CRM", () => {
     expect(roleHome(["agent_immobilier"])).toBe("/crm");
     expect(roleHome([])).toBe("/acces");
     expect(roleHome(["role_inconnu"])).toBe("/acces");
+  });
+});
+
+
+describe("isCommercialOnly", () => {
+  it("reconnaît le commercial qui n'est que commercial", () => {
+    expect(isCommercialOnly(["commercial"])).toBe(true);
+  });
+
+  it("ne réduit pas l'écran de quelqu'un qui est aussi opérateur", () => {
+    expect(isCommercialOnly(["commercial", "manager"])).toBe(false);
+    expect(isCommercialOnly(["commercial", "setter"])).toBe(false);
+    expect(isCommercialOnly(["commercial", "administrateur"])).toBe(false);
+  });
+
+  it("ni celui qui est aussi agent immobilier", () => {
+    expect(isCommercialOnly(["commercial", "agent_immobilier"])).toBe(false);
+  });
+
+  it("ne donne aucun droit à qui n'est pas commercial", () => {
+    expect(isCommercialOnly([])).toBe(false);
+    expect(isCommercialOnly(["partenaire_lecture"])).toBe(false);
+  });
+});
+
+describe("canTreatBuyers", () => {
+  it("laisse le commercial traiter ses dossiers", () => {
+    expect(canTreatBuyers(["commercial"])).toBe(true);
+  });
+
+  it("n'enlève rien aux opérateurs", () => {
+    for (const r of ["administrateur", "manager", "setter"]) {
+      expect(canTreatBuyers([r])).toBe(true);
+    }
+  });
+
+  it("reste fermé à qui n'a ni l'un ni l'autre", () => {
+    expect(canTreatBuyers(["partenaire_lecture"])).toBe(false);
+    expect(canTreatBuyers([])).toBe(false);
   });
 });

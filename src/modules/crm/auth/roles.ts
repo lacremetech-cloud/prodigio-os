@@ -90,6 +90,42 @@ export function canOperate(roles: readonly string[]): boolean {
   return hasAnyRole(roles, ["administrateur", "manager", "setter"]);
 }
 
+/**
+ * Peut traiter un dossier acquéreur : le qualifier d'une note, le déplacer dans
+ * le pipeline, caler une visite.
+ *
+ * Distinct de `canOperate`, qui décrit le setting vendeur. Le commercial ne
+ * l'est pas, et l'interface le verrouillait pourtant sur lui : la base
+ * l'autorisait, l'écran le refusait. Il voyait ses leads sans pouvoir les
+ * toucher — exactement ce pour quoi on lui a ouvert un compte.
+ *
+ * La base reste l'autorité : elle vérifie dossier par dossier. Ceci ne fait
+ * qu'arrêter d'afficher un refus là où il n'y en a pas.
+ */
+export function canTreatBuyers(roles: readonly string[]): boolean {
+  return canOperate(roles) || hasAnyRole(roles, ["commercial"]);
+}
+
+/**
+ * Commercial, et rien d'autre.
+ *
+ * Il vend un bien qu'il a souvent construit lui-même : le mandat est déjà
+ * réglé de son côté, la fabrique de biens et les communications ne le
+ * concernent pas. Lui montrer un menu « Mandats » qu'il ne peut pas ouvrir,
+ * c'est lui promettre une porte fermée.
+ *
+ * Volontairement exclusif : quelqu'un qui est AUSSI opérateur ou agent garde
+ * l'interface complète — cette fonction réduit l'écran, elle ne donne jamais
+ * un droit.
+ */
+export function isCommercialOnly(roles: readonly string[]): boolean {
+  return (
+    hasAnyRole(roles, ["commercial"]) &&
+    !canOperate(roles) &&
+    !hasAnyRole(roles, ["agent_immobilier"])
+  );
+}
+
 /** Peut voir les coordonnées sensibles (téléphone / e-mail). */
 export function canViewContactDetails(roles: readonly string[]): boolean {
   return hasAnyRole(roles, [

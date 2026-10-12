@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import {
   canDecideMandate,
-  canOperate,
+  canTreatBuyers,
   canViewAudit,
   canViewContactDetails,
 } from "@/modules/crm/auth/roles";
@@ -31,6 +31,7 @@ import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { CopyableValue } from "@/components/crm/copyable";
 import { ContactRapide, numeroAppelable } from "@/components/crm/buyers/contact-rapide";
+import { PlanifierVisite } from "@/components/crm/buyers/planifier-visite";
 import {
   BuyerActivityForm,
   BuyerAssignmentForm,
@@ -64,7 +65,7 @@ export default async function BuyerProfilePage({
   const { id } = await params;
   const session = await requireCrmSession(`/crm/acquereurs/${id}`);
   const canViewContacts = canViewContactDetails(session.roles);
-  const canOperateBuyers = canOperate(session.roles);
+  const canOperateBuyers = canTreatBuyers(session.roles);
   const canDecide = canDecideMandate(session.roles);
   const showAudit = canViewAudit(session.roles);
 
@@ -334,6 +335,17 @@ export default async function BuyerProfilePage({
 
         {/* ------------------------------------------------- Colonne latérale */}
         <div className="flex flex-col gap-5">
+          <section className="crm-panel p-4">
+            <SectionTitle eyebrow="Rendez-vous" title="Planifier la visite" />
+            {canOperateBuyers ? (
+              <PlanifierVisite buyerProfileId={profile.id} />
+            ) : (
+              <p className="text-sm text-[var(--crm-text-dim)]">
+                Vous n’avez pas les droits pour planifier une visite sur ce dossier.
+              </p>
+            )}
+          </section>
+
           <section className="crm-panel p-4">
             <SectionTitle eyebrow="Pipeline" title="Étape commerciale" />
             {canOperateBuyers ? (
