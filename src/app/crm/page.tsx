@@ -17,6 +17,7 @@ import { propertyLabel, valueBandLabel } from "@/modules/crm/labels";
 import { EmptyState, StageBadge } from "@/components/crm/ui";
 import { TableauCommercial } from "@/components/crm/buyers/tableau-commercial";
 import { loadBuyerList } from "@/modules/buyers/crm/queries";
+import { listVisites, repartirVisites } from "@/modules/buyers/crm/visites";
 import { canOperate, hasAnyRole } from "@/modules/crm/auth/roles";
 
 export const metadata: Metadata = { title: "Vue d’ensemble" };
@@ -128,7 +129,11 @@ export default async function OverviewPage() {
      les voit pas, et ses chiffres a lui sont ailleurs. Il arrive ici apres sa
      connexion, c'est donc ici que son ecran doit vivre. */
   if (hasAnyRole(session.roles, ["commercial"]) && !canOperate(session.roles)) {
-    const { items } = await loadBuyerList(canView);
+    const [{ items }, visites] = await Promise.all([
+      loadBuyerList(canView),
+      listVisites(canView),
+    ]);
+    const { aVenir } = repartirVisites(visites);
     return (
       <div className="flex flex-col gap-6">
         <header>
@@ -138,7 +143,7 @@ export default async function OverviewPage() {
             Les demandes arriv&eacute;es sur les biens qui vous sont confi&eacute;s.
           </p>
         </header>
-        <TableauCommercial items={items} />
+        <TableauCommercial items={items} visites={aVenir} />
       </div>
     );
   }

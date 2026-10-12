@@ -406,10 +406,13 @@ export async function planifierVisiteAction(input: unknown): Promise<ActionResul
   const supabase = await createSupabaseServerClient();
 
   const titre = d.note?.trim() ? `Visite — ${d.note.trim()}` : "Visite du bien";
+  // `visite`, pas `rappel` : le fait est nomme la ou il se produit. L'agenda
+  // des visites le lit directement, sans dependre de l'etape du pipeline (qui
+  // avance des que la visite est passee) ni de l'intitule saisi.
   const { error: erreurTache } = await supabase.rpc("crm_buyer_create_task", {
     p_buyer_profile_id: d.buyerProfileId,
     p_title: titre,
-    p_kind: "rappel",
+    p_kind: "visite",
     p_due_at: d.at,
     p_assignee_user_id: null,
   });

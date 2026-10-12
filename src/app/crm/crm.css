@@ -114,32 +114,31 @@
  */
 .crm-root[data-crm-theme="light"] {
   color-scheme: light;
-  /* La toile est BLANCHE. Un fond bleu-gris etale partout tirait l'interface
-     vers le papier teinte ; le blanc laisse la couleur exister la ou on l'a
-     mise — bandeaux, pastilles, chiffres. Les cartes ne se detachent plus par
-     un fond different mais par un trait net, comme chez Linear ou Stripe.
-     Les gris sont NEUTRES : plus aucune teinte bleue. */
-  --crm-bg: #ffffff;
+  /* Toile legerement teintee, cartes BLANCHES : c'est l'ecart entre les deux
+     qui cree la hierarchie. Tout blanc, les cartes n'existaient que par leur
+     trait ; tout teinte, elles disparaissaient. La barre laterale reste
+     blanche et se detache donc de la toile sans traitement supplementaire. */
+  --crm-bg: #f3f4f8;
   --crm-panel: #ffffff;
-  --crm-panel-2: #f6f7f8;
+  --crm-panel-2: #f7f8fb;
   --crm-elevated: #ffffff;
   /* Traits visibles. A #e6e8ee, un champ blanc borde de blanc casse disparait
      sur une carte blanche — c'est la moitie du « ton sur ton ». */
-  --crm-line: #e3e5e8;
-  --crm-line-soft: #eceef0;
+  --crm-line: #dce1ea;
+  --crm-line-soft: #e8ebf1;
   --crm-topbar: rgba(255, 255, 255, 0.92);
   /* Tous les tons de texte ci-dessous sont MESURES : chacun atteint au moins
      4.5:1 (WCAG AA) sur les trois surfaces — toile, carte et surface douce.
      L'ancien `--crm-text-faint` (#88909f) tombait a 2.97 sur la toile : il
      portait pourtant les sous-titres, les mentions « non designe », les
      pourcentages et les textes d'invite des champs. */
-  --crm-text: #0f1115;
-  --crm-text-dim: #4a4f57;
-  --crm-text-faint: #6b7076;
+  --crm-text: #172033;
+  --crm-text-dim: #596579;
+  --crm-text-faint: #646f85;
   --crm-shadow: 0 1px 2px rgba(13, 18, 28, 0.05), 0 12px 28px -16px rgba(13, 18, 28, 0.25);
   --crm-shadow-sm: 0 1px 2px rgba(13, 18, 28, 0.06);
-  --crm-hover: #f3f4f6;
-  --crm-line-hover: #cfd2d6;
+  --crm-hover: #eef0f5;
+  --crm-line-hover: #c4ccd9;
   --crm-on-accent: #ffffff;
   --crm-accent-vers: #000000;
   --crm-gold: #7a5f24;
@@ -730,6 +729,81 @@
 }
 
 
+/* ------------------------------------------------------ Lignes de dossier */
+/*
+ * La boite de reception etait une pile de grandes cartes : trois dossiers
+ * remplissaient l'ecran, et les valeurs qu'on compare — budget, responsable,
+ * prochaine action — se lisaient a des hauteurs differentes d'une carte a
+ * l'autre. Ce sont des COLONNES alignees : l'oeil descend une colonne au lieu
+ * de fouiller chaque carte.
+ *
+ * Sous `lg`, la grille se replie en pile : sur telephone, une ligne de tableau
+ * ne se lit pas. Les en-tetes de colonne reapparaissent alors devant chaque
+ * valeur, sans quoi on ne saurait plus ce qu'on lit.
+ */
+.crm-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.crm-ligne {
+  position: relative;
+  display: grid;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--crm-line);
+  border-radius: 12px;
+  background: var(--crm-panel);
+  box-shadow: var(--crm-shadow-sm);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.crm-ligne:hover {
+  border-color: var(--crm-line-hover);
+}
+.crm-ligne:focus-within {
+  border-color: var(--crm-univers);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-univers) 18%, transparent);
+}
+.crm-ligne__col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* En-tete de colonne : visible en pile (mobile), masque en grille (desktop)
+   ou la rangee d'en-tetes le dit une fois pour toutes. */
+.crm-ligne__ent {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--crm-text-faint);
+}
+.crm-liste__entetes {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .crm-ligne {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
+    align-items: center;
+    padding: 12px 16px;
+  }
+  .crm-ligne .crm-ligne__ent {
+    display: none;
+  }
+  .crm-liste__entetes {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
+    gap: 16px;
+    padding: 0 16px 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--crm-text-faint);
+  }
+}
+
 /* --------------------------------------------------- Lisibilité du contenu */
 /*
  * Politique de troncature du design system :
@@ -1073,4 +1147,75 @@
   color: var(--crm-univers);
   font-weight: 500;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--crm-univers) 38%, transparent);
+}
+
+
+/* ------------------------------------------------- Bandeau de resume (fiche) */
+/*
+ * Ce qu'on doit savoir avant de decrocher le telephone, sur une seule ligne :
+ * bien demande, budget declare, responsable, prochaine action. C'etait disperse
+ * sur trois sections et une colonne laterale — il fallait faire defiler la page
+ * pour savoir s'il y avait une action en attente.
+ *
+ * Les colonnes sont separees par un filet vertical plutot que par du vide : a
+ * quatre valeurs de longueurs inegales, le vide seul ne dit pas ou l'une finit
+ * et ou la suivante commence. Le filet est pose en `border-left` sur chaque
+ * colonne sauf la premiere, ce qui survit au retour a la ligne.
+ */
+.crm-resume {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--crm-line-soft);
+}
+@media (min-width: 640px) {
+  .crm-resume {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+  .crm-resume > *:nth-child(2n) {
+    padding-left: 20px;
+    border-left: 1px solid var(--crm-line-soft);
+  }
+}
+@media (min-width: 1024px) {
+  .crm-resume {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 0;
+  }
+  .crm-resume > * + * {
+    padding-left: 20px;
+    border-left: 1px solid var(--crm-line-soft);
+  }
+}
+
+/* ----------------------------------------------------- Compteur cliquable */
+/*
+ * Un compteur qui filtre doit se comporter comme un bouton : reagir au
+ * survol, se voir au clavier, et dire clairement quand il est enclenche.
+ * Sans etat visible, on ne sait plus pourquoi la liste est courte.
+ */
+.crm-compteur {
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.crm-compteur:hover:not(:disabled) {
+  border-color: var(--compteur, var(--crm-line-hover));
+}
+.crm-compteur:focus-visible {
+  outline: none;
+  border-color: var(--compteur, var(--crm-univers));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--compteur, var(--crm-univers)) 25%, transparent);
+}
+/* Enclenche : le fond prend la teinte du compteur, tres dilue. La couleur
+   n'est pas le seul signal — `aria-pressed` le dit aussi aux lecteurs
+   d'ecran, et le filet lateral s'epaissit. */
+.crm-compteur[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--compteur, var(--crm-univers)) 10%, var(--crm-panel));
+  border-color: color-mix(in srgb, var(--compteur, var(--crm-univers)) 45%, var(--crm-line));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--compteur, var(--crm-univers)) 25%, transparent);
+}
+.crm-compteur:disabled {
+  cursor: default;
 }

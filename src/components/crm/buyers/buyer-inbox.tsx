@@ -7,14 +7,19 @@ import { Chip, EmptyState } from "@/components/crm/ui";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { ContactRapide } from "./contact-rapide";
 import { numeroAppelable } from "@/modules/buyers/crm/telephone";
-import { formatDateTime, timeSince } from "@/modules/crm/format";
+import { formatDateTime } from "@/modules/crm/format";
 import {
   buyerStageLabels,
   buyerStageVisual,
   BUYER_PIPELINE_STAGES,
 } from "@/modules/buyers/crm/labels";
 import { budgetBandBounds } from "@/modules/buyers/crm/criteria";
+import {
+  BUDGET_CHOICE_LABELS,
+  type BuyerBudgetChoice,
+} from "@/modules/buyers/funnel/universal";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
+import { porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -71,11 +76,15 @@ export function BuyerInbox({
   rows,
   properties,
   members,
+  signalInitial = "tous",
 }: {
   rows: BuyerInboxRow[];
   properties: { id: string; label: string }[];
   members: { userId: string; name: string }[];
+  /** Signal pre-selectionne, lu dans l'URL par la page serveur. */
+  signalInitial?: Signal;
 }) {
+  const [signal, setSignal] = useState<Signal>(signalInitial);
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState<string>("tous");
   const [budget, setBudget] = useState<string>("tous");
@@ -103,6 +112,7 @@ export function BuyerInbox({
       }
       if (property !== "tous" && r.lastPropertyId !== property) return false;
       if (bounds && !budgetOverlaps(r, bounds)) return false;
+      if (!porteLeSignal(r, signal)) return false;
       return true;
     });
 
@@ -115,7 +125,7 @@ export function BuyerInbox({
       sorted.sort((a, b) => (b.lastInterestAt ?? "").localeCompare(a.lastInterestAt ?? ""));
     }
     return sorted;
-  }, [rows, search, stage, budget, owner, property, sort]);
+  }, [rows, search, stage, budget, owner, property, sort, signal]);
 
   const counters = useMemo(
     () => ({
@@ -131,14 +141,20 @@ export function BuyerInbox({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Compteurs réels */}
+      {/* Compteurs reels, et cliquables : le compteur EST le filtre. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Counter label="Dossiers" value={counters.total} />
-        <Counter label="Nouveaux" value={counters.nouveaux} accent="--crm-st-nouveau" />
-        <Counter label="En retard" value={counters.enRetard} accent="--crm-st-perdu" />
-        <Counter label="Fort potentiel" value={counters.fortPotentiel} accent="--crm-st-signe" />
-        <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter" />
-        <Counter label="Non affectés" value={counters.nonAffectes} accent="--crm-st-perdu" />
+        <Counter label="Dossiers" value={counters.total}
+                 signal="tous" actif={signal} onChoisir={setSignal} />
+        <Counter label="Nouveaux" value={counters.nouveaux} accent="--crm-st-nouveau"
+                 signal="nouveaux" actif={signal} onChoisir={setSignal} />
+        <Counter label="En retard" value={counters.enRetard} accent="--crm-st-perdu"
+                 signal="en_retard" actif={signal} onChoisir={setSignal} />
+        <Counter label="Fort potentiel" value={counters.fortPotentiel} accent="--crm-st-signe"
+                 signal="fort_potentiel" actif={signal} onChoisir={setSignal} />
+        <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter"
+                 signal="sans_action" actif={signal} onChoisir={setSignal} />
+        <Counter label="Non affectés" value={counters.nonAffectes} accent="--crm-st-perdu"
+                 signal="non_affectes" actif={signal} onChoisir={setSignal} />
       </div>
 
       {/* Recherche + filtres */}
@@ -196,6 +212,18 @@ export function BuyerInbox({
       <p className="text-xs text-[var(--crm-text-dim)]" role="status" aria-live="polite">
         {visible.length} dossier{visible.length > 1 ? "s" : ""} affiché
         {visible.length > 1 ? "s" : ""} sur {rows.length}.
+        {signal !== "tous" ? (
+          <>
+            {" "}
+            <button
+              type="button"
+              onClick={() => setSignal("tous")}
+              className="font-semibold text-[var(--crm-univers)] underline underline-offset-2"
+            >
+              Retirer le filtre
+            </button>
+          </>
+        ) : null}
       </p>
 
       {visible.length === 0 ? (
@@ -205,11 +233,24 @@ export function BuyerInbox({
           icon="◉"
         />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <>
+          {/* Dit une fois ce que chaque colonne contient, plutot que de le
+              repeter sur chaque ligne. Masque en pile, ou les en-tetes
+              reviennent devant chaque valeur. */}
+          <div className="crm-liste__entetes" aria-hidden>
+            <span>Acquéreur et bien</span>
+            <span>Budget déclaré</span>
+            <span>Responsable</span>
+            <span>Prochaine action</span>
+            <span>Étape</span>
+            <span>Contact</span>
+          </div>
+        <ul className="crm-liste">
           {visible.map((row) => (
             <BuyerRow key={row.buyerProfileId} row={row} />
           ))}
         </ul>
+        </>
       )}
     </div>
   );
@@ -221,28 +262,58 @@ export function BuyerInbox({
  * C'est une CARTE blanche, avec un filet de la couleur du compteur — on voit
  * la tuile, puis le chiffre, puis ce qu'il compte.
  *
- * Un compteur a zero n'est jamais mis en couleur : zero « en retard » est une
- * bonne nouvelle, pas une alerte.
+ * Elle est surtout CLIQUABLE : lire « 4 en retard » sans pouvoir ouvrir les
+ * quatre dossiers obligeait a aller rechercher soi-meme ce que le compteur
+ * venait d'annoncer. Un second clic revient a la liste complete.
+ *
+ * Un compteur a zero n'est jamais mis en couleur, ni cliquable : zero « en
+ * retard » est une bonne nouvelle, et un filtre qui ouvre le vide n'aide pas.
  */
-function Counter({ label, value, accent }: { label: string; value: number; accent?: string }) {
+function Counter({
+  label,
+  value,
+  accent,
+  signal,
+  actif,
+  onChoisir,
+}: {
+  label: string;
+  value: number;
+  accent?: string;
+  signal: Signal;
+  actif: Signal;
+  onChoisir: (s: Signal) => void;
+}) {
   const vif = Boolean(accent) && value > 0;
+  const estActif = actif === signal && signal !== "tous";
+  // « Dossiers » remet toujours la liste a plat ; les autres se decrochent.
+  const cliquable = signal === "tous" ? actif !== "tous" : value > 0;
+  const couleur = accent ? cssVarRef(accent) : "var(--crm-univers)";
+
   return (
-    <div
-      className="crm-panel flex flex-col gap-0.5 px-3.5 py-3"
+    <button
+      type="button"
+      disabled={!cliquable && !estActif}
+      aria-pressed={estActif}
+      onClick={() => onChoisir(estActif ? "tous" : signal)}
+      className="crm-panel crm-compteur flex flex-col gap-0.5 px-3.5 py-3 text-left"
       style={
-        accent
-          ? ({ borderInlineStartWidth: "3px", borderInlineStartColor: cssVarRef(accent) } as CSSProperties)
-          : undefined
+        {
+          ...(accent
+            ? { borderInlineStartWidth: "3px", borderInlineStartColor: couleur }
+            : {}),
+          ["--compteur" as keyof CSSProperties]: couleur,
+        } as CSSProperties
       }
     >
       <span
         className="text-[1.5rem] font-bold leading-tight tabular-nums text-[var(--crm-text)]"
-        style={vif ? ({ color: cssVarRef(accent as string) } as CSSProperties) : undefined}
+        style={vif ? ({ color: couleur } as CSSProperties) : undefined}
       >
         {value}
       </span>
       <span className="crm-kpi__label crm-wrap">{label}</span>
-    </div>
+    </button>
   );
 }
 
@@ -281,69 +352,117 @@ function Select({
  * « •••• masque » sinon. Les boutons d'appel n'ont donc de sens que sur une
  * valeur reellement lisible.
  */
+/** Valeur absente : on le DIT, plutot que de laisser une case vide. */
+function Manque({ children }: { children: React.ReactNode }) {
+  return <span className="text-[var(--crm-text-faint)]">{children}</span>;
+}
+
+/**
+ * Une ligne de dossier.
+ *
+ * C'etait une grande carte empilee : trois dossiers remplissaient l'ecran, et
+ * les informations qu'on compare — budget, responsable, prochaine action — se
+ * lisaient a des hauteurs differentes d'une carte a l'autre. Ce sont desormais
+ * des COLONNES alignees : l'oeil descend une colonne au lieu de fouiller
+ * chaque carte.
+ *
+ * Sous `lg`, la grille se replie en pile : sur telephone, une ligne de tableau
+ * ne se lit pas.
+ */
 function BuyerRow({ row }: { row: BuyerInboxRow }) {
   const stageV = buyerStageVisual(row.stage);
   const appelable = numeroAppelable(row.phoneMasked);
+  const budget = row.budgetChoice
+    ? BUDGET_CHOICE_LABELS[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
+    : null;
+
   return (
-    /* La carte entiere ouvre la fiche. Seul le nom etait un lien : on cliquait
-       sur la carte et rien ne se passait. Le lien s'etire en couche invisible
-       sur toute la carte, et les actions de contact repassent au-dessus. */
-    <li className="relative rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5 transition-colors hover:border-[var(--crm-line-hover)] focus-within:border-[var(--crm-univers)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <Link
-            href={`/crm/acquereurs/${row.buyerProfileId}`}
-            className="crm-wrap text-[16px] font-bold text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-univers)]"
-          >
-            {row.name}
-          </Link>
-          <p className="crm-ellipsis mt-1 text-xs text-[var(--crm-text-faint)]">
-            {row.lastPropertyLabel ?? "Aucun bien rattaché"}
-            {row.city ? ` · ${row.city}` : ""}
-            {row.interestCount > 1 ? ` · ${row.interestCount} intérêts` : ""}
-          </p>
-          <p className="crm-ellipsis mt-0.5 text-xs text-[var(--crm-text-faint)]">
-            {[row.phoneMasked, row.emailMasked].filter(Boolean).join(" · ") ||
-              "Coordonnées non renseignées"}
-          </p>
-          {appelable ? <ContactRapide numero={appelable} className="mt-2" /> : null}
+    <li className="crm-ligne">
+      {/* Identite + bien demande */}
+      <div className="min-w-0">
+        <Link
+          href={`/crm/acquereurs/${row.buyerProfileId}`}
+          className="crm-wrap text-[15px] font-bold text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-univers)]"
+        >
+          {row.name}
+        </Link>
+        <p className="crm-ellipsis mt-0.5 text-[12.5px] text-[var(--crm-text-dim)]">
+          {row.lastPropertyLabel ?? "Aucun bien rattaché"}
+          {row.city ? ` · ${row.city}` : ""}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          {row.stage === "nouveau" ? <Chip variant="gold">Non traité</Chip> : null}
+          {row.overdue ? <Chip variant="danger">En retard</Chip> : null}
+          {row.unassigned ? <Chip variant="neutral">Non affecté</Chip> : null}
         </div>
+      </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span
-            className="crm-chip crm-chip--accent"
-            style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(stageV.cssVar) } as CSSProperties}
-          >
-            <span aria-hidden>{stageV.icon}</span>
-            {stageV.label}
+      {/* Budget declare */}
+      <div className="crm-ligne__col min-w-0">
+        <span className="crm-ligne__ent">Budget</span>
+        {budget ? (
+          <span className="crm-wrap text-[13px] font-semibold text-[var(--crm-text)]">{budget}</span>
+        ) : (
+          <Manque>Non renseigné</Manque>
+        )}
+      </div>
+
+      {/* Responsable */}
+      <div className="crm-ligne__col min-w-0">
+        <span className="crm-ligne__ent">Responsable</span>
+        {row.assigneeNames.length > 0 ? (
+          <span className="crm-ellipsis text-[13px] text-[var(--crm-text)]">
+            {row.assigneeNames.join(", ")}
           </span>
-        </div>
+        ) : (
+          <Manque>Personne</Manque>
+        )}
       </div>
 
-      {/* Signaux opérationnels — icône + libellé, jamais la couleur seule. */}
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-        {row.stage === "nouveau" ? <Chip variant="gold">✦ Nouveau non traité</Chip> : null}
-        {row.newInterest ? <Chip variant="gold">✧ Nouvel intérêt</Chip> : null}
-        {row.overdue ? <Chip variant="danger">⚠ Rappel en retard</Chip> : null}
-        {row.noNextAction ? <Chip variant="danger">○ Sans prochaine action</Chip> : null}
-        {row.unassigned ? <Chip variant="danger">☰ Non affecté</Chip> : null}
-        {row.highPotential ? <Chip variant="ok">★ Fort potentiel</Chip> : null}
+      {/* Prochaine action */}
+      <div className="crm-ligne__col min-w-0">
+        <span className="crm-ligne__ent">Prochaine action</span>
+        {row.nextActionTitle ? (
+          <>
+            <span className="crm-ellipsis text-[13px] text-[var(--crm-text)]">
+              {row.nextActionTitle}
+            </span>
+            {row.nextActionAt ? (
+              <span
+                className={`text-[11.5px] ${
+                  row.overdue
+                    ? "font-semibold text-[var(--crm-danger)]"
+                    : "text-[var(--crm-text-faint)]"
+                }`}
+              >
+                {formatDateTime(row.nextActionAt)}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <Manque>Aucune</Manque>
+        )}
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--crm-text-faint)]">
-        <span>
-          {row.assigneeNames.length > 0
-            ? `Responsable : ${row.assigneeNames.join(", ")}`
-            : "Aucun responsable"}
+      {/* Etape */}
+      <div className="crm-ligne__col">
+        <span className="crm-ligne__ent">Étape</span>
+        <span
+          className="crm-chip crm-chip--accent w-fit"
+          style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(stageV.cssVar) } as CSSProperties}
+        >
+          <span aria-hidden>{stageV.icon}</span>
+          {stageV.label}
         </span>
-        <span>
-          {row.nextActionTitle
-            ? `Prochaine action : ${row.nextActionTitle}${
-                row.nextActionAt ? ` (${formatDateTime(row.nextActionAt)})` : ""
-              }`
-            : "Aucune prochaine action programmée"}
-        </span>
-        {row.lastInterestAt ? <span>Dernier intérêt {timeSince(row.lastInterestAt)}</span> : null}
+      </div>
+
+      {/* Contact */}
+      <div className="crm-ligne__col">
+        {appelable ? (
+          <ContactRapide numero={appelable} compact />
+        ) : (
+          <Manque>Pas de numéro</Manque>
+        )}
       </div>
     </li>
   );

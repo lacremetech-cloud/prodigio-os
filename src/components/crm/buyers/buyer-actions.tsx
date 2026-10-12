@@ -703,8 +703,12 @@ export function BuyerTaskForm({
         <p className="text-xs text-[var(--crm-text-dim)]">Aucune tâche. Programmez la prochaine action.</p>
       )}
 
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-1">
+      {/* Trois champs sur une rangee elastique : dans la colonne laterale, le
+          premier libelle se repliait sous le deuxieme, « PROCHAINE ACTION » et
+          « TYPE » finissant imprimes l'un sur l'autre. Une grille donne a
+          chacun une case a lui, et l'intitule garde toute la largeur. */}
+      <div className="flex flex-col gap-2">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="crm-label">Prochaine action</span>
           <input
             className="crm-input"
@@ -713,25 +717,27 @@ export function BuyerTaskForm({
             placeholder="Rappeler pour organiser la visite"
           />
         </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="crm-label">Type</span>
-          <select className="crm-select" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Type de tâche">
-            <option value="rappel">Rappel</option>
-            <option value="tache">Tâche</option>
-          </select>
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="crm-label">Échéance</span>
-          <input
-            className="crm-input"
-            type="datetime-local"
-            value={dueAt}
-            onChange={(e) => setDueAt(e.target.value)}
-          />
-        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="crm-label">Type</span>
+            <select className="crm-select" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Type de tâche">
+              <option value="rappel">Rappel</option>
+              <option value="tache">Tâche</option>
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="crm-label">Échéance</span>
+            <input
+              className="crm-input"
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+            />
+          </label>
+        </div>
         <button
           type="button"
-          className="crm-btn crm-btn--sm"
+          className="crm-btn crm-btn--sm w-fit"
           disabled={pending || !title.trim()}
           onClick={() =>
             run(() =>

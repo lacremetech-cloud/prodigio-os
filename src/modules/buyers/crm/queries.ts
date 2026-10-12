@@ -49,6 +49,8 @@ export interface BuyerListItem {
   /** Fourchette de budget recherchée (centimes). `null` = borne non renseignée. */
   budgetMinCents: number | null;
   budgetMaxCents: number | null;
+  /** Réponse au questionnaire du dernier intérêt (`budget_choice`). */
+  budgetChoice: string | null;
 }
 
 export interface BuyerListBundle {
@@ -177,6 +179,9 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       newInterest: profileInterests.some((i) => i.review_status === "nouveau"),
       budgetMinCents: criteriaByProfile.get(profile.id)?.budget_min_cents ?? null,
       budgetMaxCents: criteriaByProfile.get(profile.id)?.budget_max_cents ?? null,
+      // Le budget DÉCLARÉ vient du dernier intérêt, pas des critères : c'est la
+      // réponse de la personne, la seule qu'on ait pour un lead du funnel.
+      budgetChoice: last?.budget_choice ?? null,
     };
   });
 
@@ -226,6 +231,7 @@ export interface BuyerInboxRow {
   unassigned: boolean;
   budgetMinCents: number | null;
   budgetMaxCents: number | null;
+  budgetChoice: string | null;
 }
 
 export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
@@ -255,6 +261,7 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     unassigned: item.assignees.length === 0,
     budgetMinCents: item.budgetMinCents,
     budgetMaxCents: item.budgetMaxCents,
+    budgetChoice: item.budgetChoice,
   };
 }
 
@@ -297,6 +304,11 @@ export interface BuyerProfileDetail {
   interests: BuyerInterestWithProperty[];
   assignees: { userId: string; name: string; responsibility: string }[];
   tasks: TaskRow[];
+  /** Tâche ouverte dont l'échéance vient en premier — ce qu'il faut faire ensuite. */
+  nextTask: TaskRow | null;
+  /** Échéance de `nextTask` déjà dépassée. Calculé ici : l'heure courante
+      n'a rien à faire dans le rendu d'un composant. */
+  nextTaskOverdue: boolean;
   activities: ActivityRow[];
   auditEvents: AuditEventRow[];
   members: Map<string, MemberInfo>;
@@ -375,6 +387,13 @@ export async function getBuyerProfileDetail(
 
   const contact = (contactRow as ContactRow | null) ?? null;
 
+  const tasks = (taskRows ?? []) as TaskRow[];
+  // Une tâche sans échéance passe après celles qui en ont une.
+  const nextTask =
+    tasks
+      .filter((t) => t.status !== "fait" && t.status !== "annule")
+      .sort((a, b) => (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"))[0] ?? null;
+
   return {
     profile,
     contact,
@@ -395,7 +414,11 @@ export async function getBuyerProfileDetail(
       name: memberDisplayName(a.user_id, members),
       responsibility: a.responsibility,
     })),
-    tasks: (taskRows ?? []) as TaskRow[],
+    tasks,
+    nextTask,
+    nextTaskOverdue: Boolean(
+      nextTask?.due_at && new Date(nextTask.due_at).getTime() < Date.now(),
+    ),
     activities: (activityRows ?? []) as ActivityRow[],
     auditEvents: (auditRows ?? []) as AuditEventRow[],
     members,

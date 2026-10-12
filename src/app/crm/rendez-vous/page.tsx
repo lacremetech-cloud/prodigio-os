@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canManageAppointments, canViewContactDetails } from "@/modules/crm/auth/roles";
+import {
+  canManageAppointments,
+  canViewContactDetails,
+  isCommercialOnly,
+} from "@/modules/crm/auth/roles";
 import { listAppointments } from "@/modules/calendar/queries";
 import type { BoardAppointment } from "@/components/crm/calendar/appointments-board";
 import { RendezVousView } from "@/components/crm/calendar/rendez-vous-view";
@@ -16,6 +21,10 @@ export const metadata: Metadata = { title: "Agenda" };
  */
 export default async function AppointmentsPage() {
   const session = await requireCrmSession("/crm/rendez-vous");
+  // Cet agenda est celui des estimations vendeur, côté Mandats. Un commercial
+  // du bien n'en voit rien : il y trouvait une page vide dont le titre lui
+  // promettait un agenda qui n'est pas le sien. Le sien, ce sont les visites.
+  if (isCommercialOnly(session.roles)) redirect("/crm/visites");
   const canView = canViewContactDetails(session.roles);
   const canManage = canManageAppointments(session.roles);
   const rows = await listAppointments();

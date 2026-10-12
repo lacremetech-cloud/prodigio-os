@@ -45,6 +45,7 @@ const UNIVERS: Record<Univers, { label: string; accueil: string; items: NavItem[
     items: [
       { href: "/crm/biens", label: "Fabrique de biens", icon: "◆" },
       { href: "/crm/acquereurs", label: "Acquéreurs", icon: "◉" },
+      { href: "/crm/visites", label: "Visites", icon: "◷" },
     ],
   },
 };
@@ -74,7 +75,9 @@ const NAV_BAS: NavItem[] = [
 const NAV_COMMERCIAL: NavItem[] = [
   { href: "/crm", label: "Mon tableau de bord", icon: "◈", exact: true },
   { href: "/crm/acquereurs", label: "Mes leads", icon: "◉" },
-  { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
+  // Les VISITES, pas les estimations : « Agenda » envoyait vers l'agenda des
+  // rendez-vous d'estimation du CRM Mandats, dont il ne voit rien.
+  { href: "/crm/visites", label: "Visites", icon: "◷" },
   { href: "/crm/taches", label: "Tâches", icon: "✓" },
 ];
 
@@ -84,7 +87,11 @@ const NAV_COMMERCIAL: NavItem[] = [
  * ne perd rien.
  */
 export function universDeLaRoute(pathname: string): Univers {
-  if (pathname.startsWith("/crm/biens") || pathname.startsWith("/crm/acquereurs")) {
+  if (
+    pathname.startsWith("/crm/biens") ||
+    pathname.startsWith("/crm/acquereurs") ||
+    pathname.startsWith("/crm/visites")
+  ) {
     return "biens";
   }
   return "mandats";
@@ -347,7 +354,7 @@ export function CrmShell({
           </div>
         </header>
 
-        <main className="crm-scroll min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
+        <main className="crm-scroll min-w-0 flex-1 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
           {children}
         </main>
       </div>

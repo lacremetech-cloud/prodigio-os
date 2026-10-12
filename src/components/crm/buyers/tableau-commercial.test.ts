@@ -34,23 +34,18 @@ describe("compterPourCommercial", () => {
     expect(c.nouveauxAujourdhui).toBe(1);
   });
 
-  it("appelle au rappel aussi bien le retard que l’absence de prochaine action", () => {
+  it("sépare le retard de l’absence de prochaine action", () => {
+    // Un seul compteur additionnait les deux sous le libellé « À rappeler » :
+    // un dossier sans tâche n'a pourtant aucun rappel à honorer, et la tuile
+    // ouvrait une liste filtrée sur une moitié seulement du chiffre annoncé.
     const c = compterPourCommercial([
       dossier({ overdue: true }),
       dossier({ noNextAction: true }),
-      dossier({ overdue: true, noNextAction: true }), // compté une fois
+      dossier({ noNextAction: true }),
       dossier({}),
     ]);
-    expect(c.aRappeler).toBe(3);
-  });
-
-  it("compte les visites sur le stade du pipeline", () => {
-    const c = compterPourCommercial([
-      dossier({ stage: "visite" }),
-      dossier({ stage: "en_discussion" }),
-      dossier({ stage: "offre" }),
-    ]);
-    expect(c.visitesPlanifiees).toBe(1);
+    expect(c.enRetard).toBe(1);
+    expect(c.sansAction).toBe(2);
   });
 
   it("écarte les dossiers clos de tous les chiffres", () => {
@@ -67,8 +62,8 @@ describe("compterPourCommercial", () => {
     ]);
     expect(c).toEqual({
       nouveauxAujourdhui: 1,
-      aRappeler: 1,
-      visitesPlanifiees: 1,
+      enRetard: 1,
+      sansAction: 0,
       dossiers: 1,
     });
   });

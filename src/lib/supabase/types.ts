@@ -949,7 +949,9 @@ export type TaskRow = {
   author_user_id: string | null;
   assignee_user_id: string | null;
   title: string;
-  kind: "rappel" | "tache";
+  /** `visite` : visite d'un bien avec un acquéreur. Elle ne vit pas dans
+      `estimation_appointments`, qui ne porte que les estimations vendeur. */
+  kind: "rappel" | "tache" | "visite";
   status: "a_faire" | "fait" | "annule";
   due_at: string | null;
   completed_at: string | null;

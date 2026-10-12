@@ -98,33 +98,51 @@ export default async function BuyerProfilePage({
     name: info.email ? info.email.split("@")[0] || info.email : `Membre ${userId.slice(0, 6)}`,
   }));
 
+  /* Donnees du bandeau de tete. Toutes viennent de ce qui est deja charge :
+     rien n'est invente pour remplir la ligne. */
+  const premierInteret = interests[0];
+  const resumeBien = premierInteret?.propertyLabel ?? null;
+  const choixBudget = premierInteret?.interest.budget_choice ?? null;
+  const resumeBudget = choixBudget
+    ? BUDGET_CHOICE_LABELS[choixBudget as BuyerBudgetChoice] ?? choixBudget
+    : null;
+  // Prochaine action et retard : calcules par la requete (l'heure courante
+  // n'a rien a faire dans le rendu).
+  const prochaine = detail.nextTask;
+  const prochaineEnRetard = detail.nextTaskOverdue;
+
   // Un numero masque n'est jamais composable : le composant le refuse.
   const appelable = numeroAppelable(detail.phone);
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {/* ------------------------------------------------------------- En-tête */}
-      <header className="flex flex-col gap-3">
-        <Link href="/crm/acquereurs" className="text-xs text-[var(--crm-text-faint)] hover:text-[var(--crm-text)]">
-          ← Boîte de réception acquéreurs
+      {/*
+        Bandeau de tete : tout ce qu'on doit savoir avant de decrocher le
+        telephone — qui, a quelle etape, sur quel bien, avec quel budget, suivi
+        par qui, et quoi faire ensuite. C'etait disperse sur trois sections et
+        une colonne laterale ; il fallait faire defiler la page pour savoir s'il
+        y avait une action en attente.
+      */}
+      <header className="crm-panel flex flex-col gap-3 p-4">
+        <Link
+          href="/crm/acquereurs"
+          className="w-fit text-xs font-medium text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]"
+        >
+          ← Boîte de réception
         </Link>
+
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="crm-eyebrow">Dossier acquéreur</p>
-            <h1 className="crm-display mt-1 crm-wrap text-[27px] leading-tight text-[var(--crm-text)]">
+            <h1 className="crm-display crm-wrap text-[26px] leading-tight text-[var(--crm-text)]">
               {detail.name}
             </h1>
-            <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
+            <p className="mt-0.5 text-[12.5px] text-[var(--crm-text-dim)]">
               {profile.interest_count} intérêt{profile.interest_count > 1 ? "s" : ""}
-              {profile.first_interest_at
-                ? ` · premier intérêt ${timeSince(profile.first_interest_at)}`
-                : ""}
-              {profile.last_interest_at
-                ? ` · dernier ${timeSince(profile.last_interest_at)}`
-                : ""}
+              {profile.last_interest_at ? ` · dernier ${timeSince(profile.last_interest_at)}` : ""}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className="crm-chip crm-chip--accent"
               style={{ ["--chip-accent" as keyof CSSProperties]: cssVarRef(stageV.cssVar) } as CSSProperties}
@@ -134,6 +152,36 @@ export default async function BuyerProfilePage({
             </span>
           </div>
         </div>
+
+        <dl className="crm-resume">
+          <Resume label="Bien demandé">
+            {resumeBien ?? <Absent>Aucun bien rattaché</Absent>}
+          </Resume>
+          <Resume label="Budget déclaré">
+            {resumeBudget ? (
+              <span className="font-semibold">{resumeBudget}</span>
+            ) : (
+              <Absent>Non renseigné</Absent>
+            )}
+          </Resume>
+          <Resume label="Responsable">
+            {assignees.length > 0 ? (
+              assignees.map((a) => a.name).join(", ")
+            ) : (
+              <Absent>Personne</Absent>
+            )}
+          </Resume>
+          <Resume label="Prochaine action">
+            {prochaine ? (
+              <span className={prochaineEnRetard ? "font-semibold text-[var(--crm-danger)]" : ""}>
+                {prochaine.title}
+                {prochaine.due_at ? ` · ${formatDateTime(prochaine.due_at)}` : ""}
+              </span>
+            ) : (
+              <Absent>Aucune</Absent>
+            )}
+          </Resume>
+        </dl>
       </header>
 
       {profile.outcome ? (
@@ -153,7 +201,7 @@ export default async function BuyerProfilePage({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         {/* ------------------------------------------------ Colonne principale */}
         <div className="flex flex-col gap-5">
           {/* Identité & coordonnées */}
@@ -191,11 +239,6 @@ export default async function BuyerProfilePage({
               </Field>
             </dl>
             {appelable ? <ContactRapide numero={appelable} className="mt-3" /> : null}
-            <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
-              Ce dossier réutilise la fiche contact existante de la personne. Si elle est aussi
-              vendeuse, ses données issues du parcours vendeur restent intactes : elles ne sont
-              jamais écrasées par une manifestation d’intérêt acquéreur.
-            </p>
           </section>
 
           {/* Intérêts par bien */}
@@ -335,6 +378,17 @@ export default async function BuyerProfilePage({
         {/* ------------------------------------------------- Colonne latérale */}
         <div className="flex flex-col gap-5">
           <section className="crm-panel p-4">
+            <SectionTitle eyebrow="Suivi" title="Prochaine action et tâches" />
+            {canOperateBuyers ? (
+              <BuyerTaskForm buyerProfileId={profile.id} tasks={tasks} />
+            ) : (
+              <p className="text-sm text-[var(--crm-text-dim)]">
+                {tasks.length} tâche{tasks.length > 1 ? "s" : ""}.
+              </p>
+            )}
+          </section>
+
+          <section className="crm-panel p-4">
             <SectionTitle eyebrow="Rendez-vous" title="Planifier la visite" />
             {canOperateBuyers ? (
               <PlanifierVisite buyerProfileId={profile.id} />
@@ -342,15 +396,6 @@ export default async function BuyerProfilePage({
               <p className="text-sm text-[var(--crm-text-dim)]">
                 Vous n’avez pas les droits pour planifier une visite sur ce dossier.
               </p>
-            )}
-          </section>
-
-          <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Pipeline" title="Étape commerciale" />
-            {canOperateBuyers ? (
-              <BuyerStageForm buyerProfileId={profile.id} stage={profile.pipeline_stage} />
-            ) : (
-              <p className="text-sm text-[var(--crm-text-dim)]">{stageV.label}</p>
             )}
           </section>
 
@@ -365,13 +410,11 @@ export default async function BuyerProfilePage({
           </section>
 
           <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Suivi" title="Prochaine action et tâches" />
+            <SectionTitle eyebrow="Pipeline" title="Étape commerciale" />
             {canOperateBuyers ? (
-              <BuyerTaskForm buyerProfileId={profile.id} tasks={tasks} />
+              <BuyerStageForm buyerProfileId={profile.id} stage={profile.pipeline_stage} />
             ) : (
-              <p className="text-sm text-[var(--crm-text-dim)]">
-                {tasks.length} tâche{tasks.length > 1 ? "s" : ""}.
-              </p>
+              <p className="text-sm text-[var(--crm-text-dim)]">{stageV.label}</p>
             )}
           </section>
 
@@ -502,6 +545,21 @@ function ReponsesComplementaires({
       ))}
     </dl>
   );
+}
+
+/** Une case du bandeau de tete : une etiquette, une valeur, rien de plus. */
+function Resume({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="crm-ligne__ent">{label}</dt>
+      <dd className="crm-wrap text-[13.5px] text-[var(--crm-text)]">{children}</dd>
+    </div>
+  );
+}
+
+/** Donnee absente : on l'ecrit, on ne laisse pas une case vide. */
+function Absent({ children }: { children: React.ReactNode }) {
+  return <span className="text-[var(--crm-text-faint)]">{children}</span>;
 }
 
 function Field({
