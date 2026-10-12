@@ -54,16 +54,7 @@ const stageSchema = z.object({
   buyerProfileId: uuid,
   // Les étapes sensibles sont volontairement ABSENTES : elles passent par les
   // actions métier dédiées (offre / résultat), en base comme ici.
-  stage: z.enum([
-    "nouveau",
-    "a_contacter",
-    "contact_en_cours",
-    "qualifie",
-    "bien_a_proposer",
-    "visite_a_planifier",
-    "visite_planifiee",
-    "suivi_apres_visite",
-  ]),
+  stage: z.enum(["nouveau", "a_rappeler", "en_discussion", "visite", "vivier"]),
 });
 
 export async function setBuyerStageAction(input: unknown): Promise<ActionResult> {

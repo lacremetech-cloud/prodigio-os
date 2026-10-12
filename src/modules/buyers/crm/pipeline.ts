@@ -46,13 +46,13 @@ export interface BuyerKanbanCard {
  * d'étape). Déplacer une carte vers l'une d'elles est refusé.
  */
 export const PROTECTED_BUYER_STAGES: Record<string, "offre" | "resultat"> = {
-  offre_en_cours: "offre",
-  acquereur_gagne: "resultat",
+  offre: "offre",
+  gagne: "resultat",
   perdu: "resultat",
 };
 
 /** Étapes terminales : un dossier clos ne se rouvre pas par glisser-déposer. */
-export const CLOSED_BUYER_STAGES: readonly string[] = ["acquereur_gagne", "perdu"];
+export const CLOSED_BUYER_STAGES: readonly string[] = ["gagne", "perdu"];
 
 export interface BuyerMoveEvaluation {
   allowed: boolean;

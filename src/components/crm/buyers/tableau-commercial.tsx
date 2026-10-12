@@ -43,7 +43,7 @@ export function compterPourCommercial(items: BuyerListItem[]): ChiffresCommercia
   return {
     nouveauxAujourdhui: ouverts.filter((i) => memeJour(i.profile.last_interest_at)).length,
     aRappeler: ouverts.filter((i) => i.overdue || i.noNextAction).length,
-    visitesPlanifiees: ouverts.filter((i) => i.profile.pipeline_stage === "visite_planifiee").length,
+    visitesPlanifiees: ouverts.filter((i) => i.profile.pipeline_stage === "visite").length,
     dossiers: ouverts.length,
   };
 }
