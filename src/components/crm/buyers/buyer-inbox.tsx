@@ -318,19 +318,64 @@ function Select({
   );
 }
 
+/**
+ * `phoneMasked` porte le vrai numero quand le role a le droit de le voir, et
+ * « •••• masque » sinon. Les boutons d'appel n'ont donc de sens que sur une
+ * valeur reellement lisible.
+ */
+function numeroAppelable(masque: string | null): string | null {
+  if (!masque || masque.includes("masqu")) return null;
+  const compact = masque.replace(/[^\d+]/g, "");
+  return compact.length >= 6 ? compact : null;
+}
+
+/**
+ * Trois gestes, un doigt : appeler, envoyer un SMS, ouvrir WhatsApp. Sur un
+ * telephone, c'est tout ce qu'un commercial fait d'un lead qui vient d'arriver.
+ * WhatsApp veut le numero sans le plus ni les espaces.
+ */
+function ContactRapide({ numero }: { numero: string }) {
+  const wa = numero.replace(/\D/g, "");
+  const actions: { href: string; label: string; icone: string }[] = [
+    { href: `tel:${numero}`, label: "Appeler", icone: "✆" },
+    { href: `sms:${numero}`, label: "SMS", icone: "✉" },
+    { href: `https://wa.me/${wa}`, label: "WhatsApp", icone: "●" },
+  ];
+  return (
+    <div className="relative z-10 mt-2 flex flex-wrap gap-1.5">
+      {actions.map((a) => (
+        <a
+          key={a.label}
+          href={a.href}
+          {...(a.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          onClick={(e) => e.stopPropagation()}
+          className="crm-btn crm-btn--sm crm-btn--ghost min-h-[38px]"
+          aria-label={`${a.label} au ${numero}`}
+        >
+          <span aria-hidden>{a.icone}</span> {a.label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function BuyerRow({ row }: { row: BuyerInboxRow }) {
   const stageV = buyerStageVisual(row.stage);
+  const appelable = numeroAppelable(row.phoneMasked);
   const prioV = row.recommendedPriority
     ? buyerRecommendedPriorityVisual[row.recommendedPriority as BuyerRecommendedPriority]
     : null;
 
   return (
-    <li className="rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5 transition-colors hover:border-[var(--crm-line-strong)]">
+    /* La carte entiere ouvre la fiche. Seul le nom etait un lien : on cliquait
+       sur la carte et rien ne se passait. Le lien s'etire en couche invisible
+       sur toute la carte, et les actions de contact repassent au-dessus. */
+    <li className="relative rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5 transition-colors hover:border-[var(--crm-line-strong)] focus-within:border-[var(--crm-univers)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Link
             href={`/crm/acquereurs/${row.buyerProfileId}`}
-            className="crm-wrap text-sm font-medium text-[var(--crm-text)] hover:text-[var(--crm-gold)]"
+            className="crm-wrap text-sm font-medium text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-univers)]"
           >
             {row.name}
           </Link>
@@ -343,6 +388,7 @@ function BuyerRow({ row }: { row: BuyerInboxRow }) {
             {[row.phoneMasked, row.emailMasked].filter(Boolean).join(" · ") ||
               "Coordonnées non renseignées"}
           </p>
+          {appelable ? <ContactRapide numero={appelable} /> : null}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
