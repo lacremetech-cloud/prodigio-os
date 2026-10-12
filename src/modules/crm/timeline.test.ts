@@ -36,6 +36,7 @@ const task = (over: Partial<TaskRow>): TaskRow => ({
   updated_at: "2026-07-30T09:00:00.000Z",
   opportunity_id: "opp",
   buyer_profile_id: null,
+  interest_id: null,
   author_user_id: "u1",
   assignee_user_id: "u1",
   title: "Rappeler",

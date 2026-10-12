@@ -10,6 +10,8 @@ import {
 import { BUYER_KANBAN_COLUMNS, buyerStageLabels } from "./labels";
 
 const card = (over: Partial<BuyerKanbanCard> = {}): BuyerKanbanCard => ({
+  interestId: "int-1",
+  propertyId: "prop-1",
   buyerProfileId: "bp-1",
   stage: "nouveau",
   name: "Léa Bernard",

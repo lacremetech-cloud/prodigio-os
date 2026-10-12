@@ -23,10 +23,15 @@ import type { BuyerPipelineStage, BuyerRecommendedPriority } from "@/lib/supabas
  * le rôle : le client ne reçoit jamais une donnée non autorisée.
  */
 export interface BuyerKanbanCard {
+  /** Clé de la CARTE : une personne sur un projet. Sans elle, une personne
+      intéressée par deux projets n'aurait qu'une carte, et on ne saurait pas
+      de quel projet elle parle. */
+  interestId: string | null;
+  propertyId: string | null;
   buyerProfileId: string;
   stage: string;
   name: string;
-  /** Bien du dernier intérêt (contexte de la carte). */
+  /** Projet de CETTE carte. */
   propertyLabel: string | null;
   city: string | null;
   /** Score automatique du meilleur intérêt (≠ qualification humaine). */

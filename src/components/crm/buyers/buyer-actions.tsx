@@ -106,11 +106,19 @@ export function BuyerQualificationForm({
 }
 
 // -------------------------------------------------------------------- Étape
+/**
+ * Étape commerciale d'UNE manifestation.
+ *
+ * Elle portait sur la personne : déplacer quelqu'un vers « Visite » déplaçait
+ * tous ses projets d'un coup. Elle porte maintenant sur le projet concerné.
+ */
 export function BuyerStageForm({
   buyerProfileId,
+  interestId,
   stage,
 }: {
   buyerProfileId: string;
+  interestId: string;
   stage: string;
 }) {
   const { pending, error, done, run } = useAction();
@@ -136,7 +144,7 @@ export function BuyerStageForm({
             onChange={(e) => {
               const v = e.target.value;
               e.currentTarget.selectedIndex = 0;
-              if (v) run(() => setBuyerStageAction({ buyerProfileId, stage: v }));
+              if (v) run(() => setBuyerStageAction({ buyerProfileId, interestId, stage: v }));
             }}
             aria-label="Déplacer vers une étape"
           >
@@ -151,7 +159,8 @@ export function BuyerStageForm({
         <Saved show={done} />
       </div>
       <p className="text-[11px] text-[var(--crm-text-faint)]">
-        « Offre en cours », « Acquéreur gagné » et « Perdu » passent par leurs actions dédiées.
+        Ne déplace que ce projet. « Offre en cours », « Acquéreur gagné » et « Perdu » passent
+        par leurs actions dédiées.
       </p>
       <FieldError error={error} />
     </div>

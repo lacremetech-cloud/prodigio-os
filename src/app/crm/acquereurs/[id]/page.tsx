@@ -37,6 +37,7 @@ import { CopyableValue } from "@/components/crm/copyable";
 import { ContactRapide } from "@/components/crm/buyers/contact-rapide";
 import type { BuyerInterestRow } from "@/lib/supabase/types";
 import { numeroAppelable } from "@/modules/buyers/crm/telephone";
+import { ecrireNavigation, lireVue } from "@/modules/buyers/crm/navigation";
 import { PlanifierVisite } from "@/components/crm/buyers/planifier-visite";
 import {
   BuyerActivityForm,
@@ -65,10 +66,35 @@ function label(map: Record<string, string>, v: string | null | undefined): strin
  */
 export default async function BuyerProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  /*
+   * Le retour reconduit a l'ECRAN D'OU L'ON VIENT : le projet selectionne et la
+   * vue (liste ou pipeline) voyagent dans l'URL depuis la ligne cliquee. Sans
+   * cela, revenir d'une fiche renvoyait a la liste complete, et il fallait
+   * re-selectionner son projet a chaque dossier traite.
+   *
+   * Aucune validation des projets ici : ils ne servent qu'a reconstruire un
+   * lien, et la page de destination les revalide contre ce que l'utilisateur a
+   * reellement le droit de voir.
+   */
+  const nav = await searchParams;
+  const vueRetour = lireVue(nav.vue);
+  const projetsRetour = (() => {
+    const brut = Array.isArray(nav.projets) ? nav.projets.join(",") : nav.projets ?? "";
+    return brut.split(",").map((v) => v.trim()).filter(Boolean);
+  })();
+  const retour =
+    (vueRetour === "pipeline" ? "/crm/acquereurs/pipeline" : "/crm/acquereurs") +
+    ecrireNavigation({
+      projets: projetsRetour,
+      vue: vueRetour,
+      signal: typeof nav.signal === "string" ? nav.signal : undefined,
+    });
   const session = await requireCrmSession(`/crm/acquereurs/${id}`);
   const canViewContacts = canViewContactDetails(session.roles);
   const canOperateBuyers = canTreatBuyers(session.roles);
@@ -126,10 +152,10 @@ export default async function BuyerProfilePage({
       */}
       <header className="crm-panel flex flex-col gap-3 p-4">
         <Link
-          href="/crm/acquereurs"
+          href={retour}
           className="w-fit text-xs font-medium text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]"
         >
-          ← Boîte de réception
+          ← {vueRetour === "pipeline" ? "Pipeline" : "Boîte de réception"}
         </Link>
 
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -266,13 +292,35 @@ export default async function BuyerProfilePage({
                           {formatDateTime(i.created_at)}
                         </p>
                       </div>
-                      <Chip variant={i.review_status === "nouveau" ? "gold" : "neutral"}>
-                        {i.review_status === "nouveau"
-                          ? "Nouveau"
-                          : i.review_status === "consulte"
-                            ? "Consulté"
-                            : "Traité"}
-                      </Chip>
+                      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                        {(() => {
+                          // Un dossier clos (gagné / perdu) ferme toutes ses
+                          // manifestations : on ne gagne pas un acquéreur sur un
+                          // projet en le laissant « nouveau » sur un autre.
+                          const etape = profile.outcome ?? i.pipeline_stage;
+                          const v = buyerStageVisual(etape);
+                          return (
+                            <span
+                              className="crm-chip crm-chip--accent"
+                              style={
+                                {
+                                  ["--chip-accent" as keyof CSSProperties]: cssVarRef(v.cssVar),
+                                } as CSSProperties
+                              }
+                            >
+                              <span aria-hidden>{v.icon}</span>
+                              {v.label}
+                            </span>
+                          );
+                        })()}
+                        <Chip variant={i.review_status === "nouveau" ? "gold" : "neutral"}>
+                          {i.review_status === "nouveau"
+                            ? "Nouveau"
+                            : i.review_status === "consulte"
+                              ? "Consulté"
+                              : "Traité"}
+                        </Chip>
+                      </div>
                     </div>
 
                     {/* La reponse au questionnaire. Le budget est mis en avant :
@@ -285,6 +333,24 @@ export default async function BuyerProfilePage({
                         n'apprenaient rien : on ne montre que ce qui a ete
                         reellement repondu. */}
                     <ReponsesComplementaires interet={i} />
+
+                    {/* Caler la visite et deplacer l'etape se font PAR PROJET.
+                        Ces deux commandes vivaient dans la colonne laterale et
+                        agissaient sur « la personne » : caler une visite a
+                        Verdun deplaçait aussi son interet Jean Jaures. */}
+                    {canOperateBuyers && !isClosed ? (
+                      <div className="mt-3 flex flex-col gap-3 border-t border-[var(--crm-line-soft)] pt-3">
+                        <div>
+                          <p className="crm-label mb-1.5">Planifier la visite de ce projet</p>
+                          <PlanifierVisite buyerProfileId={profile.id} interestId={i.id} />
+                        </div>
+                        <BuyerStageForm
+                          buyerProfileId={profile.id}
+                          interestId={i.id}
+                          stage={i.pipeline_stage}
+                        />
+                      </div>
+                    ) : null}
 
 
                     {/* Attribution marketing de CETTE soumission */}
@@ -389,17 +455,6 @@ export default async function BuyerProfilePage({
           </section>
 
           <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Rendez-vous" title="Planifier la visite" />
-            {canOperateBuyers ? (
-              <PlanifierVisite buyerProfileId={profile.id} />
-            ) : (
-              <p className="text-sm text-[var(--crm-text-dim)]">
-                Vous n’avez pas les droits pour planifier une visite sur ce dossier.
-              </p>
-            )}
-          </section>
-
-          <section className="crm-panel p-4">
             <SectionTitle eyebrow="Équipe" title="Affectation" />
             <BuyerAssignmentForm
               buyerProfileId={profile.id}
@@ -409,14 +464,6 @@ export default async function BuyerProfilePage({
             />
           </section>
 
-          <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Pipeline" title="Étape commerciale" />
-            {canOperateBuyers ? (
-              <BuyerStageForm buyerProfileId={profile.id} stage={profile.pipeline_stage} />
-            ) : (
-              <p className="text-sm text-[var(--crm-text-dim)]">{stageV.label}</p>
-            )}
-          </section>
 
           {/* Actions métier dédiées (jamais un simple changement d'étape) */}
           {canOperateBuyers && !isClosed ? (

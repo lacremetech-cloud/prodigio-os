@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { Chip, EmptyState } from "@/components/crm/ui";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { ContactRapide } from "./contact-rapide";
+import { BadgeProjet } from "./barre-projets";
 import { numeroAppelable } from "@/modules/buyers/crm/telephone";
 import { formatDateTime } from "@/modules/crm/format";
 import {
@@ -74,22 +75,30 @@ function urgency(row: BuyerInboxRow): number {
 
 export function BuyerInbox({
   rows,
-  properties,
   members,
   signalInitial = "tous",
+  montrerProjet = true,
+  contexte = "",
 }: {
   rows: BuyerInboxRow[];
-  properties: { id: string; label: string }[];
   members: { userId: string; name: string }[];
   /** Signal pre-selectionne, lu dans l'URL par la page serveur. */
   signalInitial?: Signal;
+  /** Afficher le badge de projet sur chaque ligne. */
+  montrerProjet?: boolean;
+  /**
+   * Selection courante, recopiee dans chaque lien de fiche : c'est ainsi que
+   * le retour depuis une fiche retrouve le projet et la vue. Un etat garde en
+   * memoire aurait ete efface par l'aller-retour.
+   */
+  contexte?: string;
 }) {
   const [signal, setSignal] = useState<Signal>(signalInitial);
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState<string>("tous");
   const [budget, setBudget] = useState<string>("tous");
   const [owner, setOwner] = useState<string>("tous");
-  const [property, setProperty] = useState<string>("tous");
+
   const [sort, setSort] = useState<SortKey>("urgence");
 
   const visible = useMemo(() => {
@@ -110,7 +119,6 @@ export function BuyerInbox({
       if (owner !== "tous") {
         if (owner === "aucun" ? !r.unassigned : !r.assigneeIds.includes(owner)) return false;
       }
-      if (property !== "tous" && r.lastPropertyId !== property) return false;
       if (bounds && !budgetOverlaps(r, bounds)) return false;
       if (!porteLeSignal(r, signal)) return false;
       return true;
@@ -125,7 +133,7 @@ export function BuyerInbox({
       sorted.sort((a, b) => (b.lastInterestAt ?? "").localeCompare(a.lastInterestAt ?? ""));
     }
     return sorted;
-  }, [rows, search, stage, budget, owner, property, sort, signal]);
+  }, [rows, search, stage, budget, owner, sort, signal]);
 
   const counters = useMemo(
     () => ({
@@ -185,13 +193,6 @@ export function BuyerInbox({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* Le bien d'abord : c'est la premiere question qu'on se pose en
-              arrivant ici, et le seul filtre qui delimite un perimetre de
-              travail plutot qu'il ne trie. Un commercial n'en change jamais. */}
-          <Select label="Bien" value={property} onChange={setProperty} options={[
-            { value: "tous", label: "Tous les biens" },
-            ...properties.map((p) => ({ value: p.id, label: p.label })),
-          ]} />
           <Select label="Étape" value={stage} onChange={setStage} options={[
             { value: "tous", label: "Toutes les étapes" },
             ...BUYER_PIPELINE_STAGES.map((s) => ({
@@ -247,7 +248,12 @@ export function BuyerInbox({
           </div>
         <ul className="crm-liste">
           {visible.map((row) => (
-            <BuyerRow key={row.buyerProfileId} row={row} />
+            <BuyerRow
+              key={row.interestId ?? row.buyerProfileId}
+              row={row}
+              montrerProjet={montrerProjet}
+              contexte={contexte}
+            />
           ))}
         </ul>
         </>
@@ -369,7 +375,15 @@ function Manque({ children }: { children: React.ReactNode }) {
  * Sous `lg`, la grille se replie en pile : sur telephone, une ligne de tableau
  * ne se lit pas.
  */
-function BuyerRow({ row }: { row: BuyerInboxRow }) {
+function BuyerRow({
+  row,
+  montrerProjet,
+  contexte,
+}: {
+  row: BuyerInboxRow;
+  montrerProjet: boolean;
+  contexte: string;
+}) {
   const stageV = buyerStageVisual(row.stage);
   const appelable = numeroAppelable(row.phoneMasked);
   const budget = row.budgetChoice
@@ -381,15 +395,27 @@ function BuyerRow({ row }: { row: BuyerInboxRow }) {
       {/* Identite + bien demande */}
       <div className="min-w-0">
         <Link
-          href={`/crm/acquereurs/${row.buyerProfileId}`}
+          href={`/crm/acquereurs/${row.buyerProfileId}${contexte}`}
           className="crm-wrap text-[15px] font-bold text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-univers)]"
         >
           {row.name}
         </Link>
-        <p className="crm-ellipsis mt-0.5 text-[12.5px] text-[var(--crm-text-dim)]">
-          {row.lastPropertyLabel ?? "Aucun bien rattaché"}
-          {row.city ? ` · ${row.city}` : ""}
-        </p>
+        {/* Le projet, en badge lisible, quand plusieurs sont a l'ecran : sans
+            lui, deux lignes de la meme personne sur deux projets seraient
+            indiscernables. Le nom est ECRIT — la couleur ne fait qu'aider. */}
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {montrerProjet ? (
+            <BadgeProjet propertyId={row.lastPropertyId} label={row.lastPropertyLabel} />
+          ) : null}
+          {!montrerProjet && row.city ? (
+            <span className="text-[12.5px] text-[var(--crm-text-dim)]">{row.city}</span>
+          ) : null}
+          {!row.lastPropertyLabel ? (
+            <span className="text-[12.5px] text-[var(--crm-text-faint)]">
+              Aucun projet rattaché
+            </span>
+          ) : null}
+        </div>
         <div className="mt-1 flex flex-wrap items-center gap-1">
           {row.stage === "nouveau" ? <Chip variant="gold">Non traité</Chip> : null}
           {row.overdue ? <Chip variant="danger">En retard</Chip> : null}

@@ -26,6 +26,7 @@ vi.mock("next/link", () => ({
 afterEach(() => cleanup());
 
 const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
+  interestId: "int-1",
   buyerProfileId: "bp-1",
   name: "Maya Labeille",
   emailMasked: "maya@example.test",
@@ -54,8 +55,6 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   budgetMaxCents: null,
   ...over,
 });
-
-const biens = [{ id: "prop-1", label: "Villa Jean Jaurès" }];
 const membres = [{ userId: "u-1", name: "Jean-Charles C." }];
 
 describe("BuyerInbox", () => {
@@ -66,7 +65,7 @@ describe("BuyerInbox", () => {
       dossier({ buyerProfileId: "bp-3", name: "Camille Durand", stage: "visite" }),
     ];
     const { getByText, getByRole } = render(
-      <BuyerInbox rows={rows} properties={biens} members={membres} />,
+      <BuyerInbox rows={rows} members={membres} />,
     );
     expect(getByText("Maya Labeille")).toBeTruthy();
     expect(getByText("BANAT CLUB")).toBeTruthy();
@@ -76,7 +75,7 @@ describe("BuyerInbox", () => {
 
   it("une liste vide affiche l'état vide, pas une page blanche", () => {
     const { getByText } = render(
-      <BuyerInbox rows={[]} properties={biens} members={membres} />,
+      <BuyerInbox rows={[]} members={membres} />,
     );
     expect(getByText("Aucun dossier acquéreur ne correspond.")).toBeTruthy();
   });
@@ -85,7 +84,6 @@ describe("BuyerInbox", () => {
     const { queryByText } = render(
       <BuyerInbox
         rows={[dossier({ bestScore: 45, qualificationStatus: "non_qualifie" })]}
-        properties={biens}
         members={membres}
       />,
     );

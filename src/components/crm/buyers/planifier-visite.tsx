@@ -15,7 +15,14 @@ import { safeAction } from "@/modules/crm/safe-action";
  * Le champ est un `datetime-local` : sur un téléphone, il ouvre le sélecteur
  * natif, qui est ce qu'un commercial manipule le plus vite.
  */
-export function PlanifierVisite({ buyerProfileId }: { buyerProfileId: string }) {
+export function PlanifierVisite({
+  buyerProfileId,
+  interestId,
+}: {
+  buyerProfileId: string;
+  /** Projet visité : une visite appartient à UN projet, et ne déplace que lui. */
+  interestId: string;
+}) {
   const [quand, setQuand] = useState("");
   const [note, setNote] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -35,7 +42,12 @@ export function PlanifierVisite({ buyerProfileId }: { buyerProfileId: string }) 
         // explicitement, sinon une visite de 14 h partirait en base à 14 h UTC.
         const iso = new Date(quand).toISOString();
         const res = await safeAction(() =>
-          planifierVisiteAction({ buyerProfileId, at: iso, note: note.trim() || null }),
+          planifierVisiteAction({
+            buyerProfileId,
+            interestId,
+            at: iso,
+            note: note.trim() || null,
+          }),
         );
         setEnCours(false);
         if (res.ok) {

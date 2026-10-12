@@ -28,17 +28,36 @@ import type {
  * navigateur ne reçoit jamais une valeur qu'il n'a pas le droit de voir.
  */
 
-/** Agrégat d'un dossier acquéreur pour les listes (boîte de réception, Kanban). */
+/**
+ * Une ligne de travail du CRM Acquéreurs : UNE personne SUR UN PROJET.
+ *
+ * C'était auparavant un dossier par personne, toutes manifestations
+ * confondues. Quelqu'un qui s'intéresse à Villa Verdun ET à Villa Jean Jaurès
+ * n'apparaissait qu'une fois, avec une seule étape commerciale : caler une
+ * visite à Verdun déplaçait aussi son intérêt Jean Jaurès, et le pipeline
+ * global ne pouvait pas dire de quel projet une carte parlait.
+ *
+ * La fiche CONTACT reste unique — c'est la même personne, ses coordonnées ne
+ * sont pas dupliquées. Seul le SUIVI commercial se dédouble.
+ */
 export interface BuyerListItem {
   profile: BuyerProfileRow;
+  /** Manifestation d'intérêt que cette ligne représente. */
+  interestId: string | null;
+  propertyId: string | null;
+  propertyLabel: string | null;
+  /**
+   * Étape de CETTE manifestation. Un dossier clos au niveau de la personne
+   * (gagné / perdu) ferme toutes ses manifestations : on ne gagne pas un
+   * acquéreur sur un projet en le laissant « nouveau » sur un autre. La règle
+   * est appliquée ici, en un seul endroit.
+   */
+  stage: string;
   contact: ContactRow | null;
   name: string;
   emailMasked: string | null;
   phoneMasked: string | null;
   city: string | null;
-  /** Bien du dernier intérêt (contexte). */
-  lastPropertyId: string | null;
-  lastPropertyLabel: string | null;
   interestPropertyIds: string[];
   assignees: { userId: string; name: string; responsibility: string }[];
   nextTask: TaskRow | null;
@@ -53,9 +72,24 @@ export interface BuyerListItem {
   budgetChoice: string | null;
 }
 
+/** Un projet du sélecteur de navigation. */
+export interface ProjetAccessible {
+  id: string;
+  label: string;
+  city: string | null;
+}
+
 export interface BuyerListBundle {
   items: BuyerListItem[];
   members: Map<string, MemberInfo>;
+  /**
+   * Les projets auxquels l'utilisateur a accès, lus sous RLS — jamais une liste
+   * écrite dans le code. Un projet qui lui est confié apparaît donc dès qu'il
+   * existe, MÊME SANS AUCUN DOSSIER : c'est à ça que sert une barre de
+   * navigation. La dériver des dossiers l'aurait rendue invisible le jour de son
+   * lancement, exactement quand on la regarde.
+   */
+  projets: ProjetAccessible[];
   /**
    * Instant de chargement (ISO). Les composants qui raisonnent sur « ce qui est
    * en retard » ou « les trente derniers jours » le lisent ici plutôt que
@@ -143,24 +177,46 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
     assignmentsByProfile.set(a.buyer_profile_id, list);
   }
 
-  // Première tâche ouverte (déjà triée par échéance croissante).
-  const nextTaskByProfile = new Map<string, TaskRow>();
+  /*
+   * Première tâche ouverte (déjà triée par échéance croissante).
+   *
+   * Une tâche rattachée à une manifestation (une visite, par exemple) ne vaut
+   * QUE pour ce projet : sans cette distinction, caler une visite à Verdun
+   * aurait donné « prochaine action : visite » à la ligne Jean Jaurès de la
+   * même personne. Une tâche sans manifestation est un suivi général : elle
+   * vaut pour toutes ses lignes.
+   */
+  const tachesParManifestation = new Map<string, TaskRow>();
+  const tachesGenerales = new Map<string, TaskRow>();
   for (const raw of openTasks ?? []) {
     const t = raw as TaskRow;
     if (!t.buyer_profile_id) continue;
-    if (!nextTaskByProfile.has(t.buyer_profile_id)) {
-      nextTaskByProfile.set(t.buyer_profile_id, t);
+    if (t.interest_id) {
+      if (!tachesParManifestation.has(t.interest_id)) {
+        tachesParManifestation.set(t.interest_id, t);
+      }
+    } else if (!tachesGenerales.has(t.buyer_profile_id)) {
+      tachesGenerales.set(t.buyer_profile_id, t);
     }
   }
 
+  /** La plus proche entre la tâche du projet et le suivi général. */
+  function nextTaskPour(profileId: string, interestId: string | null): TaskRow | null {
+    const duProjet = interestId ? tachesParManifestation.get(interestId) ?? null : null;
+    const generale = tachesGenerales.get(profileId) ?? null;
+    if (!duProjet) return generale;
+    if (!generale) return duProjet;
+    return (duProjet.due_at ?? "9999") <= (generale.due_at ?? "9999") ? duProjet : generale;
+  }
+
   const now = Date.now();
-  const items: BuyerListItem[] = (profiles ?? []).map((raw) => {
+  const items: BuyerListItem[] = [];
+
+  for (const raw of profiles ?? []) {
     const profile = raw as BuyerProfileRow;
     const contact = contactById.get(profile.contact_id) ?? null;
     const profileInterests = interestsByProfile.get(profile.id) ?? [];
-    const last = profileInterests[0] ?? null;
-    const lastProperty = last ? propertyById.get(last.property_id) : undefined;
-    const nextTask = nextTaskByProfile.get(profile.id) ?? null;
+    const tousBiens = [...new Set(profileInterests.map((i) => i.property_id))];
 
     const assignees = (assignmentsByProfile.get(profile.id) ?? []).map((a) => ({
       userId: a.user_id,
@@ -168,7 +224,7 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       responsibility: a.responsibility,
     }));
 
-    return {
+    const identite = {
       profile,
       contact,
       name: contactName(contact?.first_name ?? null, contact?.last_name ?? null),
@@ -176,26 +232,68 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       // pour un rôle non autorisé.
       emailMasked: maskContactValue(contact?.email ?? null, canViewContacts),
       phoneMasked: maskContactValue(contact?.phone ?? null, canViewContacts),
-      city: lastProperty?.location_city ?? null,
-      lastPropertyId: last?.property_id ?? null,
-      lastPropertyLabel: propertyLabelOf(lastProperty),
-      interestPropertyIds: [...new Set(profileInterests.map((i) => i.property_id))],
+      interestPropertyIds: tousBiens,
       assignees,
-      nextTask,
-      overdue: Boolean(nextTask?.due_at && new Date(nextTask.due_at).getTime() < now),
-      noNextAction: nextTask == null,
-      newInterest: profileInterests.some((i) => i.review_status === "nouveau"),
       budgetMinCents: criteriaByProfile.get(profile.id)?.budget_min_cents ?? null,
       budgetMaxCents: criteriaByProfile.get(profile.id)?.budget_max_cents ?? null,
-      // Le budget DÉCLARÉ vient du dernier intérêt, pas des critères : c'est la
-      // réponse de la personne, la seule qu'on ait pour un lead du funnel.
-      budgetChoice: last?.budget_choice ?? null,
     };
-  });
+
+    // Un dossier sans aucune manifestation ne devrait pas exister (il naît
+    // d'une manifestation). S'il en existe un, il garde une ligne plutôt que
+    // de disparaître silencieusement de la liste.
+    if (profileInterests.length === 0) {
+      const nextTask = nextTaskPour(profile.id, null);
+      items.push({
+        ...identite,
+        interestId: null,
+        propertyId: null,
+        propertyLabel: null,
+        stage: profile.outcome ?? profile.pipeline_stage,
+        city: null,
+        nextTask,
+        overdue: Boolean(nextTask?.due_at && new Date(nextTask.due_at).getTime() < now),
+        noNextAction: nextTask == null,
+        newInterest: false,
+        budgetChoice: null,
+      });
+      continue;
+    }
+
+    for (const interet of profileInterests) {
+      const property = propertyById.get(interet.property_id);
+      const nextTask = nextTaskPour(profile.id, interet.id);
+      items.push({
+        ...identite,
+        interestId: interet.id,
+        propertyId: interet.property_id,
+        propertyLabel: propertyLabelOf(property),
+        // Un dossier clos au niveau de la personne ferme toutes ses
+        // manifestations : la règle vit ici, en un seul endroit.
+        stage: profile.outcome ?? interet.pipeline_stage,
+        city: property?.location_city ?? null,
+        nextTask,
+        overdue: Boolean(nextTask?.due_at && new Date(nextTask.due_at).getTime() < now),
+        noNextAction: nextTask == null,
+        newInterest: interet.review_status === "nouveau",
+        // Le budget DÉCLARÉ vient de la réponse au questionnaire de CETTE
+        // manifestation : c'est la seule qu'on ait pour un lead du funnel.
+        budgetChoice: interet.budget_choice ?? null,
+      });
+    }
+  }
+
+  const projets: ProjetAccessible[] = ((properties ?? []) as PropertyRow[])
+    .map((p) => ({
+      id: p.id,
+      label: propertyLabelOf(p) ?? "Bien sans nom",
+      city: p.location_city ?? null,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "fr"));
 
   return {
     items,
     members,
+    projets,
     chargeA: new Date(now).toISOString(),
     counters: {
       total: items.length,
@@ -215,6 +313,9 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
  * du funnel ne quittent le serveur pour alimenter une simple liste.
  */
 export interface BuyerInboxRow {
+  /** Clé de la LIGNE : une personne sur un projet. Deux lignes de la même
+      personne sur deux projets ne doivent pas se confondre. */
+  interestId: string | null;
   buyerProfileId: string;
   name: string;
   emailMasked: string | null;
@@ -245,20 +346,21 @@ export interface BuyerInboxRow {
 
 export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
   return {
+    interestId: item.interestId,
     buyerProfileId: item.profile.id,
     name: item.name,
     emailMasked: item.emailMasked,
     phoneMasked: item.phoneMasked,
     city: item.city,
-    stage: item.profile.pipeline_stage,
+    stage: item.stage,
     qualificationStatus: item.profile.qualification_status,
     recommendedPriority: item.profile.recommended_priority,
     bestScore: item.profile.best_overall_score,
     interestCount: item.profile.interest_count,
     lastInterestAt: item.profile.last_interest_at,
     createdAt: item.profile.created_at,
-    lastPropertyId: item.lastPropertyId,
-    lastPropertyLabel: item.lastPropertyLabel,
+    lastPropertyId: item.propertyId,
+    lastPropertyLabel: item.propertyLabel,
     assigneeNames: item.assignees.map((a) => a.name),
     assigneeIds: item.assignees.map((a) => a.userId),
     nextActionAt: item.nextTask?.due_at ?? null,
@@ -277,10 +379,12 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
 /** Convertit un agrégat de liste en carte Kanban (DTO minimal, déjà masqué). */
 export function toKanbanCard(item: BuyerListItem, qualificationLabel: string): BuyerKanbanCard {
   return {
+    interestId: item.interestId,
+    propertyId: item.propertyId,
     buyerProfileId: item.profile.id,
-    stage: item.profile.pipeline_stage,
+    stage: item.stage,
     name: item.name,
-    propertyLabel: item.lastPropertyLabel,
+    propertyLabel: item.propertyLabel,
     city: item.city,
     bestScore: item.profile.best_overall_score,
     recommendedPriority: item.profile.recommended_priority,
