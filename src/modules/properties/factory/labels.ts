@@ -44,7 +44,7 @@ export const propertyStatusVisual: Record<PropertyStatus, Visual> = {
   strategie_en_cours: { cssVar: "--crm-st-qualifie", icon: "◎" },
   production_en_cours: { cssVar: "--crm-st-rdv_planifie", icon: "⚙" },
   validation_avant_lancement: { cssVar: "--crm-st-proposition", icon: "⚑" },
-  pret_a_lancer: { cssVar: "--crm-st-signe", icon: "✔" },
+  pret_a_lancer: { cssVar: "--crm-st-signe", icon: "✔︎" },
   en_diffusion: { cssVar: "--crm-st-eligibilite", icon: "★" },
   suspendu: { cssVar: "--crm-st-a_contacter", icon: "‖" },
   archive: { cssVar: "--crm-st-perdu", icon: "✕" },
@@ -161,7 +161,7 @@ export const productionStatusVisual: Record<PropertyProductionStatus, Visual> = 
   en_cours: { cssVar: "--crm-st-rdv_planifie", icon: "◐" },
   en_revue: { cssVar: "--crm-st-qualifie", icon: "◎" },
   termine: { cssVar: "--crm-st-contact", icon: "◗" },
-  valide: { cssVar: "--crm-st-signe", icon: "✔" },
+  valide: { cssVar: "--crm-st-signe", icon: "✔︎" },
   bloque: { cssVar: "--crm-st-perdu", icon: "⚠" },
 };
 

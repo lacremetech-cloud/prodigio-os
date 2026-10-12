@@ -216,7 +216,7 @@ function PropertyCard({
         href={`/crm/biens/${p.id}`}
         aria-hidden={couverture ? undefined : true}
         tabIndex={-1}
-        className="block aspect-[16/9] w-full overflow-hidden bg-[var(--crm-panel-2)]"
+        className="crm-media-vide block aspect-[16/9] w-full overflow-hidden"
       >
         {couverture ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -227,7 +227,7 @@ function PropertyCard({
             loading="lazy"
           />
         ) : (
-          <span className="flex h-full w-full items-center justify-center text-2xl text-[var(--crm-text-faint)]">
+          <span className="flex h-full w-full items-center justify-center text-2xl">
             ◆
           </span>
         )}
@@ -237,11 +237,11 @@ function PropertyCard({
         <div className="min-w-0">
           <Link
             href={`/crm/biens/${p.id}`}
-            className="crm-wrap text-base font-semibold text-[var(--crm-text)] hover:text-[var(--crm-gold)]"
+            className="crm-wrap text-[17px] font-bold text-[var(--crm-text)] hover:text-[var(--crm-univers)]"
           >
             {propertyDisplayName(p)}
           </Link>
-          <p className="crm-wrap text-xs text-[var(--crm-text-faint)]">
+          <p className="crm-wrap text-[13px] font-medium text-[var(--crm-text-dim)]">
             {[p.property_type, p.location_city].filter(Boolean).join(" · ") || "Type et lieu à renseigner"}
           </p>
         </div>
@@ -256,8 +256,8 @@ function PropertyCard({
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-baseline justify-between text-xs">
-          <span className="text-[var(--crm-text-dim)]">Préparation</span>
-          <span className="tabular-nums font-medium text-[var(--crm-text)]">
+          <span className="font-medium text-[var(--crm-text-dim)]">Préparation</span>
+          <span className="tabular-nums font-bold text-[var(--crm-text)]">
             {readiness ? `${readiness.done}/${readiness.total}` : "—"} · {percent}%
           </span>
         </div>
@@ -266,7 +266,7 @@ function PropertyCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--crm-text-faint)]">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-[var(--crm-text-dim)]">
         <span>Responsable : {item.responsibleName ?? "non désigné"}</span>
       </div>
 

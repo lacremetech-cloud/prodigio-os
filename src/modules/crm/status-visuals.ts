@@ -26,15 +26,15 @@ export function cssVarRef(cssVar: string): string {
 // --- Stades du pipeline ------------------------------------------------------
 const STAGE_VISUALS: Record<string, { cssVar: string; icon: string }> = {
   nouveau: { cssVar: "--crm-st-nouveau", icon: "✦" },
-  prise_de_contact_en_cours: { cssVar: "--crm-st-a_contacter", icon: "☎" },
+  prise_de_contact_en_cours: { cssVar: "--crm-st-a_contacter", icon: "☎︎" },
   contact_etabli: { cssVar: "--crm-st-contact", icon: "◗" },
   qualification_en_cours: { cssVar: "--crm-st-qualifie", icon: "◎" },
   rendez_vous_planifie: { cssVar: "--crm-st-rdv_planifie", icon: "◷" },
   rendez_vous_realise: { cssVar: "--crm-st-rdv_realise", icon: "◆" },
-  estimation_etude_dossier: { cssVar: "--crm-st-estimation", icon: "⚖" },
-  proposition_de_mandat: { cssVar: "--crm-st-proposition", icon: "✎" },
-  en_attente_de_signature: { cssVar: "--crm-st-attente_signature", icon: "✒" },
-  mandat_signe: { cssVar: "--crm-st-signe", icon: "✔" },
+  estimation_etude_dossier: { cssVar: "--crm-st-estimation", icon: "⚖︎" },
+  proposition_de_mandat: { cssVar: "--crm-st-proposition", icon: "✎︎" },
+  en_attente_de_signature: { cssVar: "--crm-st-attente_signature", icon: "✒︎" },
+  mandat_signe: { cssVar: "--crm-st-signe", icon: "✔︎" },
   perdu: { cssVar: "--crm-st-perdu", icon: "✕" },
 };
 
@@ -86,17 +86,17 @@ export type TimelineKind =
   | "audit";
 
 const TIMELINE_VISUALS: Record<TimelineKind, { cssVar: string; icon: string }> = {
-  appel: { cssVar: "--crm-st-contact", icon: "☎" },
+  appel: { cssVar: "--crm-st-contact", icon: "☎︎" },
   email: { cssVar: "--crm-st-nouveau", icon: "✉" },
   rendez_vous: { cssVar: "--crm-st-rdv_planifie", icon: "◷" },
-  note: { cssVar: "--crm-st-neutre", icon: "✎" },
+  note: { cssVar: "--crm-st-neutre", icon: "✎︎" },
   stade: { cssVar: "--crm-st-qualifie", icon: "⇄" },
   segment: { cssVar: "--crm-st-estimation", icon: "⇆" },
   affectation: { cssVar: "--crm-st-rdv_planifie", icon: "☰" },
   resultat: { cssVar: "--crm-st-eligibilite", icon: "★" },
-  estimation: { cssVar: "--crm-st-estimation", icon: "⚖" },
+  estimation: { cssVar: "--crm-st-estimation", icon: "⚖︎" },
   eligibilite: { cssVar: "--crm-st-eligibilite", icon: "✓" },
-  mandat: { cssVar: "--crm-st-proposition", icon: "✒" },
+  mandat: { cssVar: "--crm-st-proposition", icon: "✒︎" },
   document: { cssVar: "--crm-st-contact", icon: "📄" },
   tache: { cssVar: "--crm-st-a_contacter", icon: "✓" },
   audit: { cssVar: "--crm-st-neutre", icon: "◦" },
