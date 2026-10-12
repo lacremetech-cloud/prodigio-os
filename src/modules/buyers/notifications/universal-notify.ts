@@ -1,0 +1,114 @@
+import "server-only";
+
+import { env, isBuyerSlackConfigured, mandateCrmBaseUrl } from "@/config";
+import { postSlackWebhook } from "@/modules/mandates/notifications/slack";
+import type { UniversalSubmissionRequest } from "../funnel/universal-payload";
+
+/**
+ * Alerte Slack pour une demande déposée par le **formulaire universel**, celui
+ * qui vit sur les landing pages des biens.
+ *
+ * Le tunnel historique a déjà la sienne (`notifyNewBuyerInterest`), mais il
+ * collecte neuf réponses — nature du projet, financement, horizon, mobilité —
+ * que le formulaire universel ne demande pas : il va droit au budget et aux
+ * coordonnées. Réutiliser son message produirait une alerte pleine de trous.
+ * Celle-ci ne dit que ce qui a réellement été saisi.
+ *
+ * Best-effort absolu : une panne Slack ne doit jamais remonter jusqu'au
+ * visiteur, dont la demande est déjà enregistrée quand on arrive ici. Rien
+ * n'est journalisé qui ressemble à une coordonnée ou à un webhook.
+ */
+
+export interface AlerteAcquereurInput {
+  request: UniversalSubmissionRequest;
+  interestId: string;
+  propertyId: string;
+  propertyName: string | null;
+  buyerProfileId: string | null;
+  /** Scores relus en base après l'insertion, jamais recalculés ici. */
+  score: {
+    overall: number | null;
+    priority: string | null;
+    budget: number | null;
+  } | null;
+}
+
+const BUDGETS: Record<string, string> = {
+  aucun_projet: "Aucun projet déclaré",
+  "500k_1m": "500 k€ à 1 M€",
+  "1m_2m": "1 à 2 M€",
+  "2m_3m": "2 à 3 M€",
+  plus_3m: "Plus de 3 M€",
+};
+
+const PRIORITES: Record<string, string> = {
+  a_qualifier: "À qualifier",
+  haute: "Haute",
+  moyenne: "Moyenne",
+  basse: "Basse",
+};
+
+/** Neutralise ce qui pourrait être interprété comme du balisage Slack. */
+function net(v: string | null | undefined): string | null {
+  const s = (v ?? "").trim();
+  if (!s) return null;
+  return s.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] as string);
+}
+
+export function construireAlerte(input: AlerteAcquereurInput) {
+  const a = input.request.answers;
+  const nom = net(`${a.firstName ?? ""} ${a.lastName ?? ""}`.trim()) ?? "Acquéreur";
+  const bien = net(input.propertyName) ?? "Bien non nommé";
+  const budget = BUDGETS[a.budgetChoice ?? ""] ?? "Budget non précisé";
+  const lien = `${mandateCrmBaseUrl()}/crm/acquereurs${
+    input.buyerProfileId ? `/${encodeURIComponent(input.buyerProfileId)}` : ""
+  }`;
+
+  const champs: string[] = [`*Bien*\n${bien}`, `*Budget annoncé*\n${budget}`];
+  if (net(a.phoneRaw)) champs.push(`*Téléphone*\n${net(a.phoneRaw)}`);
+  if (net(a.emailRaw)) champs.push(`*E-mail*\n${net(a.emailRaw)}`);
+  if (input.score?.overall != null) {
+    const p = input.score.priority ? PRIORITES[input.score.priority] ?? input.score.priority : null;
+    champs.push(`*Score*\n${input.score.overall}/100${p ? ` · ${p}` : ""}`);
+  }
+
+  return {
+    text: `Nouvelle demande acquéreur — ${nom} · ${bien}`,
+    blocks: [
+      { type: "header", text: { type: "plain_text", text: "Nouvelle demande acquéreur", emoji: false } },
+      { type: "section", text: { type: "mrkdwn", text: `*${nom}*` } },
+      { type: "section", fields: champs.map((text) => ({ type: "mrkdwn", text })) },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Ouvrir la fiche", emoji: false },
+            url: lien,
+          },
+        ],
+      },
+      {
+        type: "context",
+        elements: [{ type: "mrkdwn", text: `Prodigio OS · Intérêt \`${net(input.interestId)}\`` }],
+      },
+    ],
+  };
+}
+
+export async function alerterNouvelleDemande(
+  input: AlerteAcquereurInput,
+): Promise<{ status: "sent" | "skipped" | "failed" }> {
+  try {
+    if (!isBuyerSlackConfigured()) return { status: "skipped" };
+    const webhook = env.SLACK_BUYER_LEADS_WEBHOOK_URL;
+    if (!webhook) return { status: "skipped" };
+    const res = await postSlackWebhook(webhook, construireAlerte(input));
+    return { status: res.ok ? "sent" : "failed" };
+  } catch {
+    // Volontairement muet sur le détail : il contiendrait le webhook ou le
+    // message, donc des coordonnées.
+    console.error("alerte acquereur : echec d'envoi Slack");
+    return { status: "failed" };
+  }
+}
