@@ -218,6 +218,13 @@ export function BuyerInbox({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {/* Le bien d'abord : c'est la premiere question qu'on se pose en
+              arrivant ici, et le seul filtre qui delimite un perimetre de
+              travail plutot qu'il ne trie. Un commercial n'en change jamais. */}
+          <Select label="Bien" value={property} onChange={setProperty} options={[
+            { value: "tous", label: "Tous les biens" },
+            ...properties.map((p) => ({ value: p.id, label: p.label })),
+          ]} />
           <Select label="Étape" value={stage} onChange={setStage} options={[
             { value: "tous", label: "Toutes les étapes" },
             ...BUYER_PIPELINE_STAGES.map((s) => ({
@@ -244,10 +251,6 @@ export function BuyerInbox({
             { value: "tous", label: "Tous" },
             { value: "aucun", label: "Non affectés" },
             ...members.map((m) => ({ value: m.userId, label: m.name })),
-          ]} />
-          <Select label="Bien" value={property} onChange={setProperty} options={[
-            { value: "tous", label: "Tous les biens" },
-            ...properties.map((p) => ({ value: p.id, label: p.label })),
           ]} />
         </div>
       </div>
