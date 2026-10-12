@@ -38,6 +38,10 @@
   --crm-gold: #d4bd90;
   --crm-gold-strong: #b0925a;
   --crm-focus: #d4bd90;
+  /* Accent du second univers : un bleu calanque, froid la ou l'or est
+     chaud, pour qu'un coup d'oeil suffise a savoir ou l'on travaille. */
+  --crm-azur: #8fb6d4;
+  --crm-azur-strong: #5e8dae;
   /* Rôles sémantiques (accents) */
   --crm-info: #6aa6ff;
   --crm-success: #56c98a;
@@ -77,6 +81,8 @@
   --crm-gold: #8a6d34;
   --crm-gold-strong: #6f5626;
   --crm-focus: #6f5626;
+  --crm-azur: #3d6a8c;
+  --crm-azur-strong: #2d5370;
   --crm-info: #2f6fd0;
   --crm-success: #1f8a52;
   --crm-warning: #9a6b16;
@@ -734,4 +740,50 @@
   cursor: grab;
   color: var(--crm-text-faint);
   touch-action: none;
+}
+
+/* =============================================================================
+   UNIVERS — Mandats / Biens
+   =============================================================================
+   Le CRM couvre deux metiers. Plutot qu'un menu unique ou l'on se perd, chaque
+   univers a son menu et sa couleur. Tout ce qui doit suivre l'univers actif lit
+   `--crm-univers` : la bascule, l'etat actif du menu, les icones. Le reste de
+   l'interface garde l'or Prodigio, qui reste l'accent de la marque.
+   ========================================================================== */
+.crm-root {
+  --crm-univers: var(--crm-gold);
+  --crm-univers-strong: var(--crm-gold-strong);
+}
+.crm-root[data-crm-univers="biens"] {
+  --crm-univers: var(--crm-azur);
+  --crm-univers-strong: var(--crm-azur-strong);
+}
+
+/* Bascule d'univers : deux segments dans une gouttiere. */
+.crm-bascule {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--crm-line);
+  border-radius: 10px;
+  background: var(--crm-panel-2);
+}
+.crm-bascule__seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 12.5px;
+  color: var(--crm-text-faint);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.crm-bascule__seg:hover { color: var(--crm-text-dim); }
+.crm-bascule__seg[aria-current="true"] {
+  background: color-mix(in srgb, var(--crm-univers) 16%, var(--crm-panel));
+  color: var(--crm-univers);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--crm-univers) 38%, transparent);
 }

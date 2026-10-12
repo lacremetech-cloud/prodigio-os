@@ -92,14 +92,23 @@ describe("submitUniversalInterestAction", () => {
     expect(h.rpc).toHaveBeenCalledTimes(1);
   });
 
-  it("absorbe silencieusement un pot de miel rempli", async () => {
+  it("enregistre quand meme une demande dont le pot de miel est rempli", async () => {
+    // Le champ « Societe » est rempli par l'autocompletion de certains
+    // navigateurs, chez de vrais acquereurs. Le jeter en silence coutait des
+    // demandes reelles : ecran de confirmation affiche, rien en base. Turnstile
+    // reste la garde, et le robot devrait de toute facon la franchir.
+    h.rpc.mockResolvedValueOnce({
+      data: { accepted: true, created: true, interest_id: "i1" },
+      error: null,
+    });
+    h.rpc.mockResolvedValueOnce({ data: "https://exemple.test/dossier/", error: null });
     const res = await submitUniversalInterestAction({
       ...REQUEST,
       answers: { ...REQUEST.answers, company: "robot" },
     });
     expect(res.ok).toBe(true);
-    expect(h.rpc).not.toHaveBeenCalled();
-    expect(h.verify).not.toHaveBeenCalled();
+    expect(h.verify).toHaveBeenCalled();
+    expect(h.rpc).toHaveBeenCalled();
   });
 
   it("refuse un budget étranger au vocabulaire, sans le rapprocher d'un voisin", async () => {

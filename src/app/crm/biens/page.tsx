@@ -12,6 +12,8 @@ import {
 import { formatDate } from "@/modules/crm/format";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { EmptyState, SectionTitle } from "@/components/crm/ui";
+import { createPropertyAssetSignedUrl } from "@/modules/properties/factory/storage";
+import { isSupabaseAdminConfigured } from "@/config";
 import type { PropertyStatus } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Fabrique de biens" };
@@ -83,6 +85,22 @@ export default async function PropertiesPortfolioPage({
   const responsables = Array.from(
     new Set(all.map((it) => it.responsibleName).filter(Boolean) as string[]),
   ).sort();
+
+  /* Une vignette par bien : on reconnait un bien a sa photo avant de lire son
+     nom. Les visuels vivent dans un bucket prive, d'ou une URL signee de
+     courte duree, calculee ici pour toute la liste plutot que carte par carte. */
+  const couvertures = new Map<string, string>();
+  if (isSupabaseAdminConfigured()) {
+    const signees = await Promise.all(
+      items.map(async (item) => {
+        const chemin = item.mainMedia?.storage_path;
+        if (!chemin) return null;
+        const url = await createPropertyAssetSignedUrl(chemin);
+        return url ? ([item.property.id, url] as const) : null;
+      }),
+    );
+    for (const paire of signees) if (paire) couvertures.set(paire[0], paire[1]);
+  }
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
@@ -167,7 +185,11 @@ export default async function PropertiesPortfolioPage({
           ) : (
             <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {items.map((item) => (
-                <PropertyCard key={item.property.id} item={item} />
+                <PropertyCard
+                  key={item.property.id}
+                  item={item}
+                  couverture={couvertures.get(item.property.id) ?? null}
+                />
               ))}
             </ul>
           )}
@@ -177,13 +199,40 @@ export default async function PropertiesPortfolioPage({
   );
 }
 
-function PropertyCard({ item }: { item: PropertyPortfolioItem }) {
+function PropertyCard({
+  item,
+  couverture,
+}: {
+  item: PropertyPortfolioItem;
+  couverture: string | null;
+}) {
   const { property: p, readiness } = item;
   const visual = propertyStatusVisual[p.status as PropertyStatus];
   const percent = readiness?.percent ?? 0;
 
   return (
-    <li className="crm-panel flex min-w-0 flex-col gap-3 p-4 crm-fade-in">
+    <li className="crm-panel flex min-w-0 flex-col overflow-hidden crm-fade-in">
+      <Link
+        href={`/crm/biens/${p.id}`}
+        aria-hidden={couverture ? undefined : true}
+        tabIndex={-1}
+        className="block aspect-[16/9] w-full overflow-hidden bg-[var(--crm-panel-2)]"
+      >
+        {couverture ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={couverture}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-2xl text-[var(--crm-text-faint)]">
+            ◆
+          </span>
+        )}
+      </Link>
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <Link
@@ -237,6 +286,7 @@ function PropertyCard({ item }: { item: PropertyPortfolioItem }) {
       <Link href={`/crm/biens/${p.id}`} className="crm-btn crm-btn--sm crm-btn--ghost mt-auto self-start">
         Ouvrir le cockpit
       </Link>
+      </div>
     </li>
   );
 }
