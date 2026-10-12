@@ -243,6 +243,34 @@ export async function updatePropertyMediaAction(input: unknown): Promise<ActionR
 
 const setPrimarySchema = z.object({ propertyId: uuid, mediaId: uuid });
 
+// --- Espace de travail (Drive) ------------------------------------------------
+const workspaceSchema = z.object({
+  propertyId: uuid,
+  // Vide volontaire = on retire le lien. `null` et chaîne vide se valent ici.
+  url: z.string().trim().max(2000).nullable().default(null),
+});
+
+/**
+ * Pose (ou retire) le lien de l'espace de travail du bien.
+ *
+ * Les documents, photos et livrables vivent dans Drive : le cockpit n'a pas à
+ * les héberger, il lui suffit de mener à eux. La base re-vérifie le droit
+ * d'écriture et la forme du lien — ici, seulement la frontière.
+ */
+export async function setPropertyWorkspaceAction(input: unknown): Promise<ActionResult> {
+  await requireCrmSession();
+  const parsed = workspaceSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Saisie invalide." };
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("crm_property_set_workspace", {
+    p_property_id: parsed.data.propertyId,
+    p_url: parsed.data.url,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+  revalidateProperty(parsed.data.propertyId);
+  return { ok: true };
+}
+
 export async function setPrimaryMediaAction(input: unknown): Promise<ActionResult> {
   await requireCrmSession();
   const parsed = setPrimarySchema.safeParse(input);

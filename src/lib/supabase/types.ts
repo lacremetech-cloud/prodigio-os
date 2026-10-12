@@ -481,6 +481,8 @@ export type PropertyRow = {
   ready_at: string | null;
   ready_by: string | null;
   status_reason: string | null;
+  /** Lien de l'espace de travail du bien (Drive). Le CRM mène aux documents, il ne les héberge pas. */
+  workspace_url: string | null;
 };
 
 export type PropertyPositioningRow = {
@@ -1726,6 +1728,10 @@ export interface Database {
       };
       crm_property_set_responsible: {
         Args: { p_property_id: string; p_user_id: string | null };
+        Returns: Json;
+      };
+      crm_property_set_workspace: {
+        Args: { p_property_id: string; p_url: string | null };
         Returns: Json;
       };
       crm_property_readiness: {

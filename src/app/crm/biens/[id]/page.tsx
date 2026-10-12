@@ -10,14 +10,12 @@ import {
 } from "@/modules/properties/factory/queries";
 import { getPublicExperience, listBuyerInterests } from "@/modules/buyers/public/queries";
 import { BuyerFormSettings } from "@/components/crm/property/buyer-form-settings";
+import { EspaceTravail } from "@/components/crm/property/espace-travail";
+import { PhotoDuBien } from "@/components/crm/property/photo-du-bien";
 import { canonicalSiteUrl } from "@/config";
 import { slugify } from "@/lib/slug";
 import { listBuyersForProperty } from "@/modules/buyers/crm/queries";
-import {
-  PublicConfigForm,
-  PublicMediaManager,
-  PublicationPanel,
-} from "@/components/crm/property/public-experience";
+import { PublicationPanel } from "@/components/crm/property/public-experience";
 import { BuyerInterestsPanel } from "@/components/crm/property/buyer-interests";
 import { PropertyBuyersPanel } from "@/components/crm/buyers/property-buyers";
 import { RaccourcisBien } from "@/components/crm/property/raccourcis-bien";
@@ -38,9 +36,6 @@ import {
   ResponsibleControl,
   StatusReadinessPanel,
 } from "@/components/crm/property/cockpit";
-import { MediaManager } from "@/components/crm/property/media-manager";
-import { DocumentsManager } from "@/components/crm/property/documents-manager";
-import { ProductionPlan } from "@/components/crm/property/production-plan";
 import type { PropertyStatus } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Cockpit du bien" };
@@ -72,12 +67,11 @@ export default async function PropertyCockpitPage({
   const cockpit = await getPropertyCockpit(id);
   if (!cockpit) notFound();
 
-  const { property: p, positioning, media, documents, production, readiness, audit } = cockpit;
+  const { property: p, positioning, media, readiness, audit } = cockpit;
 
   const isAgent = session.roles.includes("agent_immobilier");
   const canEdit = canOperate(session.roles) || isAgent; // opérateur ou agent affecté (RLS déjà vérifiée)
   const canDecide = canDecideMandate(session.roles); // admin / manager
-  const canAddDocuments = canDecide || isAgent;
   const canOperateRole = canOperate(session.roles);
   const canViewContacts = canViewContactDetails(session.roles);
 
@@ -233,6 +227,20 @@ export default async function PropertyCockpitPage({
             />
           </Section>
 
+          <Section
+            title="Espace de travail"
+            subtitle="Photos, documents et livrables vivent dans Drive. Le CRM mène à eux, il ne les héberge pas."
+          >
+            <EspaceTravail propertyId={p.id} url={p.workspace_url} canEdit={canEdit} />
+          </Section>
+
+          <Section
+            title="Photo du bien"
+            subtitle="La vignette du portefeuille et la couverture de ce cockpit. Une seule, remplaçable."
+          >
+            <PhotoDuBien propertyId={p.id} apercuUrl={heroUrl} canEdit={canEdit} />
+          </Section>
+
           <Section title="Identité du bien">
             <IdentityForm property={p} canEdit={canEdit} />
           </Section>
@@ -245,69 +253,6 @@ export default async function PropertyCockpitPage({
               canDecide={canDecide}
             />
           </Section>
-
-          <Section
-            title="Médiathèque privée"
-            subtitle="Photos, vidéos, drone, plans et rendus. Accès par lien signé temporaire ; aucun fichier public."
-          >
-            <MediaManager
-              propertyId={p.id}
-              media={media}
-              mainMediaId={p.main_media_id}
-              canEdit={canEdit}
-            />
-          </Section>
-
-          <Section
-            title="Documents"
-            subtitle="Mandat, diagnostics, plans, titre, légal, copropriété, autorisations. Stockage privé."
-          >
-            <DocumentsManager
-              propertyId={p.id}
-              documents={documents}
-              canAdd={canAddDocuments}
-              canDelete={canDecide}
-            />
-          </Section>
-
-          <Section
-            title="Plan de production"
-            subtitle="Pilotage des livrables (photo, vidéo, rédaction, identité, site, brochure, publicités, funnel…)."
-          >
-            <ProductionPlan
-              propertyId={p.id}
-              items={production}
-              members={members}
-              canEdit={canEdit}
-              canDecide={canDecide}
-            />
-          </Section>
-
-          <Section
-            title="Expérience publique"
-            subtitle="Configurez la page publique dédiée à ce seul bien (contenus, sections, SEO, confidentialité). L’adresse exacte n’est jamais publique."
-          >
-            <PublicConfigForm
-              config={publicExperience.config}
-              propertyId={p.id}
-              canEdit={canEdit}
-              canDecide={canDecide}
-            />
-          </Section>
-
-
-          <Section
-            title="Médias publics"
-            subtitle="Uniquement les visuels expressément approuvés pour la diffusion. Bucket public dédié, distinct du stockage privé de la Fabrique."
-          >
-            <PublicMediaManager
-              propertyId={p.id}
-              media={publicExperience.media}
-              config={publicExperience.config}
-              canEdit={canEdit}
-            />
-          </Section>
-
 
           <Section
             title="Communications"
