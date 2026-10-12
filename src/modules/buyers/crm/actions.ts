@@ -79,6 +79,12 @@ const optionalText = (max: number) => z.string().trim().max(max).nullable().opti
 // --- Étape du pipeline --------------------------------------------------------
 const stageSchema = z.object({
   buyerProfileId: uuid,
+  /**
+   * Manifestation concernée. L'étape vivait sur la PERSONNE : caler une visite
+   * sur un projet déplaçait aussi ses autres intérêts. Elle vit désormais sur
+   * la manifestation, et c'est elle qu'on déplace.
+   */
+  interestId: uuid,
   // Les étapes sensibles sont volontairement ABSENTES : elles passent par les
   // actions métier dédiées (offre / résultat), en base comme ici.
   stage: z.enum(["nouveau", "a_rappeler", "en_discussion", "visite", "vivier"]),
@@ -95,8 +101,8 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
     };
   }
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("crm_buyer_set_stage", {
-    p_buyer_profile_id: parsed.data.buyerProfileId,
+  const { error } = await supabase.rpc("crm_buyer_set_interest_stage", {
+    p_interest_id: parsed.data.interestId,
     p_stage: parsed.data.stage,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
@@ -127,6 +133,7 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
  */
 export async function moveBuyerCardAction(input: {
   buyerProfileId: string;
+  interestId: string;
   fromStage: string;
   toStage: string;
 }): Promise<ActionResult> {
@@ -141,6 +148,7 @@ export async function moveBuyerCardAction(input: {
   }
   return setBuyerStageAction({
     buyerProfileId: input.buyerProfileId,
+    interestId: input.interestId,
     stage: input.toStage,
   });
 }
@@ -379,6 +387,9 @@ export async function logBuyerActivityAction(input: unknown): Promise<ActionResu
 // --- Planifier une visite -----------------------------------------------------
 const visiteSchema = z.object({
   buyerProfileId: uuid,
+  /** Projet visité. Une visite appartient à UN projet : sans cela, elle
+      déplaçait aussi les autres intérêts de la personne. */
+  interestId: uuid,
   /** Date et heure de la visite, au format ISO. */
   at: z.string().datetime("Date de visite invalide."),
   note: optionalText(300),
@@ -409,19 +420,26 @@ export async function planifierVisiteAction(input: unknown): Promise<ActionResul
   // `visite`, pas `rappel` : le fait est nomme la ou il se produit. L'agenda
   // des visites le lit directement, sans dependre de l'etape du pipeline (qui
   // avance des que la visite est passee) ni de l'intitule saisi.
+  // Les SIX paramètres sont toujours transmis, même nuls : une surcharge de
+  // cette fonction subsiste en base (l'outil d'administration ne sait pas
+  // supprimer une fonction), et un appel partiel pourrait correspondre aux
+  // deux signatures.
   const { error: erreurTache } = await supabase.rpc("crm_buyer_create_task", {
     p_buyer_profile_id: d.buyerProfileId,
     p_title: titre,
     p_kind: "visite",
     p_due_at: d.at,
     p_assignee_user_id: null,
+    p_interest_id: d.interestId,
   });
   if (erreurTache) {
     return { ok: false, error: humanize(erreurTache.code, erreurTache.message) };
   }
 
-  const { error: erreurStade } = await supabase.rpc("crm_buyer_set_stage", {
-    p_buyer_profile_id: d.buyerProfileId,
+  // Seule la manifestation visitée change d'étape. Les autres projets de la
+  // même personne ne bougent pas.
+  const { error: erreurStade } = await supabase.rpc("crm_buyer_set_interest_stage", {
+    p_interest_id: d.interestId,
     p_stage: "visite",
   });
   if (erreurStade) {
@@ -454,12 +472,16 @@ export async function createBuyerTaskAction(input: unknown): Promise<ActionResul
   }
   const d = parsed.data;
   const supabase = await createSupabaseServerClient();
+  // Les six paramètres sont toujours transmis (voir `planifierVisiteAction`).
+  // `p_interest_id` nul : un rappel saisi ici est un suivi général, qui vaut
+  // pour tous les projets de la personne.
   const { error } = await supabase.rpc("crm_buyer_create_task", {
     p_buyer_profile_id: d.buyerProfileId,
     p_title: d.title,
     p_kind: d.kind,
     p_due_at: d.dueAt ?? null,
     p_assignee_user_id: d.assigneeUserId ?? null,
+    p_interest_id: null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
   revalidateBuyer(d.buyerProfileId);

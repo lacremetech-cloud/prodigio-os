@@ -1311,3 +1311,135 @@
   outline: none;
   box-shadow: 0 0 0 2px var(--crm-panel), 0 0 0 4px var(--crm-univers);
 }
+
+/* ===========================================================================
+   Navigation par projet
+   ===========================================================================
+   Le projet n'est pas un filtre parmi d'autres : c'est le perimetre de travail.
+   Il se choisit en haut, avant les compteurs, et il les pilote.
+
+   Les teintes de projet sont DISTINCTES des couleurs d'etape : celles-ci
+   disent « quel projet », celles-la « ou en est l'affaire ». Les confondre
+   ferait lire un projet comme un statut. Elles restent discretes — le nom du
+   projet est toujours ecrit a cote, la couleur n'informe jamais seule.
+*/
+.crm-root {
+  --crm-projet-210: #3b82f6;
+  --crm-projet-160: #0d9488;
+  --crm-projet-280: #8b5cf6;
+  --crm-projet-30:  #d97706;
+  --crm-projet-330: #db2777;
+  --crm-projet-100: #65a30d;
+}
+
+.crm-projet {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--crm-line);
+  border-radius: 999px;
+  background: var(--crm-panel);
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--crm-text-dim);
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.crm-projet:hover {
+  border-color: var(--projet, var(--crm-line-hover));
+  color: var(--crm-text);
+}
+.crm-projet:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--crm-bg), 0 0 0 4px var(--projet, var(--crm-univers));
+}
+/* Selectionne : fond plein, pas un simple filet. C'etait la demande — on doit
+   voir d'un coup d'oeil sur quel projet on travaille. */
+.crm-projet[aria-current="true"] {
+  background: var(--projet, var(--crm-univers));
+  border-color: var(--projet, var(--crm-univers));
+  color: var(--crm-sur-vif);
+}
+.crm-projet[aria-current="true"] .crm-projet__compte {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--crm-sur-vif);
+}
+.crm-projet[aria-current="true"] .crm-projet__pastille {
+  background: var(--crm-sur-vif);
+}
+.crm-projet__pastille {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--projet, var(--crm-text-faint));
+  flex: none;
+}
+.crm-projet__compte {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--crm-panel-2);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--crm-text);
+}
+
+/* ----------------------------------------------------- Selecteur de vue */
+.crm-vues {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--crm-line);
+  border-radius: 10px;
+  background: var(--crm-panel-2);
+  width: fit-content;
+}
+.crm-vues__choix {
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--crm-text-dim);
+  transition: background 120ms ease, color 120ms ease;
+}
+.crm-vues__choix:hover {
+  color: var(--crm-text);
+  background: var(--crm-hover);
+}
+.crm-vues__choix[aria-current="true"] {
+  background: var(--crm-panel);
+  color: var(--crm-text);
+  box-shadow: var(--crm-shadow-sm);
+}
+.crm-vues__choix:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--crm-panel-2), 0 0 0 4px var(--crm-univers);
+}
+
+/* --------------------------------------------------------- Badge de projet */
+.crm-badge-projet {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--projet, var(--crm-line)) 35%, transparent);
+  background: color-mix(in srgb, var(--projet, var(--crm-line)) 12%, var(--crm-panel));
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--crm-text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crm-badge-projet__pastille {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--projet, var(--crm-text-faint));
+  flex: none;
+}

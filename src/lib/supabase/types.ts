@@ -727,6 +727,15 @@ export type BuyerInterestRow = {
    * a aucune conversion entre les deux, et c'est voulu.
    */
   budget_choice: string | null;
+  /**
+   * Étape commerciale de CETTE manifestation. Elle vivait sur la personne :
+   * caler une visite sur un projet déplaçait aussi ses autres intérêts.
+   */
+  pipeline_stage: BuyerPipelineStage;
+  outcome: "gagne" | "perdu" | null;
+  outcome_reason: string | null;
+  outcome_recorded_by: string | null;
+  outcome_recorded_at: string | null;
   financing: string | null;
   purchase_horizon: string | null;
   decision_mode: string | null;
@@ -946,6 +955,9 @@ export type TaskRow = {
    */
   opportunity_id: string | null;
   buyer_profile_id: string | null;
+  /** Manifestation d'intérêt concernée : une visite appartient à UN projet.
+      `null` pour un suivi général, qui vaut pour toutes les lignes. */
+  interest_id: string | null;
   author_user_id: string | null;
   assignee_user_id: string | null;
   title: string;
@@ -1300,6 +1312,10 @@ export interface Database {
       /** Photos de profil des membres de l'organisation. Fonction dédiée : élargir
           `crm_list_members` aurait imposé un `drop function`, donc une fenêtre
           pendant laquelle toute page qui l'appelle échoue. */
+      crm_buyer_set_interest_stage: {
+        Args: { p_interest_id: string; p_stage: string };
+        Returns: Json;
+      };
       crm_list_member_avatars: {
         Args: Record<string, never>;
         Returns: {
@@ -1913,12 +1929,20 @@ export interface Database {
         Returns: Json;
       };
       crm_buyer_create_task: {
+        /**
+         * Les six paramètres sont REQUIS côté application. Une surcharge à cinq
+         * paramètres subsiste en base — l'outil d'administration utilisé ne sait
+         * pas supprimer une fonction, et Postgres refuse de retirer une valeur
+         * par défaut. Un appel partiel correspondrait aux deux signatures et
+         * serait rejeté ; les typer requis rend cette faute impossible.
+         */
         Args: {
           p_buyer_profile_id: string;
           p_title: string;
-          p_kind?: string;
-          p_due_at?: string | null;
-          p_assignee_user_id?: string | null;
+          p_kind: string;
+          p_due_at: string | null;
+          p_assignee_user_id: string | null;
+          p_interest_id: string | null;
         };
         Returns: Json;
       };

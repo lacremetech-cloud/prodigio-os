@@ -220,7 +220,7 @@ export function TableauCommercial({
                       {d.name}
                     </span>
                     <span className="crm-ellipsis block text-[11px] text-[var(--crm-text-faint)]">
-                      {d.lastPropertyLabel ?? "Bien non précisé"}
+                      {d.propertyLabel ?? "Bien non précisé"}
                       {d.budgetChoice
                         ? ` · ${BUDGET_CHOICE_LABELS[d.budgetChoice as BuyerBudgetChoice] ?? d.budgetChoice}`
                         : ""}

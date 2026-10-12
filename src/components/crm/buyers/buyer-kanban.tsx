@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Chip } from "@/components/crm/ui";
+import { BadgeProjet } from "./barre-projets";
 import { cssVarRef, vifVar } from "@/modules/crm/status-visuals";
 import {
   BUYER_KANBAN_COLUMNS,
@@ -41,9 +42,15 @@ interface Grabbed {
 export function BuyerKanbanBoard({
   cards,
   canMove,
+  montrerProjet = true,
+  contexte = "",
 }: {
   cards: BuyerKanbanCard[];
   canMove: boolean;
+  /** Afficher le badge de projet sur chaque carte. */
+  montrerProjet?: boolean;
+  /** Selection courante, recopiee dans chaque lien de fiche. */
+  contexte?: string;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -66,8 +73,21 @@ export function BuyerKanbanBoard({
     "tous" | "non_affecte" | "en_retard" | "fort_potentiel" | "sans_action"
   >("tous");
 
-  const byId = useMemo(() => new Map(cards.map((c) => [c.buyerProfileId, c])), [cards]);
-  const stageOf = (c: BuyerKanbanCard) => stageOverride[c.buyerProfileId] ?? c.stage;
+  /*
+   * Tout ce tableau etait indexe sur la PERSONNE. Depuis qu'une carte
+   * represente une personne SUR UN PROJET, deux cartes du meme acquereur
+   * partageaient alors le meme identifiant : les deplacer l'une deplaçait
+   * l'autre, et l'affichage optimiste peignait les deux.
+   *
+   * La cle d'une carte est sa manifestation. Le repli sur la personne ne sert
+   * qu'au dossier sans aucune manifestation, qui ne devrait pas exister.
+   */
+  const cleCarte = (c: BuyerKanbanCard) => c.interestId ?? c.buyerProfileId;
+  const byId = useMemo(
+    () => new Map(cards.map((c) => [c.interestId ?? c.buyerProfileId, c])),
+    [cards],
+  );
+  const stageOf = (c: BuyerKanbanCard) => stageOverride[cleCarte(c)] ?? c.stage;
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -97,12 +117,12 @@ export function BuyerKanbanBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, stageOverride]);
 
-  const commitMove = (buyerProfileId: string, fromStage: string, toStage: string) => {
+  const commitMove = (cle: string, fromStage: string, toStage: string) => {
     const evaluation = evaluateBuyerMove(fromStage, toStage);
     if (evaluation.noop) return;
     if (!evaluation.allowed) {
       setNotice({
-        buyerProfileId,
+        buyerProfileId: cle,
         text: evaluation.reason ?? "Déplacement non autorisé.",
         action: evaluation.requiresAction,
       });
@@ -112,20 +132,42 @@ export function BuyerKanbanBoard({
     if (savingId) return; // verrou anti-double-envoi
 
     setNotice(null);
-    setSavingId(buyerProfileId);
-    setStageOverride((prev) => ({ ...prev, [buyerProfileId]: toStage })); // optimiste
-    const name = byId.get(buyerProfileId)?.name ?? "Dossier";
+    setSavingId(cle);
+    setStageOverride((prev) => ({ ...prev, [cle]: toStage })); // optimiste
+    const carte = byId.get(cle);
+    const name = carte?.name ?? "Dossier";
     setLive(`${name} déplacé vers « ${buyerStageLabels[toStage] ?? toStage} », enregistrement…`);
 
     startTransition(async () => {
+      // Sans manifestation, il n'y a pas d'etape a deplacer : on le dit plutot
+      // que d'envoyer une requete qui echouerait en base.
+      const manifestation = carte?.interestId ?? null;
+      if (!carte || !manifestation) {
+        setSavingId(null);
+        setStageOverride((prev) => {
+          const next = { ...prev };
+          delete next[cle];
+          return next;
+        });
+        setNotice({
+          buyerProfileId: cle,
+          text: "Ce dossier n'est rattaché à aucun projet : son étape ne peut pas être déplacée.",
+        });
+        return;
+      }
       const res = await safeAction(() =>
-        moveBuyerCardAction({ buyerProfileId, fromStage, toStage }),
+        moveBuyerCardAction({
+          buyerProfileId: carte.buyerProfileId,
+          interestId: manifestation,
+          fromStage,
+          toStage,
+        }),
       );
       setSavingId(null);
       // Dans les deux cas on retire l'override : le serveur fait autorité.
       setStageOverride((prev) => {
         const next = { ...prev };
-        delete next[buyerProfileId];
+        delete next[cle];
         return next;
       });
       if (res.ok) {
@@ -133,7 +175,7 @@ export function BuyerKanbanBoard({
         router.refresh();
       } else {
         setNotice({
-          buyerProfileId,
+          buyerProfileId: cle,
           text: res.error ?? "Enregistrement impossible.",
           // Un échec technique n'a pas d'action métier associée : `in` distingue
           // le refus métier (qui en propose une) de la panne (qui n'en a pas).
@@ -157,11 +199,11 @@ export function BuyerKanbanBoard({
   const onCardKeyDown = (e: React.KeyboardEvent, c: BuyerKanbanCard) => {
     if (!canMove) return;
     const currentStage = stageOf(c);
-    if (!grabbed || grabbed.id !== c.buyerProfileId) {
+    if (!grabbed || grabbed.id !== cleCarte(c)) {
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
         const idx = Math.max(0, BUYER_KANBAN_COLUMNS.indexOf(currentStage as never));
-        setGrabbed({ id: c.buyerProfileId, fromStage: currentStage, targetIndex: idx });
+        setGrabbed({ id: cleCarte(c), fromStage: currentStage, targetIndex: idx });
         setLive(
           `${c.name} saisi. Flèches gauche/droite pour choisir la colonne, Entrée pour déposer, Échap pour annuler.`,
         );
@@ -182,7 +224,7 @@ export function BuyerKanbanBoard({
       e.preventDefault();
       const target = BUYER_KANBAN_COLUMNS[grabbed.targetIndex]!;
       setGrabbed(null);
-      commitMove(c.buyerProfileId, grabbed.fromStage, target);
+      commitMove(cleCarte(c), grabbed.fromStage, target);
     }
   };
 
@@ -273,7 +315,7 @@ export function BuyerKanbanBoard({
                   setOverStage(null);
                   setDragId(null);
                   const card = id ? byId.get(id) : null;
-                  if (card) commitMove(card.buyerProfileId, stageOf(card), col);
+                  if (card) commitMove(cleCarte(card), stageOf(card), col);
                 }}
               >
                 {items.length === 0 ? (
@@ -283,29 +325,31 @@ export function BuyerKanbanBoard({
                 ) : (
                   items.map((c) => (
                     <Card
-                      key={c.buyerProfileId}
+                      key={cleCarte(c)}
                       card={c}
                       canMove={canMove}
-                      saving={savingId === c.buyerProfileId}
-                      grabbed={grabbed?.id === c.buyerProfileId}
+                      saving={savingId === cleCarte(c)}
+                      grabbed={grabbed?.id === cleCarte(c)}
                       grabbedTarget={
-                        grabbed?.id === c.buyerProfileId
+                        grabbed?.id === cleCarte(c)
                           ? buyerStageLabels[BUYER_KANBAN_COLUMNS[grabbed.targetIndex]!] ?? ""
                           : null
                       }
-                      notice={notice?.buyerProfileId === c.buyerProfileId ? notice : null}
+                      notice={notice?.buyerProfileId === cleCarte(c) ? notice : null}
+                      montrerProjet={montrerProjet}
+                      contexte={contexte}
                       currentStage={stageOf(c)}
                       onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", c.buyerProfileId);
+                        e.dataTransfer.setData("text/plain", cleCarte(c));
                         e.dataTransfer.effectAllowed = "move";
-                        setDragId(c.buyerProfileId);
+                        setDragId(cleCarte(c));
                       }}
                       onDragEnd={() => {
                         setDragId(null);
                         setOverStage(null);
                       }}
                       onKeyDown={(e) => onCardKeyDown(e, c)}
-                      onMenuMove={(toStage) => commitMove(c.buyerProfileId, stageOf(c), toStage)}
+                      onMenuMove={(toStage) => commitMove(cleCarte(c), stageOf(c), toStage)}
                     />
                   ))
                 )}
@@ -326,6 +370,8 @@ function Card({
   grabbedTarget,
   notice,
   currentStage,
+  montrerProjet,
+  contexte,
   onDragStart,
   onDragEnd,
   onKeyDown,
@@ -338,6 +384,8 @@ function Card({
   grabbedTarget: string | null;
   notice: { text: string; action?: "offre" | "resultat" | "reouverture" } | null;
   currentStage: string;
+  montrerProjet: boolean;
+  contexte: string;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
@@ -367,7 +415,7 @@ function Card({
           </button>
         ) : null}
         <div className="min-w-0 flex-1">
-          <Link href={`/crm/acquereurs/${card.buyerProfileId}`} className="min-w-0">
+          <Link href={`/crm/acquereurs/${card.buyerProfileId}${contexte}`} className="min-w-0">
             <div className="flex items-center gap-2">
               <span
                 className="crm-ellipsis text-[15px] font-bold text-[var(--crm-text)]"
@@ -377,13 +425,24 @@ function Card({
               </span>
               {card.recommendedPriority === "prioritaire" ? <Chip variant="gold">★</Chip> : null}
             </div>
-            <p
-              className="crm-ellipsis mt-1 text-xs text-[var(--crm-text-faint)]"
-              title={`${card.propertyLabel ?? ""}${card.city ? ` · ${card.city}` : ""}`}
-            >
-              {card.propertyLabel ?? "Aucun bien rattaché"}
-              {card.city ? ` · ${card.city}` : ""}
-            </p>
+            {/* En vue « tous les projets », c'est ce badge qui dit DE QUEL
+                projet la carte parle : deux cartes de la meme personne y
+                voisinent, et seul le nom ne les distinguerait pas. */}
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+              {montrerProjet ? (
+                <BadgeProjet propertyId={card.propertyId} label={card.propertyLabel} />
+              ) : null}
+              {card.city ? (
+                <span className="crm-ellipsis text-xs text-[var(--crm-text-faint)]">
+                  {card.city}
+                </span>
+              ) : null}
+              {!card.propertyLabel ? (
+                <span className="text-xs text-[var(--crm-text-faint)]">
+                  Aucun projet rattaché
+                </span>
+              ) : null}
+            </div>
           </Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--crm-text-dim)]">
             {card.interestCount > 1 ? <span>{card.interestCount} intérêts</span> : null}
@@ -442,7 +501,7 @@ function Card({
           <p className="crm-wrap text-[11px] text-[var(--crm-text-dim)]">{notice.text}</p>
           {notice.action ? (
             <Link
-              href={`/crm/acquereurs/${card.buyerProfileId}`}
+              href={`/crm/acquereurs/${card.buyerProfileId}${contexte}`}
               className="mt-1 inline-block text-[11px] text-[var(--crm-gold)] underline"
             >
               {notice.action === "offre"
