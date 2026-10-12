@@ -91,7 +91,7 @@ function Bloc({
       </h2>
       {groupes.map((g) => (
         <div key={g.jour} className="crm-panel flex flex-col gap-2 p-4">
-          <p className="text-[13px] font-bold capitalize text-[var(--crm-text)]">
+          <p className="text-[13px] font-bold text-[var(--crm-text)] first-letter:uppercase">
             {JOUR.format(new Date(g.jour))}
           </p>
           <ul className="flex flex-col gap-1.5">

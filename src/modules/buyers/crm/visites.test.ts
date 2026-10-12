@@ -62,7 +62,7 @@ describe("grouperParJour", () => {
       visite("2026-10-15T09:00:00.000Z", "c"),
     ]);
     expect(groupes.map((g) => g.jour)).toEqual(["2026-10-14", "2026-10-15"]);
-    expect(groupes[0].visites.map((v) => v.taskId)).toEqual(["a", "b"]);
+    expect(groupes[0]?.visites.map((v) => v.taskId)).toEqual(["a", "b"]);
   });
 
   it("ne fusionne pas deux journées identiques séparées par une autre", () => {

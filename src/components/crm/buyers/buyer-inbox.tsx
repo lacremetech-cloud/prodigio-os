@@ -285,7 +285,7 @@ function Counter({
   onChoisir: (s: Signal) => void;
 }) {
   const vif = Boolean(accent) && value > 0;
-  const estActif = actif === signal;
+  const estActif = actif === signal && signal !== "tous";
   // « Dossiers » remet toujours la liste a plat ; les autres se decrochent.
   const cliquable = signal === "tous" ? actif !== "tous" : value > 0;
   const couleur = accent ? cssVarRef(accent) : "var(--crm-univers)";

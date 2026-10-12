@@ -43,10 +43,11 @@ export interface Visite {
   assigneeName: string | null;
 }
 
+/** Même règle que la boîte de réception : le titre commercial, jamais la ville
+    (qui est affichée à part — l'agenda imprimait « Cassis · Cassis »). */
 function propertyLabelOf(p: PropertyRow | undefined): string | null {
   if (!p) return null;
-  const nom = (p as { name?: string | null }).name ?? null;
-  return nom ?? p.location_city ?? null;
+  return p.commercial_title || p.project_name || "Bien sans nom";
 }
 
 export async function listVisites(canViewContacts: boolean): Promise<Visite[]> {
