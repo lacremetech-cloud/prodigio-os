@@ -231,31 +231,30 @@ export function BuyerKanbanBoard({
           const dropBlocked = isOver && protectedCol;
           const visual = buyerStageVisual(col);
           return (
-            <div key={col} className="crm-kanban-col flex flex-col">
-              <div
-                className="crm-kanban-head mb-2 flex items-center justify-between gap-2"
-                style={
-                  { ["--col-accent" as keyof CSSProperties]: cssVarRef(visual.cssVar) } as CSSProperties
-                }
-              >
-                <h2 className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-[var(--crm-text-dim)]">
-                  <span aria-hidden style={{ color: cssVarRef(visual.cssVar) }}>
-                    {visual.icon}
-                  </span>
+            <div
+              key={col}
+              className="crm-kanban-col flex flex-col"
+              style={
+                { ["--col-accent" as keyof CSSProperties]: cssVarRef(visual.cssVar) } as CSSProperties
+              }
+            >
+              <div className="crm-kanban-head mb-2">
+                <h2 className="crm-kanban-head__pastille min-w-0">
+                  <span aria-hidden>{visual.icon}</span>
                   <span className="crm-ellipsis">{visual.label}</span>
-                  {protectedCol ? (
-                    <span
-                      title="Colonne pilotée par une action métier dédiée (confirmation, motif, audit)"
-                      className="shrink-0 text-[var(--crm-text-faint)]"
-                    >
-                      🔒
-                    </span>
-                  ) : null}
                 </h2>
-                <span className="crm-chip shrink-0 tabular-nums">{items.length}</span>
+                <span className="crm-kanban-head__compte">{items.length}</span>
+                {protectedCol ? (
+                  <span
+                    title="Colonne pilotée par une action métier dédiée (confirmation, motif, audit)"
+                    className="shrink-0 text-[var(--crm-text-faint)]"
+                  >
+                    🔒
+                  </span>
+                ) : null}
               </div>
               <div
-                className={`crm-kanban-dropzone flex min-h-[120px] flex-col gap-2 rounded-[12px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] p-2 ${
+                className={`crm-kanban-dropzone crm-kanban-zone flex min-h-[120px] flex-col gap-2 rounded-[12px] p-2 ${
                   isOver && !dropBlocked ? "crm-kanban-dropzone--over" : ""
                 } ${dropBlocked ? "crm-kanban-dropzone--blocked" : ""}`}
                 onDragOver={(e) => {

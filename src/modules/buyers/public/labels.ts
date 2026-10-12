@@ -74,7 +74,7 @@ export const buyerReviewStatusLabels: Record<BuyerReviewStatus, string> = {
 export const buyerReviewStatusVisual: Record<BuyerReviewStatus, Visual> = {
   nouveau: { cssVar: "--crm-st-nouveau", icon: "●" },
   consulte: { cssVar: "--crm-st-qualifie", icon: "◎" },
-  traite: { cssVar: "--crm-st-signe", icon: "✔" },
+  traite: { cssVar: "--crm-st-signe", icon: "✔︎" },
 };
 
 export const buyerPriorityLabels: Record<string, string> = {

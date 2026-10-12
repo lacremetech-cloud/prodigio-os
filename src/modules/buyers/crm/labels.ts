@@ -63,11 +63,11 @@ export const BUYER_KANBAN_COLUMNS: readonly BuyerPipelineStage[] = BUYER_PIPELIN
 
 const BUYER_STAGE_VISUALS: Record<string, { cssVar: string; icon: string }> = {
   nouveau: { cssVar: "--crm-st-nouveau", icon: "✦" },
-  a_rappeler: { cssVar: "--crm-st-a_contacter", icon: "☎" },
+  a_rappeler: { cssVar: "--crm-st-a_contacter", icon: "☎︎" },
   en_discussion: { cssVar: "--crm-st-contact", icon: "◗" },
   visite: { cssVar: "--crm-st-rdv_planifie", icon: "◷" },
-  offre: { cssVar: "--crm-st-proposition", icon: "✎" },
-  gagne: { cssVar: "--crm-st-signe", icon: "✔" },
+  offre: { cssVar: "--crm-st-proposition", icon: "✎︎" },
+  gagne: { cssVar: "--crm-st-signe", icon: "✔︎" },
   perdu: { cssVar: "--crm-st-perdu", icon: "✕" },
   vivier: { cssVar: "--crm-st-qualifie", icon: "◈" },
 };
@@ -96,7 +96,7 @@ export const buyerQualificationVisual: Record<
 > = {
   non_qualifie: { cssVar: "--crm-st-neutre", icon: "○" },
   en_cours: { cssVar: "--crm-st-qualifie", icon: "◎" },
-  qualifie: { cssVar: "--crm-st-signe", icon: "✔" },
+  qualifie: { cssVar: "--crm-st-signe", icon: "✔︎" },
   ecarte: { cssVar: "--crm-st-perdu", icon: "✕" },
 };
 
