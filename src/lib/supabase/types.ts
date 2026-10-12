@@ -721,6 +721,12 @@ export type BuyerInterestRow = {
   normalized_answers: Json;
   project_nature: string | null;
   budget_band: string | null;
+  /**
+   * Réponse du formulaire **universel** à « Avez-vous un projet ? Si oui, quel
+   * est votre budget ? ». Le champ historique `budget_band` reste vide : il n'y
+   * a aucune conversion entre les deux, et c'est voulu.
+   */
+  budget_choice: string | null;
   financing: string | null;
   purchase_horizon: string | null;
   decision_mode: string | null;

@@ -122,3 +122,14 @@ export const TIMELINE_KIND_LABELS: Record<TimelineKind, string> = {
   tache: "Tâche",
   audit: "Audit",
 };
+
+/**
+ * Variable d'APLAT correspondant a une variable de statut.
+ *
+ * Les deux echelles sont nommees en parallele (`--crm-st-nouveau` /
+ * `--crm-vif-nouveau`) : une table de correspondance serait une seconde source
+ * de verite a tenir a jour, et elle divergerait.
+ */
+export function vifVar(cssVar: string): string {
+  return cssVar.replace("--crm-st-", "--crm-vif-");
+}
