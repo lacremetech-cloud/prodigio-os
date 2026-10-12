@@ -105,11 +105,46 @@ export function ScoreMeter({
   );
 }
 
-export function Avatar({ name, size = 30 }: { name: string; size?: number }) {
+/**
+ * Avatar d'un membre : sa photo si la fiche en porte une, ses initiales sinon.
+ *
+ * La photo vient de `organization_memberships.avatar_url` — jamais d'une
+ * correspondance « e-mail → fichier » codée en dur, qui imposerait un
+ * deploiement a chaque arrivee dans l'equipe.
+ *
+ * `<img>` nu plutot que `next/image` : la source est une URL arbitraire saisie
+ * en base, que l'optimiseur de Next refuserait tant que son domaine n'est pas
+ * declare dans la configuration. Le format est deja petit (un avatar), il n'y a
+ * rien a optimiser.
+ */
+export function Avatar({
+  name,
+  size = 30,
+  photo,
+}: {
+  name: string;
+  size?: number;
+  photo?: string | null;
+}) {
+  const commun = "inline-flex shrink-0 items-center justify-center rounded-full border border-[var(--crm-line)]";
+  if (photo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photo}
+        alt=""
+        aria-hidden="true"
+        width={size}
+        height={size}
+        className={`${commun} bg-[var(--crm-panel-2)] object-cover`}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   return (
     <span
       aria-hidden="true"
-      className="inline-flex shrink-0 items-center justify-center rounded-full border border-[var(--crm-line)] bg-[var(--crm-elevated)] font-semibold text-[var(--crm-gold)]"
+      className={`${commun} bg-[var(--crm-elevated)] font-semibold text-[var(--crm-gold)]`}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
       {initials(name)}

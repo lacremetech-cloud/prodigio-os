@@ -257,11 +257,14 @@ function GlobalSearch({ commercial }: { commercial: boolean }) {
 export function CrmShell({
   email,
   roles,
+  photo,
   themePreference,
   children,
 }: {
   email: string | null;
   roles: string[];
+  /** Photo de profil du membre connecte, si sa fiche en porte une. */
+  photo?: string | null;
   themePreference: ThemePreference;
   children: React.ReactNode;
 }) {
@@ -299,7 +302,7 @@ export function CrmShell({
         <div className="mt-6 flex-1">
           <NavLinks commercial={commercial} />
         </div>
-        <UserCard name={name} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
+        <UserCard name={name} photo={photo} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
       </aside>
 
       {/* Drawer mobile */}
@@ -317,7 +320,7 @@ export function CrmShell({
             <div className="mt-6 flex-1">
               <NavLinks commercial={commercial} onNavigate={() => setOpen(false)} />
             </div>
-            <UserCard name={name} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
+            <UserCard name={name} photo={photo} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
           </aside>
         </div>
       ) : null}
@@ -343,14 +346,17 @@ export function CrmShell({
             >
               ↻ <span className="hidden sm:inline">Actualiser</span>
             </button>
-            <div className="hidden items-center gap-2 sm:flex">
-              <Avatar name={name} size={28} />
-            </div>
-            <form action={signOutAction}>
-              <button type="submit" className="crm-btn crm-btn--ghost crm-btn--sm">
-                Déconnexion
-              </button>
-            </form>
+            {/* En haut a droite : qui est connecte. La deconnexion vit en bas
+                de la barre laterale, sous l'identite — une sortie de session
+                n'a pas a etre le bouton le plus visible de l'ecran, ni a
+                cotoyer « Actualiser » a deux centimetres. */}
+            <span
+              className="flex items-center gap-2"
+              title={`${name} · ${primary ? roleLabels[primary] : "Sans rôle"}`}
+            >
+              <Avatar name={name} size={28} photo={photo} />
+              <span className="sr-only">Connecté en {name}</span>
+            </span>
           </div>
         </header>
 
@@ -363,14 +369,40 @@ export function CrmShell({
   );
 }
 
-function UserCard({ name, roleLabel }: { name: string; roleLabel: string }) {
+/**
+ * Pied de la barre laterale : qui est connecte, et comment en sortir.
+ *
+ * La deconnexion siegeait en haut a droite, a deux centimetres
+ * d'« Actualiser » — deux boutons de meme poids visuel dont l'un recharge la
+ * page et l'autre met dehors. Elle descend sous l'identite, la ou on la
+ * cherche, et le haut ne garde que le profil.
+ */
+function UserCard({
+  name,
+  roleLabel,
+  photo,
+}: {
+  name: string;
+  roleLabel: string;
+  photo?: string | null;
+}) {
   return (
-    <div className="mt-4 flex items-center gap-3 rounded-[10px] border border-[var(--crm-line)] bg-[var(--crm-panel-2)] px-3 py-2.5">
-      <Avatar name={name} size={32} />
-      <div className="min-w-0">
-        <p className="crm-ellipsis text-xs font-medium text-[var(--crm-text)]" title={name}>{name}</p>
-        <p className="crm-ellipsis text-[11px] text-[var(--crm-text-faint)]">{roleLabel}</p>
+    <div className="mt-4 flex flex-col gap-2 rounded-[10px] border border-[var(--crm-line)] bg-[var(--crm-panel-2)] px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        <Avatar name={name} size={32} photo={photo} />
+        <div className="min-w-0">
+          <p className="crm-ellipsis text-xs font-medium text-[var(--crm-text)]" title={name}>{name}</p>
+          <p className="crm-ellipsis text-[11px] text-[var(--crm-text-faint)]">{roleLabel}</p>
+        </div>
       </div>
+      <form action={signOutAction}>
+        <button
+          type="submit"
+          className="crm-btn crm-btn--ghost crm-btn--sm w-full justify-center"
+        >
+          Déconnexion
+        </button>
+      </form>
     </div>
   );
 }

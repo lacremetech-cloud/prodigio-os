@@ -152,7 +152,7 @@ export default async function OverviewPage() {
      les voit pas, et ses chiffres a lui sont ailleurs. Il arrive ici apres sa
      connexion, c'est donc ici que son ecran doit vivre. */
   if (hasAnyRole(session.roles, ["commercial"]) && !canOperate(session.roles)) {
-    const [{ items }, visites] = await Promise.all([
+    const [{ items, chargeA }, visites] = await Promise.all([
       loadBuyerList(canView),
       listVisites(canView),
     ]);
@@ -166,7 +166,7 @@ export default async function OverviewPage() {
             Les demandes arriv&eacute;es sur les biens qui vous sont confi&eacute;s.
           </p>
         </header>
-        <TableauCommercial items={items} visites={aVenir} />
+        <TableauCommercial items={items} visites={aVenir} chargeA={chargeA} />
       </div>
     );
   }

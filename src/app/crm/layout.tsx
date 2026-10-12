@@ -24,7 +24,12 @@ export default async function CrmLayout({
   const cookieStore = await cookies();
   const themePreference = normalizePreference(cookieStore.get(THEME_COOKIE)?.value);
   return (
-    <CrmShell email={session.email} roles={session.roles} themePreference={themePreference}>
+    <CrmShell
+      email={session.email}
+      roles={session.roles}
+      photo={session.avatarUrl}
+      themePreference={themePreference}
+    >
       {children}
     </CrmShell>
   );

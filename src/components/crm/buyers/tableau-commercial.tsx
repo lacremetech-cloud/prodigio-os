@@ -4,6 +4,7 @@ import type { BuyerListItem } from "@/modules/buyers/crm/queries";
 import { formatDateTime } from "@/modules/crm/format";
 import type { Visite } from "@/modules/buyers/crm/visites";
 import { CourbeArrivees } from "./courbe-arrivees";
+import { datesDArrivee } from "@/modules/buyers/crm/arrivees";
 import {
   BUDGET_CHOICE_LABELS,
   type BuyerBudgetChoice,
@@ -151,10 +152,14 @@ function Chiffre({
 export function TableauCommercial({
   items,
   visites,
+  chargeA,
 }: {
   items: BuyerListItem[];
   /** Visites a venir, lues a la meme source que l'agenda des visites. */
   visites: Visite[];
+  /** Instant de chargement (ISO) : la courbe en a besoin pour que son rendu
+      serveur et son rendu navigateur tombent sur le meme jour. */
+  chargeA: string;
 }) {
   const c = compterPourCommercial(items);
   const prochaines = visites.slice(0, 5);
@@ -163,7 +168,7 @@ export function TableauCommercial({
     <section className="flex flex-col gap-4">
       {/* Est-ce que ça monte : la premiere question devant un funnel payant,
           et la seule a laquelle une rangee de compteurs ne repond pas. */}
-      <CourbeArrivees items={items} />
+      <CourbeArrivees dates={datesDArrivee(items)} chargeA={chargeA} />
 
       {/* Deux colonnes sur telephone, cinq au-dela : chaque chiffre reste
           lisible sans zoom, et la rangee ne se brise jamais au milieu.

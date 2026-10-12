@@ -11,6 +11,8 @@ export interface CrmSession {
   userId: string;
   email: string | null;
   roles: string[];
+  /** Photo de profil du membre, si sa fiche en porte une. */
+  avatarUrl: string | null;
 }
 
 /**
@@ -29,7 +31,22 @@ export const getCrmSession = cache(async (): Promise<CrmSession | null> => {
   const { data } = await supabase.rpc("crm_active_roles");
   const roles = Array.isArray(data) ? (data as string[]) : [];
 
-  return { userId: user.id, email: user.email ?? null, roles };
+  // La photo ne doit jamais empêcher d'entrer : si la lecture échoue, on
+  // retombe sur les initiales plutôt que de refuser la session.
+  let avatarUrl: string | null = null;
+  try {
+    const { data: avatars } = await supabase.rpc("crm_list_member_avatars");
+    if (Array.isArray(avatars)) {
+      const mien = (avatars as { user_id: string; avatar_url: string | null }[]).find(
+        (a) => a.user_id === user.id,
+      );
+      avatarUrl = mien?.avatar_url ?? null;
+    }
+  } catch {
+    avatarUrl = null;
+  }
+
+  return { userId: user.id, email: user.email ?? null, roles, avatarUrl };
 });
 
 /**

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { arriveesParJour, variationArrivees } from "./arrivees";
+import { arriveesParJour, datesDArrivee, variationArrivees } from "./arrivees";
 import type { BuyerListItem } from "./queries";
 
-/** `createdAt` est la seule donnée que le calcul regarde. */
-function dossier(createdAt: string | null): BuyerListItem {
-  return { profile: { created_at: createdAt } } as unknown as BuyerListItem;
+/** La courbe ne reçoit que des dates : une date absente n'y arrive jamais. */
+function dossier(createdAt: string | null): string {
+  return createdAt ?? "";
 }
 
 /** Midi local, pour qu'aucun décalage horaire ne fasse basculer de jour. */
@@ -80,5 +80,21 @@ describe("variationArrivees", () => {
       dossier(jourLocal(-1, MAINTENANT)),
     ];
     expect(variationArrivees(items, 7, MAINTENANT)).toBe(-75);
+  });
+});
+
+describe("datesDArrivee", () => {
+  it("n'extrait que les dates de création, et écarte celles qui manquent", () => {
+    // La courbe est un composant client : lui passer les dossiers enverrait au
+    // navigateur la ligne contact brute, coordonnées non masquées comprises.
+    const items = [
+      { profile: { created_at: "2026-10-01T10:00:00.000Z" } },
+      { profile: { created_at: null } },
+      { profile: { created_at: "2026-10-02T10:00:00.000Z" } },
+    ] as unknown as BuyerListItem[];
+    expect(datesDArrivee(items)).toEqual([
+      "2026-10-01T10:00:00.000Z",
+      "2026-10-02T10:00:00.000Z",
+    ]);
   });
 });
