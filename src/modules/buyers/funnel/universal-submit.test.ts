@@ -9,6 +9,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   rpc: vi.fn(),
   verify: vi.fn(),
+  // Relecture des scores pour l'alerte Slack : chaine minimale, pas de reseau.
+  from: vi.fn(() => ({
+    select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
+  })),
   flags: { supabase: true, turnstile: true, prodSafe: true },
 }));
 
@@ -23,7 +27,7 @@ vi.mock("@/config", async (importOriginal) => {
   };
 });
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: async () => ({ rpc: h.rpc }),
+  createSupabaseServerClient: async () => ({ rpc: h.rpc, from: h.from }),
 }));
 vi.mock("./turnstile", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./turnstile")>();
@@ -49,6 +53,7 @@ const REQUEST = {
 beforeEach(() => {
   h.rpc.mockReset();
   h.verify.mockReset();
+  h.from.mockClear();
   h.flags = { supabase: true, turnstile: true, prodSafe: true };
   h.verify.mockResolvedValue({ ok: true });
 });

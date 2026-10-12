@@ -122,25 +122,35 @@ export async function submitUniversalInterestAction(
          l'alerte dise exactement ce que le CRM affichera. */
       const interetId = result.interest_id;
       const alerte = async () => {
-        const { data: ligne } = await supabase
-          .from("buyer_interests")
-          .select("overall_score, priority, budget_score, property_id, buyer_profile_id")
-          .eq("id", interetId)
-          .maybeSingle();
-        await alerterNouvelleDemande({
-          request,
-          interestId: interetId,
-          propertyId: ligne?.property_id ?? "",
-          propertyName: null,
-          buyerProfileId: ligne?.buyer_profile_id ?? null,
-          score: ligne
-            ? {
-                overall: ligne.overall_score ?? null,
-                priority: ligne.priority ?? null,
-                budget: ligne.budget_score ?? null,
-              }
-            : null,
-        });
+        /* Une notification ne compromet jamais un depot : l'alerte avale ses
+           propres erreurs. Sans cela, un Slack injoignable ou une lecture
+           refusee remonterait en rejet non capture — hors du try/catch de
+           l'action, puisque `after` s'execute apres la reponse. */
+        try {
+          const { data: ligne } = await supabase
+            .from("buyer_interests")
+            .select("overall_score, priority, budget_score, property_id, buyer_profile_id")
+            .eq("id", interetId)
+            .maybeSingle();
+          await alerterNouvelleDemande({
+            request,
+            interestId: interetId,
+            propertyId: ligne?.property_id ?? "",
+            propertyName: null,
+            buyerProfileId: ligne?.buyer_profile_id ?? null,
+            score: ligne
+              ? {
+                  overall: ligne.overall_score ?? null,
+                  priority: ligne.priority ?? null,
+                  budget: ligne.budget_score ?? null,
+                }
+              : null,
+          });
+        } catch (cause) {
+          console.warn("alerte acquereur non envoyee", {
+            name: cause instanceof Error ? cause.name : "unknown",
+          });
+        }
       };
       try {
         after(() => alerte());
