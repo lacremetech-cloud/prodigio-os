@@ -20,6 +20,8 @@ import {
 } from "@/components/crm/property/public-experience";
 import { BuyerInterestsPanel } from "@/components/crm/property/buyer-interests";
 import { PropertyBuyersPanel } from "@/components/crm/buyers/property-buyers";
+import { RaccourcisBien } from "@/components/crm/property/raccourcis-bien";
+import { compterDossiers, lienDuTunnel } from "@/modules/properties/cockpit/raccourcis";
 import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { buildPropertyTimeline } from "@/modules/properties/factory/timeline";
@@ -118,6 +120,18 @@ export default async function PropertyCockpitPage({
   const named = displayName(p);
   const suggestedSlug = named === FALLBACK_NAME ? "" : slugify(named);
 
+  /* Les trois choses qu'on vient chercher ici tous les jours. Le lien du
+     tunnel se deduit des origines autorisees : c'est la seule source exacte,
+     puisqu'un site absent de cette liste ne peut pas afficher le formulaire. */
+  const tunnelUrl = lienDuTunnel(publicExperience.config?.buyer_form_allowed_origins ?? []);
+  const comptesDossiers = compterDossiers(
+    propertyBuyers.map((r) => ({
+      pipelineStage: r.profile.pipeline_stage,
+      derniereDemande: r.interest.created_at,
+      assigneCount: r.assigneeNames.length,
+    })),
+  );
+
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
       {/* Fil d'Ariane */}
@@ -168,9 +182,27 @@ export default async function PropertyCockpitPage({
         </div>
       </header>
 
+      <RaccourcisBien
+        tunnelUrl={tunnelUrl}
+        brochureUrl={publicExperience.config?.buyer_form_brochure_url ?? null}
+        comptes={comptesDossiers}
+      />
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
         {/* Colonne principale */}
         <div className="flex min-w-0 flex-col gap-5">
+          <Section
+            title="Dossiers acquéreurs"
+            subtitle="Les acquéreurs intéressés par ce bien. Ouvrez un dossier pour le suivi complet."
+            action={
+              <Link href="/crm/acquereurs" className="crm-btn crm-btn--sm crm-btn--ghost">
+                Tous les acquéreurs
+              </Link>
+            }
+          >
+            <PropertyBuyersPanel rows={propertyBuyers} />
+          </Section>
+
           <Section
             title="Formulaire acquéreur"
             subtitle="Le code à coller dans votre landing. Les demandes arrivent juste en dessous. Ne publie pas la vitrine Prodigio."
@@ -274,18 +306,6 @@ export default async function PropertyCockpitPage({
               config={publicExperience.config}
               canEdit={canEdit}
             />
-          </Section>
-
-          <Section
-            title="Dossiers acquéreurs"
-            subtitle="Les acquéreurs intéressés par ce bien. Ouvrez un dossier pour le suivi complet."
-            action={
-              <Link href="/crm/acquereurs" className="crm-btn crm-btn--sm crm-btn--ghost">
-                Tous les acquéreurs
-              </Link>
-            }
-          >
-            <PropertyBuyersPanel rows={propertyBuyers} />
           </Section>
 
 

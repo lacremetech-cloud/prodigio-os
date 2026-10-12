@@ -189,7 +189,9 @@
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--crm-gold);
+  /* Suit l'univers : un surtitre dore au-dessus d'une page Biens entierement
+     indigo etait le dernier reste de l'ancien theme. */
+  color: var(--crm-univers);
 }
 .crm-display {
   font-family: var(--font-display);
