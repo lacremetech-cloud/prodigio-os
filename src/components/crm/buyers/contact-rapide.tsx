@@ -9,16 +9,6 @@
  * même geste doit se faire de la même manière aux deux endroits.
  */
 
-/**
- * Un numéro masqué (rôle sans accès aux coordonnées) n'est jamais composable.
- * On renvoie `null` plutôt que de proposer un bouton qui appellerait « ••• ».
- */
-export function numeroAppelable(masque: string | null): string | null {
-  if (!masque || masque.includes("masqu")) return null;
-  const compact = masque.replace(/[^\d+]/g, "");
-  return compact.length >= 6 ? compact : null;
-}
-
 export function ContactRapide({ numero, className }: { numero: string; className?: string }) {
   // WhatsApp veut le numéro sans le plus ni les espaces.
   const wa = numero.replace(/\D/g, "");
