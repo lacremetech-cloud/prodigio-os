@@ -376,6 +376,65 @@ export async function logBuyerActivityAction(input: unknown): Promise<ActionResu
   return { ok: true };
 }
 
+// --- Planifier une visite -----------------------------------------------------
+const visiteSchema = z.object({
+  buyerProfileId: uuid,
+  /** Date et heure de la visite, au format ISO. */
+  at: z.string().datetime("Date de visite invalide."),
+  note: optionalText(300),
+});
+
+/**
+ * Caler une visite, en un seul geste.
+ *
+ * C'est le moment le plus important du suivi, et il se jouait jusqu'ici en
+ * deux temps : créer une tâche, puis déplacer la carte. Deux gestes pour un
+ * seul fait, donc deux occasions d'en oublier un — et un tableau de bord qui
+ * annonçait « 0 visite planifiée » alors que la visite était bien prise.
+ *
+ * L'ordre compte : la tâche d'abord, l'étape ensuite. Si la tâche échoue, rien
+ * n'a bougé ; si c'est l'étape qui échoue, la visite reste inscrite dans
+ * l'agenda du commercial plutôt que perdue.
+ */
+export async function planifierVisiteAction(input: unknown): Promise<ActionResult> {
+  await requireCrmSession();
+  const parsed = visiteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Saisie invalide." };
+  }
+  const d = parsed.data;
+  const supabase = await createSupabaseServerClient();
+
+  const titre = d.note?.trim() ? `Visite — ${d.note.trim()}` : "Visite du bien";
+  const { error: erreurTache } = await supabase.rpc("crm_buyer_create_task", {
+    p_buyer_profile_id: d.buyerProfileId,
+    p_title: titre,
+    p_kind: "rappel",
+    p_due_at: d.at,
+    p_assignee_user_id: null,
+  });
+  if (erreurTache) {
+    return { ok: false, error: humanize(erreurTache.code, erreurTache.message) };
+  }
+
+  const { error: erreurStade } = await supabase.rpc("crm_buyer_set_stage", {
+    p_buyer_profile_id: d.buyerProfileId,
+    p_stage: "visite",
+  });
+  if (erreurStade) {
+    return {
+      ok: false,
+      error:
+        "La visite est bien enregistrée dans l'agenda, mais le dossier n'a pas pu passer à l'étape « Visite ». Déplacez-le à la main.",
+    };
+  }
+
+  // Conversion Meta « rendez-vous programmé » : le fait métier, c'est ici.
+  enArrierePlan(() => conversionRendezVous(supabase, d.buyerProfileId));
+  revalidateBuyer(d.buyerProfileId);
+  return { ok: true };
+}
+
 const taskSchema = z.object({
   buyerProfileId: uuid,
   title: z.string().trim().min(1, "Un intitulé est requis.").max(300),

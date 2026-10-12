@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/modules/crm/auth/actions";
 import { roleLabels } from "@/modules/crm/labels";
-import type { CrmRole } from "@/modules/crm/auth/roles";
+import { isCommercialOnly, type CrmRole } from "@/modules/crm/auth/roles";
 import { Avatar } from "@/components/crm/ui";
 import { ThemeProvider } from "@/components/crm/theme/theme-provider";
 import {
@@ -61,6 +61,21 @@ const NAV_BAS: NavItem[] = [
   { href: "/crm/taches", label: "Tâches", icon: "✓" },
   { href: "/crm/communications", label: "Communications", icon: "✉" },
   { href: "/crm/parametres", label: "Paramètres", icon: "⚙" },
+];
+
+/**
+ * Menu du commercial : ses leads, son agenda, ses tâches. Rien d'autre.
+ *
+ * Il vend un bien dont le mandat est déjà réglé de son côté. La fabrique de
+ * biens, les mandats, les communications et les paramètres d'équipe ne le
+ * concernent pas — et la base les lui refuse de toute façon. Lui montrer ces
+ * portes, c'est les lui promettre fermées.
+ */
+const NAV_COMMERCIAL: NavItem[] = [
+  { href: "/crm", label: "Mon tableau de bord", icon: "◈", exact: true },
+  { href: "/crm/acquereurs", label: "Mes leads", icon: "◉" },
+  { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
+  { href: "/crm/taches", label: "Tâches", icon: "✓" },
 ];
 
 /**
@@ -134,10 +149,27 @@ function Bascule({ actif, onNavigate }: { actif: Univers; onNavigate?: () => voi
   );
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({
+  onNavigate,
+  commercial,
+}: {
+  onNavigate?: () => void;
+  commercial: boolean;
+}) {
   const pathname = usePathname();
   const actif = universDeLaRoute(pathname);
   const univers = UNIVERS[actif];
+
+  if (commercial) {
+    return (
+      <nav className="flex flex-col gap-1" aria-label="Navigation">
+        {NAV_COMMERCIAL.map((item) => (
+          <Lien key={item.href} item={item} actif={isActive(pathname, item)} onNavigate={onNavigate} />
+        ))}
+      </nav>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <nav className="flex flex-col gap-1">
@@ -184,8 +216,11 @@ function Brand() {
   );
 }
 
-function GlobalSearch() {
+function GlobalSearch({ commercial }: { commercial: boolean }) {
   const router = useRouter();
+  // La recherche menait toujours aux leads vendeurs : pour un commercial,
+  // c'etait une porte sur une page vide.
+  const base = commercial ? "/crm/acquereurs" : "/crm/mandats";
   return (
     <form
       role="search"
@@ -193,14 +228,18 @@ function GlobalSearch() {
         e.preventDefault();
         const value = new FormData(e.currentTarget).get("q");
         const q = typeof value === "string" ? value.trim() : "";
-        router.push(q ? `/crm/mandats?q=${encodeURIComponent(q)}` : "/crm/mandats");
+        router.push(q ? `${base}?q=${encodeURIComponent(q)}` : base);
       }}
       className="hidden min-w-0 flex-1 sm:block"
     >
       <input
         name="q"
         type="search"
-        placeholder="Rechercher un lead (nom, e-mail, ville…)"
+        placeholder={
+          commercial
+            ? "Rechercher un acquéreur (nom, e-mail, téléphone…)"
+            : "Rechercher un lead (nom, e-mail, ville…)"
+        }
         aria-label="Recherche globale"
         className="crm-input max-w-md"
       />
@@ -222,7 +261,11 @@ export function CrmShell({
   const [open, setOpen] = useState(false);
   const router = useRouter();
   // L'univers actif teinte toute la coquille via `--crm-univers`.
-  const univers = universDeLaRoute(usePathname());
+  const commercial = isCommercialOnly(roles);
+  // Le commercial ne quitte jamais l'univers des biens : la bascule n'existe
+  // pas pour lui, et l'accent doit rester le sien.
+  const universRoute = universDeLaRoute(usePathname());
+  const univers = commercial ? "biens" : universRoute;
   const rootRef = useRef<HTMLDivElement>(null);
   const primary = roles.find((r) => r in roleLabels) as CrmRole | undefined;
   const name = email ?? "Utilisateur";
@@ -247,7 +290,7 @@ export function CrmShell({
           <Brand />
         </div>
         <div className="mt-6 flex-1">
-          <NavLinks />
+          <NavLinks commercial={commercial} />
         </div>
         <UserCard name={name} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
       </aside>
@@ -265,7 +308,7 @@ export function CrmShell({
               <Brand />
             </div>
             <div className="mt-6 flex-1">
-              <NavLinks onNavigate={() => setOpen(false)} />
+              <NavLinks commercial={commercial} onNavigate={() => setOpen(false)} />
             </div>
             <UserCard name={name} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
           </aside>
@@ -282,7 +325,7 @@ export function CrmShell({
           >
             ☰
           </button>
-          <GlobalSearch />
+          <GlobalSearch commercial={commercial} />
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"

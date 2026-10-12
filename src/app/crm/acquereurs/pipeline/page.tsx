@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canOperate, canViewContactDetails } from "@/modules/crm/auth/roles";
+import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toKanbanCard } from "@/modules/buyers/crm/queries";
 import { buyerQualificationLabels } from "@/modules/buyers/crm/labels";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: "Pipeline Acquéreurs" };
 export default async function BuyersPipelinePage() {
   const session = await requireCrmSession("/crm/acquereurs/pipeline");
   const canViewContacts = canViewContactDetails(session.roles);
-  const canMove = canOperate(session.roles);
+  const canMove = canTreatBuyers(session.roles);
 
   const { items } = await loadBuyerList(canViewContacts);
   const cards = items.map((item) =>
