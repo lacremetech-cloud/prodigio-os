@@ -111,7 +111,7 @@ export default async function BuyerProfilePage({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="crm-eyebrow">Dossier acquéreur</p>
-            <h1 className="mt-1 crm-wrap text-[30px] font-bold leading-tight text-[var(--crm-text)]">
+            <h1 className="crm-display mt-1 crm-wrap text-[27px] leading-tight text-[var(--crm-text)]">
               {detail.name}
             </h1>
             <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
@@ -163,7 +163,7 @@ export default async function BuyerProfilePage({
               <Field label="Nom">{detail.name}</Field>
               <div className="min-w-0">
                 <dt className="crm-label">Téléphone</dt>
-                <dd className="crm-wrap text-[19px] font-bold tracking-[0.01em] text-[var(--crm-text)]">
+                <dd className="crm-wrap text-[15.5px] font-semibold text-[var(--crm-text)]">
                   {detail.phone ? (
                     <CopyableValue
                       value={detail.phone}

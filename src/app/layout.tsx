@@ -14,7 +14,8 @@ import { site } from "@/lib/site";
 //  - Cormorant Garamond : GRANDS titres éditoriaux uniquement (serif de luxe) —
 //    graisses 500/600, normal + italique.
 //  - Inter : tout le reste — textes, questions, choix, formulaires, boutons,
-//    signature et intertitres — graisses 400/500/600.
+//    signature et intertitres — graisses 400/500/600/700/800. Le CRM n'utilise
+//    QUE celle-ci : le serif editorial appartient aux pages publiques.
 const cormorant = localFont({
   variable: "--font-cormorant",
   display: "swap",
@@ -33,6 +34,11 @@ const inter = localFont({
     { path: "./fonts/inter-latin-400-normal.woff2", weight: "400", style: "normal" },
     { path: "./fonts/inter-latin-500-normal.woff2", weight: "500", style: "normal" },
     { path: "./fonts/inter-latin-600-normal.woff2", weight: "600", style: "normal" },
+    // 700 et 800 manquaient : tout `font-bold` tombait dans le vide et le
+    // navigateur fabriquait un faux gras, d'ou une interface qui paraissait
+    // molle quelle que soit la graisse demandee.
+    { path: "./fonts/inter-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/inter-latin-800-normal.woff2", weight: "800", style: "normal" },
   ],
 });
 
