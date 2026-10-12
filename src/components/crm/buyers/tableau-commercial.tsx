@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { BuyerListItem } from "@/modules/buyers/crm/queries";
+import { formatDateTime } from "@/modules/crm/format";
 
 /**
  * Tableau de bord d'un commercial, pensé pour un téléphone tenu d'une main.
@@ -34,19 +35,60 @@ function encoreOuvert(item: BuyerListItem): boolean {
 
 export interface ChiffresCommercial {
   nouveauxAujourdhui: number;
-  aRappeler: number;
+  enRetard: number;
+  sansAction: number;
   visitesPlanifiees: number;
   dossiers: number;
 }
 
+/*
+ * Un seul compteur « A rappeler » additionnait deux choses differentes : les
+ * dossiers dont l'echeance est passee, et ceux pour lesquels personne n'a rien
+ * prevu. Les deux demandent une action, mais pas la meme — et le libelle
+ * mentait sur la moitie du chiffre : un dossier sans tache n'a aucun rappel a
+ * honorer. La tuile ouvrait en plus une liste filtree sur l'une des deux
+ * moities seulement, si bien que le chiffre annonce et la liste obtenue ne
+ * concordaient pas.
+ *
+ * Les deux ensembles sont disjoints par construction (`overdue` suppose une
+ * tache, `noNextAction` son absence) : les separer ne compte rien deux fois.
+ */
 export function compterPourCommercial(items: BuyerListItem[]): ChiffresCommercial {
   const ouverts = items.filter(encoreOuvert);
   return {
     nouveauxAujourdhui: ouverts.filter((i) => memeJour(i.profile.last_interest_at)).length,
-    aRappeler: ouverts.filter((i) => i.overdue || i.noNextAction).length,
+    enRetard: ouverts.filter((i) => i.overdue).length,
+    sansAction: ouverts.filter((i) => i.noNextAction).length,
     visitesPlanifiees: ouverts.filter((i) => i.profile.pipeline_stage === "visite").length,
     dossiers: ouverts.length,
   };
+}
+
+/**
+ * Les visites a venir, deduites des dossiers deja charges.
+ *
+ * Une visite, dans ce CRM, c'est une tache a echeance plus l'etape « visite » :
+ * c'est exactement ce qu'ecrit le formulaire « Planifier la visite ». On relit
+ * donc le meme fait, sans deuxieme requete et sans table parallele qui
+ * pourrait divergir du compteur juste au-dessus.
+ *
+ * Une visite deja passee n'est pas « a venir » : elle a lieu ou elle est
+ * manquee, et elle remonte alors dans « En retard ».
+ */
+export function prochainesVisites(
+  items: BuyerListItem[],
+  now: number = Date.now(),
+): BuyerListItem[] {
+  return items
+    .filter((i) => {
+      if (!encoreOuvert(i)) return false;
+      if (i.profile.pipeline_stage !== "visite") return false;
+      const quand = i.nextTask?.due_at;
+      if (!quand) return false;
+      const t = new Date(quand).getTime();
+      return !Number.isNaN(t) && t >= now;
+    })
+    .sort((a, b) => (a.nextTask?.due_at ?? "").localeCompare(b.nextTask?.due_at ?? ""));
 }
 
 /**
@@ -108,15 +150,20 @@ function Chiffre({
 
 export function TableauCommercial({ items }: { items: BuyerListItem[] }) {
   const c = compterPourCommercial(items);
+  const visites = prochainesVisites(items).slice(0, 5);
   return (
-    <section className="flex flex-col gap-3">
-      {/* Deux colonnes sur telephone, quatre au-dela : chaque chiffre reste
-          lisible sans zoom, et la rangee ne se brise jamais au milieu. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <section className="flex flex-col gap-4">
+      {/* Deux colonnes sur telephone, cinq au-dela : chaque chiffre reste
+          lisible sans zoom, et la rangee ne se brise jamais au milieu.
+          Chaque tuile ouvre EXACTEMENT les dossiers qu'elle compte. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Chiffre valeur={c.nouveauxAujourdhui} libelle="Arrivés aujourd’hui"
                  icone="✦" vif="--crm-vif-nouveau"
                  href="/crm/acquereurs?signal=nouveaux" />
-        <Chiffre valeur={c.aRappeler} libelle="À rappeler" alerte
+        <Chiffre valeur={c.enRetard} libelle="En retard" alerte
+                 icone="!" vif="--crm-vif-perdu"
+                 href="/crm/acquereurs?signal=en_retard" />
+        <Chiffre valeur={c.sansAction} libelle="Sans action prévue" alerte
                  icone="☎︎" vif="--crm-vif-a_contacter"
                  href="/crm/acquereurs?signal=sans_action" />
         <Chiffre valeur={c.visitesPlanifiees} libelle="Visites planifiées"
@@ -125,6 +172,49 @@ export function TableauCommercial({ items }: { items: BuyerListItem[] }) {
         <Chiffre valeur={c.dossiers} libelle="Dossiers en cours"
                  icone="◈" vif="--crm-vif-signe"
                  href="/crm/acquereurs" />
+      </div>
+
+      {/* Ce qui est cale, et quand. Le compteur disait « 3 visites » sans
+          jamais dire lesquelles ni a quelle heure : il fallait ouvrir le
+          pipeline puis chaque fiche pour retrouver sa propre journee. */}
+      <div className="crm-panel flex flex-col gap-2 p-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-bold text-[var(--crm-text)]">Prochaines visites</h2>
+          <Link
+            href="/crm/acquereurs/pipeline"
+            className="text-xs font-medium text-[var(--crm-univers)] hover:underline"
+          >
+            Tout voir
+          </Link>
+        </div>
+        {visites.length === 0 ? (
+          <p className="rounded-[10px] border border-dashed border-[var(--crm-line)] px-3 py-5 text-center text-xs text-[var(--crm-text-faint)]">
+            Aucune visite planifiée. Ouvrez une fiche pour en caler une.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {visites.map((v) => (
+              <li key={v.profile.id}>
+                <Link
+                  href={`/crm/acquereurs/${v.profile.id}`}
+                  className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[var(--crm-line-hover)]"
+                >
+                  <span className="min-w-0">
+                    <span className="crm-ellipsis block text-sm font-semibold text-[var(--crm-text)]">
+                      {v.name}
+                    </span>
+                    <span className="crm-ellipsis block text-[11px] text-[var(--crm-text-faint)]">
+                      {v.lastPropertyLabel ?? "Bien non précisé"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--crm-text-dim)]">
+                    {v.nextTask?.due_at ? formatDateTime(v.nextTask.due_at) : ""}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

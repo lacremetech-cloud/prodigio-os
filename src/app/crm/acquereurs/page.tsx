@@ -4,6 +4,7 @@ import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
 import { BuyerInbox } from "@/components/crm/buyers/buyer-inbox";
+import { lireSignal } from "@/modules/buyers/crm/signaux";
 
 export const metadata: Metadata = { title: "Acquéreurs" };
 
@@ -15,8 +16,15 @@ export const metadata: Metadata = { title: "Acquéreurs" };
  * coordonnées sont masquées **avant** d'être envoyées au navigateur, selon le
  * rôle — jamais côté client.
  */
-export default async function BuyersInboxPage() {
+export default async function BuyersInboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireCrmSession("/crm/acquereurs");
+  // `?signal=en_retard` : les tuiles du tableau de bord ouvrent directement la
+  // liste qu'elles annoncent. Une valeur inconnue ne filtre rien.
+  const signal = lireSignal((await searchParams).signal);
   const canViewContacts = canViewContactDetails(session.roles);
 
   const { items, members } = await loadBuyerList(canViewContacts);
@@ -55,7 +63,12 @@ export default async function BuyersInboxPage() {
         </Link>
       </header>
 
-      <BuyerInbox rows={rows} properties={properties} members={memberOptions} />
+      <BuyerInbox
+        rows={rows}
+        properties={properties}
+        members={memberOptions}
+        signalInitial={signal}
+      />
     </div>
   );
 }
