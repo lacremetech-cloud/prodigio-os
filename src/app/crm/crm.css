@@ -114,32 +114,32 @@
  */
 .crm-root[data-crm-theme="light"] {
   color-scheme: light;
-  /* La toile et la surface douce ne se distinguaient quasiment pas (#eef1f5
-     contre #f1f3f7) : une tuile posee a meme la toile disparaissait dedans.
-     La toile descend d'un cran, la surface douce remonte. Elles ne servent
-     plus a la meme chose : la douce est un CREUX dans une carte blanche, la
-     toile est le fond sur lequel les cartes se posent. */
-  --crm-bg: #e8ecf2;
+  /* La toile est BLANCHE. Un fond bleu-gris etale partout tirait l'interface
+     vers le papier teinte ; le blanc laisse la couleur exister la ou on l'a
+     mise — bandeaux, pastilles, chiffres. Les cartes ne se detachent plus par
+     un fond different mais par un trait net, comme chez Linear ou Stripe.
+     Les gris sont NEUTRES : plus aucune teinte bleue. */
+  --crm-bg: #ffffff;
   --crm-panel: #ffffff;
-  --crm-panel-2: #f3f5f9;
+  --crm-panel-2: #f6f7f8;
   --crm-elevated: #ffffff;
   /* Traits visibles. A #e6e8ee, un champ blanc borde de blanc casse disparait
      sur une carte blanche — c'est la moitie du « ton sur ton ». */
-  --crm-line: #d2d8e2;
-  --crm-line-soft: #e4e8ef;
+  --crm-line: #e3e5e8;
+  --crm-line-soft: #eceef0;
   --crm-topbar: rgba(255, 255, 255, 0.92);
   /* Tous les tons de texte ci-dessous sont MESURES : chacun atteint au moins
      4.5:1 (WCAG AA) sur les trois surfaces — toile, carte et surface douce.
      L'ancien `--crm-text-faint` (#88909f) tombait a 2.97 sur la toile : il
      portait pourtant les sous-titres, les mentions « non designe », les
      pourcentages et les textes d'invite des champs. */
-  --crm-text: #0d121c;
-  --crm-text-dim: #3f4a5c;
-  --crm-text-faint: #5a6473;
+  --crm-text: #0f1115;
+  --crm-text-dim: #4a4f57;
+  --crm-text-faint: #6b7076;
   --crm-shadow: 0 1px 2px rgba(13, 18, 28, 0.05), 0 12px 28px -16px rgba(13, 18, 28, 0.25);
   --crm-shadow-sm: 0 1px 2px rgba(13, 18, 28, 0.06);
-  --crm-hover: #edf0f5;
-  --crm-line-hover: #c3cad6;
+  --crm-hover: #f3f4f6;
+  --crm-line-hover: #cfd2d6;
   --crm-on-accent: #ffffff;
   --crm-accent-vers: #000000;
   --crm-gold: #7a5f24;
@@ -165,17 +165,41 @@
   --crm-st-signe: #136c34;
   --crm-st-perdu: #c62828;
   --crm-st-neutre: #616c7e;
-  /* Aplats : vifs, et ils portent du blanc. Voir la note du theme sombre. */
+  /* Aplats : vifs, et ils portent du blanc. Le libelle qu'ils portent est en
+     14 px/800, soit du « grand texte » au sens WCAG : le seuil tombe de 4.5 a
+     3:1, ce qui autorise cette saturation. Chaque valeur est mesuree. */
   --crm-vif-nouveau: #4f46e5;
-  --crm-vif-a_contacter: #b45309;
-  --crm-vif-contact: #0e7490;
+  --crm-vif-a_contacter: #d97706;
+  --crm-vif-contact: #0891b2;
   --crm-vif-qualifie: #7c3aed;
   --crm-vif-rdv_planifie: #4f46e5;
-  --crm-vif-proposition: #c2410c;
-  --crm-vif-signe: #15803d;
+  --crm-vif-proposition: #ea580c;
+  --crm-vif-signe: #16a34a;
   --crm-vif-perdu: #e11d48;
   --crm-vif-neutre: #64748b;
   --crm-sur-vif: #ffffff;
+}
+
+/*
+ * TYPOGRAPHIE DU CRM — une seule famille, et elle est epaisse.
+ *
+ * Le CRM heritait du serif editorial des pages publiques (Cormorant). C'est la
+ * bonne police pour une brochure de villa ; ce n'est pas celle d'un outil qu'on
+ * ouvre quarante fois par jour. Le CRM n'utilise plus qu'Inter.
+ *
+ * Inter n'etait par ailleurs embarquee qu'en 400/500/600 : tout `font-bold`
+ * (700) tombait dans le vide et le navigateur fabriquait un faux gras. Les
+ * graisses 700 et 800 sont desormais dans le depot — c'est la vraie raison
+ * pour laquelle l'interface paraissait molle, quelle que soit la valeur
+ * demandee.
+ */
+.crm-root {
+  --font-display: var(--font-sans);
+}
+.crm-display {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
 /* ------------------------------------------------------------------ Layout */
@@ -218,8 +242,8 @@
 /* --------------------------------------------------------------- Typography */
 .crm-eyebrow {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   /* Suit l'univers : un surtitre dore au-dessus d'une page Biens entierement
      indigo etait le dernier reste de l'ancien theme. */
