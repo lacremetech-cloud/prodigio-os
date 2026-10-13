@@ -6,7 +6,7 @@ import type { Visite } from "@/modules/buyers/crm/visites";
 import { CourbeArrivees } from "./courbe-arrivees";
 import { datesDArrivee } from "@/modules/buyers/crm/arrivees";
 import {
-  BUDGET_CHOICE_LABELS,
+  BUDGET_CHOICE_COURT,
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
 
@@ -222,7 +222,7 @@ export function TableauCommercial({
                     <span className="crm-ellipsis block text-[11px] text-[var(--crm-text-faint)]">
                       {d.propertyLabel ?? "Bien non précisé"}
                       {d.budgetChoice
-                        ? ` · ${BUDGET_CHOICE_LABELS[d.budgetChoice as BuyerBudgetChoice] ?? d.budgetChoice}`
+                        ? ` · ${BUDGET_CHOICE_COURT[d.budgetChoice as BuyerBudgetChoice] ?? d.budgetChoice}`
                         : ""}
                     </span>
                   </span>

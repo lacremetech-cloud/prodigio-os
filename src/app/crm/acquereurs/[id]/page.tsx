@@ -14,6 +14,7 @@ import { memberDisplayName } from "@/modules/crm/data/queries";
 import { buyerAuditEventLabels, buyerStageVisual } from "@/modules/buyers/crm/labels";
 import { formatCents } from "@/modules/buyers/crm/criteria";
 import {
+  BUDGET_CHOICE_COURT,
   BUDGET_CHOICE_LABELS,
   BUDGET_QUESTION,
   type BuyerBudgetChoice,
@@ -30,7 +31,7 @@ import {
 import { activityOutcomeLabels, activityTypeLabels } from "@/modules/crm/labels";
 import { formatDateTime, timeSince } from "@/modules/crm/format";
 import { cssVarRef } from "@/modules/crm/status-visuals";
-import { Chip, SectionTitle } from "@/components/crm/ui";
+import { SectionTitle } from "@/components/crm/ui";
 import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { CopyableValue } from "@/components/crm/copyable";
@@ -130,7 +131,7 @@ export default async function BuyerProfilePage({
   const resumeBien = premierInteret?.propertyLabel ?? null;
   const choixBudget = premierInteret?.interest.budget_choice ?? null;
   const resumeBudget = choixBudget
-    ? BUDGET_CHOICE_LABELS[choixBudget as BuyerBudgetChoice] ?? choixBudget
+    ? BUDGET_CHOICE_COURT[choixBudget as BuyerBudgetChoice] ?? choixBudget
     : null;
   // Prochaine action et retard : calcules par la requete (l'heure courante
   // n'a rien a faire dans le rendu).
@@ -194,7 +195,7 @@ export default async function BuyerProfilePage({
             {assignees.length > 0 ? (
               assignees.map((a) => a.name).join(", ")
             ) : (
-              <Absent>Personne</Absent>
+              <Absent>Non affecté</Absent>
             )}
           </Resume>
           <Resume label="Prochaine action">
@@ -204,7 +205,7 @@ export default async function BuyerProfilePage({
                 {prochaine.due_at ? ` · ${formatDateTime(prochaine.due_at)}` : ""}
               </span>
             ) : (
-              <Absent>Aucune</Absent>
+              <Absent>À programmer</Absent>
             )}
           </Resume>
         </dl>
@@ -264,7 +265,9 @@ export default async function BuyerProfilePage({
                 {detail.contact ? `depuis le ${formatDateTime(detail.contact.created_at)}` : "—"}
               </Field>
             </dl>
-            {appelable ? <ContactRapide numero={appelable} className="mt-3" /> : null}
+            {/* Memes boutons que la liste : le meme geste se fait de la meme
+                maniere aux deux endroits. */}
+            <ContactRapide numero={appelable} email={detail.email} className="mt-3" />
           </section>
 
           {/* Intérêts par bien */}
@@ -313,13 +316,6 @@ export default async function BuyerProfilePage({
                             </span>
                           );
                         })()}
-                        <Chip variant={i.review_status === "nouveau" ? "gold" : "neutral"}>
-                          {i.review_status === "nouveau"
-                            ? "Nouveau"
-                            : i.review_status === "consulte"
-                              ? "Consulté"
-                              : "Traité"}
-                        </Chip>
                       </div>
                     </div>
 

@@ -40,6 +40,22 @@ export const BUDGET_CHOICE_LABELS: Record<BuyerBudgetChoice, string> = {
 };
 
 /**
+ * Les mêmes réponses, en version courte — pour une colonne de tableau.
+ *
+ * Le libellé long est la QUESTION telle qu'elle a été posée : il a sa place sur
+ * la fiche, où l'on veut savoir ce qu'on a demandé à la personne. Dans une
+ * liste, « Oui, entre 500 000 € et 1 million d'euros » passait sur deux lignes
+ * et poussait tout le reste.
+ */
+export const BUDGET_CHOICE_COURT: Record<BuyerBudgetChoice, string> = {
+  aucun_projet: "Pas de projet",
+  "500k_1m": "500 000 € – 1 M€",
+  "1m_2m": "1 – 2 M€",
+  "2m_3m": "2 – 3 M€",
+  plus_3m: "Plus de 3 M€",
+};
+
+/**
  * Bornes indicatives en centimes. `aucun_projet` n'en a **pas** : ce n'est pas
  * un budget inconnu, c'est l'absence de projet. Miroir de
  * `public.buyer_choice_bounds(text)`.

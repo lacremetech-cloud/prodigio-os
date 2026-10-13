@@ -48,7 +48,7 @@ export function PropertyBuyersPanel({ rows }: { rows: PropertyBuyerRow[] }) {
                 <div className="min-w-0">
                   <Link
                     href={`/crm/acquereurs/${profile.id}`}
-                    className="crm-wrap text-sm font-medium text-[var(--crm-text)] hover:text-[var(--crm-gold)]"
+                    className="crm-wrap text-sm font-medium text-[var(--crm-text)] hover:text-[var(--crm-azur)]"
                   >
                     {name}
                   </Link>
