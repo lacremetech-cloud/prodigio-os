@@ -24,30 +24,47 @@
 -- se décidera après inventaire des dépendances, séparément.
 --
 -- ---------------------------------------------------------------------
--- LE PIÈGE DU DÉFAUT
+-- CE QUI N'EST PAS DÉDUIT
 --
--- `qualification_status` vaut `non_qualifie` PAR DÉFAUT : c'est l'état de
--- quelqu'un que personne n'a jamais jugé, pas celui de quelqu'un qu'on a
--- écarté. Le reprendre littéralement aurait marqué « Non qualifié » tout
--- le fichier jamais traité — exactement l'inverse de ce qu'il raconte.
--- Seul `ecarte` porte un rejet explicite, et lui seul devient
--- `non_qualifie`.
+-- Rien n'est reporté de l'ancienne échelle vers la nouvelle. Trois raisons,
+-- et chacune suffirait :
 --
--- De même, aucun ancien « Qualifié » ne devient « Gros potentiel » :
--- « Qualifié » disait qu'un humain avait validé le dossier, pas qu'il le
--- jugeait fort. Promouvoir d'office aurait fabriqué des gros potentiels
--- que personne n'a confirmés. Ces dossiers reviennent donc « À qualifier »
--- — la file de travail, pas la poubelle — et leur valeur d'origine reste
--- lisible dans la colonne conservée et dans le journal d'audit.
+-- 1. `qualification_status` vaut `non_qualifie` PAR DÉFAUT. C'est l'état de
+--    quelqu'un que personne n'a jamais jugé, pas celui de quelqu'un qu'on a
+--    écarté. Le reprendre littéralement marquerait « Non qualifié » tout le
+--    fichier jamais traité — l'inverse exact de ce qu'il raconte.
+--
+-- 2. L'ancienne échelle vise la PERSONNE, la nouvelle le DOSSIER. Un
+--    « Écarté » posé parce que la personne ne voulait pas de Verdun
+--    rejetterait aussi Jean Jaurès, qu'elle n'a peut-être jamais discuté.
+--    Un rejet hérité fait disparaître un dossier de la file sans que
+--    personne ne l'ait décidé : c'est pire qu'une absence de jugement.
+--
+-- 3. « Qualifié » ne dit pas un niveau de potentiel — il dit « quelqu'un a
+--    regardé ». En faire un « Gros potentiel » fabriquerait des gros
+--    potentiels que personne n'a confirmés.
+--
+-- La valeur d'origine n'est pas perdue : la colonne la garde, le journal
+-- d'audit en conserve la trace dossier par dossier, et la fiche l'affiche
+-- comme une qualification HÉRITÉE, à préciser — jamais comme un verdict.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- 1. Trace AVANT de toucher quoi que ce soit
+-- 1. La qualification DU PROJET prime, toujours
 --
--- Le journal est écrit en premier, et il porte les deux anciennes valeurs.
--- Si la reprise se révélait fausse, c'est lui qui permet de la rejouer
--- autrement : une migration qui efface sa propre source est une migration
--- qu'on ne peut pas corriger.
+-- L'ancienne échelle vit sur la PERSONNE, la nouvelle sur le DOSSIER
+-- (personne × projet). Les reporter l'une sur l'autre reviendrait à décider
+-- pour chaque projet d'après un jugement qui n'en visait aucun : une
+-- personne « Écartée » parce qu'elle ne voulait pas de Verdun se verrait
+-- rejetée sur Jean Jaurès, qu'elle n'a peut-être jamais discuté. Un rejet
+-- hérité est pire qu'une absence de jugement : il fait disparaître un
+-- dossier de la file sans que personne ne l'ait décidé.
+--
+-- Aucune valeur de l'ancienne échelle n'est donc reportée. Elle n'est pas
+-- perdue pour autant : la colonne `buyer_profiles.qualification_status`
+-- garde sa valeur, et le journal ci-dessous en conserve la trace, dossier
+-- par dossier. La fiche l'affiche comme une qualification HÉRITÉE, à
+-- préciser — pas comme un verdict.
 -- ---------------------------------------------------------------------
 insert into public.audit_events
   (actor_user_id, entity_type, entity_id, event_type, old_value, new_value, metadata)
@@ -60,73 +77,51 @@ select
     'qualification', i.qualification,
     'qualification_status_profil', p.qualification_status
   ),
-  jsonb_build_object(
-    'qualification',
-    case
-      -- Le seul rejet explicite de l'ancienne échelle.
-      when i.qualification = 'a_qualifier' and p.qualification_status = 'ecarte'
-        then 'non_qualifie'
-      -- « Qualifié » n'est pas un niveau de potentiel : retour à la file.
-      when i.qualification = 'qualifie' then 'a_qualifier'
-      else i.qualification
-    end
-  ),
+  jsonb_build_object('qualification', 'a_qualifier'),
   jsonb_build_object(
     'source', 'consolidation_qualification_unique',
-    'migration', '20261014090000'
+    'migration', '20261014090000',
+    'motif', case
+      when i.qualification = 'qualifie'
+        then 'Ancien « Qualifié » : ne disait pas un niveau de potentiel, à préciser'
+      else 'Ancienne qualification par personne conservée pour mémoire, non reportée'
+    end
   )
 from public.buyer_interests i
 join public.buyer_profiles p on p.id = i.buyer_profile_id
 where
-  -- On ne journalise que ce qui change réellement.
+  -- Le repli de « Qualifié », qui lui change bien une valeur…
   i.qualification = 'qualifie'
-  or (i.qualification = 'a_qualifier' and p.qualification_status = 'ecarte');
+  -- …et la mémoire d'une ancienne qualification qui disait quelque chose,
+  -- sur un dossier que personne n'a encore jugé sur la nouvelle échelle.
+  or (i.qualification = 'a_qualifier' and p.qualification_status <> 'non_qualifie');
 
 -- ---------------------------------------------------------------------
--- 2. Reprise de l'ancienne qualification — AVANT le repli de « Qualifié »
+-- 2. Repli de « Qualifié » — la SEULE écriture de cette migration
 --
--- L'ordre n'est pas indifférent. En repliant « Qualifié » d'abord, un
--- dossier à la fois `qualification = 'qualifie'` (jugement récent, positif)
--- et `qualification_status = 'ecarte'` (jugement ancien, négatif) se
--- retrouvait à `a_qualifier`, redevenait éligible à la reprise, et finissait
--- `non_qualifie` : le vieux rejet écrasait le jugement récent, et le journal
--- écrit plus haut annonçait autre chose que ce que la base contenait.
+-- Il ne disait pas un niveau de potentiel, il disait « quelqu'un a
+-- regardé ». Le dossier revient donc « À qualifier ».
 --
--- La reprise ne touche donc que les dossiers restés au défaut `a_qualifier`,
--- c'est-à-dire ceux sur lesquels personne ne s'est jamais prononcé sur la
--- nouvelle échelle.
+-- Et c'est TOUT ce qui change. Les appels consignés, les notes, les
+-- rappels, l'étape commerciale, les affectations : rien n'y touche. Un
+-- dossier déjà appelé ne retombe pas dans « À contacter », qui se lit sur
+-- le nombre de tentatives et non sur la qualification — c'est précisément
+-- pour cela que les deux sont des colonnes séparées.
 --
--- Le motif est obligatoire pour `non_qualifie` (contrainte existante) : il
--- dit d'où vient la valeur, pour que personne ne cherche trois semaines plus
--- tard qui a écarté ce dossier et pourquoi.
--- ---------------------------------------------------------------------
-update public.buyer_interests i
-   set qualification = 'non_qualifie',
-       qualification_reason = coalesce(
-         nullif(btrim(coalesce(i.qualification_reason, '')), ''),
-         'Écarté — repris de l''ancienne qualification'
-       ),
-       qualification_at = coalesce(i.qualification_at, now())
-  from public.buyer_profiles p
- where p.id = i.buyer_profile_id
-   and i.qualification = 'a_qualifier'
-   and p.qualification_status = 'ecarte';
-
--- `non_qualifie`, `en_cours` et `qualifie` de l'ancienne échelle ne donnent
--- lieu à AUCUNE écriture : ils valent tous « personne n'a encore tranché sur
--- la nouvelle échelle », ce que `a_qualifier` dit déjà.
-
--- ---------------------------------------------------------------------
--- 3. Repli de « Qualifié »
---
--- Il ne disait pas un niveau de potentiel. Le dossier revient dans la file à
--- qualifier, et c'est tout : la date est posée pour que la fiche montre que
--- quelque chose s'est passé ce jour-là.
+-- `qualification_at` n'est volontairement PAS posée : poser une date
+-- ferait croire qu'un humain a tranché ce jour-là. La trace de la reprise
+-- est dans le journal, à sa place.
 -- ---------------------------------------------------------------------
 update public.buyer_interests
-   set qualification = 'a_qualifier',
-       qualification_at = coalesce(qualification_at, now())
+   set qualification = 'a_qualifier'
  where qualification = 'qualifie';
+
+-- ---------------------------------------------------------------------
+-- 3. Rien d'autre n'est écrit
+--
+-- `non_qualifie`, `en_cours`, `qualifie` et `ecarte` de l'ancienne échelle
+-- ne donnent lieu à AUCUNE écriture sur les dossiers. Voir le point 1.
+-- ---------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------
 -- 4. Quatre valeurs, et pas cinq
