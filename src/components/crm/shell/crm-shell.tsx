@@ -35,6 +35,7 @@ const UNIVERS: Record<Univers, { label: string; accueil: string; items: NavItem[
     label: "Mandats",
     accueil: "/crm/mandats",
     items: [
+      { href: "/crm/vue-ensemble", label: "Vue d’ensemble", icon: "◈" },
       { href: "/crm/mandats", label: "Leads", icon: "☰" },
       { href: "/crm/mandats/pipeline", label: "Pipeline", icon: "▤" },
     ],
@@ -55,7 +56,10 @@ const ORDRE_UNIVERS: Univers[] = ["mandats", "biens"];
 
 /** Entrees communes aux deux univers : elles ne changent pas de couleur. */
 const NAV_HAUT: NavItem[] = [
-  { href: "/crm", label: "Vue d’ensemble", icon: "◈", exact: true },
+  /* « Accueil » et non « Vue d'ensemble » : cette entrée mène au choix des
+     espaces, pas aux chiffres d'un seul des deux métiers. Ceux-ci ont leur
+     propre page, atteignable depuis l'accueil et depuis l'espace Mandats. */
+  { href: "/crm", label: "Accueil", icon: "◈", exact: true },
 ];
 const NAV_BAS: NavItem[] = [
   { href: "/crm/rendez-vous", label: "Agenda", icon: "◷" },
@@ -215,7 +219,7 @@ function NavLinks({
  * centimetres de lui. Le nom seul, pose, suffit — et la ligne du dessous dit
  * ou l'on est, ce que le monogramme ne disait pas.
  */
-function Brand() {
+function Brand({ espace }: { espace: string }) {
   return (
     <Link href="/crm" className="block">
       {/*
@@ -242,8 +246,10 @@ function Brand() {
         de l'air la detachent : elle ne dit pas la meme chose — l'une est la
         marque, l'autre l'endroit du produit ou l'on se trouve.
       */}
+      {/* L'endroit du produit ou l'on se trouve. Un administrateur voyait
+          « Espace commercial » alors qu'il pilote les deux metiers. */}
       <span className="mt-3 block border-t border-white/10 pt-2.5 text-[9.5px] uppercase tracking-[0.26em] text-[var(--crm-sb-faible)]">
-        Espace commercial
+        {espace}
       </span>
     </Link>
   );
@@ -302,6 +308,10 @@ export function CrmShell({
   // pas pour lui, et l'accent doit rester le sien.
   const universRoute = universDeLaRoute(usePathname());
   const univers = commercial ? "biens" : universRoute;
+  /* Ce que dit la ligne sous le logo : l'endroit du produit ou l'on se trouve,
+     pas le role de la personne. Un administrateur pilote les deux metiers ; lui
+     afficher « Espace commercial » le range dans un seul. */
+  const espace = commercial ? "Espace commercial" : "Administration";
   const rootRef = useRef<HTMLDivElement>(null);
   const primary = roles.find((r) => r in roleLabels) as CrmRole | undefined;
   const name = email ?? "Utilisateur";
@@ -330,7 +340,7 @@ export function CrmShell({
       */}
       <aside className="crm-sidebar sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col p-4 lg:flex">
         <div className="px-2 py-2">
-          <Brand />
+          <Brand espace={espace} />
         </div>
         <div className="crm-scroll mt-6 min-h-0 flex-1 overflow-y-auto">
           <NavLinks commercial={commercial} />
@@ -348,7 +358,7 @@ export function CrmShell({
           />
           <aside className="crm-sidebar absolute left-0 top-0 flex h-full w-[268px] flex-col p-4 crm-fade-in">
             <div className="px-2 py-2">
-              <Brand />
+              <Brand espace={espace} />
             </div>
             <div className="crm-scroll mt-6 min-h-0 flex-1 overflow-y-auto">
               <NavLinks commercial={commercial} onNavigate={() => setOpen(false)} />
