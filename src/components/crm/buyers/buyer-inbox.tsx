@@ -231,8 +231,18 @@ export function BuyerInbox({
 
       {visible.length === 0 ? (
         <EmptyState
-          title="Aucun dossier acquéreur ne correspond."
-          hint="Ajustez la recherche ou les filtres. Les nouveaux acquéreurs apparaissent ici dès leur première manifestation d’intérêt sur une page publique."
+          /* Rien du tout n’est different de « vos filtres cachent tout » : le
+             premier ne se corrige pas en touchant aux filtres. */
+          title={
+            rows.length === 0
+              ? "Aucun acquéreur pour l’instant."
+              : "Aucun dossier acquéreur ne correspond."
+          }
+          hint={
+            rows.length === 0
+              ? "Les acquéreurs apparaissent ici dès leur première manifestation d’intérêt sur une page publique."
+              : "Ajustez la recherche ou les filtres."
+          }
           icon="◉"
         />
       ) : (

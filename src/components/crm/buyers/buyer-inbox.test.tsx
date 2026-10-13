@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { BuyerInbox } from "./buyer-inbox";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 
@@ -77,7 +77,21 @@ describe("BuyerInbox", () => {
     const { getByText } = render(
       <BuyerInbox rows={[]} members={membres} />,
     );
+    expect(getByText("Aucun acquéreur pour l’instant.")).toBeTruthy();
+  });
+
+  // Sans acquéreur du tout, inviter à « ajuster les filtres » envoie le
+  // commercial chercher une panne qui n'existe pas.
+  it("distingue « rien à afficher » de « les filtres cachent tout »", () => {
+    const { getByText, getByLabelText } = render(
+      <BuyerInbox
+        rows={[dossier({ stage: "nouveau" })]}
+        members={membres}
+      />,
+    );
+    fireEvent.change(getByLabelText("Étape"), { target: { value: "signe" } });
     expect(getByText("Aucun dossier acquéreur ne correspond.")).toBeTruthy();
+    expect(getByText("Ajustez la recherche ou les filtres.")).toBeTruthy();
   });
 
   it("ne montre plus ni score ni qualification", () => {
