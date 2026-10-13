@@ -392,12 +392,22 @@ html.js .reveal.reveal-rise.is-visible {
   color: var(--uf-fg);
   font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
   padding: 24px 16px;
-  /* Consulté en direct, le formulaire doit remplir l'écran : sans cela le fond
-     de l'application réapparaît sous la carte. En iframe, le parent ajuste la
-     hauteur au contenu et cette règle n'a aucun effet visible. */
-  min-height: 100dvh;
   box-sizing: border-box;
 }
+
+/* Consulté en direct, le formulaire doit remplir l'écran, sinon le fond de
+   l'application réapparaît sous la carte. C'était obtenu par `min-height:
+   100dvh` SUR la racine — et la note qui l'accompagnait, « en iframe cette
+   règle n'a aucun effet visible », était fausse.
+
+   En cadre, `100dvh` vaut la hauteur que l'hôte vient de donner au cadre. La
+   racine ne peut donc plus jamais redescendre en dessous : la hauteur publiée
+   se fige à son maximum, et l'écran 2, plus court que l'écran 1, laisse un
+   grand vide blanc sous le bouton. C'est ce qui a été observé.
+
+   Le fond va donc sur la page elle-même : l'écran est rempli en consultation
+   directe, et la hauteur publiée reste exactement celle du contenu. */
+html:has(.uf-root) { background: #ffffff; }
 
 /* Le formulaire vit chez un tiers : il ne doit hériter d'AUCUN style de la page
    qui l'entoure, ni d'une règle globale de l'application. La règle `h1,h2,h3`
@@ -409,6 +419,7 @@ html.js .reveal.reveal-rise.is-visible {
 }
 
 @media (prefers-color-scheme: dark) {
+  html:has(.uf-root) { background: #14110e; }
   .uf-root {
     --uf-bg: #14110e;
     --uf-fg: #f3efe9;
