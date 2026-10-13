@@ -112,23 +112,44 @@ export function UniversalBuyerForm({
    * page d'arrivée, qui porte déjà la même phrase — c'était un clic pour rien.
    *
    * Hors cadre, on remplace l'entrée d'historique : revenir en arrière doit
-   * ramener d'où l'on vient, pas sur un formulaire déjà envoyé. Dans un cadre,
-   * seul le parent peut se déplacer ; on le lui demande, et c'est lui qui
-   * décide (il n'accepte qu'une adresse de sa propre origine). S'il n'écoute
-   * pas — page hôte plus ancienne, script en erreur — le bouton reste affiché
-   * dessous : personne ne se retrouve bloqué.
+   * ramener d'où l'on vient, pas sur un formulaire déjà envoyé.
+   *
+   * Dans un cadre, on demande d'abord à la page hôte de se déplacer : c'est
+   * elle qui décide, et elle n'accepte qu'une adresse de sa propre origine.
+   * Mais on ne s'en remet pas à elle seule. Une page hôte ouverte AVANT le
+   * déploiement de ce dialogue — un onglet laissé ouvert toute la matinée —
+   * n'écoute rien, et le visiteur se retrouvait devant l'écran « Votre demande
+   * est enregistrée » et son bouton noir, c'est-à-dire devant le clic que tout
+   * ceci devait supprimer.
+   *
+   * Passé un court délai, on l'emmène donc nous-mêmes. Naviguer la fenêtre du
+   * haut depuis un cadre d'une autre origine est permis tant que le visiteur
+   * vient d'agir — il vient d'envoyer le formulaire. Si le navigateur refuse,
+   * le bouton reste affiché dessous : personne ne se retrouve bloqué.
    */
   useEffect(() => {
     if (status !== "done" || !brochureUrl) return;
-    if (isEmbedded()) {
-      notifyParentBrochure(brochureUrl);
+    if (!isEmbedded()) {
+      try {
+        window.location.replace(brochureUrl);
+      } catch {
+        // Navigation refusée : le bouton ci-dessous prend le relais.
+      }
       return;
     }
-    try {
-      window.location.replace(brochureUrl);
-    } catch {
-      // Navigation refusée : le bouton ci-dessous prend le relais.
-    }
+
+    notifyParentBrochure(brochureUrl);
+
+    /* Le délai laisse sa chance à la page hôte. Si elle se déplace, ce cadre
+       disparaît avec elle et ce minuteur ne s'exécute jamais. */
+    const secours = window.setTimeout(() => {
+      try {
+        if (window.top) window.top.location.href = brochureUrl;
+      } catch {
+        // Navigation du haut refusée : le bouton prend le relais.
+      }
+    }, 1200);
+    return () => window.clearTimeout(secours);
   }, [status, brochureUrl]);
 
   /**
