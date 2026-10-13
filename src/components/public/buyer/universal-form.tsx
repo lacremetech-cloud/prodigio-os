@@ -20,7 +20,12 @@ import {
   universalStepTwoSchema,
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
-import { isEmbedded, notifyParentBrochure, notifyParentHeight } from "./embed-bridge";
+import {
+  isEmbedded,
+  notifyParentBrochure,
+  notifyParentHeight,
+  observeHeight,
+} from "./embed-bridge";
 
 /**
  * Formulaire acquéreur **universel** — deux écrans, et jamais un troisième.
@@ -104,6 +109,12 @@ export function UniversalBuyerForm({
   useEffect(() => {
     notifyParentHeight(rootRef.current);
   }, [step, status, errors, brochureUrl]);
+
+  /* Et il la republie dès que le cadre prend une taille. Une page hôte qui
+     précharge le formulaire dans une modale masquée lui donne une hauteur de
+     zéro : sans cet observateur, la hauteur n'était jamais annoncée, et l'hôte
+     croyait le formulaire absent alors qu'il était prêt. */
+  useEffect(() => observeHeight(rootRef.current), []);
 
   /**
    * Demande enregistrée et dossier disponible : on y conduit directement.

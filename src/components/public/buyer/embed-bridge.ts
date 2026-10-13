@@ -57,6 +57,38 @@ export function notifyParentHeight(node: HTMLElement | null): void {
 }
 
 /**
+ * Republie la hauteur CHAQUE FOIS que le cadre en prend une.
+ *
+ * Le message de hauteur ne partait qu'aux changements d'état du formulaire. Or
+ * une page hôte qui précharge le cadre dans une modale `display:none` lui donne
+ * une hauteur de ZÉRO : `notifyParentHeight` refuse de publier une hauteur
+ * nulle — à raison —, et plus rien ne la republiait quand la modale s'ouvrait
+ * enfin. Le formulaire était là, chargé, prêt, et la page hôte ne le savait
+ * pas : elle finissait par proposer WhatsApp à sa place. C'est ce qui a été
+ * observé en production.
+ *
+ * Un observateur de taille règle le cas à la source, pour toute page hôte :
+ * passer de 0 à 520 px est un changement de taille comme un autre.
+ *
+ * Rend une fonction d'arrêt, à appeler au démontage.
+ */
+export function observeHeight(node: HTMLElement | null): () => void {
+  if (typeof window === "undefined" || !node || !isEmbedded()) return () => {};
+  if (typeof ResizeObserver === "undefined") {
+    /* Navigateur sans ResizeObserver : on republie quelques fois, le temps que
+       la modale s'ouvre. Mieux vaut trois messages de trop qu'un formulaire
+       invisible. */
+    const minuteurs = [200, 800, 2000, 5000].map((d) =>
+      window.setTimeout(() => notifyParentHeight(node), d),
+    );
+    return () => minuteurs.forEach((m) => window.clearTimeout(m));
+  }
+  const observateur = new ResizeObserver(() => notifyParentHeight(node));
+  observateur.observe(node);
+  return () => observateur.disconnect();
+}
+
+/**
  * Publie l'adresse du dossier au parent. Sans effet hors iframe.
  *
  * L'hôte reste seul juge : il n'accepte ce message que de cette iframe, et ne
