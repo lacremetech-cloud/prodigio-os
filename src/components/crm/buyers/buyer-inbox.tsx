@@ -28,7 +28,7 @@ import {
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
-import { porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
+import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -267,6 +267,28 @@ export function BuyerInbox({
             ...members.map((m) => ({ value: m.userId, label: m.name })),
           ]} />
         </div>
+      </div>
+
+      {/* Filtres rapides : une pastille, un clic, et la liste dit exactement ce
+          que la pastille annonce. Ils se combinent avec les filtres detailles
+          en dessous, et « Tous » les reinitialise. */}
+      <div className="crm-rapides" role="group" aria-label="Filtres rapides">
+        {FILTRES_RAPIDES.map((f) => {
+          const n =
+            f.signal === "tous" ? rows.length : rows.filter((r) => porteLeSignal(r, f.signal)).length;
+          return (
+            <button
+              key={f.signal}
+              type="button"
+              className="crm-rapide"
+              aria-pressed={signal === f.signal}
+              onClick={() => setSignal(f.signal)}
+            >
+              {f.label}
+              <span className="crm-rapide__n">{n}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* La session d'appels : combien de dossiers attendent, et par où

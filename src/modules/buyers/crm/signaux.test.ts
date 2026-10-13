@@ -51,3 +51,39 @@ describe("porteLeSignal", () => {
     expect(porteLeSignal(dossier({}), "tous")).toBe(true);
   });
 });
+
+/**
+ * Les filtres rapides sont ceux que le commercial se pose vraiment en arrivant.
+ * Deux pièges s'y cachent, et ce sont eux qui sont vérifiés ici.
+ */
+describe("filtres rapides de traitement", () => {
+  const base = (over: Partial<BuyerInboxRow>): BuyerInboxRow => dossier(over);
+
+  /* « À contacter » n'est PAS « sans prochaine action » : un dossier appelé
+     trois fois sans succès n'est plus à contacter, il est à rappeler. */
+  it("« à contacter » ne retient que ceux à qui personne n'a parlé", () => {
+    expect(porteLeSignal(base({ callAttempts: 0 }), "a_contacter")).toBe(true);
+    expect(porteLeSignal(base({ callAttempts: 3, noNextAction: true }), "a_contacter")).toBe(false);
+  });
+
+  /* « Injoignable » porte sur le DERNIER appel. Quelqu'un qu'on a fini par
+     joindre n'est plus injoignable, même s'il l'a été dix fois avant. */
+  it("« injoignables » regarde le dernier appel, pas l'historique", () => {
+    expect(porteLeSignal(base({ lastCallOutcome: "sans_reponse" }), "injoignables")).toBe(true);
+    expect(porteLeSignal(base({ lastCallOutcome: "message_laisse" }), "injoignables")).toBe(true);
+    expect(
+      porteLeSignal(base({ callAttempts: 10, lastCallOutcome: "contact_etabli" }), "injoignables"),
+    ).toBe(false);
+  });
+
+  it("les qualifications se filtrent une à une", () => {
+    expect(porteLeSignal(base({ qualification: "gros_potentiel" }), "gros_potentiel")).toBe(true);
+    expect(porteLeSignal(base({ qualification: "en_reflexion" }), "en_reflexion")).toBe(true);
+    expect(porteLeSignal(base({ qualification: "non_qualifie" }), "non_qualifies")).toBe(true);
+    expect(porteLeSignal(base({ qualification: "gros_potentiel" }), "non_qualifies")).toBe(false);
+  });
+
+  it("un numéro invalide se retrouve en un clic", () => {
+    expect(porteLeSignal(base({ phoneInvalid: true }), "numero_invalide")).toBe(true);
+  });
+});
