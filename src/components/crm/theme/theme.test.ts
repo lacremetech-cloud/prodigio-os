@@ -14,11 +14,14 @@ describe("normalizePreference", () => {
     expect(normalizePreference("dark")).toBe("dark");
     expect(normalizePreference("system")).toBe("system");
   });
-  it("retombe sur le défaut (sombre) pour toute autre valeur", () => {
-    expect(normalizePreference(undefined)).toBe("dark");
-    expect(normalizePreference(null)).toBe("dark");
-    expect(normalizePreference("bidon")).toBe("dark");
-    expect(DEFAULT_PREFERENCE).toBe("dark");
+  /* Le defaut est le CLAIR : c'est lui qui porte la charte, et c'est en clair
+     que les couleurs de qualification et de projet se lisent. Ce test le
+     verrouille — un retour au sombre par defaut doit se voir ici. */
+  it("retombe sur le défaut (clair) pour toute autre valeur", () => {
+    expect(normalizePreference(undefined)).toBe("light");
+    expect(normalizePreference(null)).toBe("light");
+    expect(normalizePreference("bidon")).toBe("light");
+    expect(DEFAULT_PREFERENCE).toBe("light");
   });
 });
 
@@ -32,8 +35,8 @@ describe("resolveTheme", () => {
     expect(resolveTheme("system", true)).toBe("light");
     expect(resolveTheme("system", false)).toBe("dark");
   });
-  it("système sans information (SSR) retombe sur sombre", () => {
-    expect(resolveTheme("system", null)).toBe("dark");
+  it("système sans information (SSR) retombe sur clair", () => {
+    expect(resolveTheme("system", null)).toBe("light");
   });
 });
 
