@@ -8,6 +8,7 @@ const activity = (over: Partial<ActivityRow>): ActivityRow => ({
   occurred_at: "2026-07-30T10:00:00.000Z",
   opportunity_id: "opp",
   buyer_profile_id: null,
+  interest_id: null,
   contact_id: null,
   author_user_id: "u1",
   type: "appel",

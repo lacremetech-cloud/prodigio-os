@@ -47,6 +47,12 @@ export type ContactRow = {
   phone: string | null;
   preferred_channel: "telephone" | "email" | "indifferent" | null;
   status: string;
+  /**
+   * `invalide` retire ce numéro de la file d'appels — jusqu'à correction : un
+   * déclencheur en base le repasse à `ok` dès que le numéro change. Le dossier,
+   * lui, reste ouvert : on a perdu un numéro, pas une personne.
+   */
+  phone_status: "ok" | "invalide";
 }
 
 export type OpportunityRow = {
@@ -732,6 +738,19 @@ export type BuyerInterestRow = {
    * caler une visite sur un projet déplaçait aussi ses autres intérêts.
    */
   pipeline_stage: BuyerPipelineStage;
+  /**
+   * Jugement commercial sur CETTE manifestation, confirmé par la personne qui
+   * appelle. Il ne se déduit ni du budget déclaré, ni d'un appel sans réponse :
+   * un gros potentiel injoignable reste un gros potentiel.
+   *
+   * À ne pas confondre avec `BuyerProfileRow.qualification_status`, dont le
+   * vocabulaire est plus ancien ET de sens différent — son « non_qualifie »
+   * veut dire « pas encore qualifié », celui-ci veut dire « écarté ».
+   */
+  qualification: BuyerQualification;
+  qualification_reason: string | null;
+  qualification_by: string | null;
+  qualification_at: string | null;
   outcome: "gagne" | "perdu" | null;
   outcome_reason: string | null;
   outcome_recorded_by: string | null;
@@ -796,6 +815,17 @@ export type BuyerPipelineStage =
 
 /** Qualification validée par un HUMAIN (jamais déduite d'un score). */
 export type BuyerQualificationStatus = "non_qualifie" | "en_cours" | "qualifie" | "ecarte";
+
+/**
+ * Qualification portée par la MANIFESTATION (une par projet). Cinq valeurs,
+ * une seule à la fois, et c'est elle — et elle seule — qui colore la ligne.
+ */
+export type BuyerQualification =
+  | "a_qualifier"
+  | "gros_potentiel"
+  | "qualifie"
+  | "en_reflexion"
+  | "non_qualifie";
 
 /** Recommandation opérationnelle DÉRIVÉE des scores (≠ qualification humaine). */
 export type BuyerRecommendedPriority = "prioritaire" | "a_qualifier" | "a_suivre";
@@ -930,6 +960,11 @@ export type ActivityRow = {
    */
   opportunity_id: string | null;
   buyer_profile_id: string | null;
+  /**
+   * La manifestation concernée : c'est elle qui rend l'historique lisible PAR
+   * PROJET. `null` sur les activités antérieures à cette séparation.
+   */
+  interest_id: string | null;
   contact_id: string | null;
   author_user_id: string | null;
   type: "appel" | "tentative_appel" | "email" | "sms_whatsapp" | "rendez_vous" | "note" | "autre";
@@ -1314,6 +1349,27 @@ export interface Database {
           pendant laquelle toute page qui l'appelle échoue. */
       crm_buyer_set_interest_stage: {
         Args: { p_interest_id: string; p_stage: string };
+        Returns: Json;
+      };
+      /**
+       * Tous les paramètres sont NOMMÉS et tous obligatoires : PostgREST
+       * résout la surcharge par les noms d'arguments, et une valeur par défaut
+       * ajoutée plus tard créerait une seconde signature en production — dette
+       * déjà payée sur `crm_buyer_create_task`.
+       */
+      crm_buyer_record_treatment: {
+        Args: {
+          p_interest_id: string;
+          p_call_outcome: string | null;
+          p_qualification: string | null;
+          p_qualification_reason: string | null;
+          p_note: string | null;
+          p_stage: string | null;
+          p_next_action_kind: string | null;
+          p_next_action_at: string | null;
+          p_next_action_title: string | null;
+          p_complete_task_id: string | null;
+        };
         Returns: Json;
       };
       crm_list_member_avatars: {

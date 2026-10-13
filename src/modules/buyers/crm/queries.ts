@@ -10,6 +10,7 @@ import type {
   BuyerAssignmentRow,
   BuyerInterestRow,
   BuyerProfileRow,
+  BuyerQualification,
   BuyerSearchCriteriaRow,
   ContactRow,
   PropertyRow,
@@ -70,6 +71,22 @@ export interface BuyerListItem {
   budgetMaxCents: number | null;
   /** Réponse au questionnaire du dernier intérêt (`budget_choice`). */
   budgetChoice: string | null;
+  /**
+   * Jugement commercial sur CE projet. Il ne se déduit de rien : ni du budget
+   * déclaré, ni d'un appel sans réponse. C'est lui — et lui seul — qui colore
+   * la ligne.
+   */
+  qualification: BuyerQualification;
+  qualificationReason: string | null;
+  /** Appels consignés sur CE projet. Un message envoyé n'en est pas un. */
+  callAttempts: number;
+  lastCallAt: string | null;
+  lastCallOutcome: string | null;
+  lastNote: string | null;
+  lastNoteAt: string | null;
+  lastNoteBy: string | null;
+  /** Numéro signalé invalide : ce dossier sort de la file d'appels. */
+  phoneInvalid: boolean;
 }
 
 /** Un projet du sélecteur de navigation. */
@@ -129,6 +146,7 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
     { data: properties },
     { data: criteria },
     members,
+    { data: activityByInterest },
   ] = await Promise.all([
     supabase.from("buyer_profiles").select("*").order("last_interest_at", { ascending: false }),
     supabase.from("contacts").select("*"),
@@ -149,6 +167,10 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       .from("buyer_search_criteria")
       .select("buyer_profile_id, budget_min_cents, budget_max_cents"),
     getMembersMap(),
+    // Tentatives, dernier appel et dernière note : agrégés EN BASE. Rapatrier
+    // toutes les activités ferait grossir la charge avec le nombre d'appels
+    // passés, pour afficher deux nombres et une phrase.
+    supabase.from("crm_buyer_interest_activity").select("*"),
   ]);
 
   const criteriaByProfile = new Map(
@@ -209,6 +231,20 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
     return (duProjet.due_at ?? "9999") <= (generale.due_at ?? "9999") ? duProjet : generale;
   }
 
+  /** Résumé d'historique par manifestation, tel que la base l'a agrégé. */
+  interface ResumeActivite {
+    interest_id: string;
+    call_attempts: number | null;
+    last_call_at: string | null;
+    last_call_outcome: string | null;
+    last_note: string | null;
+    last_note_at: string | null;
+    last_note_by: string | null;
+  }
+  const activiteParManifestation = new Map<string, ResumeActivite>(
+    ((activityByInterest ?? []) as ResumeActivite[]).map((a) => [a.interest_id, a]),
+  );
+
   const now = Date.now();
   const items: BuyerListItem[] = [];
 
@@ -255,6 +291,15 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
         noNextAction: nextTask == null,
         newInterest: false,
         budgetChoice: null,
+        qualification: "a_qualifier",
+        qualificationReason: null,
+        callAttempts: 0,
+        lastCallAt: null,
+        lastCallOutcome: null,
+        lastNote: null,
+        lastNoteAt: null,
+        lastNoteBy: null,
+        phoneInvalid: contact?.phone_status === "invalide",
       });
       continue;
     }
@@ -262,6 +307,7 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
     for (const interet of profileInterests) {
       const property = propertyById.get(interet.property_id);
       const nextTask = nextTaskPour(profile.id, interet.id);
+      const activite = activiteParManifestation.get(interet.id);
       items.push({
         ...identite,
         interestId: interet.id,
@@ -278,6 +324,16 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
         // Le budget DÉCLARÉ vient de la réponse au questionnaire de CETTE
         // manifestation : c'est la seule qu'on ait pour un lead du funnel.
         budgetChoice: interet.budget_choice ?? null,
+        qualification: interet.qualification,
+        qualificationReason: interet.qualification_reason,
+        callAttempts: activite?.call_attempts ?? 0,
+        lastCallAt: activite?.last_call_at ?? null,
+        lastCallOutcome: activite?.last_call_outcome ?? null,
+        lastNote: activite?.last_note ?? null,
+        lastNoteAt: activite?.last_note_at ?? null,
+        lastNoteBy: activite?.last_note_by ?? null,
+        // Le numéro appartient à la PERSONNE : invalide ici, invalide partout.
+        phoneInvalid: contact?.phone_status === "invalide",
       });
     }
   }
@@ -342,6 +398,19 @@ export interface BuyerInboxRow {
   budgetMinCents: number | null;
   budgetMaxCents: number | null;
   budgetChoice: string | null;
+  /** C'est elle, et elle seule, qui colore la ligne. */
+  qualification: BuyerQualification;
+  qualificationReason: string | null;
+  callAttempts: number;
+  lastCallAt: string | null;
+  lastCallOutcome: string | null;
+  lastNote: string | null;
+  lastNoteAt: string | null;
+  lastNoteBy: string | null;
+  phoneInvalid: boolean;
+  /** Rappel ouvert à solder quand ce dossier est traité. */
+  nextActionId: string | null;
+  nextActionKind: string | null;
 }
 
 export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
@@ -365,6 +434,17 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     assigneeIds: item.assignees.map((a) => a.userId),
     nextActionAt: item.nextTask?.due_at ?? null,
     nextActionTitle: item.nextTask?.title ?? null,
+    nextActionId: item.nextTask?.id ?? null,
+    nextActionKind: item.nextTask?.kind ?? null,
+    qualification: item.qualification,
+    qualificationReason: item.qualificationReason,
+    callAttempts: item.callAttempts,
+    lastCallAt: item.lastCallAt,
+    lastCallOutcome: item.lastCallOutcome,
+    lastNote: item.lastNote,
+    lastNoteAt: item.lastNoteAt,
+    lastNoteBy: item.lastNoteBy,
+    phoneInvalid: item.phoneInvalid,
     overdue: item.overdue,
     noNextAction: item.noNextAction,
     newInterest: item.newInterest,

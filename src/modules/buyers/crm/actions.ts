@@ -507,3 +507,81 @@ export async function setBuyerTaskStatusAction(input: unknown): Promise<ActionRe
   revalidateBuyer(parsed.data.buyerProfileId);
   return { ok: true };
 }
+
+// --- Traitement d'un appel : une seule écriture -------------------------------
+/**
+ * Ce que le commercial renseigne en raccrochant, en un seul geste : le résultat
+ * de l'appel, sa qualification, une note, la prochaine action.
+ *
+ * Tout est facultatif, et c'est délibéré : on n'oblige pas à qualifier un
+ * injoignable, ni à écrire une note à chaque tentative. Exiger les deux à
+ * chaque appel produit des qualifications au hasard et des notes vides.
+ *
+ * Les quatre données restent SÉPARÉES jusqu'en base — résultat, qualification,
+ * étape, prochaine action. « Gros potentiel + injoignable + rappel demain + en
+ * discussion » est un état parfaitement cohérent, et le système doit savoir
+ * l'écrire.
+ */
+const traitementSchema = z.object({
+  buyerProfileId: uuid,
+  interestId: uuid,
+  callOutcome: z
+    .enum(["contact_etabli", "sans_reponse", "message_laisse", "mauvais_numero"])
+    .nullable()
+    .optional(),
+  qualification: z
+    .enum(["a_qualifier", "gros_potentiel", "qualifie", "en_reflexion", "non_qualifie"])
+    .nullable()
+    .optional(),
+  qualificationReason: optionalText(300),
+  note: optionalText(4000),
+  // Les étapes engageantes restent absentes : elles ont leur action dédiée.
+  stage: z.enum(["nouveau", "a_rappeler", "en_discussion", "visite", "vivier"]).nullable().optional(),
+  nextActionKind: z.enum(["rappel", "tache", "visite"]).nullable().optional(),
+  nextActionAt: z.string().datetime({ offset: true }).nullable().optional(),
+  nextActionTitle: optionalText(200),
+  /** Rappel que ce traitement solde. */
+  completeTaskId: uuid.nullable().optional(),
+});
+
+export async function recordBuyerTreatmentAction(input: unknown): Promise<ActionResult> {
+  await requireCrmSession();
+  const parsed = traitementSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Saisie invalide. Vérifiez les champs." };
+  }
+  const d = parsed.data;
+
+  // Un motif est exigé pour écarter : la base le refuserait, autant le dire
+  // ici, tout de suite, plutôt que de renvoyer une erreur technique.
+  if (d.qualification === "non_qualifie" && !d.qualificationReason?.trim()) {
+    return { ok: false, error: "Indiquez un motif pour écarter ce dossier." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("crm_buyer_record_treatment", {
+    p_interest_id: d.interestId,
+    p_call_outcome: d.callOutcome ?? null,
+    p_qualification: d.qualification ?? null,
+    p_qualification_reason: d.qualificationReason ?? null,
+    p_note: d.note ?? null,
+    p_stage: d.stage ?? null,
+    p_next_action_kind: d.nextActionKind ?? null,
+    p_next_action_at: d.nextActionAt ?? null,
+    p_next_action_title: d.nextActionTitle ?? null,
+    p_complete_task_id: d.completeTaskId ?? null,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+
+  // Les conversions suivent le FAIT métier, pas le clic : seule une entrée
+  // réelle en discussion ou en visite les déclenche.
+  if (d.stage === "en_discussion") {
+    enArrierePlan(() => conversionInscriptionTerminee(supabase, d.interestId));
+  }
+  if (d.stage === "visite") {
+    enArrierePlan(() => conversionRendezVous(supabase, d.interestId));
+  }
+
+  revalidateBuyer(d.buyerProfileId);
+  return { ok: true };
+}
