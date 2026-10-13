@@ -121,7 +121,7 @@ function Chiffre({
   // nouvelle, pas un probleme.
   const enAlerte = Boolean(alerte) && valeur > 0;
   return (
-    <Link
+    <Link prefetch={false}
       href={href}
       className="crm-panel flex min-w-0 flex-col gap-2 p-4 transition-colors hover:border-[var(--crm-univers)]"
       style={{ ["--tuile" as keyof CSSProperties]: `var(${vif})` } as CSSProperties}
@@ -195,7 +195,7 @@ export function TableauCommercial({
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-sm font-bold text-[var(--crm-text)]">À traiter en priorité</h2>
           {priorites.length > 5 ? (
-            <Link
+            <Link prefetch={false}
               href="/crm/acquereurs?signal=sans_action"
               className="text-xs font-medium text-[var(--crm-univers)] hover:underline"
             >
@@ -211,7 +211,7 @@ export function TableauCommercial({
           <ul className="flex flex-col gap-1.5">
             {priorites.slice(0, 5).map((d) => (
               <li key={d.profile.id}>
-                <Link
+                <Link prefetch={false}
                   href={`/crm/acquereurs/${d.profile.id}`}
                   className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[var(--crm-line-hover)]"
                 >
@@ -248,7 +248,7 @@ export function TableauCommercial({
       <div className="crm-panel flex flex-col gap-2 p-4">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-sm font-bold text-[var(--crm-text)]">Prochaines visites</h2>
-          <Link
+          <Link prefetch={false}
             href="/crm/visites"
             className="text-xs font-medium text-[var(--crm-univers)] hover:underline"
           >
@@ -263,7 +263,7 @@ export function TableauCommercial({
           <ul className="flex flex-col gap-1.5">
             {prochaines.map((v) => (
               <li key={v.taskId}>
-                <Link
+                <Link prefetch={false}
                   href={`/crm/acquereurs/${v.buyerProfileId}`}
                   className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[var(--crm-line-hover)]"
                 >

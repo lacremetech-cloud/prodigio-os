@@ -69,7 +69,7 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
   // rendre optionnel par un spread fait mentir le typage.
   if (kpi.href) {
     return (
-      <Link href={kpi.href} className={classe} style={style}>
+      <Link prefetch={false} href={kpi.href} className={classe} style={style}>
         {contenu}
       </Link>
     );
@@ -85,7 +85,7 @@ function PriorityItem({ lead, canView, meta }: { lead: Lead; canView: boolean; m
   const name = contactName(lead.contactFirstName, lead.contactLastName);
   const phone = maskContactValue(lead.contactPhone, canView);
   return (
-    <Link
+    <Link prefetch={false}
       href={`/crm/mandats/${lead.opportunityId}`}
       className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[var(--crm-line-hover)]"
     >

@@ -1820,3 +1820,14 @@
 @media (max-width: 640px) {
   .crm-panneau { width: 100vw; }
 }
+
+/* Un plafond de chargement atteint se DIT : travailler sur un sous-ensemble
+   sans le savoir est pire que travailler lentement. */
+.crm-avertissement {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--crm-warning) 40%, transparent);
+  background: color-mix(in srgb, var(--crm-warning) 10%, transparent);
+  color: var(--crm-text);
+  font-size: 13px;
+}

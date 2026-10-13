@@ -317,3 +317,34 @@ group by a.interest_id;
 revoke all on public.crm_buyer_interest_activity from public;
 revoke all on public.crm_buyer_interest_activity from anon;
 grant select on public.crm_buyer_interest_activity to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6. Le journal d'audit accepte le nouvel acte métier
+-- ---------------------------------------------------------------------
+--
+-- `audit_events.event_type` a un vocabulaire FERMÉ — et c'est une bonne chose :
+-- la contrainte a rattrapé l'oubli au premier enregistrement réel, plutôt que
+-- de laisser entrer un type inventé que personne n'aurait su relire ensuite.
+--
+-- Un traitement est UN acte : un appel, une qualification, une note et un
+-- rappel posés dans le même geste. On l'enregistre donc comme un événement, et
+-- non comme quatre, pour que la trace se relise comme le travail s'est fait.
+alter table public.audit_events drop constraint audit_events_event_type_check;
+alter table public.audit_events add constraint audit_events_event_type_check check (event_type = any (array[
+'creation','changement_stade','changement_segment','changement_affectation','changement_permission',
+'resolution_doublon','resultat_commercial','invitation_creee','invitation_renvoyee','invitation_revoquee',
+'invitation_acceptee','changement_role','activation_membre','desactivation_membre','calendrier_connecte',
+'calendrier_deconnecte','estimation_planifiee','estimation_replanifiee','estimation_annulee','estimation_resultat',
+'estimation_realisee','decision_eligibilite','regle_economique_maj','mandat_brouillon','mandat_propose',
+'mandat_signe','mandat_refuse','mandat_expire','mandat_annule','document_ajoute','document_remplace',
+'document_supprime','bien_cree','bien_identite','bien_positionnement','bien_statut','bien_responsable',
+'bien_media_ajoute','bien_media_supprime','bien_media_principal','bien_document_ajoute','bien_document_supprime',
+'bien_production_maj','bien_pret','bien_public_config','bien_public_media_ajoute','bien_public_media_supprime',
+'bien_public_hero','bien_public_valide','bien_public_statut','bien_publie','bien_depublie',
+'acquereur_interet_statut','acquereur_profil_cree','acquereur_interet_rattache','acquereur_stade',
+'acquereur_qualification','acquereur_affectation','acquereur_criteres','acquereur_offre','acquereur_resultat',
+'acquereur_traitement',
+'communication_planifiee','communication_preparee','communication_envoyee','communication_livree',
+'communication_echec','communication_bloquee','communication_annulee','communication_rejouee','communication_statut',
+'modele_cree','modele_maj','modele_statut','automatisation_creee','automatisation_maj','automatisation_statut',
+'opposition_ajoutee','opposition_levee']));

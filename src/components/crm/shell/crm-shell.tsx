@@ -126,6 +126,11 @@ function Lien({
   return (
     <Link
       href={item.href}
+      /* Pas de préchargement : chaque entrée du menu est une PAGE CRM entière,
+         avec ses requêtes. Les précharger toutes, à chaque écran, revenait à
+         rendre quatre pages pour en afficher une. Mesuré : c'est l'essentiel
+         des quinze allers-retours par interaction. */
+      prefetch={false}
       onClick={onNavigate}
       aria-current={actif ? "page" : undefined}
       className="crm-nav-item"
@@ -145,6 +150,7 @@ function Bascule({ actif, onNavigate }: { actif: Univers; onNavigate?: () => voi
         <Link
           key={cle}
           href={UNIVERS[cle].accueil}
+          prefetch={false}
           onClick={onNavigate}
           aria-current={cle === actif}
           className="crm-bascule__seg"
