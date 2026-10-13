@@ -191,7 +191,7 @@ function Chiffre({
         </span>
       </span>
       <span
-        className="text-[2rem] font-bold leading-none tabular-nums"
+        className="text-[2.35rem] font-bold leading-none tabular-nums"
         style={{ color: enAlerte ? "var(--tuile)" : "var(--crm-text)" }}
       >
         {valeur}
