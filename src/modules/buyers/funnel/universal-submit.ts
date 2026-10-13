@@ -2,7 +2,10 @@
 
 import { after } from "next/server";
 import { alerterNouvelleDemande } from "../notifications/universal-notify";
-import { conversionProspect } from "@/modules/analytics/meta/conversions";
+import {
+  bienDeLaManifestation,
+  conversionProspect,
+} from "@/modules/analytics/meta/conversions";
 import { normalizePhone } from "@/modules/mandates/funnel/normalize";
 
 import {
@@ -129,8 +132,14 @@ export async function submitUniversalInterestAction(
       const conversion = async () => {
         try {
           const touche = request.context.lastTouch ?? request.context.firstTouch;
+          // Le bien est relu en base : il permet de ventiler les conversions
+          // par bien dans le Gestionnaire de publicites, sans dependre du nom
+          // donne aux campagnes.
+          const bien = await bienDeLaManifestation(supabase, interetId);
           await conversionProspect({
             interestId: interetId,
+            propertyName: bien?.nom ?? null,
+            propertyId: bien?.id ?? null,
             sourceUrl: request.context.originUrl ?? touche?.url ?? null,
             identity: {
               email: request.answers.emailRaw,

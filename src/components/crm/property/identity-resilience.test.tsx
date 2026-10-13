@@ -106,7 +106,11 @@ describe("formulaire d'identité — une panne ne détruit plus la saisie", () =
     await screen.findByRole("alert");
 
     updatePropertyIdentityAction.mockResolvedValueOnce({ ok: true });
-    fireEvent.click(screen.getByRole("button", { name: /Enregistrer l’identité/i }));
+    // Le message d'erreur peut apparaître AVANT que le bouton quitte son état
+    // « Enregistrement… » : le chercher par son libellé au repos échouait alors
+    // une fois sur trois, selon le minutage. On attend qu'il redevienne
+    // cliquable — ce qu'un utilisateur fait de toute façon.
+    fireEvent.click(await screen.findByRole("button", { name: /Enregistrer l’identité/i }));
 
     await waitFor(() => expect(screen.getByText("Enregistré")).toBeTruthy());
     // La deuxième tentative a bien renvoyé la saisie complète.

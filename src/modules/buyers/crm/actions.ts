@@ -112,13 +112,13 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
        une fois par son etape et une fois par un statut separe. L'equivalent
        honnete est l'entree en discussion — quelqu'un a repondu, c'est une vraie
        conversation, et c'est une decision humaine, jamais un score. */
-    enArrierePlan(() => conversionInscriptionTerminee(supabase, parsed.data.buyerProfileId));
+    enArrierePlan(() => conversionInscriptionTerminee(supabase, parsed.data.interestId));
   }
   if (parsed.data.stage === "visite") {
     // Conversion « rendez-vous programme » : le fait metier, c'est l'entree en
     // visite. L'identifiant d'evenement porte la date, si bien qu'un aller-
     // retour de carte dans la meme journee ne compte pas deux fois.
-    enArrierePlan(() => conversionRendezVous(supabase, parsed.data.buyerProfileId));
+    enArrierePlan(() => conversionRendezVous(supabase, parsed.data.interestId));
   }
   revalidateBuyer(parsed.data.buyerProfileId);
   return { ok: true };
@@ -451,7 +451,7 @@ export async function planifierVisiteAction(input: unknown): Promise<ActionResul
   }
 
   // Conversion Meta « rendez-vous programmé » : le fait métier, c'est ici.
-  enArrierePlan(() => conversionRendezVous(supabase, d.buyerProfileId));
+  enArrierePlan(() => conversionRendezVous(supabase, d.interestId));
   revalidateBuyer(d.buyerProfileId);
   return { ok: true };
 }
