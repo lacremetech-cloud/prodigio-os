@@ -1860,3 +1860,18 @@
   font-size: 11.5px;
   opacity: 0.75;
 }
+
+/* Barre de progression du premier traitement. */
+.crm-progression {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--crm-panel-2);
+  border: 1px solid var(--crm-line-soft);
+  overflow: hidden;
+}
+.crm-progression > span {
+  display: block;
+  height: 100%;
+  background: var(--crm-univers);
+  transition: width 200ms ease;
+}

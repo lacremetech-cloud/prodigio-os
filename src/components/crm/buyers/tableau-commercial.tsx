@@ -45,6 +45,9 @@ export interface ChiffresCommercial {
   enRetard: number;
   sansAction: number;
   dossiers: number;
+  aContacter: number;
+  aRappeler: number;
+  enCours: number;
 }
 
 /*
@@ -66,6 +69,54 @@ export function compterPourCommercial(items: BuyerListItem[]): ChiffresCommercia
     enRetard: ouverts.filter((i) => i.overdue).length,
     sansAction: ouverts.filter((i) => i.noNextAction).length,
     dossiers: ouverts.length,
+    /*
+     * « À contacter » = personne ne lui a encore parlé. C'est volontairement
+     * différent de « sans action prévue » : un dossier appelé trois fois sans
+     * succès n'est plus à contacter, il est à rappeler. Les deux comptaient
+     * autrefois pareil, et le commercial rappelait en priorité des gens qu'il
+     * venait d'avoir au téléphone.
+     */
+    aContacter: ouverts.filter((i) => i.callAttempts === 0).length,
+    /* Un rappel est DÛ aujourd'hui ou en retard. Les rappels futurs ne sont pas
+       comptés : ils ne demandent rien aujourd'hui. */
+    aRappeler: ouverts.filter((i) => i.nextTask?.due_at && !estPlusTard(i.nextTask.due_at)).length,
+    /* « En cours » : un échange est engagé et le dossier est encore ouvert. */
+    enCours: ouverts.filter((i) => ETAPES_EN_COURS.has(i.stage)).length,
+  };
+}
+
+const ETAPES_EN_COURS = new Set(["a_rappeler", "en_discussion", "visite", "offre"]);
+
+/** Vrai si l'échéance tombe après aujourd'hui. */
+function estPlusTard(iso: string): boolean {
+  const d = new Date(iso);
+  const fin = new Date();
+  fin.setHours(23, 59, 59, 999);
+  return d.getTime() > fin.getTime();
+}
+
+/**
+ * Le premier traitement : combien de dossiers ont reçu AU MOINS une tentative.
+ *
+ * Une tentative sans réponse compte : elle a été faite, c'est ce que mesure ce
+ * nombre. Elle ne vaut PAS « personne jointe » — ce serait une autre mesure, et
+ * les confondre fait croire à un travail abouti qui ne l'est pas.
+ */
+export function premierTraitement(items: BuyerListItem[]): {
+  traites: number;
+  total: number;
+  pourcent: number;
+  restants: number;
+} {
+  const ouverts = items.filter(encoreOuvert);
+  const total = ouverts.length;
+  const traites = ouverts.filter((i) => i.callAttempts > 0).length;
+  return {
+    traites,
+    total,
+    // Pas de division par zéro : un périmètre vide n'est pas « 0 % traité ».
+    pourcent: total === 0 ? 0 : Math.round((traites / total) * 100),
+    restants: total - traites,
   };
 }
 
@@ -164,6 +215,7 @@ export function TableauCommercial({
   const c = compterPourCommercial(items);
   const prochaines = visites.slice(0, 5);
   const priorites = aTraiterEnPriorite(items);
+  const traitement = premierTraitement(items);
   return (
     <section className="flex flex-col gap-4">
       {/* Est-ce que ça monte : la premiere question devant un funnel payant,
@@ -173,23 +225,69 @@ export function TableauCommercial({
       {/* Deux colonnes sur telephone, cinq au-dela : chaque chiffre reste
           lisible sans zoom, et la rangee ne se brise jamais au milieu.
           Chaque tuile ouvre EXACTEMENT les dossiers qu'elle compte. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Chiffre valeur={c.nouveauxAujourdhui} libelle="Arrivés aujourd’hui"
+      {/* Six compteurs qui repondent a « qu'est-ce que je fais maintenant ».
+          Ils peuvent se chevaucher — un dossier a contacter est aussi un
+          dossier total — et c'est voulu : ce ne sont pas des parts d'un
+          camembert, ce sont six questions. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Chiffre valeur={c.dossiers} libelle="Leads totaux"
+                 icone="◈" vif="--crm-vif-signe"
+                 href="/crm/acquereurs" />
+        <Chiffre valeur={c.nouveauxAujourdhui} libelle="Leads aujourd’hui"
                  icone="✦" vif="--crm-vif-nouveau"
                  href="/crm/acquereurs?signal=nouveaux" />
-        <Chiffre valeur={c.enRetard} libelle="En retard" alerte
-                 icone="!" vif="--crm-vif-perdu"
-                 href="/crm/acquereurs?signal=en_retard" />
-        <Chiffre valeur={c.sansAction} libelle="Sans action prévue" alerte
+        <Chiffre valeur={c.aContacter} libelle="À contacter"
                  icone="☎︎" vif="--crm-vif-a_contacter"
-                 href="/crm/acquereurs?signal=sans_action" />
+                 href="/crm/acquereurs?signal=a_contacter" />
+        <Chiffre valeur={c.aRappeler} libelle="À rappeler" alerte
+                 icone="↻" vif="--crm-vif-proposition"
+                 href="/crm/acquereurs?signal=a_rappeler" />
+        <Chiffre valeur={c.enCours} libelle="En cours"
+                 icone="◗" vif="--crm-vif-contact"
+                 href="/crm/acquereurs?signal=en_cours" />
         <Chiffre valeur={visites.length} libelle="Visites à venir"
                  icone="◷" vif="--crm-vif-rdv_planifie"
                  href="/crm/visites" />
-        <Chiffre valeur={c.dossiers} libelle="Dossiers en cours"
-                 icone="◈" vif="--crm-vif-signe"
-                 href="/crm/acquereurs" />
       </div>
+
+      {/* Le premier traitement : la seule mesure qui dit si le travail du jour
+          avance. Une tentative sans reponse y compte — elle a ete faite — mais
+          ne vaut PAS « personne jointe ». */}
+      {traitement.total > 0 ? (
+        <div className="crm-panel flex flex-col gap-2 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-[var(--crm-text)]">
+              Premier traitement : {traitement.pourcent} %
+              <span className="ml-2 text-xs font-medium text-[var(--crm-text-dim)]">
+                {traitement.traites} lead{traitement.traites > 1 ? "s" : ""} sur {traitement.total}
+              </span>
+            </h2>
+            {traitement.restants > 0 ? (
+              <Link prefetch={false}
+                href="/crm/acquereurs?signal=a_contacter"
+                className="crm-btn crm-btn--primaire inline-flex items-center"
+              >
+                Commencer les appels
+              </Link>
+            ) : null}
+          </div>
+          <div
+            className="crm-progression"
+            role="progressbar"
+            aria-valuenow={traitement.pourcent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Premier traitement"
+          >
+            <span style={{ width: `${traitement.pourcent}%` }} />
+          </div>
+          <p className="text-xs text-[var(--crm-text-dim)]">
+            {traitement.restants > 0
+              ? `${traitement.restants} reste${traitement.restants > 1 ? "nt" : ""} à contacter.`
+              : "Tout le monde a été contacté au moins une fois."}
+          </p>
+        </div>
+      ) : null}
 
       <div className="crm-panel flex flex-col gap-2 p-4">
         <div className="flex items-baseline justify-between gap-3">

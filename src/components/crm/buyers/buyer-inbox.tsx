@@ -197,7 +197,6 @@ export function BuyerInbox({
       total: rows.length,
       nouveaux: rows.filter((r) => r.stage === "nouveau").length,
       enRetard: rows.filter((r) => r.overdue).length,
-      fortPotentiel: rows.filter((r) => r.highPotential).length,
       sansAction: rows.filter((r) => r.noNextAction).length,
       nonAffectes: rows.filter((r) => r.unassigned).length,
     }),
@@ -214,8 +213,6 @@ export function BuyerInbox({
                  signal="nouveaux" actif={signal} onChoisir={setSignal} />
         <Counter label="En retard" value={counters.enRetard} accent="--crm-st-perdu"
                  signal="en_retard" actif={signal} onChoisir={setSignal} />
-        <Counter label="Fort potentiel" value={counters.fortPotentiel} accent="--crm-st-signe"
-                 signal="fort_potentiel" actif={signal} onChoisir={setSignal} />
         <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter"
                  signal="sans_action" actif={signal} onChoisir={setSignal} />
         <Counter label="Non affectés" value={counters.nonAffectes} accent="--crm-st-perdu"

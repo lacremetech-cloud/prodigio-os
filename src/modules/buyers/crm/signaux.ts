@@ -27,6 +27,7 @@ export type Signal =
   | "en_reflexion"
   | "non_qualifies"
   | "numero_invalide"
+  | "en_cours"
   | "nouveaux"
   | "en_retard"
   | "fort_potentiel"
@@ -42,6 +43,7 @@ const SIGNAUX: Signal[] = [
   "en_reflexion",
   "non_qualifies",
   "numero_invalide",
+  "en_cours",
   "nouveaux",
   "en_retard",
   "fort_potentiel",
@@ -94,6 +96,11 @@ export function porteLeSignal(row: BuyerInboxRow, signal: Signal): boolean {
       return row.qualification === "non_qualifie";
     case "numero_invalide":
       return row.phoneInvalid;
+    /* « En cours » : un échange est engagé. Le compteur du tableau de bord et
+       ce filtre doivent compter la MÊME chose — un compteur qui ouvre une
+       autre liste que celle qu'il annonce est un compteur qui ment. */
+    case "en_cours":
+      return ["a_rappeler", "en_discussion", "visite", "offre"].includes(row.stage);
     case "nouveaux":
       return row.stage === "nouveau";
     case "en_retard":

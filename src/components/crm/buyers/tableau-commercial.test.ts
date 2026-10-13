@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { aTraiterEnPriorite, compterPourCommercial } from "./tableau-commercial";
+import {
+  aTraiterEnPriorite,
+  compterPourCommercial,
+  premierTraitement,
+} from "./tableau-commercial";
 import type { BuyerListItem } from "@/modules/buyers/crm/queries";
 
 /** Dossier minimal : seuls les champs que le comptage regarde sont renseignés. */
@@ -10,6 +14,8 @@ function dossier(p: {
   overdue?: boolean;
   noNextAction?: boolean;
   id?: string;
+  callAttempts?: number;
+  dueAt?: string | null;
 }): BuyerListItem {
   return {
     profile: {
@@ -20,6 +26,9 @@ function dossier(p: {
     },
     overdue: p.overdue ?? false,
     noNextAction: p.noNextAction ?? false,
+    callAttempts: p.callAttempts ?? 0,
+    stage: p.stage ?? "nouveau",
+    nextTask: p.dueAt ? { due_at: p.dueAt } : null,
   } as unknown as BuyerListItem;
 }
 
@@ -62,11 +71,16 @@ describe("compterPourCommercial", () => {
         outcome: "perdu",
       }),
     ]);
+    // `toEqual` et non `toMatchObject` : ce test doit tomber si un compteur
+    // est ajoute sans qu'on se demande s'il exclut bien les dossiers clos.
     expect(c).toEqual({
       nouveauxAujourdhui: 1,
       enRetard: 1,
       sansAction: 0,
       dossiers: 1,
+      aContacter: 1,
+      aRappeler: 0,
+      enCours: 1,
     });
   });
 });
@@ -96,5 +110,64 @@ describe("aTraiterEnPriorite", () => {
       dossier({ id: "clos", overdue: true, outcome: "perdu" }),
     ]);
     expect(l).toEqual([]);
+  });
+});
+
+/**
+ * Le premier traitement est la seule mesure qui dit si le travail du jour
+ * avance. Deux pièges y sont vérifiés.
+ */
+describe("premier traitement", () => {
+  it("compte un dossier une seule fois, quel que soit le nombre de tentatives", () => {
+    const t = premierTraitement([
+      dossier({ id: "a", callAttempts: 7 }),
+      dossier({ id: "b", callAttempts: 1 }),
+      dossier({ id: "c", callAttempts: 0 }),
+    ]);
+    expect(t).toMatchObject({ traites: 2, total: 3, restants: 1 });
+  });
+
+  /* Une tentative SANS REPONSE compte dans le premier traitement : elle a bien
+     ete faite. Elle ne vaut pas « personne jointe » — confondre les deux fait
+     croire a un travail abouti qui ne l'est pas. */
+  it("compte une tentative sans réponse comme un premier traitement", () => {
+    expect(premierTraitement([dossier({ callAttempts: 1 })]).pourcent).toBe(100);
+  });
+
+  /* Un perimetre vide n'est pas « 0 % traite » : il n'y a rien a traiter, et
+     une division par zero donnerait NaN a l'ecran. */
+  it("ne divise pas par zéro sur un périmètre vide", () => {
+    expect(premierTraitement([])).toEqual({ traites: 0, total: 0, pourcent: 0, restants: 0 });
+  });
+});
+
+describe("compteurs de travail", () => {
+  /* « A contacter » n'est pas « sans action prevue ». */
+  it("« à contacter » exclut les dossiers déjà appelés", () => {
+    const c = compterPourCommercial([
+      dossier({ id: "a", callAttempts: 0 }),
+      dossier({ id: "b", callAttempts: 3, noNextAction: true }),
+    ]);
+    expect(c.aContacter).toBe(1);
+  });
+
+  /* Un rappel pris pour la semaine prochaine ne demande rien AUJOURD'HUI. */
+  it("« à rappeler » ignore les rappels futurs", () => {
+    const demain = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+    const passe = new Date(Date.now() - 3600 * 1000).toISOString();
+    const c = compterPourCommercial([
+      dossier({ id: "a", dueAt: passe }),
+      dossier({ id: "b", dueAt: demain }),
+    ]);
+    expect(c.aRappeler).toBe(1);
+  });
+
+  it("« en cours » ne retient que les étapes où un échange est engagé", () => {
+    const c = compterPourCommercial([
+      dossier({ id: "a", stage: "nouveau" }),
+      dossier({ id: "b", stage: "en_discussion" }),
+      dossier({ id: "c", stage: "visite" }),
+    ]);
+    expect(c.enCours).toBe(2);
   });
 });
