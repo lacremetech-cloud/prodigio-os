@@ -158,3 +158,68 @@ describe("envoi", () => {
     expect((screen.getByLabelText("Prénom") as HTMLInputElement).value).toBe("Camille");
   });
 });
+
+/**
+ * La remise du dossier ne doit plus coûter un clic : la page d'arrivée porte
+ * déjà « Votre demande est enregistrée », l'écran intermédiaire ne disait rien
+ * de plus. Ce qui est vérifié ici, c'est qu'on y conduit vraiment — et que le
+ * bouton reste en place pour qui ne peut pas être conduit.
+ */
+describe("remise du dossier", () => {
+  const vraiParent = window.parent;
+  const vraiTop = window.top;
+
+  /* « Dans un cadre » se mesure a `window.self !== window.top` : remplacer le
+     seul `parent` ne suffit pas, le formulaire se croirait encore autonome. */
+  function simulerCadre(postMessage: ReturnType<typeof vi.fn>) {
+    Object.defineProperty(window, "parent", { value: { postMessage }, configurable: true });
+    Object.defineProperty(window, "top", { value: { nom: "hote" }, configurable: true });
+  }
+
+  afterEach(() => {
+    Object.defineProperty(window, "parent", { value: vraiParent, configurable: true });
+    Object.defineProperty(window, "top", { value: vraiTop, configurable: true });
+  });
+
+  it("hors cadre, conduit directement au dossier", async () => {
+    const replace = vi.fn();
+    Object.defineProperty(window, "location", {
+      value: { ...window.location, replace, href: "https://go.test/bien/x/interet" },
+      configurable: true,
+    });
+    renderForm();
+    await fillAndSubmit();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("https://exemple.test/brochure.pdf"));
+  });
+
+  it("dans un cadre, demande au parent de s'y rendre — et ne se déplace pas lui-même", async () => {
+    const postMessage = vi.fn();
+    simulerCadre(postMessage);
+    renderForm();
+    await fillAndSubmit();
+    await waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        { type: "prodigio:buyer-form:brochure", url: "https://exemple.test/brochure.pdf" },
+        "*",
+      ),
+    );
+  });
+
+  it("garde le bouton en repli, pour une page hôte qui n'écoute pas", async () => {
+    simulerCadre(vi.fn());
+    renderForm();
+    await fillAndSubmit();
+    const lien = await screen.findByRole("link", { name: /accéder à la brochure/i });
+    expect(lien.getAttribute("href")).toBe("https://exemple.test/brochure.pdf");
+  });
+
+  it("sans dossier disponible, ne déplace personne", async () => {
+    submit.mockResolvedValue({ ok: true, brochureUrl: null });
+    const postMessage = vi.fn();
+    simulerCadre(postMessage);
+    renderForm();
+    await fillAndSubmit();
+    await screen.findByText("Votre demande est enregistrée.");
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+});
