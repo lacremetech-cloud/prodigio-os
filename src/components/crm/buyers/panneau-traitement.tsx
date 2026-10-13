@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { MutableRefObject } from "react";
 import Link from "next/link";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import { recordBuyerTreatmentAction } from "@/modules/buyers/crm/actions";
@@ -10,34 +11,39 @@ import {
   QUALIFICATION_LABELS,
   BUYER_QUALIFICATIONS,
   RESULTATS_APPEL,
-  etapeProposee,
   proposeUnRappel,
   type ResultatAppel,
 } from "@/modules/buyers/crm/qualification";
-import { BUYER_PIPELINE_STAGES, buyerStageLabels } from "@/modules/buyers/crm/labels";
 import { ContactRapide } from "./contact-rapide";
 import { BadgeProjet } from "./barre-projets";
 import { BUDGET_CHOICE_COURT, type BuyerBudgetChoice } from "@/modules/buyers/funnel/universal";
 
 /**
- * Le panneau de traitement : appeler, consigner, qualifier, programmer, suivant.
+ * Le panneau de traitement : un appel, une saisie, au suivant.
  *
- * Il s'ouvre À CÔTÉ de la liste, qui reste visible et chargée. Ouvrir un dossier
- * était une navigation de page complète — 3,2 s mesurées, et la liste détruite
- * puis reconstruite au retour. Ici, tout ce qu'il affiche vient de la ligne
- * déjà en mémoire : l'ouverture est instantanée parce qu'il n'y a rien à aller
- * chercher.
+ * Il ne contient PAS une fiche réduite. Une fiche complète comprimée dans un
+ * panneau donne un formulaire qu'il faut parcourir ; ce qu'il faut, c'est un
+ * écran où « injoignable, rappel demain, suivant » se fait sans défiler et sans
+ * ouvrir quoi que ce soit.
  *
- * Les quatre données restent SÉPARÉES : le résultat de l'appel est un fait, la
- * qualification un jugement, l'étape l'état de l'affaire, la prochaine action
- * un engagement daté. Aucune ne se déduit d'une autre.
+ * D'où ce qui n'y est PAS : l'offre, l'attribution marketing, l'étape du
+ * pipeline, les réglages d'équipe. Ils vivent dans le dossier complet, à un
+ * clic sur le nom. Les faire figurer ici coûterait un défilement à chaque appel
+ * pour des champs qu'on touche une fois par mois.
+ *
+ * Les données restent SÉPARÉES jusqu'en base : le résultat de l'appel est un
+ * fait daté, la qualification un jugement, la prochaine action un engagement.
+ * Aucune ne se déduit d'une autre — un gros potentiel injoignable reste un gros
+ * potentiel.
  */
+
+type TypeAction = "aucune" | "rappel" | "visite";
 
 function dansNJours(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() + n);
   d.setHours(10, 0, 0, 0);
-  return d.toISOString();
+  return versChampLocal(d.toISOString());
 }
 
 /** `datetime-local` veut une heure locale sans fuseau ; l'ISO en porte un. */
@@ -64,11 +70,6 @@ function dateCourte(iso: string | null): string {
   });
 }
 
-export interface ResultatEnregistrement {
-  ok: boolean;
-  error?: string;
-}
-
 export function PanneauTraitement({
   row,
   position,
@@ -77,6 +78,7 @@ export function PanneauTraitement({
   onEnregistre,
   onSuivant,
   resteUnSuivant,
+  saleRef,
 }: {
   row: BuyerInboxRow;
   position: number;
@@ -86,13 +88,23 @@ export function PanneauTraitement({
   onEnregistre: () => void;
   onSuivant: () => void;
   resteUnSuivant: boolean;
+  /**
+   * Miroir de l'état « saisie non enregistrée », tenu pour la liste : c'est
+   * ELLE qui change de dossier, donc c'est elle qui doit pouvoir prévenir.
+   * Perdre une note qu'on vient de dicter au téléphone est la façon la plus
+   * sûre de faire abandonner l'outil.
+   *
+   * Une ref et non un état remonté : le parent n'a besoin de cette valeur qu'au
+   * moment du clic, jamais pour se redessiner.
+   */
+  saleRef: MutableRefObject<boolean>;
 }) {
   const [resultat, setResultat] = useState<ResultatAppel | null>(null);
   const [qualification, setQualification] = useState<string | null>(null);
   const [motif, setMotif] = useState("");
   const [note, setNote] = useState("");
-  const [rappelLe, setRappelLe] = useState("");
-  const [etape, setEtape] = useState<string | null>(null);
+  const [typeAction, setTypeAction] = useState<TypeAction>("aucune");
+  const [quand, setQuand] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const envoiRef = useRef(false);
@@ -101,13 +113,37 @@ export function PanneauTraitement({
    * La saisie n'est PAS remise à zéro par un effet : le panneau est remonté par
    * sa clé quand le dossier change (voir `key` chez l'appelant). Un effet de
    * remise à zéro laisse un rendu intermédiaire où la saisie du dossier
-   * PRÉCÉDENT est encore à l'écran sur le dossier suivant — et c'est ainsi
-   * qu'un « injoignable » se reporte tout seul d'un dossier à l'autre.
+   * PRÉCÉDENT est encore à l'écran sur le suivant — et c'est ainsi qu'un
+   * « injoignable » se reporte tout seul d'un dossier à l'autre.
    */
 
-  const etapeSuggeree = etapeProposee(resultat, row.stage);
-  const suggereRappel = proposeUnRappel(resultat);
-  const etapeRetenue = etape ?? etapeSuggeree;
+  const sale =
+    resultat !== null || qualification !== null || note.trim() !== "" || quand !== "";
+
+  useEffect(() => {
+    saleRef.current = sale;
+    // Le panneau disparait sans toujours passer par « Enregistrer » : on rend
+    // la main propre, sinon la liste croit a une saisie en cours a jamais.
+    return () => {
+      saleRef.current = false;
+    };
+  }, [sale, saleRef]);
+
+  /** Choisir un résultat sans réponse propose un rappel : on n'impose rien. */
+  function choisirResultat(v: ResultatAppel) {
+    const nouveau = resultat === v ? null : v;
+    setResultat(nouveau);
+    if (nouveau && proposeUnRappel(nouveau) && typeAction === "aucune") {
+      setTypeAction("rappel");
+      setQuand(dansNJours(1));
+    }
+  }
+
+  function choisirTypeAction(t: TypeAction) {
+    setTypeAction(t);
+    if (t === "aucune") setQuand("");
+    else if (!quand) setQuand(dansNJours(t === "rappel" ? 1 : 2));
+  }
 
   async function enregistrer(puisSuivant: boolean) {
     // Deux clics rapides ne doivent pas écrire deux fois : la garde est une
@@ -119,21 +155,23 @@ export function PanneauTraitement({
 
     /* `safeAction` : une action serveur qui lève ne doit JAMAIS faire tomber
        l'écran. Sans elle, une coupure réseau en plein enregistrement efface la
-       note qu'on vient de taper — c'est l'incident d'août, et c'est exactement
-       ce qu'on ne veut pas sur une session d'appels. */
+       note qu'on vient de taper. */
     const resultatAction = await safeAction(() =>
       recordBuyerTreatmentAction({
         buyerProfileId: row.buyerProfileId,
         interestId: row.interestId,
         callOutcome: resultat,
-      qualification,
+        qualification,
         qualificationReason: qualification === "non_qualifie" ? motif || null : null,
         note: note.trim() || null,
-        stage: etapeRetenue,
-        nextActionKind: rappelLe ? "rappel" : null,
-        nextActionAt: depuisChampLocal(rappelLe),
-        nextActionTitle: rappelLe ? "Rappeler" : null,
-      // Traiter un dossier solde le rappel qui l'avait amené dans la file.
+        /* Planifier une visite fait avancer l'étape — c'est le fait métier qui
+           la porte, pas un menu séparé qu'il faudrait penser à toucher. */
+        stage: typeAction === "visite" && quand ? "visite" : null,
+        nextActionKind: typeAction === "aucune" ? null : typeAction,
+        nextActionAt: depuisChampLocal(quand),
+        nextActionTitle:
+          typeAction === "visite" ? "Visite" : typeAction === "rappel" ? "Rappeler" : null,
+        // Traiter un dossier solde le rappel qui l'avait amené dans la file.
         completeTaskId: row.nextActionId,
       }),
     );
@@ -147,23 +185,22 @@ export function PanneauTraitement({
       setErreur(resultatAction.error ?? "L’enregistrement a échoué. Réessayez.");
       return;
     }
+    saleRef.current = false;
     onEnregistre();
     if (puisSuivant) onSuivant();
   }
 
-  const peutEnregistrer =
-    resultat !== null || qualification !== null || note.trim() !== "" || rappelLe !== "";
+  const peutEnregistrer = sale;
+  const budget = row.budgetChoice
+    ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
+    : null;
 
   return (
     <aside className="crm-panneau" aria-label={`Traitement de ${row.name}`}>
+      {/* ---- En-tête compact : qui, quel projet, quel budget, comment le joindre */}
       <header className="crm-panneau__tete">
-        <div className="min-w-0">
-          {/* « Dossier 0 sur 0 » s'affichait des que le dossier ouvert ne
-              faisait pas partie de la file — par exemple parce qu'on vient de
-              lui poser un rappel pour la semaine prochaine. Un compteur faux
-              est pire qu'un compteur absent : on ne montre la position que
-              lorsqu'elle veut dire quelque chose. */}
-          <p className="crm-eyebrow">
+        <div className="min-w-0 flex-1">
+          <p className="crm-panneau__rang">
             {position > 0 && total > 0 ? `Dossier ${position} sur ${total}` : "Dossier"}
           </p>
           <h2 className="crm-panneau__nom">
@@ -171,87 +208,70 @@ export function PanneauTraitement({
               {row.name}
             </Link>
           </h2>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
+          <div className="crm-panneau__meta">
             {row.lastPropertyId && row.lastPropertyLabel ? (
               <BadgeProjet propertyId={row.lastPropertyId} label={row.lastPropertyLabel} />
             ) : null}
-            {row.budgetChoice ? (
-              <span className="crm-panneau__budget">
-                {BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice}
-              </span>
-            ) : null}
+            {budget ? <span className="crm-panneau__budget">{budget}</span> : null}
           </div>
+          {row.phoneMasked || row.emailMasked ? (
+            <p className="crm-panneau__coord">
+              {row.phoneMasked}
+              {row.phoneMasked && row.emailMasked ? " · " : ""}
+              {row.emailMasked}
+            </p>
+          ) : null}
         </div>
         <button type="button" className="crm-panneau__fermer" onClick={onFermer} aria-label="Fermer">
           ✕
         </button>
       </header>
 
+      <div className="crm-panneau__actions-contact">
+        <ContactRapide numero={row.phoneMasked} email={row.emailMasked} />
+      </div>
+
+      {row.phoneInvalid ? (
+        <p className="crm-panneau__alerte" role="status">
+          Numéro signalé invalide : ce dossier est sorti de la file d’appels. Passez par e-mail,
+          ou corrigez le numéro dans le dossier.
+        </p>
+      ) : null}
+
       <div className="crm-panneau__corps">
-        {/* 1. Joindre la personne — avant tout le reste. */}
-        <section className="crm-panneau__bloc">
-          <ContactRapide numero={row.phoneMasked} email={row.emailMasked} />
-          {row.phoneInvalid ? (
-            <p className="crm-panneau__alerte" role="status">
-              Numéro signalé invalide. Ce dossier est sorti de la file d’appels ; passez par
-              e-mail, ou corrigez le numéro dans la fiche.
-            </p>
-          ) : null}
-        </section>
-
-        {/* 2. Ce qu'on sait déjà, en une ligne. */}
-        <section className="crm-panneau__bloc crm-panneau__rappel">
-          <p>
-            <strong>{row.callAttempts}</strong> tentative{row.callAttempts > 1 ? "s" : ""} ·
-            dernier appel {dateCourte(row.lastCallAt)}
-          </p>
-          {row.lastNote ? (
-            <p className="crm-panneau__note-ancienne">
-              <span className="crm-panneau__note-date">{dateCourte(row.lastNoteAt)}</span>
-              {row.lastNote}
-            </p>
-          ) : (
-            <p className="crm-panneau__note-ancienne crm-panneau__vide">Aucune note.</p>
-          )}
-        </section>
-
-        {/* 3. Le résultat de CET appel. */}
-        <section className="crm-panneau__bloc">
-          <h3 className="crm-panneau__titre">Résultat de l’appel</h3>
-          <div className="crm-choix">
+        {/* ---- 1. Ce qui vient de se passer ---------------------------------- */}
+        <section className="crm-bloc">
+          <h3 className="crm-bloc__titre">Résultat de l’appel</h3>
+          <div className="crm-grille crm-grille--2">
             {RESULTATS_APPEL.map((r) => (
               <button
                 key={r.valeur}
                 type="button"
-                className="crm-choix__item"
+                className="crm-gros-choix"
                 aria-pressed={resultat === r.valeur}
-                onClick={() => setResultat(resultat === r.valeur ? null : r.valeur)}
+                onClick={() => choisirResultat(r.valeur)}
               >
                 {r.label}
               </button>
             ))}
           </div>
-          {resultat === "mauvais_numero" ? (
-            <p className="crm-panneau__aide">
-              Le numéro sortira de la file d’appels. Le dossier reste ouvert.
-            </p>
-          ) : null}
         </section>
 
-        {/* 4. La qualification — facultative, surtout sur un injoignable. */}
-        <section className="crm-panneau__bloc">
-          <h3 className="crm-panneau__titre">
-            Qualification{" "}
-            <span className="crm-panneau__actuelle">
-              · actuelle : {QUALIFICATION_LABELS[row.qualification]}
-            </span>
+        {/* ---- 2. Ce qu'on en pense ------------------------------------------ */}
+        <section className="crm-bloc">
+          <h3 className="crm-bloc__titre">
+            Qualification
+            <span className="crm-bloc__actuel">actuelle : {QUALIFICATION_LABELS[row.qualification]}</span>
           </h3>
-          <div className="crm-choix">
+          {/* Trois colonnes : cinq options tiennent en DEUX rangees au lieu de
+              trois, et le parcours critique repasse sous la ligne de
+              flottaison d'un portable 768. */}
+          <div className="crm-grille crm-grille--3">
             {BUYER_QUALIFICATIONS.map((q) => (
               <button
                 key={q}
                 type="button"
-                className={`crm-choix__item crm-choix__item--${q}`}
+                className={`crm-gros-choix crm-gros-choix--${q}`}
                 aria-pressed={qualification === q}
                 onClick={() => setQualification(qualification === q ? null : q)}
               >
@@ -259,92 +279,120 @@ export function PanneauTraitement({
               </button>
             ))}
           </div>
+          {/* Le motif n'apparaît que s'il est exigé : un champ qui attend sans
+              servir occupe la place et fait croire qu'il manque une réponse. */}
           {qualification === "non_qualifie" ? (
-            <label className="crm-panneau__champ">
-              <span>Motif</span>
-              <select
-                className="crm-select"
-                value={motif}
-                onChange={(e) => setMotif(e.target.value)}
-              >
-                <option value="">Choisir un motif…</option>
-                {MOTIFS_NON_QUALIFIE.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <select
+              className="crm-select mt-2 w-full"
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+              aria-label="Motif"
+            >
+              <option value="">Motif…</option>
+              {MOTIFS_NON_QUALIFIE.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
           ) : null}
         </section>
 
-        {/* 5. La note. */}
-        <section className="crm-panneau__bloc">
-          <h3 className="crm-panneau__titre">Note</h3>
+        {/* ---- 3. Ce qu'il faut retenir --------------------------------------- */}
+        <section className="crm-bloc">
+          <h3 className="crm-bloc__titre">Note de l’échange</h3>
           <textarea
             className="crm-panneau__zone"
-            rows={3}
+            rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Contexte, objection, prochaine étape…"
+            placeholder="Objection, contexte, ce qu’il attend…"
           />
         </section>
 
-        {/* 6. La prochaine action. */}
-        <section className="crm-panneau__bloc">
-          <h3 className="crm-panneau__titre">Prochaine action</h3>
-          <div className="crm-choix">
-            <button type="button" className="crm-choix__item" onClick={() => setRappelLe(versChampLocal(dansNJours(1)))}>
-              Demain
+        {/* ---- 4. Ce qu'on s'engage à faire ----------------------------------- */}
+        <section className="crm-bloc">
+          <h3 className="crm-bloc__titre">Prochaine action</h3>
+          <div className="crm-grille crm-grille--3">
+            <button
+              type="button"
+              className="crm-gros-choix"
+              aria-pressed={typeAction === "aucune"}
+              onClick={() => choisirTypeAction("aucune")}
+            >
+              Aucune
             </button>
-            <button type="button" className="crm-choix__item" onClick={() => setRappelLe(versChampLocal(dansNJours(3)))}>
-              Dans 3 jours
+            <button
+              type="button"
+              className="crm-gros-choix"
+              aria-pressed={typeAction === "rappel"}
+              onClick={() => choisirTypeAction("rappel")}
+            >
+              Rappeler
             </button>
-            {rappelLe ? (
-              <button type="button" className="crm-choix__item" onClick={() => setRappelLe("")}>
-                Retirer
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="crm-gros-choix"
+              aria-pressed={typeAction === "visite"}
+              onClick={() => choisirTypeAction("visite")}
+            >
+              Visite
+            </button>
           </div>
-          <input
-            type="datetime-local"
-            className="crm-select mt-2 w-full"
-            value={rappelLe}
-            onChange={(e) => setRappelLe(e.target.value)}
-            aria-label="Date du rappel"
-          />
-          {suggereRappel && !rappelLe ? (
-            <p className="crm-panneau__aide">Sans réponse : programmez un rappel.</p>
+
+          {/* La date n'apparaît QUE si une action est choisie. Un champ de date
+              toujours visible se remplit par réflexe, et l'agenda se couvre de
+              rappels que personne n'a voulus. */}
+          {typeAction !== "aucune" ? (
+            <div className="mt-2 flex flex-col gap-2">
+              {typeAction === "rappel" ? (
+                <div className="crm-grille crm-grille--3">
+                  <button type="button" className="crm-petit-choix" onClick={() => setQuand(dansNJours(1))}>
+                    Demain
+                  </button>
+                  <button type="button" className="crm-petit-choix" onClick={() => setQuand(dansNJours(3))}>
+                    3 jours
+                  </button>
+                  <button type="button" className="crm-petit-choix" onClick={() => setQuand(dansNJours(7))}>
+                    1 semaine
+                  </button>
+                </div>
+              ) : null}
+              <input
+                type="datetime-local"
+                className="crm-select w-full"
+                value={quand}
+                onChange={(e) => setQuand(e.target.value)}
+                aria-label={typeAction === "visite" ? "Date de la visite" : "Date du rappel"}
+              />
+              {typeAction === "visite" ? (
+                <p className="crm-panneau__aide">
+                  Planifier la visite fait passer ce dossier à l’étape « Visite ».
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </section>
 
-        {/* 7. L'étape — en secondaire, parce qu'elle n'est pas à toucher à chaque appel. */}
-        <details className="crm-panneau__secondaire">
+        {/* ---- 5. L'historique, replié, mais sa dernière note visible ---------- */}
+        <details className="crm-historique">
           <summary>
-            Étape : {buyerStageLabels[row.stage] ?? row.stage}
-            {etapeSuggeree && !etape ? ` → ${buyerStageLabels[etapeSuggeree]} (proposé)` : null}
+            Historique · {row.callAttempts} tentative{row.callAttempts > 1 ? "s" : ""}
+            {row.lastCallAt ? ` · dernier appel ${dateCourte(row.lastCallAt)}` : ""}
           </summary>
-          <div className="crm-choix mt-2">
-            {BUYER_PIPELINE_STAGES.filter(
-              (s) => !["offre", "gagne", "perdu"].includes(s),
-            ).map((s) => (
-              <button
-                key={s}
-                type="button"
-                className="crm-choix__item"
-                aria-pressed={etapeRetenue === s}
-                onClick={() => setEtape(etapeRetenue === s ? null : s)}
-              >
-                {buyerStageLabels[s]}
-              </button>
-            ))}
-          </div>
-          <p className="crm-panneau__aide">
-            Offre, gagné et perdu passent par leur action dédiée, avec motif et traçabilité.
+          <p className="crm-historique__corps">
+            Le détail complet des échanges se lit dans le dossier.
           </p>
         </details>
+        {row.lastNote ? (
+          <p className="crm-derniere-note">
+            <span className="crm-derniere-note__date">{dateCourte(row.lastNoteAt)}</span>
+            {row.lastNote}
+          </p>
+        ) : null}
       </div>
 
+      {/* ---- Toujours atteignable, quelle que soit la longueur du corps ------- */}
       <footer className="crm-panneau__pied">
         {erreur ? (
           <p className="crm-panneau__erreur" role="alert">
@@ -354,7 +402,7 @@ export function PanneauTraitement({
         <div className="flex gap-2">
           <button
             type="button"
-            className="crm-btn crm-btn--secondaire"
+            className="crm-btn crm-btn--secondaire flex-1"
             disabled={enCours || !peutEnregistrer}
             onClick={() => enregistrer(false)}
           >
@@ -362,7 +410,7 @@ export function PanneauTraitement({
           </button>
           <button
             type="button"
-            className="crm-btn crm-btn--primaire"
+            className="crm-btn crm-btn--primaire flex-1"
             disabled={enCours || !peutEnregistrer || !resteUnSuivant}
             onClick={() => enregistrer(true)}
           >
@@ -370,7 +418,7 @@ export function PanneauTraitement({
           </button>
         </div>
         {!resteUnSuivant ? (
-          <p className="crm-panneau__aide">
+          <p className="crm-panneau__aide mt-1.5">
             {total > 0 ? "Dernier dossier de la file." : "Aucun autre dossier à appeler maintenant."}
           </p>
         ) : null}

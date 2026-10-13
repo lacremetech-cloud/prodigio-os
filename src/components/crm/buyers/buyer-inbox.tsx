@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Chip, EmptyState } from "@/components/crm/ui";
@@ -119,6 +119,20 @@ export function BuyerInbox({
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [ordreFile, setOrdreFile] = useState<string[]>([]);
   const router = useRouter();
+
+  /* Le panneau y tient a jour « il y a une saisie non enregistree ». C'est ICI
+     qu'on change de dossier, donc c'est ici qu'il faut prevenir — une note
+     dictee au telephone et perdue en changeant de ligne, et l'outil est
+     abandonne le jour meme. */
+  const saleRef = useRef(false);
+
+  /** Vrai si l'on peut quitter le dossier ouvert : sinon on demande. */
+  function peutQuitter(): boolean {
+    if (!saleRef.current) return true;
+    return window.confirm(
+      "Vous avez une saisie non enregistrée sur ce dossier. La perdre ?",
+    );
+  }
   const [stage, setStage] = useState<string>("tous");
   const [budget, setBudget] = useState<string>("tous");
   const [owner, setOwner] = useState<string>("tous");
@@ -179,6 +193,8 @@ export function BuyerInbox({
   /** Ouvrir un dossier à la main démarre une file : celle de l'écran. */
   function ouvrir(row: BuyerInboxRow) {
     const cle = row.interestId ?? row.buyerProfileId;
+    if (cle === ouvert) return;
+    if (!peutQuitter()) return;
     if (ordreFile.length === 0) {
       setOrdreFile(file.map((r) => r.interestId ?? r.buyerProfileId));
     }
@@ -187,6 +203,7 @@ export function BuyerInbox({
 
   /** « Commencer les appels » : on repart du haut d'une file fraîche. */
   function commencerLesAppels() {
+    if (!peutQuitter()) return;
     const ordre = file.map((r) => r.interestId ?? r.buyerProfileId);
     setOrdreFile(ordre);
     setOuvert(ordre[0] ?? null);
@@ -378,7 +395,10 @@ export function BuyerInbox({
           position={position}
           total={totalFile}
           resteUnSuivant={suivantDansLaFile(ordreFile, ouvert) !== null}
-          onFermer={() => setOuvert(null)}
+          saleRef={saleRef}
+          onFermer={() => {
+            if (peutQuitter()) setOuvert(null);
+          }}
           /* `router.refresh()` recharge les DONNÉES de la page sans rien
              démonter : la liste reste à l'écran, les filtres et la position de
              défilement sont conservés. */
