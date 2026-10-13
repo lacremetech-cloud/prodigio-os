@@ -158,8 +158,13 @@ export function PanneauTraitement({
     <aside className="crm-panneau" aria-label={`Traitement de ${row.name}`}>
       <header className="crm-panneau__tete">
         <div className="min-w-0">
+          {/* « Dossier 0 sur 0 » s'affichait des que le dossier ouvert ne
+              faisait pas partie de la file — par exemple parce qu'on vient de
+              lui poser un rappel pour la semaine prochaine. Un compteur faux
+              est pire qu'un compteur absent : on ne montre la position que
+              lorsqu'elle veut dire quelque chose. */}
           <p className="crm-eyebrow">
-            Dossier {position} sur {total}
+            {position > 0 && total > 0 ? `Dossier ${position} sur ${total}` : "Dossier"}
           </p>
           <h2 className="crm-panneau__nom">
             <Link href={`/crm/acquereurs/${row.buyerProfileId}`} prefetch={false}>
@@ -365,7 +370,9 @@ export function PanneauTraitement({
           </button>
         </div>
         {!resteUnSuivant ? (
-          <p className="crm-panneau__aide">Dernier dossier de la file.</p>
+          <p className="crm-panneau__aide">
+            {total > 0 ? "Dernier dossier de la file." : "Aucun autre dossier à appeler maintenant."}
+          </p>
         ) : null}
       </footer>
     </aside>

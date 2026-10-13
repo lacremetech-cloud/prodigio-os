@@ -49,10 +49,12 @@
   --crm-text: #f5f4f2;
   --crm-text-dim: #c4c7ce;
   --crm-text-faint: #9aa1ad;
-  /* Accent Prodigio */
-  --crm-gold: #d4bd90;
-  --crm-gold-strong: #b0925a;
-  --crm-focus: #d4bd90;
+  /* Accent Prodigio : emeraude. Le jeton garde son nom historique (`gold`) —
+     le renommer toucherait des dizaines d'appels pour un gain nul — mais il ne
+     porte plus d'or : la charte reserve desormais l'accent au vert. */
+  --crm-gold: #34d399;
+  --crm-gold-strong: #059669;
+  --crm-focus: #34d399;
   /* Accent du second univers : un bleu calanque, froid la ou l'or est
      chaud, pour qu'un coup d'oeil suffise a savoir ou l'on travaille. */
   --crm-azur: #8fb6d4;
@@ -66,11 +68,14 @@
   /* Alias de compatibilité : les usages existants deviennent thème-adaptatifs. */
   --color-danger-on-dark: var(--crm-danger);
   /* Statuts / stades du pipeline */
-  --crm-st-nouveau: #6aa6ff;            /* bleu */
+  --crm-st-nouveau: #8aa0b8;            /* ardoise */
   --crm-st-a_contacter: #e6b45c;        /* ambre */
   --crm-st-contact: #4fd0d6;            /* cyan */
-  --crm-st-qualifie: #b18cf0;           /* violet */
-  --crm-st-rdv_planifie: #8b93f2;       /* indigo */
+  /* Le violet est banni de la charte : il vivait encore ici alors que le theme
+     clair en avait deja ete debarrasse — et c'est le SOMBRE qui s'affiche par
+     defaut, donc le seul que l'on voyait vraiment. */
+  --crm-st-qualifie: #5ec8b4;           /* teal */
+  --crm-st-rdv_planifie: #6aa6ff;       /* bleu, et non plus indigo */
   --crm-st-rdv_realise: #45c9b0;        /* turquoise */
   --crm-st-estimation: #45c9b0;         /* turquoise */
   --crm-st-eligibilite: #d9b45a;        /* doré */
@@ -86,11 +91,11 @@
    * couleur de texte etalee sur toute une largeur. Ici, un cran plus clair
    * pour tenir sur le noir.
    */
-  --crm-vif-nouveau: #818cf8;
+  --crm-vif-nouveau: #64748b;
   --crm-vif-a_contacter: #f59e0b;
   --crm-vif-contact: #06b6d4;
-  --crm-vif-qualifie: #a78bfa;
-  --crm-vif-rdv_planifie: #818cf8;
+  --crm-vif-qualifie: #14b8a6;
+  --crm-vif-rdv_planifie: #3b82f6;
   --crm-vif-proposition: #fb923c;
   --crm-vif-signe: #22c55e;
   --crm-vif-perdu: #fb7185;
@@ -145,8 +150,8 @@
   --crm-line-hover: #c4ccd9;
   --crm-on-accent: #ffffff;
   --crm-accent-vers: #000000;
-  --crm-gold: #7a5f24;
-  --crm-gold-strong: #5f4a1b;
+  --crm-gold: #047857;
+  --crm-gold-strong: #065f46;
   --crm-focus: #047857;
   /* Emeraude : rubrique active du menu et actions principales. L'indigo qui
      occupait cette place tirait vers le violet, banni de la charte. */
