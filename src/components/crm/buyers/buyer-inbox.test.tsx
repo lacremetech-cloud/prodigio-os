@@ -23,6 +23,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+/* `useRouter` n'existe pas hors d'une application montée. La boîte de réception
+   s'en sert pour recharger les DONNÉES après un enregistrement, sans démonter
+   la liste. */
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
+
 afterEach(() => cleanup());
 
 const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
@@ -45,6 +50,17 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   assigneeIds: [],
   nextActionAt: null,
   nextActionTitle: null,
+  nextActionId: null,
+  nextActionKind: null,
+  qualification: "a_qualifier",
+  qualificationReason: null,
+  callAttempts: 0,
+  lastCallAt: null,
+  lastCallOutcome: null,
+  lastNote: null,
+  lastNoteAt: null,
+  lastNoteBy: null,
+  phoneInvalid: false,
   overdue: false,
   noNextAction: true,
   newInterest: true,
@@ -65,7 +81,7 @@ describe("BuyerInbox", () => {
       dossier({ buyerProfileId: "bp-3", name: "Camille Durand", stage: "visite" }),
     ];
     const { getByText, getByRole } = render(
-      <BuyerInbox rows={rows} members={membres} />,
+      <BuyerInbox rows={rows} members={membres} chargeA="2026-10-13T12:00:00.000Z" />,
     );
     expect(getByText("Maya Labeille")).toBeTruthy();
     expect(getByText("BANAT CLUB")).toBeTruthy();
@@ -75,7 +91,7 @@ describe("BuyerInbox", () => {
 
   it("une liste vide affiche l'état vide, pas une page blanche", () => {
     const { getByText } = render(
-      <BuyerInbox rows={[]} members={membres} />,
+      <BuyerInbox rows={[]} members={membres} chargeA="2026-10-13T12:00:00.000Z" />,
     );
     expect(getByText("Aucun acquéreur pour l’instant.")).toBeTruthy();
   });
@@ -87,6 +103,7 @@ describe("BuyerInbox", () => {
       <BuyerInbox
         rows={[dossier({ stage: "nouveau" })]}
         members={membres}
+        chargeA="2026-10-13T12:00:00.000Z"
       />,
     );
     fireEvent.change(getByLabelText("Étape"), { target: { value: "signe" } });
@@ -94,15 +111,47 @@ describe("BuyerInbox", () => {
     expect(getByText("Ajustez la recherche ou les filtres.")).toBeTruthy();
   });
 
-  it("ne montre plus ni score ni qualification", () => {
-    const { queryByText } = render(
+  /**
+   * Le SCORE automatique reste caché : c'est un calcul, pas un jugement, et
+   * l'afficher à côté d'une qualification humaine fait croire à deux avis.
+   *
+   * La QUALIFICATION, elle, est désormais affichée — et c'est celle de la
+   * MANIFESTATION (`qualification`), pas l'ancien statut du profil
+   * (`qualificationStatus`), dont le vocabulaire porte un sens différent.
+   */
+  it("montre la qualification du projet, jamais le score automatique", () => {
+    const { queryByText, getAllByText } = render(
       <BuyerInbox
-        rows={[dossier({ bestScore: 45, qualificationStatus: "non_qualifie" })]}
+        rows={[
+          dossier({
+            bestScore: 45,
+            qualificationStatus: "non_qualifie",
+            qualification: "gros_potentiel",
+          }),
+        ]}
         members={membres}
+        chargeA="2026-10-13T12:00:00.000Z"
       />,
     );
     expect(queryByText(/Score 45/)).toBeNull();
-    expect(queryByText(/Qualification/)).toBeNull();
+    expect(getAllByText("Gros potentiel").length).toBeGreaterThan(0);
+    // L'ancien statut du profil ne doit surtout pas s'afficher à sa place.
     expect(queryByText("Non qualifié")).toBeNull();
+  });
+
+  /* La couleur de ligne ne dit QUE la qualification. Un gros potentiel qui n'a
+     pas décroché doit rester vert : c'est ce qui évite de rappeler en priorité
+     les gens qu'on vient d'écarter. */
+  it("colore la ligne selon la qualification, pas selon le retard", () => {
+    const { container } = render(
+      <BuyerInbox
+        rows={[dossier({ qualification: "gros_potentiel", overdue: true })]}
+        members={membres}
+        chargeA="2026-10-13T12:00:00.000Z"
+      />,
+    );
+    const ligne = container.querySelector(".crm-ligne");
+    expect(ligne?.className).toContain("crm-ligne--vert");
+    expect(ligne?.className).not.toContain("crm-ligne--rouge");
   });
 });

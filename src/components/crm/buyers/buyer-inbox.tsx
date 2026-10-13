@@ -5,7 +5,15 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Chip, EmptyState } from "@/components/crm/ui";
 import { cssVarRef } from "@/modules/crm/status-visuals";
+import { useRouter } from "next/navigation";
 import { ContactRapide } from "./contact-rapide";
+import { fileDAppels, positionDansLaFile, suivantDansLaFile } from "@/modules/buyers/crm/file-appels";
+import { PanneauTraitement } from "./panneau-traitement";
+import {
+  QUALIFICATION_BADGE,
+  QUALIFICATION_LABELS,
+  QUALIFICATION_TEINTE,
+} from "@/modules/buyers/crm/qualification";
 import { BadgeProjet } from "./barre-projets";
 import { numeroAppelable } from "@/modules/buyers/crm/telephone";
 import { formatDateTime } from "@/modules/crm/format";
@@ -20,7 +28,7 @@ import {
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
-import { porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
+import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -79,6 +87,7 @@ export function BuyerInbox({
   signalInitial = "tous",
   montrerProjet = true,
   contexte = "",
+  chargeA,
 }: {
   rows: BuyerInboxRow[];
   members: { userId: string; name: string }[];
@@ -92,9 +101,24 @@ export function BuyerInbox({
    * memoire aurait ete efface par l'aller-retour.
    */
   contexte?: string;
+  /** Instant de chargement, fourni par le serveur : voir `maintenant`. */
+  chargeA: string;
 }) {
   const [signal, setSignal] = useState<Signal>(signalInitial);
   const [search, setSearch] = useState("");
+
+  /*
+   * Le dossier ouvert dans le panneau, et l'ORDRE DE LA FILE figé au moment où
+   * la session d'appels démarre.
+   *
+   * Figer l'ordre n'est pas un détail : le dossier qu'on vient d'enregistrer
+   * sort de la file (il a désormais un rappel futur), toutes les positions
+   * glissent d'un cran, et « suivant » sauterait un dossier sans que personne
+   * ne le remarque.
+   */
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  const [ordreFile, setOrdreFile] = useState<string[]>([]);
+  const router = useRouter();
   const [stage, setStage] = useState<string>("tous");
   const [budget, setBudget] = useState<string>("tous");
   const [owner, setOwner] = useState<string>("tous");
@@ -135,12 +159,44 @@ export function BuyerInbox({
     return sorted;
   }, [rows, search, stage, budget, owner, sort, signal]);
 
+  /**
+   * La file d'appels porte sur ce qui est À L'ÉCRAN : filtrer par projet ou par
+   * qualification doit restreindre la session, sinon « commencer les appels »
+   * ramène les dossiers qu'on venait justement d'écarter.
+   */
+  /* L'instant de référence vient du SERVEUR (`chargeA`). Lire l'horloge
+     pendant le rendu donnerait une file différente au serveur et au navigateur
+     — et un rendu non reproductible, que React refuse à juste titre. */
+  const maintenant = Date.parse(chargeA);
+  const file = useMemo(() => fileDAppels(visible, maintenant), [visible, maintenant]);
+
+  const rowOuverte = useMemo(
+    () => visible.find((r) => (r.interestId ?? r.buyerProfileId) === ouvert) ?? null,
+    [visible, ouvert],
+  );
+  const { position, total: totalFile } = positionDansLaFile(ordreFile, ouvert);
+
+  /** Ouvrir un dossier à la main démarre une file : celle de l'écran. */
+  function ouvrir(row: BuyerInboxRow) {
+    const cle = row.interestId ?? row.buyerProfileId;
+    if (ordreFile.length === 0) {
+      setOrdreFile(file.map((r) => r.interestId ?? r.buyerProfileId));
+    }
+    setOuvert(cle);
+  }
+
+  /** « Commencer les appels » : on repart du haut d'une file fraîche. */
+  function commencerLesAppels() {
+    const ordre = file.map((r) => r.interestId ?? r.buyerProfileId);
+    setOrdreFile(ordre);
+    setOuvert(ordre[0] ?? null);
+  }
+
   const counters = useMemo(
     () => ({
       total: rows.length,
       nouveaux: rows.filter((r) => r.stage === "nouveau").length,
       enRetard: rows.filter((r) => r.overdue).length,
-      fortPotentiel: rows.filter((r) => r.highPotential).length,
       sansAction: rows.filter((r) => r.noNextAction).length,
       nonAffectes: rows.filter((r) => r.unassigned).length,
     }),
@@ -157,8 +213,6 @@ export function BuyerInbox({
                  signal="nouveaux" actif={signal} onChoisir={setSignal} />
         <Counter label="En retard" value={counters.enRetard} accent="--crm-st-perdu"
                  signal="en_retard" actif={signal} onChoisir={setSignal} />
-        <Counter label="Fort potentiel" value={counters.fortPotentiel} accent="--crm-st-signe"
-                 signal="fort_potentiel" actif={signal} onChoisir={setSignal} />
         <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter"
                  signal="sans_action" actif={signal} onChoisir={setSignal} />
         <Counter label="Non affectés" value={counters.nonAffectes} accent="--crm-st-perdu"
@@ -212,6 +266,47 @@ export function BuyerInbox({
         </div>
       </div>
 
+      {/* Filtres rapides : une pastille, un clic, et la liste dit exactement ce
+          que la pastille annonce. Ils se combinent avec les filtres detailles
+          en dessous, et « Tous » les reinitialise. */}
+      <div className="crm-rapides" role="group" aria-label="Filtres rapides">
+        {FILTRES_RAPIDES.map((f) => {
+          const n =
+            f.signal === "tous" ? rows.length : rows.filter((r) => porteLeSignal(r, f.signal)).length;
+          return (
+            <button
+              key={f.signal}
+              type="button"
+              className="crm-rapide"
+              aria-pressed={signal === f.signal}
+              onClick={() => setSignal(f.signal)}
+            >
+              {f.label}
+              <span className="crm-rapide__n">{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* La session d'appels : combien de dossiers attendent, et par où
+          commencer. Sans ce point d'entrée, « qui j'appelle maintenant » se
+          rejoue à chaque fois dans la tête du commercial. */}
+      {file.length > 0 ? (
+        <div className="crm-session">
+          <p className="crm-session__texte">
+            <strong>{file.length}</strong> dossier{file.length > 1 ? "s" : ""} à appeler
+            maintenant
+            <span className="crm-session__detail">
+              {" "}
+              · retards et rappels du jour en premier, puis les nouveaux
+            </span>
+          </p>
+          <button type="button" className="crm-btn crm-btn--primaire" onClick={commencerLesAppels}>
+            Commencer les appels
+          </button>
+        </div>
+      ) : null}
+
       <p className="text-xs text-[var(--crm-text-dim)]" role="status" aria-live="polite">
         {visible.length} dossier{visible.length > 1 ? "s" : ""} affiché
         {visible.length > 1 ? "s" : ""} sur {rows.length}.
@@ -255,6 +350,7 @@ export function BuyerInbox({
             <span>Budget déclaré</span>
             <span>Responsable</span>
             <span>Prochaine action</span>
+            <span>Qualification</span>
             <span>Étape</span>
             <span>Contact</span>
           </div>
@@ -265,11 +361,31 @@ export function BuyerInbox({
               row={row}
               montrerProjet={montrerProjet}
               contexte={contexte}
+              onOuvrir={ouvrir}
+              actif={ouvert === (row.interestId ?? row.buyerProfileId)}
             />
           ))}
         </ul>
         </>
       )}
+
+      {rowOuverte ? (
+        <PanneauTraitement
+          /* La CLÉ porte la remise à zéro : changer de dossier remonte le
+             panneau, donc aucune saisie du précédent ne peut survivre. */
+          key={ouvert}
+          row={rowOuverte}
+          position={position}
+          total={totalFile}
+          resteUnSuivant={suivantDansLaFile(ordreFile, ouvert) !== null}
+          onFermer={() => setOuvert(null)}
+          /* `router.refresh()` recharge les DONNÉES de la page sans rien
+             démonter : la liste reste à l'écran, les filtres et la position de
+             défilement sont conservés. */
+          onEnregistre={() => router.refresh()}
+          onSuivant={() => setOuvert(suivantDansLaFile(ordreFile, ouvert))}
+        />
+      ) : null}
     </div>
   );
 }
@@ -394,10 +510,15 @@ function BuyerRow({
   row,
   montrerProjet,
   contexte,
+  onOuvrir,
+  actif,
 }: {
   row: BuyerInboxRow;
   montrerProjet: boolean;
   contexte: string;
+  /** Ouvre le panneau de traitement, SANS quitter la liste. */
+  onOuvrir: (row: BuyerInboxRow) => void;
+  actif: boolean;
 }) {
   const stageV = buyerStageVisual(row.stage);
   const appelable = numeroAppelable(row.phoneMasked);
@@ -407,15 +528,28 @@ function BuyerRow({
     ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
     : null;
 
+  /* La TEINTE de la ligne dit la qualification, et rien d'autre. Elle disait
+     auparavant « en retard » : un gros potentiel qui n'avait pas decroche
+     virait au rouge, et le commercial rappelait les mauvaises personnes. */
+  const teinte = QUALIFICATION_TEINTE[row.qualification];
+
   return (
-    <li className="crm-ligne">
+    <li
+      className={`crm-ligne${teinte ? ` crm-ligne--${teinte}` : ""}${actif ? " crm-ligne--actif" : ""}`}
+      onClick={() => onOuvrir(row)}
+    >
       {/* Identite, coordonnees et projet. Les coordonnees se lisent ICI :
           avoir a ouvrir une fiche pour retrouver un numero, c'est un clic et
           un retour a chaque appel. */}
       <div className="min-w-0">
+        {/* Le NOM mene a la fiche complete ; le reste de la ligne ouvre le
+            panneau. Sans ce `stopPropagation`, un clic sur le nom ferait les
+            deux a la fois. */}
         <Link
           href={`/crm/acquereurs/${row.buyerProfileId}${contexte}`}
-          className="crm-wrap text-[15px] font-bold text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-azur)]"
+          prefetch={false}
+          onClick={(e) => e.stopPropagation()}
+          className="crm-wrap relative z-10 text-[15px] font-bold text-[var(--crm-text)] outline-none hover:text-[var(--crm-azur)]"
         >
           {row.name}
         </Link>
@@ -515,6 +649,20 @@ function BuyerRow({
         ) : (
           <Manque>À programmer</Manque>
         )}
+      </div>
+
+      {/* Qualification : le jugement commercial, toujours ecrit, jamais
+          seulement une couleur. */}
+      <div className="crm-ligne__col">
+        <span className="crm-ligne__ent">Qualification</span>
+        <span className={`crm-qualif crm-qualif--${QUALIFICATION_BADGE[row.qualification]} w-fit`}>
+          {QUALIFICATION_LABELS[row.qualification]}
+        </span>
+        {row.callAttempts > 0 ? (
+          <span className="text-[11.5px] text-[var(--crm-text-faint)]">
+            {row.callAttempts} tentative{row.callAttempts > 1 ? "s" : ""}
+          </span>
+        ) : null}
       </div>
 
       {/* Etape */}

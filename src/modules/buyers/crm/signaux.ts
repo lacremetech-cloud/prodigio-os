@@ -20,6 +20,14 @@ import type { BuyerInboxRow } from "./queries";
  */
 export type Signal =
   | "tous"
+  | "a_contacter"
+  | "a_rappeler"
+  | "injoignables"
+  | "gros_potentiel"
+  | "en_reflexion"
+  | "non_qualifies"
+  | "numero_invalide"
+  | "en_cours"
   | "nouveaux"
   | "en_retard"
   | "fort_potentiel"
@@ -28,11 +36,35 @@ export type Signal =
 
 const SIGNAUX: Signal[] = [
   "tous",
+  "a_contacter",
+  "a_rappeler",
+  "injoignables",
+  "gros_potentiel",
+  "en_reflexion",
+  "non_qualifies",
+  "numero_invalide",
+  "en_cours",
   "nouveaux",
   "en_retard",
   "fort_potentiel",
   "sans_action",
   "non_affectes",
+];
+
+/**
+ * Les filtres RAPIDES, ceux qui méritent une pastille au-dessus de la liste.
+ * Les autres restent accessibles par l'URL et par les compteurs, mais une
+ * rangée de treize pastilles ne se lit plus.
+ */
+export const FILTRES_RAPIDES: { signal: Signal; label: string }[] = [
+  { signal: "tous", label: "Tous" },
+  { signal: "a_contacter", label: "À contacter" },
+  { signal: "a_rappeler", label: "À rappeler" },
+  { signal: "injoignables", label: "Injoignables" },
+  { signal: "gros_potentiel", label: "Gros potentiel" },
+  { signal: "en_reflexion", label: "En réflexion" },
+  { signal: "non_qualifies", label: "Non qualifiés" },
+  { signal: "numero_invalide", label: "Numéros invalides" },
 ];
 
 /** Normalise un paramètre d'URL : une valeur inconnue ne filtre rien. */
@@ -44,6 +76,31 @@ export function lireSignal(valeur: string | string[] | undefined): Signal {
 /** Un dossier porte-t-il ce signal ? Fonction pure. */
 export function porteLeSignal(row: BuyerInboxRow, signal: Signal): boolean {
   switch (signal) {
+    /* « À contacter » = personne ne lui a encore parlé. C'est le compteur du
+       premier traitement, pas « sans prochaine action » : un dossier qu'on a
+       déjà appelé trois fois sans succès n'est plus à contacter, il est à
+       rappeler. */
+    case "a_contacter":
+      return row.callAttempts === 0;
+    case "a_rappeler":
+      return row.nextActionAt !== null;
+    /* Injoignable = le DERNIER appel n'a mené à personne. Un dossier qu'on a
+       fini par joindre n'est plus injoignable, même s'il l'a été dix fois. */
+    case "injoignables":
+      return row.lastCallOutcome === "sans_reponse" || row.lastCallOutcome === "message_laisse";
+    case "gros_potentiel":
+      return row.qualification === "gros_potentiel";
+    case "en_reflexion":
+      return row.qualification === "en_reflexion";
+    case "non_qualifies":
+      return row.qualification === "non_qualifie";
+    case "numero_invalide":
+      return row.phoneInvalid;
+    /* « En cours » : un échange est engagé. Le compteur du tableau de bord et
+       ce filtre doivent compter la MÊME chose — un compteur qui ouvre une
+       autre liste que celle qu'il annonce est un compteur qui ment. */
+    case "en_cours":
+      return ["a_rappeler", "en_discussion", "visite", "offre"].includes(row.stage);
     case "nouveaux":
       return row.stage === "nouveau";
     case "en_retard":

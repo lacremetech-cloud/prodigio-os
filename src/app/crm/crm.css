@@ -49,10 +49,12 @@
   --crm-text: #f5f4f2;
   --crm-text-dim: #c4c7ce;
   --crm-text-faint: #9aa1ad;
-  /* Accent Prodigio */
-  --crm-gold: #d4bd90;
-  --crm-gold-strong: #b0925a;
-  --crm-focus: #d4bd90;
+  /* Accent Prodigio : emeraude. Le jeton garde son nom historique (`gold`) —
+     le renommer toucherait des dizaines d'appels pour un gain nul — mais il ne
+     porte plus d'or : la charte reserve desormais l'accent au vert. */
+  --crm-gold: #34d399;
+  --crm-gold-strong: #059669;
+  --crm-focus: #34d399;
   /* Accent du second univers : un bleu calanque, froid la ou l'or est
      chaud, pour qu'un coup d'oeil suffise a savoir ou l'on travaille. */
   --crm-azur: #8fb6d4;
@@ -66,11 +68,14 @@
   /* Alias de compatibilité : les usages existants deviennent thème-adaptatifs. */
   --color-danger-on-dark: var(--crm-danger);
   /* Statuts / stades du pipeline */
-  --crm-st-nouveau: #6aa6ff;            /* bleu */
+  --crm-st-nouveau: #8aa0b8;            /* ardoise */
   --crm-st-a_contacter: #e6b45c;        /* ambre */
   --crm-st-contact: #4fd0d6;            /* cyan */
-  --crm-st-qualifie: #b18cf0;           /* violet */
-  --crm-st-rdv_planifie: #8b93f2;       /* indigo */
+  /* Le violet est banni de la charte : il vivait encore ici alors que le theme
+     clair en avait deja ete debarrasse — et c'est le SOMBRE qui s'affiche par
+     defaut, donc le seul que l'on voyait vraiment. */
+  --crm-st-qualifie: #5ec8b4;           /* teal */
+  --crm-st-rdv_planifie: #6aa6ff;       /* bleu, et non plus indigo */
   --crm-st-rdv_realise: #45c9b0;        /* turquoise */
   --crm-st-estimation: #45c9b0;         /* turquoise */
   --crm-st-eligibilite: #d9b45a;        /* doré */
@@ -86,11 +91,11 @@
    * couleur de texte etalee sur toute une largeur. Ici, un cran plus clair
    * pour tenir sur le noir.
    */
-  --crm-vif-nouveau: #818cf8;
+  --crm-vif-nouveau: #64748b;
   --crm-vif-a_contacter: #f59e0b;
   --crm-vif-contact: #06b6d4;
-  --crm-vif-qualifie: #a78bfa;
-  --crm-vif-rdv_planifie: #818cf8;
+  --crm-vif-qualifie: #14b8a6;
+  --crm-vif-rdv_planifie: #3b82f6;
   --crm-vif-proposition: #fb923c;
   --crm-vif-signe: #22c55e;
   --crm-vif-perdu: #fb7185;
@@ -145,8 +150,8 @@
   --crm-line-hover: #c4ccd9;
   --crm-on-accent: #ffffff;
   --crm-accent-vers: #000000;
-  --crm-gold: #7a5f24;
-  --crm-gold-strong: #5f4a1b;
+  --crm-gold: #047857;
+  --crm-gold-strong: #065f46;
   --crm-focus: #047857;
   /* Emeraude : rubrique active du menu et actions principales. L'indigo qui
      occupait cette place tirait vers le violet, banni de la charte. */
@@ -833,7 +838,7 @@
     border-top: none;
   }
   .crm-ligne {
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 1.05fr) minmax(0, 0.9fr) minmax(0, 0.8fr) auto;
     align-items: center;
     padding: 12px 16px;
   }
@@ -842,7 +847,7 @@
   }
   .crm-liste__entetes {
     display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 1.05fr) minmax(0, 0.9fr) minmax(0, 0.8fr) auto;
     gap: 16px;
     padding: 10px 16px;
     background: var(--crm-panel-2);
@@ -1589,4 +1594,289 @@
 .crm-contact--whatsapp:hover {
   background: #1a9449;
   border-color: #16803f;
+}
+
+/* ===================================================================== */
+/*  Qualification : le seul signal qui colore une ligne                   */
+/* ===================================================================== */
+/*
+ * La teinte de ligne disait auparavant « en retard ». Un gros potentiel qui
+ * n'avait pas decroche virait au rouge, et le commercial rappelait en priorite
+ * les gens qu'il venait d'ecarter. Elle ne dit plus QUE la qualification.
+ *
+ * Teintes tres basses en saturation : le texte reste a plein contraste par
+ * dessus, et le libelle est toujours ecrit — la couleur n'est jamais le seul
+ * signal.
+ */
+.crm-ligne--vert { background: color-mix(in srgb, var(--crm-success) 9%, var(--crm-panel)); }
+.crm-ligne--orange { background: color-mix(in srgb, var(--crm-warning) 10%, var(--crm-panel)); }
+.crm-ligne--rouge { background: color-mix(in srgb, var(--crm-danger) 9%, var(--crm-panel)); }
+.crm-ligne--vert:hover { background: color-mix(in srgb, var(--crm-success) 15%, var(--crm-panel)); }
+.crm-ligne--orange:hover { background: color-mix(in srgb, var(--crm-warning) 16%, var(--crm-panel)); }
+.crm-ligne--rouge:hover { background: color-mix(in srgb, var(--crm-danger) 15%, var(--crm-panel)); }
+
+/* Le dossier ouvert dans le panneau se repere d'un coup d'oeil. */
+.crm-ligne--actif { box-shadow: inset 3px 0 0 var(--crm-univers); }
+.crm-ligne { cursor: pointer; }
+
+/* Badge de qualification : toujours un libelle, jamais une pastille muette. */
+.crm-qualif {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.crm-qualif--gris {
+  background: var(--crm-panel-2);
+  color: var(--crm-text-dim);
+  border-color: var(--crm-line);
+}
+.crm-qualif--vert {
+  background: color-mix(in srgb, var(--crm-success) 16%, transparent);
+  color: var(--crm-success);
+  border-color: color-mix(in srgb, var(--crm-success) 40%, transparent);
+}
+.crm-qualif--orange {
+  background: color-mix(in srgb, var(--crm-warning) 16%, transparent);
+  color: var(--crm-warning);
+  border-color: color-mix(in srgb, var(--crm-warning) 40%, transparent);
+}
+.crm-qualif--rouge {
+  background: color-mix(in srgb, var(--crm-danger) 14%, transparent);
+  color: var(--crm-danger);
+  border-color: color-mix(in srgb, var(--crm-danger) 38%, transparent);
+}
+
+/* ===================================================================== */
+/*  La session d'appels                                                   */
+/* ===================================================================== */
+.crm-session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--crm-line);
+  border-radius: 10px;
+  background: var(--crm-panel);
+}
+.crm-session__texte { font-size: 14px; color: var(--crm-text); margin: 0; }
+.crm-session__detail { color: var(--crm-text-faint); font-size: 12.5px; }
+
+/* ===================================================================== */
+/*  Panneau de traitement                                                 */
+/* ===================================================================== */
+/*
+ * Il s'ouvre A COTE de la liste, qui reste chargee. Ouvrir un dossier etait
+ * une navigation de page complete — 3,2 s mesurees, liste detruite puis
+ * reconstruite au retour.
+ */
+.crm-panneau {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100vw);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--crm-panel);
+  border-left: 1px solid var(--crm-line);
+  box-shadow: -18px 0 48px rgb(0 0 0 / 0.18);
+}
+.crm-panneau__tete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--crm-line-soft);
+}
+.crm-panneau__nom { font-size: 18px; font-weight: 700; color: var(--crm-text); margin: 2px 0 0; }
+.crm-panneau__nom a { color: inherit; text-decoration: none; }
+.crm-panneau__nom a:hover { text-decoration: underline; }
+.crm-panneau__budget { font-size: 12.5px; color: var(--crm-text-dim); }
+.crm-panneau__fermer {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2);
+  color: var(--crm-text-dim);
+  cursor: pointer;
+}
+.crm-panneau__corps {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.crm-panneau__bloc { display: flex; flex-direction: column; gap: 8px; }
+.crm-panneau__titre {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--crm-text-faint);
+  margin: 0;
+}
+.crm-panneau__actuelle { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.crm-panneau__rappel { font-size: 13px; color: var(--crm-text-dim); gap: 4px; }
+.crm-panneau__rappel p { margin: 0; }
+.crm-panneau__note-ancienne {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--crm-panel-2);
+  border: 1px solid var(--crm-line-soft);
+  font-size: 13px;
+  color: var(--crm-text);
+  line-height: 1.55;
+}
+.crm-panneau__note-date { display: block; font-size: 11px; color: var(--crm-text-faint); }
+.crm-panneau__vide { color: var(--crm-text-faint); }
+.crm-panneau__aide { font-size: 12px; color: var(--crm-text-faint); margin: 0; }
+.crm-panneau__alerte {
+  font-size: 12.5px;
+  color: var(--crm-danger);
+  background: color-mix(in srgb, var(--crm-danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--crm-danger) 35%, transparent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0;
+}
+.crm-panneau__erreur {
+  font-size: 13px;
+  color: var(--crm-danger);
+  margin: 0 0 8px;
+}
+.crm-panneau__champ { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.crm-panneau__zone {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  padding: 9px 11px;
+  font-size: 13.5px;
+  font-family: inherit;
+  resize: vertical;
+}
+.crm-panneau__secondaire {
+  border-top: 1px solid var(--crm-line-soft);
+  padding-top: 12px;
+  font-size: 13px;
+  color: var(--crm-text-dim);
+}
+.crm-panneau__secondaire summary { cursor: pointer; }
+.crm-panneau__pied {
+  flex: none;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--crm-line);
+  background: var(--crm-panel);
+}
+
+/* Boutons de choix : 40 px de haut, libelle toujours visible. */
+.crm-choix { display: flex; flex-wrap: wrap; gap: 6px; }
+.crm-choix__item {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.crm-choix__item:hover { background: var(--crm-hover); }
+.crm-choix__item[aria-pressed="true"] {
+  background: var(--crm-univers);
+  border-color: var(--crm-univers);
+  color: #fff;
+}
+
+.crm-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.crm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.crm-btn--primaire { background: var(--crm-univers); color: #fff; }
+.crm-btn--secondaire {
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  border-color: var(--crm-line);
+}
+
+@media (max-width: 640px) {
+  .crm-panneau { width: 100vw; }
+}
+
+/* Un plafond de chargement atteint se DIT : travailler sur un sous-ensemble
+   sans le savoir est pire que travailler lentement. */
+.crm-avertissement {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--crm-warning) 40%, transparent);
+  background: color-mix(in srgb, var(--crm-warning) 10%, transparent);
+  color: var(--crm-text);
+  font-size: 13px;
+}
+
+/* Filtres rapides : une pastille = une question qu'on se pose vraiment. */
+.crm-rapides { display: flex; flex-wrap: wrap; gap: 6px; }
+.crm-rapide {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel);
+  color: var(--crm-text-dim);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.crm-rapide:hover { background: var(--crm-hover); color: var(--crm-text); }
+.crm-rapide[aria-pressed="true"] {
+  background: var(--crm-univers);
+  border-color: var(--crm-univers);
+  color: #fff;
+}
+.crm-rapide__n {
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  opacity: 0.75;
+}
+
+/* Barre de progression du premier traitement. */
+.crm-progression {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--crm-panel-2);
+  border: 1px solid var(--crm-line-soft);
+  overflow: hidden;
+}
+.crm-progression > span {
+  display: block;
+  height: 100%;
+  background: var(--crm-univers);
+  transition: width 200ms ease;
 }

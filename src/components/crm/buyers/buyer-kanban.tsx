@@ -415,7 +415,7 @@ function Card({
           </button>
         ) : null}
         <div className="min-w-0 flex-1">
-          <Link href={`/crm/acquereurs/${card.buyerProfileId}${contexte}`} className="min-w-0">
+          <Link prefetch={false} href={`/crm/acquereurs/${card.buyerProfileId}${contexte}`} className="min-w-0">
             <div className="flex items-center gap-2">
               <span
                 className="crm-ellipsis text-[15px] font-bold text-[var(--crm-text)]"
@@ -500,7 +500,7 @@ function Card({
         <div className="rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] p-2">
           <p className="crm-wrap text-[11px] text-[var(--crm-text-dim)]">{notice.text}</p>
           {notice.action ? (
-            <Link
+            <Link prefetch={false}
               href={`/crm/acquereurs/${card.buyerProfileId}${contexte}`}
               className="mt-1 inline-block text-[11px] text-[var(--crm-azur)] underline"
             >

@@ -37,7 +37,7 @@ export default async function BuyersInboxPage({
   const params = await searchParams;
   const canViewContacts = canViewContactDetails(session.roles);
 
-  const { items, members, projets } = await loadBuyerList(canViewContacts);
+  const { items, members, projets, chargeA, tronquee } = await loadBuyerList(canViewContacts);
 
   // `?signal=en_retard` : les tuiles du tableau de bord ouvrent directement la
   // liste qu'elles annoncent. Une valeur inconnue ne filtre rien.
@@ -71,6 +71,15 @@ export default async function BuyersInboxPage({
         </p>
       </header>
 
+      {/* Tronquer une liste de leads sans le dire serait pire que lent : le
+          commercial travaillerait sur un sous-ensemble sans le savoir. */}
+      {tronquee ? (
+        <p className="crm-avertissement" role="status">
+          Seuls les {items.length} dossiers les plus récents sont chargés. Affinez par projet ou
+          par filtre pour atteindre les autres.
+        </p>
+      ) : null}
+
       <BarreProjets
         projets={projets}
         selection={selection}
@@ -87,6 +96,7 @@ export default async function BuyersInboxPage({
         /* Le badge de projet n'a de sens que si plusieurs projets sont à
            l'écran : sous un onglet de projet, le répéter sur chaque ligne
            n'apprend rien et prend la place du reste. */
+        chargeA={chargeA}
         montrerProjet={selection.length !== 1}
         contexte={ecrireNavigation({ projets: selection, vue, signal })}
       />

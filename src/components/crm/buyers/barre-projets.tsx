@@ -51,6 +51,11 @@ export function BarreProjets({
       <div className="flex flex-wrap gap-2" role="group" aria-label="Projet">
         <Link
           href={`${route(vue)}${ecrireNavigation({ projets: [], vue, signal })}`}
+          /* Pas de préchargement : chaque variante de cette barre est un rendu
+             serveur COMPLET de la liste. Les précharger toutes coûtait, mesuré,
+             quinze allers-retours par changement de projet — pour un lien sur
+             lequel on ne cliquera pas. */
+          prefetch={false}
           aria-current={selection.length === 0 ? "true" : undefined}
           className="crm-projet crm-projet--tous"
         >
@@ -64,6 +69,7 @@ export function BarreProjets({
             <Link
               key={p.id}
               href={`${route(vue)}${ecrireNavigation({ projets: bascule(p.id), vue, signal })}`}
+              prefetch={false}
               aria-current={actif ? "true" : undefined}
               className="crm-projet"
               style={{ ["--projet" as keyof CSSProperties]: `var(--crm-projet-${teinteProjet(p.id)})` } as CSSProperties}
@@ -83,6 +89,7 @@ export function BarreProjets({
           <Link
             key={v}
             href={`${route(v)}${ecrireNavigation({ projets: selection, vue: v, signal })}`}
+            prefetch={false}
             aria-current={vue === v ? "true" : undefined}
             className="crm-vues__choix"
           >
