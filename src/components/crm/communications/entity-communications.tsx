@@ -103,7 +103,7 @@ export function EntityCommunications({
         );
       })}
       <li>
-        <Link href="/crm/communications" className="text-[12px] text-[var(--crm-gold)] hover:underline">
+        <Link href="/crm/communications" className="text-[12px] text-[var(--crm-azur)] hover:underline">
           Voir le centre de communications →
         </Link>
       </li>

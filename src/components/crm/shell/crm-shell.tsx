@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/modules/crm/auth/actions";
@@ -202,22 +201,21 @@ function NavLinks({
   );
 }
 
+/**
+ * La marque, sans monogramme.
+ *
+ * Le « P » dans son carre noir doublait le mot qu'il abrege, a deux
+ * centimetres de lui. Le nom seul, pose, suffit — et la ligne du dessous dit
+ * ou l'on est, ce que le monogramme ne disait pas.
+ */
 function Brand() {
   return (
-    <Link href="/crm" className="flex items-center gap-2.5">
-      <Image
-        src="/images/brand/marque-prodigio.png"
-        alt=""
-        width={64}
-        height={64}
-        className="crm-brand-badge"
-        priority
-      />
-      <span className="leading-tight">
-        <span className="block text-sm font-semibold text-[var(--crm-text)]">Prodigio</span>
-        <span className="block text-[10px] uppercase tracking-[0.2em] text-[var(--crm-text-faint)]">
-          Mandats &amp; Biens
-        </span>
+    <Link href="/crm" className="block leading-tight">
+      <span className="block text-[19px] font-bold lowercase tracking-tight text-[var(--crm-sb-texte)]">
+        prodigio
+      </span>
+      <span className="mt-0.5 block text-[10px] uppercase tracking-[0.18em] text-[var(--crm-sb-faible)]">
+        Espace commercial
       </span>
     </Link>
   );
@@ -295,11 +293,18 @@ export function CrmShell({
       <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript() }} />
       <ThemeProvider initialPreference={themePreference} rootRef={rootRef}>
       {/* Sidebar desktop */}
-      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[var(--crm-line)] bg-[var(--crm-panel)] p-4 lg:flex">
+      {/*
+        Hauteur de fenetre exactement, jamais plus : la navigation defile si
+        elle deborde, le profil reste colle en bas. Sans ça, sur un portable
+        13 pouces a 100 %, « Deconnexion » passait sous le pli — visible
+        seulement en faisant defiler une barre qu'on ne pense pas a faire
+        defiler.
+      */}
+      <aside className="crm-sidebar sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col p-4 lg:flex">
         <div className="px-2 py-2">
           <Brand />
         </div>
-        <div className="mt-6 flex-1">
+        <div className="crm-scroll mt-6 min-h-0 flex-1 overflow-y-auto">
           <NavLinks commercial={commercial} />
         </div>
         <UserCard name={name} photo={photo} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
@@ -313,11 +318,11 @@ export function CrmShell({
             className="absolute inset-0 bg-black/60"
             onClick={() => setOpen(false)}
           />
-          <aside className="absolute left-0 top-0 flex h-full w-[268px] flex-col border-r border-[var(--crm-line)] bg-[var(--crm-panel)] p-4 crm-fade-in">
+          <aside className="crm-sidebar absolute left-0 top-0 flex h-full w-[268px] flex-col p-4 crm-fade-in">
             <div className="px-2 py-2">
               <Brand />
             </div>
-            <div className="mt-6 flex-1">
+            <div className="crm-scroll mt-6 min-h-0 flex-1 overflow-y-auto">
               <NavLinks commercial={commercial} onNavigate={() => setOpen(false)} />
             </div>
             <UserCard name={name} photo={photo} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
@@ -346,17 +351,9 @@ export function CrmShell({
             >
               ↻ <span className="hidden sm:inline">Actualiser</span>
             </button>
-            {/* En haut a droite : qui est connecte. La deconnexion vit en bas
-                de la barre laterale, sous l'identite — une sortie de session
-                n'a pas a etre le bouton le plus visible de l'ecran, ni a
-                cotoyer « Actualiser » a deux centimetres. */}
-            <span
-              className="flex items-center gap-2"
-              title={`${name} · ${primary ? roleLabels[primary] : "Sans rôle"}`}
-            >
-              <Avatar name={name} size={28} photo={photo} />
-              <span className="sr-only">Connecté en {name}</span>
-            </span>
+            {/* Pas de portrait ici : l'identite vit en bas de la barre
+                laterale, avec la deconnexion. En haut, elle ne servait a rien
+                qu'a repeter ce qui est deja ecrit a l'ecran d'a cote. */}
           </div>
         </header>
 
@@ -387,19 +384,18 @@ function UserCard({
   photo?: string | null;
 }) {
   return (
-    <div className="mt-4 flex flex-col gap-2 rounded-[10px] border border-[var(--crm-line)] bg-[var(--crm-panel-2)] px-3 py-2.5">
+    <div className="crm-sidebar__profil mt-4 flex shrink-0 flex-col gap-2 rounded-[10px] px-3 py-2.5">
       <div className="flex items-center gap-3">
         <Avatar name={name} size={32} photo={photo} />
         <div className="min-w-0">
-          <p className="crm-ellipsis text-xs font-medium text-[var(--crm-text)]" title={name}>{name}</p>
-          <p className="crm-ellipsis text-[11px] text-[var(--crm-text-faint)]">{roleLabel}</p>
+          <p className="crm-ellipsis text-xs font-medium text-[var(--crm-sb-texte)]" title={name}>
+            {name}
+          </p>
+          <p className="crm-ellipsis text-[11px] text-[var(--crm-sb-faible)]">{roleLabel}</p>
         </div>
       </div>
       <form action={signOutAction}>
-        <button
-          type="submit"
-          className="crm-btn crm-btn--ghost crm-btn--sm w-full justify-center"
-        >
+        <button type="submit" className="crm-sidebar__sortie w-full">
           Déconnexion
         </button>
       </form>

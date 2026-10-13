@@ -396,7 +396,7 @@ function Card({
     <div
       className={`crm-kanban-card flex flex-col gap-2 p-3 ${
         saving ? "crm-kanban-card--saving" : ""
-      } ${grabbed ? "ring-1 ring-[var(--crm-gold)]" : ""}`}
+      } ${grabbed ? "ring-1 ring-[var(--crm-azur)]" : ""}`}
       draggable={canMove && !saving && targets.length > 0}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
@@ -455,11 +455,11 @@ function Card({
             <p className="mt-1 text-[11px] text-[var(--crm-text-faint)]">{card.phoneMasked}</p>
           ) : null}
         </div>
-        {saving ? <span className="shrink-0 text-[11px] text-[var(--crm-gold)]">…</span> : null}
+        {saving ? <span className="shrink-0 text-[11px] text-[var(--crm-azur)]">…</span> : null}
       </div>
 
       {grabbed ? (
-        <p className="rounded-[6px] bg-[var(--crm-panel-2)] px-2 py-1 text-[11px] text-[var(--crm-gold)]">
+        <p className="rounded-[6px] bg-[var(--crm-panel-2)] px-2 py-1 text-[11px] text-[var(--crm-azur)]">
           Cible : « {grabbedTarget} » — Entrée pour déposer, Échap pour annuler.
         </p>
       ) : null}
@@ -502,7 +502,7 @@ function Card({
           {notice.action ? (
             <Link
               href={`/crm/acquereurs/${card.buyerProfileId}${contexte}`}
-              className="mt-1 inline-block text-[11px] text-[var(--crm-gold)] underline"
+              className="mt-1 inline-block text-[11px] text-[var(--crm-azur)] underline"
             >
               {notice.action === "offre"
                 ? "Ouvrir la fiche (enregistrer une offre)"

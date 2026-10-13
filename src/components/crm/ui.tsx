@@ -144,7 +144,7 @@ export function Avatar({
   return (
     <span
       aria-hidden="true"
-      className={`${commun} bg-[var(--crm-elevated)] font-semibold text-[var(--crm-gold)]`}
+      className={`${commun} bg-[var(--crm-elevated)] font-semibold text-[var(--crm-azur)]`}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
       {initials(name)}
@@ -173,7 +173,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[var(--crm-line)] bg-[var(--crm-panel)] px-6 py-16 text-center crm-fade-in">
-      <span aria-hidden className="text-2xl text-[var(--crm-gold)]">{icon}</span>
+      <span aria-hidden className="text-2xl text-[var(--crm-text-faint)]">{icon}</span>
       <p className="text-sm font-medium text-[var(--crm-text)]">{title}</p>
       {hint ? <p className="max-w-sm text-sm text-[var(--crm-text-dim)]">{hint}</p> : null}
     </div>

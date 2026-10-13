@@ -16,7 +16,7 @@ import {
 } from "@/modules/buyers/crm/labels";
 import { budgetBandBounds } from "@/modules/buyers/crm/criteria";
 import {
-  BUDGET_CHOICE_LABELS,
+  BUDGET_CHOICE_COURT,
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
@@ -167,8 +167,10 @@ export function BuyerInbox({
 
       {/* Recherche + filtres */}
       <div className="flex flex-col gap-2 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="min-w-0 flex-1">
+        {/* Sur telephone, la recherche prend toute la largeur : partagee avec
+            « Trier par », elle tombait a sept caracteres visibles. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <label className="min-w-0 sm:flex-1">
             <span className="sr-only">Rechercher un acquéreur</span>
             <input
               className="crm-input"
@@ -178,7 +180,7 @@ export function BuyerInbox({
               onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-          <label className="flex items-center gap-1.5">
+          <label className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
             <span className="crm-label shrink-0">Trier par</span>
             <select
               className="crm-select text-xs"
@@ -192,7 +194,7 @@ export function BuyerInbox({
           </label>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           <Select label="Étape" value={stage} onChange={setStage} options={[
             { value: "tous", label: "Toutes les étapes" },
             ...BUYER_PIPELINE_STAGES.map((s) => ({
@@ -305,7 +307,10 @@ function Counter({
       className="crm-panel crm-compteur flex flex-col gap-0.5 px-3.5 py-3 text-left"
       style={
         {
-          ...(accent
+          /* Le liseré ne se colore QUE si le compteur compte quelque chose.
+             Un « 0 en retard » borde de rouge se lit comme une alerte, alors
+             que c'est exactement la bonne nouvelle. */
+          ...(accent && value > 0
             ? { borderInlineStartWidth: "3px", borderInlineStartColor: couleur }
             : {}),
           ["--compteur" as keyof CSSProperties]: couleur,
@@ -335,7 +340,7 @@ function Select({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="flex min-w-0 items-center gap-1.5">
+    <label className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
       <span className="crm-label shrink-0">{label}</span>
       <select
         className="crm-select text-xs"
@@ -386,24 +391,60 @@ function BuyerRow({
 }) {
   const stageV = buyerStageVisual(row.stage);
   const appelable = numeroAppelable(row.phoneMasked);
+  // Forme COURTE en liste : le libelle long est la question telle qu'elle a ete
+  // posee, il passait sur deux lignes et poussait tout le reste.
   const budget = row.budgetChoice
-    ? BUDGET_CHOICE_LABELS[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
+    ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
     : null;
 
   return (
     <li className="crm-ligne">
-      {/* Identite + bien demande */}
+      {/* Identite, coordonnees et projet. Les coordonnees se lisent ICI :
+          avoir a ouvrir une fiche pour retrouver un numero, c'est un clic et
+          un retour a chaque appel. */}
       <div className="min-w-0">
         <Link
           href={`/crm/acquereurs/${row.buyerProfileId}${contexte}`}
-          className="crm-wrap text-[15px] font-bold text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-univers)]"
+          className="crm-wrap text-[15px] font-bold text-[var(--crm-text)] outline-none after:absolute after:inset-0 after:content-[''] hover:text-[var(--crm-azur)]"
         >
           {row.name}
         </Link>
+
+        <div className="crm-coord mt-1">
+          {row.phoneMasked ? (
+            appelable ? (
+              <a
+                href={`tel:${appelable}`}
+                onClick={(e) => e.stopPropagation()}
+                className="crm-coord__lien"
+                title={`Appeler le ${row.phoneMasked}`}
+              >
+                {row.phoneMasked}
+              </a>
+            ) : (
+              <span>{row.phoneMasked}</span>
+            )
+          ) : null}
+          {row.emailMasked ? (
+            row.emailMasked.includes("@") && !row.emailMasked.includes("•") ? (
+              <a
+                href={`mailto:${row.emailMasked}`}
+                onClick={(e) => e.stopPropagation()}
+                className="crm-coord__lien crm-ellipsis"
+                title={`Écrire à ${row.emailMasked}`}
+              >
+                {row.emailMasked}
+              </a>
+            ) : (
+              <span className="crm-ellipsis">{row.emailMasked}</span>
+            )
+          ) : null}
+        </div>
+
         {/* Le projet, en badge lisible, quand plusieurs sont a l'ecran : sans
             lui, deux lignes de la meme personne sur deux projets seraient
             indiscernables. Le nom est ECRIT — la couleur ne fait qu'aider. */}
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {montrerProjet ? (
             <BadgeProjet propertyId={row.lastPropertyId} label={row.lastPropertyLabel} />
           ) : null}
@@ -415,11 +456,7 @@ function BuyerRow({
               Aucun projet rattaché
             </span>
           ) : null}
-        </div>
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          {row.stage === "nouveau" ? <Chip variant="gold">Non traité</Chip> : null}
           {row.overdue ? <Chip variant="danger">En retard</Chip> : null}
-          {row.unassigned ? <Chip variant="neutral">Non affecté</Chip> : null}
         </div>
       </div>
 
@@ -441,7 +478,7 @@ function BuyerRow({
             {row.assigneeNames.join(", ")}
           </span>
         ) : (
-          <Manque>Personne</Manque>
+          <Manque>Non affecté</Manque>
         )}
       </div>
 
@@ -466,7 +503,7 @@ function BuyerRow({
             ) : null}
           </>
         ) : (
-          <Manque>Aucune</Manque>
+          <Manque>À programmer</Manque>
         )}
       </div>
 
@@ -484,10 +521,19 @@ function BuyerRow({
 
       {/* Contact */}
       <div className="crm-ligne__col">
-        {appelable ? (
-          <ContactRapide numero={appelable} compact />
+        <span className="crm-ligne__ent">Contact</span>
+        {appelable || row.emailMasked ? (
+          <ContactRapide
+            numero={appelable}
+            email={
+              row.emailMasked && row.emailMasked.includes("@") && !row.emailMasked.includes("•")
+                ? row.emailMasked
+                : null
+            }
+            compact
+          />
         ) : (
-          <Manque>Pas de numéro</Manque>
+          <Manque>Aucune coordonnée</Manque>
         )}
       </div>
     </li>

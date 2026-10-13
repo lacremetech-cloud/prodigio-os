@@ -118,10 +118,14 @@
      qui cree la hierarchie. Tout blanc, les cartes n'existaient que par leur
      trait ; tout teinte, elles disparaissaient. La barre laterale reste
      blanche et se detache donc de la toile sans traitement supplementaire. */
-  --crm-bg: #f3f4f8;
+  --crm-bg: #f1f4f8;
   --crm-panel: #ffffff;
-  --crm-panel-2: #f7f8fb;
+  --crm-panel-2: #f7f9fc;
   --crm-elevated: #ffffff;
+  /* Anthracite de la barre laterale. Ce n'est pas une surface de contenu : on
+     ne pose rien dessus, elle encadre. */
+  --crm-anthracite: #151a23;
+  --crm-anthracite-clair: #1f2733;
   /* Traits visibles. A #e6e8ee, un champ blanc borde de blanc casse disparait
      sur une carte blanche — c'est la moitie du « ton sur ton ». */
   --crm-line: #dce1ea;
@@ -132,7 +136,7 @@
      L'ancien `--crm-text-faint` (#88909f) tombait a 2.97 sur la toile : il
      portait pourtant les sous-titres, les mentions « non designe », les
      pourcentages et les textes d'invite des champs. */
-  --crm-text: #172033;
+  --crm-text: #17202e;
   --crm-text-dim: #596579;
   --crm-text-faint: #646f85;
   --crm-shadow: 0 1px 2px rgba(13, 18, 28, 0.05), 0 12px 28px -16px rgba(13, 18, 28, 0.25);
@@ -143,35 +147,38 @@
   --crm-accent-vers: #000000;
   --crm-gold: #7a5f24;
   --crm-gold-strong: #5f4a1b;
-  --crm-focus: #4338ca;
-  --crm-azur: #4338ca;
-  --crm-azur-strong: #332a9e;
+  --crm-focus: #047857;
+  /* Emeraude : rubrique active du menu et actions principales. L'indigo qui
+     occupait cette place tirait vers le violet, banni de la charte. */
+  --crm-azur: #059669;
+  --crm-azur-strong: #047857;
   --crm-info: #2560c4;
   --crm-success: #136c34;
   --crm-warning: #9a5b06;
   --crm-danger: #c62828;
   --crm-priority: #7a5f24;
-  --crm-st-nouveau: #2560c4;
+  --crm-st-nouveau: #334155;
   --crm-st-a_contacter: #9a5b06;
-  --crm-st-contact: #0a7076;
-  --crm-st-qualifie: #6333a8;
-  --crm-st-rdv_planifie: #4338ca;
+  --crm-st-contact: #0f766e;
+  --crm-st-qualifie: #0f766e;
+  /* « Visite » : bleu. C'etait un indigo qui se lisait violet. */
+  --crm-st-rdv_planifie: #1d4ed8;
   --crm-st-rdv_realise: #0a6d5c;
   --crm-st-estimation: #0a6d5c;
   --crm-st-eligibilite: #7a5f24;
   --crm-st-proposition: #b23c0c;
-  --crm-st-attente_signature: #6333a8;
+  --crm-st-attente_signature: #0f766e;
   --crm-st-signe: #136c34;
   --crm-st-perdu: #c62828;
   --crm-st-neutre: #616c7e;
   /* Aplats : vifs, et ils portent du blanc. Le libelle qu'ils portent est en
      14 px/800, soit du « grand texte » au sens WCAG : le seuil tombe de 4.5 a
      3:1, ce qui autorise cette saturation. Chaque valeur est mesuree. */
-  --crm-vif-nouveau: #4f46e5;
+  --crm-vif-nouveau: #475569;
   --crm-vif-a_contacter: #d97706;
-  --crm-vif-contact: #0891b2;
-  --crm-vif-qualifie: #7c3aed;
-  --crm-vif-rdv_planifie: #4f46e5;
+  --crm-vif-contact: #0f766e;
+  --crm-vif-qualifie: #0f766e;
+  --crm-vif-rdv_planifie: #2563eb;
   --crm-vif-proposition: #ea580c;
   --crm-vif-signe: #16a34a;
   --crm-vif-perdu: #e11d48;
@@ -741,28 +748,66 @@
  * ne se lit pas. Les en-tetes de colonne reapparaissent alors devant chaque
  * valeur, sans quoi on ne saurait plus ce qu'on lit.
  */
+/*
+ * Un TABLEAU, pas une pile de cartes. Les lignes partagent une seule surface
+ * blanche et se separent par un filet : a huit lignes, huit cartes ombrees
+ * faisaient huit objets a regarder, la ou il n'y a qu'une liste.
+ *
+ * Sous `lg`, la grille se replie en cartes empilees : sur telephone, une ligne
+ * de tableau ne se lit pas, et les en-tetes reviennent devant chaque valeur.
+ */
 .crm-liste {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border: 1px solid var(--crm-line);
+  border-radius: 10px;
+  background: var(--crm-panel);
+  overflow: hidden;
 }
 .crm-ligne {
   position: relative;
   display: grid;
   gap: 10px 16px;
   padding: 14px 16px;
-  border: 1px solid var(--crm-line);
-  border-radius: 12px;
   background: var(--crm-panel);
-  box-shadow: var(--crm-shadow-sm);
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition: background 120ms ease;
+}
+.crm-ligne + .crm-ligne {
+  border-top: 1px solid var(--crm-line-soft);
 }
 .crm-ligne:hover {
-  border-color: var(--crm-line-hover);
+  background: var(--crm-hover);
 }
 .crm-ligne:focus-within {
-  border-color: var(--crm-univers);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-univers) 18%, transparent);
+  background: var(--crm-hover);
+  box-shadow: inset 3px 0 0 var(--crm-azur);
+}
+
+/* Coordonnees de la ligne : lisibles sans ouvrir la fiche, et cliquables. */
+.crm-coord {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--crm-text-dim);
+}
+.crm-coord__lien {
+  position: relative;
+  z-index: 10;
+  width: fit-content;
+  max-width: 100%;
+  color: var(--crm-text-dim);
+  text-decoration: none;
+}
+.crm-coord__lien:hover {
+  color: var(--crm-azur);
+  text-decoration: underline;
+}
+.crm-coord__lien:focus-visible {
+  outline: 2px solid var(--crm-azur);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 .crm-ligne__col {
   display: flex;
@@ -783,6 +828,10 @@
   display: none;
 }
 @media (min-width: 1024px) {
+  .crm-liste {
+    border-radius: 0 0 10px 10px;
+    border-top: none;
+  }
   .crm-ligne {
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
     align-items: center;
@@ -795,7 +844,11 @@
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
     gap: 16px;
-    padding: 0 16px 6px;
+    padding: 10px 16px;
+    background: var(--crm-panel-2);
+    border: 1px solid var(--crm-line);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
     font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -1070,33 +1123,75 @@
  * Il devient une pastille teintee de l'accent de l'univers — visible dans les
  * deux themes, et le mot « actif » y est porte par la couleur ET la graisse.
  */
+/* =========================================================== Barre laterale
+ * Anthracite plein. Elle n'est plus une surface de contenu : elle encadre, et
+ * tout ce qu'elle porte se lit en clair dessus. Ses propres tons de texte sont
+ * nommes separement (`--crm-sb-*`) pour qu'aucun composant n'aille y chercher
+ * les tons du contenu, qui y seraient illisibles.
+ */
+.crm-sidebar {
+  --crm-sb-texte: #f4f7fb;
+  --crm-sb-faible: #9aa6b8;
+  background: var(--crm-anthracite, #151a23);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+.crm-sidebar__profil {
+  background: var(--crm-anthracite-clair, #1f2733);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.crm-sidebar__sortie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--crm-sb-texte);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.crm-sidebar__sortie:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.crm-sidebar__sortie:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--crm-anthracite, #151a23), 0 0 0 4px var(--crm-azur);
+}
+
 .crm-nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 11px 12px;
   font-size: 14.5px;
   /* Un menu en 400 gris pale ne donne pas envie d'etre clique. */
   font-weight: 500;
-  color: var(--crm-text-dim);
+  color: var(--crm-sb-faible, var(--crm-text-dim));
   transition: background-color 120ms ease, color 120ms ease;
 }
 .crm-nav-item:hover {
-  background: var(--crm-hover);
-  color: var(--crm-text);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--crm-sb-texte, var(--crm-text));
 }
+/* Rubrique active : aplat emeraude plein. Un simple changement de teinte sur
+   fond sombre ne se voyait pas assez pour dire « vous etes ici ». */
 .crm-nav-item[aria-current="page"] {
-  background: color-mix(in srgb, var(--crm-univers) 12%, var(--crm-panel));
-  color: var(--crm-univers);
-  font-weight: 600;
+  background: var(--crm-azur);
+  color: #ffffff;
+  font-weight: 650;
 }
 .crm-nav-item__icon {
   font-size: 15px;
-  color: var(--crm-text-dim);
-}
-.crm-nav-item[aria-current="page"] .crm-nav-item__icon {
   color: inherit;
+}
+.crm-nav-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--crm-anthracite, #151a23), 0 0 0 4px var(--crm-azur);
 }
 
 /*
@@ -1324,12 +1419,16 @@
    projet est toujours ecrit a cote, la couleur n'informe jamais seule.
 */
 .crm-root {
-  --crm-projet-210: #3b82f6;
-  --crm-projet-160: #0d9488;
-  --crm-projet-280: #8b5cf6;
-  --crm-projet-30:  #d97706;
-  --crm-projet-330: #db2777;
-  --crm-projet-100: #65a30d;
+  /* Bleu et turquoise d'abord : ce sont les teintes de Villa Jean Jaures et de
+     Villa Verdun, qui tombent sur ces deux-la. Les suivantes servent aux
+     projets a venir. Ni violet ni rouge : le premier est banni de la charte,
+     le second reserve aux alertes. */
+  --crm-projet-210: #2563eb;
+  --crm-projet-160: #0891b2;
+  --crm-projet-280: #0f766e;
+  --crm-projet-30:  #b45309;
+  --crm-projet-330: #9d174d;
+  --crm-projet-100: #4d7c0f;
 }
 
 .crm-projet {
@@ -1442,4 +1541,52 @@
   border-radius: 999px;
   background: var(--projet, var(--crm-text-faint));
   flex: none;
+}
+
+/* ======================================================= Actions de contact
+ * Appeler, ecrire, WhatsApp. Trois boutons de 40 px de haut : en dessous, on
+ * les manque au doigt. Ils vivent au-dessus de la zone cliquable de la ligne
+ * (`z-index`), et chacun arrete la propagation du clic — sans quoi appeler
+ * quelqu'un depuis la liste ouvrait sa fiche par-dessus.
+ */
+.crm-contacts {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.crm-contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line-hover);
+  background: var(--crm-panel);
+  color: var(--crm-text);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.crm-contact:hover {
+  background: var(--crm-hover);
+  border-color: var(--crm-text-dim);
+}
+.crm-contact:focus-visible {
+  outline: none;
+  border-color: var(--crm-azur);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-azur) 25%, transparent);
+}
+/* WhatsApp porte sa propre couleur : c'est a ça qu'on le reconnait, et le
+   vert de la marque n'est pas l'emeraude de l'interface. */
+.crm-contact--whatsapp {
+  background: #1faf54;
+  border-color: #1a9449;
+  color: #ffffff;
+}
+.crm-contact--whatsapp:hover {
+  background: #1a9449;
+  border-color: #16803f;
 }

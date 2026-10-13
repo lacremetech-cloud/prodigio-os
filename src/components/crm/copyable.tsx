@@ -20,7 +20,7 @@ export function CopyableValue({
 }) {
   const [copied, setCopied] = useState(false);
   const body = href ? (
-    <a className="crm-wrap underline decoration-dotted underline-offset-2 hover:text-[var(--crm-gold)]" href={href}>
+    <a className="crm-wrap underline decoration-dotted underline-offset-2 hover:text-[var(--crm-azur)]" href={href}>
       {value}
     </a>
   ) : (
@@ -33,7 +33,7 @@ export function CopyableValue({
       {copyable ? (
         <button
           type="button"
-          className="shrink-0 text-[11px] text-[var(--crm-gold)] underline"
+          className="shrink-0 text-[11px] text-[var(--crm-azur)] underline"
           aria-label="Copier"
           onClick={() => {
             void navigator.clipboard?.writeText(copyable).then(() => {
