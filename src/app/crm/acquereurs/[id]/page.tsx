@@ -32,6 +32,10 @@ import { activityOutcomeLabels, activityTypeLabels } from "@/modules/crm/labels"
 import { formatDateTime, timeSince } from "@/modules/crm/format";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { SectionTitle } from "@/components/crm/ui";
+import {
+  QUALIFICATION_BADGE,
+  QUALIFICATION_LABELS,
+} from "@/modules/buyers/crm/qualification";
 import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
 import { CopyableValue } from "@/components/crm/copyable";
@@ -110,6 +114,32 @@ export default async function BuyerProfilePage({
     canViewDetails: canViewContacts,
   });
   const { profile, interests, assignees, tasks, activities, auditEvents, members } = detail;
+
+  /*
+   * Tentatives et dernier appel PAR MANIFESTATION, dérivés des activités déjà
+   * chargées — exactement comme la vue `crm_buyer_interest_activity` les agrège
+   * pour la liste. Les deux affichages lisent donc le même fait : un appel
+   * consigné depuis le panneau apparaît ici, et réciproquement.
+   *
+   * Un message n'est pas un appel : seuls `appel` et `tentative_appel` comptent.
+   */
+  const resumeParManifestation = new Map<
+    string,
+    { call_attempts: number; last_call_at: string | null }
+  >();
+  for (const a of activities) {
+    if (!a.interest_id) continue;
+    if (a.type !== "appel" && a.type !== "tentative_appel") continue;
+    const actuel = resumeParManifestation.get(a.interest_id) ?? {
+      call_attempts: 0,
+      last_call_at: null,
+    };
+    actuel.call_attempts += 1;
+    if (!actuel.last_call_at || a.occurred_at > actuel.last_call_at) {
+      actuel.last_call_at = a.occurred_at;
+    }
+    resumeParManifestation.set(a.interest_id, actuel);
+  }
 
   const stageV = buyerStageVisual(profile.pipeline_stage);
   const isClosed = profile.pipeline_stage === "gagne" || profile.pipeline_stage === "perdu";
@@ -316,8 +346,32 @@ export default async function BuyerProfilePage({
                             </span>
                           );
                         })()}
+                        {/* La QUALIFICATION de ce projet, a cote de son etape.
+                            Les deux disent des choses differentes — l'une est
+                            un jugement, l'autre l'etat de l'affaire — et c'est
+                            la fiche complete qui doit montrer les deux. */}
+                        <span className={`crm-qualif crm-qualif--${QUALIFICATION_BADGE[i.qualification]}`}>
+                          {QUALIFICATION_LABELS[i.qualification]}
+                        </span>
                       </div>
                     </div>
+
+                    {i.qualification === "non_qualifie" && i.qualification_reason ? (
+                      <p className="mt-1.5 text-[12.5px] text-[var(--crm-text-dim)]">
+                        Motif : {i.qualification_reason}
+                      </p>
+                    ) : null}
+
+                    {/* Tentatives et dernier appel, PAR PROJET : c'est ce que le
+                        panneau rapide affiche, et les deux lisent la meme
+                        source. */}
+                    <p className="mt-1 text-[12.5px] text-[var(--crm-text-faint)]">
+                      {resumeParManifestation.get(i.id)?.call_attempts ?? 0} tentative
+                      {(resumeParManifestation.get(i.id)?.call_attempts ?? 0) > 1 ? "s" : ""}
+                      {resumeParManifestation.get(i.id)?.last_call_at
+                        ? ` · dernier appel ${formatDateTime(resumeParManifestation.get(i.id)!.last_call_at!)}`
+                        : ""}
+                    </p>
 
                     {/* La reponse au questionnaire. Le budget est mis en avant :
                         c'est la seule question posee par le formulaire, et la
