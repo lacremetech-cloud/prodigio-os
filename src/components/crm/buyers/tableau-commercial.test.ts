@@ -79,7 +79,7 @@ describe("compterPourCommercial", () => {
       sansAction: 0,
       dossiers: 1,
       aContacter: 1,
-      aRappeler: 0,
+      rappelsDus: 0,
       enCours: 1,
     });
   });
@@ -151,15 +151,19 @@ describe("compteurs de travail", () => {
     expect(c.aContacter).toBe(1);
   });
 
-  /* Un rappel pris pour la semaine prochaine ne demande rien AUJOURD'HUI. */
-  it("« à rappeler » ignore les rappels futurs", () => {
+  /* « Dû » se lit a l'HEURE : un rappel pris pour ce soir ne demande rien
+     maintenant, et un rappel pris pour la semaine prochaine encore moins. La
+     tuile et le filtre `echeance=dus` de la liste comptent la meme chose. */
+  it("« rappels dus » ne compte que les échéances atteintes ou dépassées", () => {
     const demain = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+    const ceSoir = new Date(Date.now() + 3 * 3600 * 1000).toISOString();
     const passe = new Date(Date.now() - 3600 * 1000).toISOString();
     const c = compterPourCommercial([
       dossier({ id: "a", dueAt: passe }),
-      dossier({ id: "b", dueAt: demain }),
+      dossier({ id: "b", dueAt: ceSoir }),
+      dossier({ id: "c", dueAt: demain }),
     ]);
-    expect(c.aRappeler).toBe(1);
+    expect(c.rappelsDus).toBe(1);
   });
 
   it("« en cours » ne retient que les étapes où un échange est engagé", () => {

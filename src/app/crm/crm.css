@@ -2086,3 +2086,191 @@
   gap: 6px;
 }
 .crm-arbitrage__choix .crm-btn { font-size: 12.5px; padding: 0 12px; }
+
+/* =====================================================================
+   BARRE DE FILTRES PARTAGÉE — liste et Kanban
+
+   Trois pastilles dehors, quatre filtres repliés derrière un bouton, et
+   les filtres actifs en étiquettes retirables. La liste portait deux
+   rangées de compteurs, cinq sélecteurs dépliés et huit pastilles : sur
+   une fenêtre de 740 px, le premier dossier se trouvait à 1211 px du
+   haut. On ne travaille pas comme ça.
+   ===================================================================== */
+
+/* Le bouton « Filtres » et le bouton « Trier » du téléphone. */
+.crm-commande {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel);
+  color: var(--crm-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.crm-commande:hover { background: var(--crm-hover); }
+.crm-commande[aria-expanded="true"] { border-color: var(--crm-univers); }
+
+/* Combien de filtres repliés sont actifs : sans ce chiffre, un filtre posé
+   derrière un bouton est un filtre oublié. */
+.crm-commande__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--crm-univers);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* La rangée d'échéance, sous « À rappeler » : plus discrète que les trois
+   pastilles principales, pour qu'on lise la hiérarchie sans l'expliquer. */
+.crm-rapides--fines .crm-rapide {
+  min-height: 29px;
+  padding: 0 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* --- Étiquettes des filtres appliqués -------------------------------- */
+.crm-pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--crm-univers);
+  background: color-mix(in srgb, var(--crm-univers) 10%, transparent);
+  color: var(--crm-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.crm-pastille:hover { background: color-mix(in srgb, var(--crm-univers) 18%, transparent); }
+.crm-pastille--raz {
+  border-style: dashed;
+  border-color: var(--crm-line);
+  background: transparent;
+  color: var(--crm-text-dim);
+  font-weight: 500;
+}
+
+/* --- La feuille des filtres ------------------------------------------
+   Sur téléphone elle monte du bas, à portée du pouce. Sur ordinateur elle
+   se pose en panneau centré : le même balisage, deux présentations, et
+   aucune duplication de logique. */
+.crm-feuille {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.crm-feuille__fond {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(10, 18, 26, 0.45);
+  cursor: pointer;
+}
+.crm-feuille__corps {
+  position: relative;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+  background: var(--crm-panel);
+  border-top: 1px solid var(--crm-line);
+  box-shadow: 0 -18px 50px rgba(10, 18, 26, 0.28);
+}
+.crm-feuille__tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.crm-feuille__titre {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--crm-text);
+}
+.crm-feuille__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.crm-feuille__option[aria-pressed="true"] {
+  border-color: var(--crm-univers);
+  background: color-mix(in srgb, var(--crm-univers) 12%, transparent);
+  font-weight: 700;
+}
+.crm-feuille__pied {
+  display: flex;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--crm-line-soft);
+}
+
+@media (min-width: 640px) {
+  .crm-feuille { align-items: center; padding: 24px; }
+  .crm-feuille__corps {
+    max-width: 420px;
+    border-radius: 14px;
+    border: 1px solid var(--crm-line);
+    box-shadow: 0 24px 60px rgba(10, 18, 26, 0.3);
+  }
+}
+
+/* --- La prochaine action, sur la fiche -------------------------------
+   Une seule ligne, lue par le même module que la liste et le tableau de
+   bord. Le retard se voit sans qu'on ait à lire la date. */
+.crm-prochaine {
+  margin: 0 0 10px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--crm-line-soft);
+  background: var(--crm-panel-2);
+  font-size: 12.5px;
+  color: var(--crm-text);
+}
+.crm-prochaine[data-etat="en_retard"] {
+  border-color: var(--crm-danger);
+  background: color-mix(in srgb, var(--crm-danger) 9%, transparent);
+}
+.crm-prochaine__etat,
+.crm-prochaine__portee { color: var(--crm-text-dim); font-weight: 500; }
+.crm-prochaine[data-etat="en_retard"] .crm-prochaine__etat {
+  color: var(--crm-danger);
+  font-weight: 700;
+}

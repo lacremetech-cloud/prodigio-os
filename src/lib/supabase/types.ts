@@ -817,13 +817,15 @@ export type BuyerPipelineStage =
 export type BuyerQualificationStatus = "non_qualifie" | "en_cours" | "qualifie" | "ecarte";
 
 /**
- * Qualification portée par la MANIFESTATION (une par projet). Cinq valeurs,
- * une seule à la fois, et c'est elle — et elle seule — qui colore la ligne.
+ * Qualification portée par la MANIFESTATION (une par projet). **Quatre**
+ * valeurs, une seule à la fois, et c'est elle — et elle seule — qui colore la
+ * ligne. C'est aussi la SEULE qualification du CRM acquéreurs : l'échelle qui
+ * vivait sur `BuyerProfileRow.qualification_status` ne s'affiche plus nulle
+ * part (migration 20261014090000).
  */
 export type BuyerQualification =
   | "a_qualifier"
   | "gros_potentiel"
-  | "qualifie"
   | "en_reflexion"
   | "non_qualifie";
 

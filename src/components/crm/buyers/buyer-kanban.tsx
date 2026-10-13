@@ -18,6 +18,14 @@ import {
   movableBuyerStages,
   type BuyerKanbanCard,
 } from "@/modules/buyers/crm/pipeline";
+import { BarreFiltres } from "./barre-filtres";
+import {
+  filtrer,
+  FILTRES_AVANCES_VIDES,
+  type Echeance,
+  type FiltresAvances,
+  type Signal,
+} from "@/modules/buyers/crm/filtres";
 import { moveBuyerCardAction } from "@/modules/buyers/crm/actions";
 import { safeAction } from "@/modules/crm/safe-action";
 
@@ -44,6 +52,10 @@ export function BuyerKanbanBoard({
   canMove,
   montrerProjet = true,
   contexte = "",
+  members = [],
+  signalInitial = "tous",
+  echeanceInitiale = "toutes",
+  chargeA,
 }: {
   cards: BuyerKanbanCard[];
   canMove: boolean;
@@ -51,6 +63,13 @@ export function BuyerKanbanBoard({
   montrerProjet?: boolean;
   /** Selection courante, recopiee dans chaque lien de fiche. */
   contexte?: string;
+  /** L'equipe, pour le filtre « Responsable » — le meme que dans la liste. */
+  members?: { userId: string; name: string }[];
+  /** Les MEMES filtres que la liste, lus dans la MEME URL. */
+  signalInitial?: Signal;
+  echeanceInitiale?: Echeance;
+  /** Instant de chargement, fourni par le serveur. */
+  chargeA: string;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -67,11 +86,17 @@ export function BuyerKanbanBoard({
   const [live, setLive] = useState("");
   const [grabbed, setGrabbed] = useState<Grabbed | null>(null);
 
-  // Filtres : stables au déplacement (ils ne dépendent pas de la position).
+  /* Filtres : stables au déplacement (ils ne dépendent pas de la position).
+     Ce sont EXACTEMENT ceux de la liste, sur les mêmes champs et avec les
+     mêmes définitions. Le tableau avait les siens — cinq onglets aux noms
+     voisins qui ne comptaient pas la même chose : passer d'une vue à l'autre
+     changeait le nombre de dossiers sans que rien ne l'explique. */
   const [search, setSearch] = useState("");
-  const [quick, setQuick] = useState<
-    "tous" | "non_affecte" | "en_retard" | "fort_potentiel" | "sans_action"
-  >("tous");
+  const [signal, setSignal] = useState<Signal>(signalInitial);
+  const [echeance, setEcheance] = useState<Echeance>(echeanceInitiale);
+  const [avances, setAvances] = useState<FiltresAvances>(FILTRES_AVANCES_VIDES);
+  const [feuille, setFeuille] = useState(false);
+  const maintenant = Date.parse(chargeA);
 
   /*
    * Tout ce tableau etait indexe sur la PERSONNE. Depuis qu'une carte
@@ -89,20 +114,10 @@ export function BuyerKanbanBoard({
   );
   const stageOf = (c: BuyerKanbanCard) => stageOverride[cleCarte(c)] ?? c.stage;
 
-  const visible = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return cards.filter((c) => {
-      if (needle) {
-        const hay = `${c.name} ${c.city ?? ""} ${c.propertyLabel ?? ""}`.toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
-      if (quick === "non_affecte") return c.unassigned;
-      if (quick === "en_retard") return c.overdue;
-      if (quick === "fort_potentiel") return c.recommendedPriority === "prioritaire";
-      if (quick === "sans_action") return c.noNextAction;
-      return true;
-    });
-  }, [cards, search, quick]);
+  const visible = useMemo(
+    () => filtrer(cards, { signal, echeance, recherche: search, avances }, maintenant),
+    [cards, search, signal, echeance, avances, maintenant],
+  );
 
   const columns = useMemo(() => {
     const map = new Map<string, BuyerKanbanCard[]>();
@@ -230,36 +245,21 @@ export function BuyerKanbanBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          className="crm-input max-w-[260px] text-sm"
-          placeholder="Rechercher (nom, ville, bien…)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Rechercher un dossier acquéreur"
-        />
-        <div className="crm-tabs flex-wrap">
-          {(
-            [
-              ["tous", "Tous"],
-              ["non_affecte", "Non affectés"],
-              ["en_retard", "En retard"],
-              ["sans_action", "Sans action"],
-              ["fort_potentiel", "Fort potentiel"],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              className={`crm-tab ${quick === v ? "crm-tab--active" : ""}`}
-              aria-pressed={quick === v}
-              onClick={() => setQuick(v)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <BarreFiltres
+        dossiers={cards}
+        members={members}
+        maintenant={maintenant}
+        signal={signal}
+        setSignal={setSignal}
+        echeance={echeance}
+        setEcheance={setEcheance}
+        recherche={search}
+        setRecherche={setSearch}
+        avances={avances}
+        setAvances={setAvances}
+        feuilleOuverte={feuille}
+        setFeuilleOuverte={setFeuille}
+      />
 
       <p className="sr-only" role="status" aria-live="polite">
         {live}
@@ -423,7 +423,9 @@ function Card({
               >
                 {card.name}
               </span>
-              {card.recommendedPriority === "prioritaire" ? <Chip variant="gold">★</Chip> : null}
+              {card.qualification === "gros_potentiel" ? (
+                <Chip variant="gold">Gros potentiel</Chip>
+              ) : null}
             </div>
             {/* En vue « tous les projets », c'est ce badge qui dit DE QUEL
                 projet la carte parle : deux cartes de la meme personne y

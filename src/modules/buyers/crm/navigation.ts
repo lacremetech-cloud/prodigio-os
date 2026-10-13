@@ -46,11 +46,17 @@ export function ecrireNavigation(params: {
   projets: readonly string[];
   vue: VueAcquereurs;
   signal?: string;
+  echeance?: string;
 }): string {
   const q = new URLSearchParams();
   if (params.projets.length > 0) q.set("projets", params.projets.join(","));
   if (params.vue !== "liste") q.set("vue", params.vue);
   if (params.signal && params.signal !== "tous") q.set("signal", params.signal);
+  /* L'échéance n'a de sens que sous « À rappeler » : la traîner seule dans
+     l'URL afficherait une étiquette que rien ne filtre. */
+  if (params.signal === "a_rappeler" && params.echeance && params.echeance !== "toutes") {
+    q.set("echeance", params.echeance);
+  }
   const s = q.toString();
   return s ? `?${s}` : "";
 }

@@ -4,7 +4,7 @@ import { canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
 import { BuyerInbox } from "@/components/crm/buyers/buyer-inbox";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
-import { lireSignal } from "@/modules/buyers/crm/signaux";
+import { lireEcheance, lireSignal } from "@/modules/buyers/crm/filtres";
 import {
   dansLaSelection,
   ecrireNavigation,
@@ -39,9 +39,11 @@ export default async function BuyersInboxPage({
 
   const { items, members, projets, chargeA, tronquee } = await loadBuyerList(canViewContacts);
 
-  // `?signal=en_retard` : les tuiles du tableau de bord ouvrent directement la
-  // liste qu'elles annoncent. Une valeur inconnue ne filtre rien.
+  /* `?signal=a_rappeler&echeance=dus` : les tuiles du tableau de bord ouvrent
+     exactement la liste qu'elles annoncent. Une valeur inconnue ne filtre
+     rien — un lien partagé ne doit jamais rendre une liste vide inexplicable. */
   const signal = lireSignal(params.signal);
+  const echeance = lireEcheance(params.echeance);
   const selection = lireProjets(params.projets, projets);
   const vue = lireVue(params.vue);
 
@@ -93,12 +95,13 @@ export default async function BuyersInboxPage({
         rows={rows}
         members={memberOptions}
         signalInitial={signal}
+        echeanceInitiale={echeance}
         /* Le badge de projet n'a de sens que si plusieurs projets sont à
            l'écran : sous un onglet de projet, le répéter sur chaque ligne
            n'apprend rien et prend la place du reste. */
         chargeA={chargeA}
         montrerProjet={selection.length !== 1}
-        contexte={ecrireNavigation({ projets: selection, vue, signal })}
+        contexte={ecrireNavigation({ projets: selection, vue, signal, echeance })}
       />
     </div>
   );

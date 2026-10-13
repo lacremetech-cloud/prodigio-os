@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toKanbanCard } from "@/modules/buyers/crm/queries";
-import { buyerQualificationLabels } from "@/modules/buyers/crm/labels";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
 import {
@@ -11,9 +10,8 @@ import {
   lireProjets,
   lireVue,
 } from "@/modules/buyers/crm/navigation";
-import { lireSignal } from "@/modules/buyers/crm/signaux";
+import { lireEcheance, lireSignal } from "@/modules/buyers/crm/filtres";
 import { comptesParProjet } from "@/modules/buyers/crm/comptes";
-import type { BuyerQualificationStatus } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Pipeline Acquéreurs" };
 
@@ -36,21 +34,27 @@ export default async function BuyersPipelinePage({
   const canViewContacts = canViewContactDetails(session.roles);
   const canMove = canTreatBuyers(session.roles);
 
-  const { items, projets } = await loadBuyerList(canViewContacts);
+  const { items, projets, chargeA, members } = await loadBuyerList(canViewContacts);
+
+  /* La meme liste d'equipe que la liste : le filtre « Responsable » doit
+     proposer les memes noms dans les deux vues. */
+  const memberOptions = [...members.entries()].map(([userId, info]) => ({
+    userId,
+    name: info.email ? info.email.split("@")[0] || info.email : `Membre ${userId.slice(0, 6)}`,
+  }));
 
   const selection = lireProjets(params.projets, projets);
   const vue = lireVue(params.vue);
   const signal = lireSignal(params.signal);
+  const echeance = lireEcheance(params.echeance);
   const comptes = comptesParProjet(items);
 
   const visibles = items.filter((i) => dansLaSelection(i.propertyId, selection));
-  const cards = visibles.map((item) =>
-    toKanbanCard(
-      item,
-      buyerQualificationLabels[item.profile.qualification_status as BuyerQualificationStatus] ??
-        item.profile.qualification_status,
-    ),
-  );
+  /* La carte porte la MÊME qualification que la ligne de liste. Elle portait
+     l'ancienne échelle, par personne : un dossier pouvait s'afficher
+     « Qualifié » ici et « À qualifier » dans la liste, pour la même personne,
+     le même jour. */
+  const cards = visibles.map((item) => toKanbanCard(item));
 
   return (
     <div className="flex flex-col gap-5">
@@ -78,10 +82,14 @@ export default async function BuyersPipelinePage({
       <BuyerKanbanBoard
         cards={cards}
         canMove={canMove}
+        members={memberOptions}
+        signalInitial={signal}
+        echeanceInitiale={echeance}
+        chargeA={chargeA}
         /* Sous un onglet de projet, repeter son nom sur chaque carte
            n'apprend rien ; en vue « tous les projets », c'est indispensable. */
         montrerProjet={selection.length !== 1}
-        contexte={ecrireNavigation({ projets: selection, vue, signal })}
+        contexte={ecrireNavigation({ projets: selection, vue, signal, echeance })}
       />
     </div>
   );

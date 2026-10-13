@@ -38,14 +38,11 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   phoneMasked: "+33612345678",
   city: "Cassis",
   stage: "nouveau",
-  qualificationStatus: "non_qualifie",
-  recommendedPriority: null,
-  bestScore: null,
   interestCount: 1,
   lastInterestAt: "2026-10-12T08:00:00.000Z",
   createdAt: "2026-10-12T08:00:00.000Z",
-  lastPropertyId: "prop-1",
-  lastPropertyLabel: "Villa Jean Jaurès",
+  propertyId: "prop-1",
+  propertyLabel: "Villa Jean Jaurès",
   assigneeNames: [],
   assigneeIds: [],
   nextActionAt: null,
@@ -106,6 +103,10 @@ describe("BuyerInbox", () => {
         chargeA="2026-10-13T12:00:00.000Z"
       />,
     );
+    /* L'étape vit derrière « Filtres » : elle sert moins souvent que les trois
+       pastilles, et la déplier en permanence repoussait le premier dossier
+       sous une page de réglages. Elle reste à un clic. */
+    fireEvent.click(getByText("Filtres"));
     fireEvent.change(getByLabelText("Étape"), { target: { value: "signe" } });
     expect(getByText("Aucun dossier acquéreur ne correspond.")).toBeTruthy();
     expect(getByText("Ajustez la recherche ou les filtres.")).toBeTruthy();
@@ -124,8 +125,6 @@ describe("BuyerInbox", () => {
       <BuyerInbox
         rows={[
           dossier({
-            bestScore: 45,
-            qualificationStatus: "non_qualifie",
             qualification: "gros_potentiel",
           }),
         ]}

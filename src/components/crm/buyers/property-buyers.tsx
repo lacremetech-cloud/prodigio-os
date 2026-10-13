@@ -1,19 +1,16 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { Chip } from "@/components/crm/ui";
+
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { formatDateTime } from "@/modules/crm/format";
+import { buyerStageVisual } from "@/modules/buyers/crm/labels";
 import {
-  buyerQualificationLabels,
-  buyerRecommendedPriorityLabels,
-  buyerRecommendedPriorityVisual,
-  buyerStageVisual,
-} from "@/modules/buyers/crm/labels";
+  lireQualification,
+  QUALIFICATION_BADGE,
+  QUALIFICATION_LABELS,
+  RESULTAT_APPEL_LABELS,
+} from "@/modules/buyers/crm/qualification";
 import type { PropertyBuyerRow } from "@/modules/buyers/crm/queries";
-import type {
-  BuyerQualificationStatus,
-  BuyerRecommendedPriority,
-} from "@/lib/supabase/types";
 
 /**
  * Vue « acquéreurs intéressés » depuis la Fabrique de biens.
@@ -21,6 +18,13 @@ import type {
  * Ce n'est PAS une copie des dossiers : c'est une **autre vue des mêmes
  * dossiers acquéreurs**, filtrée sur un bien. Chaque ligne ouvre la fiche
  * consolidée, où vit l'ensemble du suivi.
+ *
+ * Elle portait quatre notions d'état sur une seule ligne — étape, ancienne
+ * qualification par personne, recommandation calculée, et un « Non traité /
+ * Consulté / Traité » qui n'existait qu'ici — plus deux scores en centièmes.
+ * Six façons de dire où en est un dossier, dont aucune n'était celle de la
+ * liste. Il en reste QUATRE, les mêmes que partout : l'étape, la
+ * qualification, le dernier résultat de contact et la prochaine action.
  */
 export function PropertyBuyersPanel({ rows }: { rows: PropertyBuyerRow[] }) {
   if (rows.length === 0) {
@@ -34,11 +38,9 @@ export function PropertyBuyersPanel({ rows }: { rows: PropertyBuyerRow[] }) {
   return (
     <div className="flex flex-col gap-2">
       <ul className="flex flex-col gap-2">
-        {rows.map(({ profile, name, phoneMasked, emailMasked, interest, assigneeNames }) => {
+        {rows.map(({ profile, name, phoneMasked, emailMasked, interest, assigneeNames, lastCallOutcome, nextActionAt }) => {
           const stageV = buyerStageVisual(profile.pipeline_stage);
-          const prioV = profile.recommended_priority
-            ? buyerRecommendedPriorityVisual[profile.recommended_priority]
-            : null;
+          const qualif = lireQualification(interest.qualification);
           return (
             <li
               key={profile.id}
@@ -73,47 +75,26 @@ export function PropertyBuyersPanel({ rows }: { rows: PropertyBuyerRow[] }) {
                     <span aria-hidden>{stageV.icon}</span>
                     {stageV.label}
                   </span>
-                  {prioV && profile.recommended_priority ? (
-                    <span
-                      className="crm-chip crm-chip--accent"
-                      style={
-                        { ["--chip-accent" as keyof CSSProperties]: cssVarRef(prioV.cssVar) } as CSSProperties
-                      }
-                    >
-                      <span aria-hidden>{prioV.icon}</span>
-                      {
-                        buyerRecommendedPriorityLabels[
-                          profile.recommended_priority as BuyerRecommendedPriority
-                        ]
-                      }
-                    </span>
-                  ) : null}
+                  <span className={`crm-badge crm-badge--${QUALIFICATION_BADGE[qualif]}`}>
+                    {QUALIFICATION_LABELS[qualif]}
+                  </span>
                 </div>
               </div>
 
-              {/* Compatibilité (score budget de l'intérêt) et maturité (score projet). */}
+              {/* Le dernier CONTACT et la prochaine ACTION : les deux seules
+                  choses qui disent quoi faire de ce dossier aujourd'hui. Les
+                  scores calculés à l'inscription n'y répondaient pas. */}
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--crm-text-dim)]">
-                <span className="tabular-nums" title="Compatibilité budgétaire calculée à la soumission">
-                  Compatibilité {interest.budget_score ?? "—"}/100
-                </span>
-                <span className="tabular-nums" title="Maturité du projet calculée à la soumission">
-                  Maturité {interest.maturity_score ?? "—"}/100
+                <span>
+                  {lastCallOutcome
+                    ? `Dernier contact : ${RESULTAT_APPEL_LABELS[lastCallOutcome] ?? lastCallOutcome}`
+                    : "Jamais contacté"}
                 </span>
                 <span>
-                  Qualification :{" "}
-                  {
-                    buyerQualificationLabels[
-                      profile.qualification_status as BuyerQualificationStatus
-                    ]
-                  }
+                  {nextActionAt
+                    ? `Prochaine action : ${formatDateTime(nextActionAt)}`
+                    : "Aucune action prévue"}
                 </span>
-                <Chip variant={interest.review_status === "nouveau" ? "gold" : "neutral"}>
-                  {interest.review_status === "nouveau"
-                    ? "Non traité"
-                    : interest.review_status === "consulte"
-                      ? "Consulté"
-                      : "Traité"}
-                </Chip>
                 <span>
                   {assigneeNames.length > 0
                     ? `Responsable : ${assigneeNames.join(", ")}`

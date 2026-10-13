@@ -32,6 +32,7 @@ import { activityOutcomeLabels, activityTypeLabels } from "@/modules/crm/labels"
 import { formatDateTime, timeSince } from "@/modules/crm/format";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { SectionTitle } from "@/components/crm/ui";
+import { ActionsDossier } from "@/components/crm/buyers/actions-dossier";
 import {
   QUALIFICATION_BADGE,
   QUALIFICATION_LABELS,
@@ -115,6 +116,10 @@ export default async function BuyerProfilePage({
   });
   const { profile, interests, assignees, tasks, activities, auditEvents, members } = detail;
 
+  /* Calculée par la requête, avec le module partagé : l'heure courante n'a
+     rien à faire dans le rendu. */
+  const prochaine = detail.prochaine;
+
   /*
    * Tentatives et dernier appel PAR MANIFESTATION, dérivés des activités déjà
    * chargées — exactement comme la vue `crm_buyer_interest_activity` les agrège
@@ -163,10 +168,6 @@ export default async function BuyerProfilePage({
   const resumeBudget = choixBudget
     ? BUDGET_CHOICE_COURT[choixBudget as BuyerBudgetChoice] ?? choixBudget
     : null;
-  // Prochaine action et retard : calcules par la requete (l'heure courante
-  // n'a rien a faire dans le rendu).
-  const prochaine = detail.nextTask;
-  const prochaineEnRetard = detail.nextTaskOverdue;
 
   // Un numero masque n'est jamais composable : le composant le refuse.
   const appelable = numeroAppelable(detail.phone);
@@ -230,9 +231,12 @@ export default async function BuyerProfilePage({
           </Resume>
           <Resume label="Prochaine action">
             {prochaine ? (
-              <span className={prochaineEnRetard ? "font-semibold text-[var(--crm-danger)]" : ""}>
-                {prochaine.title}
-                {prochaine.due_at ? ` · ${formatDateTime(prochaine.due_at)}` : ""}
+              <span
+                className={
+                  prochaine.etat === "en_retard" ? "font-semibold text-[var(--crm-danger)]" : ""
+                }
+              >
+                {prochaine.titre} · {formatDateTime(prochaine.dueAt)}
               </span>
             ) : (
               <Absent>À programmer</Absent>
@@ -495,6 +499,30 @@ export default async function BuyerProfilePage({
         <div className="flex flex-col gap-5">
           <section className="crm-panel p-4">
             <SectionTitle eyebrow="Suivi" title="Prochaine action et tâches" />
+            {/* LA prochaine action, calculée par le même module que la liste,
+                le Kanban, le cockpit du bien et le tableau de bord. La fiche
+                affichait toutes les tâches sans dire laquelle venait ensuite :
+                un dossier pouvait annoncer « Aucune action prévue » dans la
+                liste et porter un rappel de mardi ici. */}
+            {prochaine ? (
+              <p className="crm-prochaine" data-etat={prochaine.etat}>
+                <strong>{prochaine.titre}</strong>
+                {" · "}
+                {formatDateTime(prochaine.dueAt)}
+                <span className="crm-prochaine__etat">
+                  {prochaine.etat === "en_retard"
+                    ? " · en retard"
+                    : prochaine.etat === "aujourdhui"
+                      ? " · aujourd’hui"
+                      : " · à venir"}
+                </span>
+                {prochaine.generale ? (
+                  <span className="crm-prochaine__portee"> · tous projets</span>
+                ) : null}
+              </p>
+            ) : (
+              <p className="text-xs text-[var(--crm-text-dim)]">Aucune action prévue.</p>
+            )}
             {canOperateBuyers ? (
               <BuyerTaskForm buyerProfileId={profile.id} tasks={tasks} />
             ) : (
@@ -515,36 +543,58 @@ export default async function BuyerProfilePage({
           </section>
 
 
-          {/* Actions métier dédiées (jamais un simple changement d'étape) */}
-          {canOperateBuyers && !isClosed ? (
-            <section className="crm-panel p-4">
-              <SectionTitle eyebrow="Action dédiée" title="Offre en cours" />
-              {profile.offer_recorded_at ? (
-                <p className="mb-2 text-xs text-[var(--crm-text-dim)]">
-                  Offre enregistrée le {formatDateTime(profile.offer_recorded_at)}
-                  {detail.offerPropertyLabel ? ` sur ${detail.offerPropertyLabel}` : ""}
-                  {profile.offer_amount_cents != null
-                    ? ` · ${formatCents(profile.offer_amount_cents)}`
-                    : ""}
-                </p>
-              ) : null}
-              <BuyerOfferForm buyerProfileId={profile.id} properties={interestProperties} />
-            </section>
-          ) : null}
-
-          {canDecide && !isClosed ? (
-            <section className="crm-panel p-4">
-              <SectionTitle eyebrow="Action dédiée" title="Résultat commercial" />
-              <BuyerOutcomeForm buyerProfileId={profile.id} />
-            </section>
-          ) : null}
-
-          {canDecide && isClosed ? (
-            <section className="crm-panel p-4">
-              <SectionTitle eyebrow="Action dédiée" title="Rouvrir le dossier" />
-              <BuyerReopenForm buyerProfileId={profile.id} />
-            </section>
-          ) : null}
+          {/* Les trois actions qui servent une fois par dossier, repliées
+              derrière un bouton. Chacune n'apparaît que si l'état du dossier
+              la permet : proposer « Rouvrir » sur un dossier ouvert, ou
+              « Clôturer » sur un dossier clos, c'est promettre une porte
+              fermée. Les confirmations et les motifs sont inchangés. */}
+          <ActionsDossier
+            actions={[
+              ...(canOperateBuyers && !isClosed
+                ? [
+                    {
+                      cle: "offre",
+                      label: profile.offer_recorded_at ? "Modifier l’offre" : "Enregistrer une offre",
+                      contenu: (
+                        <>
+                          {profile.offer_recorded_at ? (
+                            <p className="mb-2 text-xs text-[var(--crm-text-dim)]">
+                              Offre enregistrée le {formatDateTime(profile.offer_recorded_at)}
+                              {detail.offerPropertyLabel ? ` sur ${detail.offerPropertyLabel}` : ""}
+                              {profile.offer_amount_cents != null
+                                ? ` · ${formatCents(profile.offer_amount_cents)}`
+                                : ""}
+                            </p>
+                          ) : null}
+                          <BuyerOfferForm
+                            buyerProfileId={profile.id}
+                            properties={interestProperties}
+                          />
+                        </>
+                      ),
+                    },
+                  ]
+                : []),
+              ...(canDecide && !isClosed
+                ? [
+                    {
+                      cle: "resultat",
+                      label: "Clôturer le dossier",
+                      contenu: <BuyerOutcomeForm buyerProfileId={profile.id} />,
+                    },
+                  ]
+                : []),
+              ...(canDecide && isClosed
+                ? [
+                    {
+                      cle: "reouverture",
+                      label: "Rouvrir le dossier",
+                      contenu: <BuyerReopenForm buyerProfileId={profile.id} />,
+                    },
+                  ]
+                : []),
+            ]}
+          />
 
           {/* Attribution marketing consolidée du dossier */}
           <section className="crm-panel p-4">

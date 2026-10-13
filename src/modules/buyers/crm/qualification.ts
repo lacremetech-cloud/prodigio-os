@@ -1,5 +1,19 @@
 /**
- * La qualification commerciale : cinq valeurs, une seule à la fois.
+ * LA qualification commerciale — quatre valeurs, une seule à la fois.
+ *
+ * Source unique : la liste, le panneau de traitement, la fiche, le Kanban et
+ * le cockpit du bien lisent tous ce module. Il y a eu deux échelles pendant
+ * quelques jours — celle-ci, par dossier, et une ancienne par personne
+ * (`buyer_profiles.qualification_status`) qui survivait sur le Kanban et le
+ * cockpit. Même mot, deux listes, deux écrans : plus personne ne savait
+ * laquelle faisait foi. La migration 20261014090000 a repris la seconde dans
+ * celle-ci, et ce fichier est désormais le seul endroit où la liste s'écrit.
+ *
+ * « Qualifié » a disparu de l'échelle. Il ne disait pas un niveau de potentiel
+ * — il disait « quelqu'un a regardé » —, et il se confondait avec « Gros
+ * potentiel » dans l'usage. Les quatre valeurs restantes répondent toutes à la
+ * même question, celle qui sert à décider qui on rappelle : est-ce que ça vaut
+ * le coup ?
  *
  * C'est le SEUL signal qui colore une ligne de la liste. Un gros potentiel qui
  * n'a pas décroché reste vert : son injoignabilité est un fait d'appel, pas un
@@ -17,7 +31,6 @@ import type { BuyerQualification } from "@/lib/supabase/types";
 export const BUYER_QUALIFICATIONS: readonly BuyerQualification[] = [
   "a_qualifier",
   "gros_potentiel",
-  "qualifie",
   "en_reflexion",
   "non_qualifie",
 ] as const;
@@ -25,21 +38,17 @@ export const BUYER_QUALIFICATIONS: readonly BuyerQualification[] = [
 export const QUALIFICATION_LABELS: Record<BuyerQualification, string> = {
   a_qualifier: "À qualifier",
   gros_potentiel: "Gros potentiel",
-  qualifie: "Qualifié",
   en_reflexion: "En réflexion",
   non_qualifie: "Non qualifié",
 };
 
 /**
- * Teinte de la ligne. `null` = ligne blanche : « à qualifier » et « qualifié »
- * ne méritent pas un fond coloré, l'un parce qu'il est l'état par défaut de
- * tout le monde, l'autre parce qu'il est la normalité d'un dossier qui avance.
- * Colorer les cinq ne distinguerait plus rien.
+ * Teinte de la ligne. `null` = ligne blanche : « à qualifier » est l'état par
+ * défaut de tout le monde, le colorer ne distinguerait rien de rien.
  */
 export const QUALIFICATION_TEINTE: Record<BuyerQualification, string | null> = {
   a_qualifier: null,
   gros_potentiel: "vert",
-  qualifie: null,
   en_reflexion: "orange",
   non_qualifie: "rouge",
 };
@@ -48,7 +57,6 @@ export const QUALIFICATION_TEINTE: Record<BuyerQualification, string | null> = {
 export const QUALIFICATION_BADGE: Record<BuyerQualification, "gris" | "vert" | "orange" | "rouge"> = {
   a_qualifier: "gris",
   gros_potentiel: "vert",
-  qualifie: "vert",
   en_reflexion: "orange",
   non_qualifie: "rouge",
 };
@@ -66,6 +74,16 @@ export const MOTIFS_NON_QUALIFIE = [
 
 export function estQualificationConnue(v: string): v is BuyerQualification {
   return (BUYER_QUALIFICATIONS as readonly string[]).includes(v);
+}
+
+/**
+ * Lit une qualification venue de la base. Une valeur inconnue — un « qualifie »
+ * resté dans une ligne écrite juste avant la migration, par exemple — retombe
+ * sur l'état par défaut plutôt que de casser l'écran. C'est aussi la bonne
+ * réponse métier : ce dossier est précisément à re-qualifier.
+ */
+export function lireQualification(v: string | null | undefined): BuyerQualification {
+  return v && estQualificationConnue(v) ? v : "a_qualifier";
 }
 
 // --- Résultats d'appel --------------------------------------------------------

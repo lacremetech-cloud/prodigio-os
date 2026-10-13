@@ -1,5 +1,10 @@
 import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  prochaineAction,
+  type ProchaineAction,
+  type TacheOuverte,
+} from "./prochaine-action";
 import { contactName } from "@/modules/crm/format";
 import { maskContactValue } from "@/modules/crm/auth/roles";
 import { getMembersMap, memberDisplayName, type MemberInfo } from "@/modules/crm/data/queries";
@@ -123,7 +128,7 @@ export interface BuyerListBundle {
     nonAffectes: number;
     enRetard: number;
     sansProchaineAction: number;
-    fortPotentiel: number;
+    grosPotentiel: number;
   };
 }
 
@@ -378,8 +383,11 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       nonAffectes: items.filter((i) => i.assignees.length === 0).length,
       enRetard: items.filter((i) => i.overdue).length,
       sansProchaineAction: items.filter((i) => i.noNextAction).length,
-      fortPotentiel: items.filter((i) => i.profile.recommended_priority === "prioritaire")
-        .length,
+      /* « Gros potentiel » est désormais un JUGEMENT, posé au téléphone, et
+         non plus une recommandation calculée à partir des réponses du
+         formulaire. Les deux portaient le même nom et ne disaient pas la
+         même chose. */
+      grosPotentiel: items.filter((i) => i.qualification === "gros_potentiel").length,
     },
   };
 }
@@ -399,14 +407,15 @@ export interface BuyerInboxRow {
   phoneMasked: string | null;
   city: string | null;
   stage: string;
-  qualificationStatus: string;
-  recommendedPriority: string | null;
-  bestScore: number | null;
+  /* `qualificationStatus` (ancienne échelle par personne), `recommendedPriority`
+     et `bestScore` ne quittent plus le serveur : ils disaient une deuxième, une
+     troisième et une quatrième fois « où en est ce lead », sans que personne ne
+     les ait posés. Les colonnes restent en base. */
   interestCount: number;
   lastInterestAt: string | null;
   createdAt: string;
-  lastPropertyId: string | null;
-  lastPropertyLabel: string | null;
+  propertyId: string | null;
+  propertyLabel: string | null;
   assigneeNames: string[];
   assigneeIds: string[];
   nextActionAt: string | null;
@@ -443,14 +452,11 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     phoneMasked: item.phoneMasked,
     city: item.city,
     stage: item.stage,
-    qualificationStatus: item.profile.qualification_status,
-    recommendedPriority: item.profile.recommended_priority,
-    bestScore: item.profile.best_overall_score,
     interestCount: item.profile.interest_count,
     lastInterestAt: item.profile.last_interest_at,
     createdAt: item.profile.created_at,
-    lastPropertyId: item.propertyId,
-    lastPropertyLabel: item.propertyLabel,
+    propertyId: item.propertyId,
+    propertyLabel: item.propertyLabel,
     assigneeNames: item.assignees.map((a) => a.name),
     assigneeIds: item.assignees.map((a) => a.userId),
     nextActionAt: item.nextTask?.due_at ?? null,
@@ -469,7 +475,7 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     overdue: item.overdue,
     noNextAction: item.noNextAction,
     newInterest: item.newInterest,
-    highPotential: item.profile.recommended_priority === "prioritaire",
+    highPotential: item.qualification === "gros_potentiel",
     unassigned: item.assignees.length === 0,
     budgetMinCents: item.budgetMinCents,
     budgetMaxCents: item.budgetMaxCents,
@@ -477,8 +483,15 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
   };
 }
 
-/** Convertit un agrégat de liste en carte Kanban (DTO minimal, déjà masqué). */
-export function toKanbanCard(item: BuyerListItem, qualificationLabel: string): BuyerKanbanCard {
+/**
+ * Convertit un agrégat de liste en carte Kanban (DTO minimal, déjà masqué).
+ *
+ * La carte porte EXACTEMENT les champs sur lesquels la liste filtre. C'est la
+ * condition pour que les deux vues soient deux vues des mêmes dossiers : tant
+ * que le Kanban avait ses propres onglets sur ses propres champs, passer de
+ * l'une à l'autre changeait le nombre de dossiers sans que rien ne l'explique.
+ */
+export function toKanbanCard(item: BuyerListItem): BuyerKanbanCard {
   return {
     interestId: item.interestId,
     propertyId: item.propertyId,
@@ -487,15 +500,19 @@ export function toKanbanCard(item: BuyerListItem, qualificationLabel: string): B
     name: item.name,
     propertyLabel: item.propertyLabel,
     city: item.city,
-    bestScore: item.profile.best_overall_score,
-    recommendedPriority: item.profile.recommended_priority,
-    qualificationLabel,
+    emailMasked: item.emailMasked,
+    phoneMasked: item.phoneMasked,
+    qualification: item.qualification,
+    callAttempts: item.callAttempts,
+    nextActionAt: item.nextTask?.due_at ?? null,
+    assigneeIds: item.assignees.map((a) => a.userId),
+    budgetMinCents: item.budgetMinCents,
+    budgetMaxCents: item.budgetMaxCents,
     interestCount: item.profile.interest_count,
     unassigned: item.assignees.length === 0,
     overdue: item.overdue,
     noNextAction: item.noNextAction,
     newInterest: item.newInterest,
-    phoneMasked: item.phoneMasked,
   };
 }
 
@@ -518,11 +535,15 @@ export interface BuyerProfileDetail {
   interests: BuyerInterestWithProperty[];
   assignees: { userId: string; name: string; responsibility: string }[];
   tasks: TaskRow[];
-  /** Tâche ouverte dont l'échéance vient en premier — ce qu'il faut faire ensuite. */
-  nextTask: TaskRow | null;
-  /** Échéance de `nextTask` déjà dépassée. Calculé ici : l'heure courante
-      n'a rien à faire dans le rendu d'un composant. */
-  nextTaskOverdue: boolean;
+  /**
+   * LA prochaine action, calculée par le module partagé — le même que la
+   * liste, le Kanban, le cockpit du bien et le tableau de bord.
+   *
+   * La fiche avait sa propre règle (toute tâche non « faite » ni « annulée »,
+   * échéance ou pas), la liste la sienne (statut « à faire » strictement) :
+   * un même dossier pouvait annoncer deux choses différentes selon l'écran.
+   */
+  prochaine: ProchaineAction | null;
   activities: ActivityRow[];
   auditEvents: AuditEventRow[];
   members: Map<string, MemberInfo>;
@@ -602,11 +623,11 @@ export async function getBuyerProfileDetail(
   const contact = (contactRow as ContactRow | null) ?? null;
 
   const tasks = (taskRows ?? []) as TaskRow[];
-  // Une tâche sans échéance passe après celles qui en ont une.
-  const nextTask =
-    tasks
-      .filter((t) => t.status !== "fait" && t.status !== "annule")
-      .sort((a, b) => (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"))[0] ?? null;
+  /* Sur la fiche d'une personne, on ne filtre pas sur un projet : on montre la
+     plus proche, tous projets confondus. L'heure est lue ICI, dans la requête,
+     et non pendant le rendu — un composant qui lit l'horloge n'est pas
+     reproductible, et React le refuse à juste titre. */
+  const prochaine = prochaineAction(tasks as TacheOuverte[], null, Date.now());
 
   return {
     profile,
@@ -629,10 +650,7 @@ export async function getBuyerProfileDetail(
       responsibility: a.responsibility,
     })),
     tasks,
-    nextTask,
-    nextTaskOverdue: Boolean(
-      nextTask?.due_at && new Date(nextTask.due_at).getTime() < Date.now(),
-    ),
+    prochaine,
     activities: (activityRows ?? []) as ActivityRow[],
     auditEvents: (auditRows ?? []) as AuditEventRow[],
     members,
@@ -651,6 +669,12 @@ export interface PropertyBuyerRow {
   emailMasked: string | null;
   interest: BuyerInterestRow;
   assigneeNames: string[];
+  /* Les deux memes informations que partout ailleurs : ce qui s'est passe au
+     dernier appel, et ce qui est prevu ensuite. Le cockpit affichait a la
+     place deux scores en centiemes et un statut « Non traite / Consulte /
+     Traite » qui n'existait que sur cet ecran. */
+  lastCallOutcome: string | null;
+  nextActionAt: string | null;
 }
 
 export async function listBuyersForProperty(
@@ -672,11 +696,33 @@ export async function listBuyersForProperty(
   ];
   if (profileIds.length === 0) return [];
 
-  const [{ data: profileRows }, { data: assignmentRows }, members] = await Promise.all([
+  const interestIds = interests.map((i) => i.id);
+  const [
+    { data: profileRows },
+    { data: assignmentRows },
+    members,
+    { data: activityRows },
+    { data: taskRows },
+  ] = await Promise.all([
     supabase.from("buyer_profiles").select("*").in("id", profileIds),
     supabase.from("buyer_assignments").select("*").in("buyer_profile_id", profileIds),
     getMembersMap(),
+    // Agrege EN BASE : rapatrier toutes les activites pour afficher un libelle
+    // ferait grossir la charge avec le nombre d'appels passes.
+    supabase.from("crm_buyer_interest_activity").select("*").in("interest_id", interestIds),
+    supabase
+      .from("tasks")
+      .select("*")
+      .in("buyer_profile_id", profileIds)
+      .eq("status", "a_faire")
+      .order("due_at", { ascending: true }),
   ]);
+
+  const dernierAppel = new Map<string, string | null>(
+    ((activityRows ?? []) as { interest_id: string; last_call_outcome: string | null }[]).map(
+      (a) => [a.interest_id, a.last_call_outcome],
+    ),
+  );
 
   const profiles = (profileRows ?? []) as BuyerProfileRow[];
   const profileById = new Map(profiles.map((p) => [p.id, p]));
@@ -710,6 +756,15 @@ export async function listBuyersForProperty(
       emailMasked: maskContactValue(contact?.email ?? null, canViewContacts),
       interest,
       assigneeNames: assigneesByProfile.get(pid) ?? [],
+      lastCallOutcome: dernierAppel.get(interest.id) ?? null,
+      /* La MEME definition que la liste : la tache du projet si elle existe,
+         sinon le suivi general de la personne, et la plus proche des deux. */
+      nextActionAt:
+        prochaineAction(
+          ((taskRows ?? []) as TacheOuverte[]).filter((t) => t.buyer_profile_id === pid),
+          interest.id,
+          Date.now(),
+        )?.dueAt ?? null,
     });
   }
   return rows;

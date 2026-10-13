@@ -15,7 +15,7 @@
  */
 
 import { BUYER_KANBAN_COLUMNS } from "./labels";
-import type { BuyerPipelineStage, BuyerRecommendedPriority } from "@/lib/supabase/types";
+import type { BuyerPipelineStage, BuyerQualification } from "@/lib/supabase/types";
 
 /**
  * DTO minimal d'une carte du Kanban Acquéreurs, prêt à sérialiser vers le
@@ -34,16 +34,22 @@ export interface BuyerKanbanCard {
   /** Projet de CETTE carte. */
   propertyLabel: string | null;
   city: string | null;
-  /** Score automatique du meilleur intérêt (≠ qualification humaine). */
-  bestScore: number | null;
-  recommendedPriority: BuyerRecommendedPriority | null;
-  qualificationLabel: string;
+  emailMasked: string | null;
+  phoneMasked: string | null;
+  /* Les champs ci-dessous sont ceux sur lesquels la LISTE filtre, aux mêmes
+     noms : c'est ce qui fait du Kanban une autre vue des mêmes dossiers, et
+     non un second inventaire aux règles voisines. */
+  qualification: BuyerQualification;
+  callAttempts: number;
+  nextActionAt: string | null;
+  assigneeIds: string[];
+  budgetMinCents: number | null;
+  budgetMaxCents: number | null;
   interestCount: number;
   unassigned: boolean;
   overdue: boolean;
   noNextAction: boolean;
   newInterest: boolean;
-  phoneMasked: string | null;
 }
 
 /**
@@ -115,8 +121,11 @@ export function buyerUrgencyWeight(card: BuyerKanbanCard): number {
   if (card.newInterest) weight += 5;
   if (card.unassigned) weight += 4;
   if (card.noNextAction) weight += 3;
-  if (card.recommendedPriority === "prioritaire") weight += 2;
-  else if (card.recommendedPriority === "a_qualifier") weight += 1;
+  /* Seul « gros potentiel » pese : c'est un JUGEMENT, pose par quelqu'un qui a
+     eu la personne au telephone. « A qualifier » est l'etat par defaut de tout
+     le monde — lui donner du poids rendrait urgent chaque lead que personne n'a
+     encore touche, c'est-a-dire tous, et le tri ne trierait plus rien. */
+  if (card.qualification === "gros_potentiel") weight += 2;
   return weight;
 }
 

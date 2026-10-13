@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { BuyerListItem } from "@/modules/buyers/crm/queries";
 import { formatDateTime } from "@/modules/crm/format";
+import { estDu } from "@/modules/buyers/crm/prochaine-action";
 import type { Visite } from "@/modules/buyers/crm/visites";
 import { CourbeArrivees } from "./courbe-arrivees";
 import { datesDArrivee } from "@/modules/buyers/crm/arrivees";
@@ -46,7 +47,7 @@ export interface ChiffresCommercial {
   sansAction: number;
   dossiers: number;
   aContacter: number;
-  aRappeler: number;
+  rappelsDus: number;
   enCours: number;
 }
 
@@ -77,23 +78,18 @@ export function compterPourCommercial(items: BuyerListItem[]): ChiffresCommercia
      * venait d'avoir au téléphone.
      */
     aContacter: ouverts.filter((i) => i.callAttempts === 0).length,
-    /* Un rappel est DÛ aujourd'hui ou en retard. Les rappels futurs ne sont pas
-       comptés : ils ne demandent rien aujourd'hui. */
-    aRappeler: ouverts.filter((i) => i.nextTask?.due_at && !estPlusTard(i.nextTask.due_at)).length,
+    /* « Rappels dus » : l'échéance est ATTEINTE ou dépassée, à l'heure près.
+       C'est la même définition que le filtre `echeance=dus` de la liste, et
+       c'est la même fonction qui tranche — un compteur qui ouvre une autre
+       liste que celle qu'il annonce est un compteur qui ment. */
+    rappelsDus: ouverts.filter((i) => i.nextTask?.due_at && estDu(i.nextTask.due_at, Date.now()))
+      .length,
     /* « En cours » : un échange est engagé et le dossier est encore ouvert. */
     enCours: ouverts.filter((i) => ETAPES_EN_COURS.has(i.stage)).length,
   };
 }
 
 const ETAPES_EN_COURS = new Set(["a_rappeler", "en_discussion", "visite", "offre"]);
-
-/** Vrai si l'échéance tombe après aujourd'hui. */
-function estPlusTard(iso: string): boolean {
-  const d = new Date(iso);
-  const fin = new Date();
-  fin.setHours(23, 59, 59, 999);
-  return d.getTime() > fin.getTime();
-}
 
 /**
  * Le premier traitement : combien de dossiers ont reçu AU MOINS une tentative.
@@ -239,12 +235,12 @@ export function TableauCommercial({
         <Chiffre valeur={c.aContacter} libelle="À contacter"
                  icone="☎︎" vif="--crm-vif-a_contacter"
                  href="/crm/acquereurs?signal=a_contacter" />
-        <Chiffre valeur={c.aRappeler} libelle="À rappeler" alerte
+        <Chiffre valeur={c.rappelsDus} libelle="Rappels dus" alerte
                  icone="↻" vif="--crm-vif-proposition"
-                 href="/crm/acquereurs?signal=a_rappeler" />
+                 href="/crm/acquereurs?signal=a_rappeler&echeance=dus" />
         <Chiffre valeur={c.enCours} libelle="En cours"
                  icone="◗" vif="--crm-vif-contact"
-                 href="/crm/acquereurs?signal=en_cours" />
+                 href="/crm/acquereurs?etape=en_discussion" />
         <Chiffre valeur={visites.length} libelle="Visites à venir"
                  icone="◷" vif="--crm-vif-rdv_planifie"
                  href="/crm/visites" />

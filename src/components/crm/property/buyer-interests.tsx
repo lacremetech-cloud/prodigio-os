@@ -198,7 +198,12 @@ function InterestRow({
             />
           </div>
 
-          <ScoreRow interest={i} />
+          {/* Les scores calcules a l'inscription (global, budget, maturite,
+              financement, disponibilite) etaient affiches ici en centiemes.
+              Ils disaient une cinquieme fois « ou en est ce lead », sans que
+              personne ne les ait poses, et entraient en contradiction avec la
+              qualification du commercial des le premier appel. Les REPONSES,
+              elles, restent au-dessus : c'est ce que la personne a declare. */}
           <AttributionRow interest={i} />
 
           {reviewerName ? (
@@ -240,29 +245,6 @@ function Detail({ label, value }: { label: string; value: string | null }) {
       <br />
       <span className="text-[var(--crm-text)]">{value}</span>
     </p>
-  );
-}
-
-function ScoreRow({ interest: i }: { interest: BuyerInterestRow }) {
-  const cells: [string, number | null][] = [
-    ["Global", i.overall_score],
-    ["Budget", i.budget_score],
-    ["Maturité", i.maturity_score],
-    ["Financement", i.financing_score],
-    ["Disponibilité", i.availability_score],
-  ];
-  if (cells.every(([, v]) => v == null)) return null;
-  return (
-    <div className="flex flex-wrap gap-3 rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] px-3 py-2">
-      {cells.map(([k, v]) =>
-        v == null ? null : (
-          <span key={k} className="text-xs text-[var(--crm-text-dim)]">
-            <span className="crm-label">{k}</span>{" "}
-            <span className="font-semibold tabular-nums text-[var(--crm-text)]">{v}/100</span>
-          </span>
-        ),
-      )}
-    </div>
   );
 }
 

@@ -6,19 +6,19 @@
  * signal : chaque statut porte aussi une icône et un libellé, et les couleurs
  * passent par des **variables CSS thème-adaptatives** (clair / sombre / système).
  *
- * Quatre notions distinctes, jamais confondues (voir docs/20) :
- *   • le score automatique du funnel      → `buyer_interests.overall_score`
- *   • la recommandation opérationnelle    → `recommended_priority`
- *   • la qualification validée par un humain → `qualification_status`
- *   • l'étape commerciale du pipeline     → `pipeline_stage`
+ * Un dossier acquéreur porte QUATRE informations, et pas une de plus :
+ *   • l'étape commerciale    → `pipeline_stage`, ici
+ *   • la qualification       → `qualification`, dans `./qualification.ts`
+ *   • le dernier résultat de contact → `RESULTATS_APPEL`, dans le même fichier
+ *   • la prochaine action datée      → la tâche ouverte, dans `./prochaine-action.ts`
+ *
+ * Le score automatique du funnel et la recommandation qui en dérivait ne
+ * s'affichent plus sur les écrans commerciaux : ils disaient une cinquième et
+ * une sixième fois « où en est ce lead », sans que personne ne les ait posées.
+ * Les colonnes restent en base, les réponses du formulaire aussi.
  */
 
-import type {
-  BuyerMatchFactor,
-  BuyerPipelineStage,
-  BuyerQualificationStatus,
-  BuyerRecommendedPriority,
-} from "@/lib/supabase/types";
+import type { BuyerMatchFactor, BuyerPipelineStage } from "@/lib/supabase/types";
 
 // --- Étapes du pipeline acquéreur (ordre = progression) ----------------------
 export const BUYER_PIPELINE_STAGES: readonly BuyerPipelineStage[] = [
@@ -82,39 +82,15 @@ export function buyerStageVisual(stage: string): {
   return { ...v, label: buyerStageLabels[stage] ?? stage };
 }
 
-// --- Qualification HUMAINE (décision d'une personne, jamais un score) --------
-export const buyerQualificationLabels: Record<BuyerQualificationStatus, string> = {
-  non_qualifie: "Non qualifié",
-  en_cours: "Qualification en cours",
-  qualifie: "Qualifié",
-  ecarte: "Écarté",
-};
-
-export const buyerQualificationVisual: Record<
-  BuyerQualificationStatus,
-  { cssVar: string; icon: string }
-> = {
-  non_qualifie: { cssVar: "--crm-st-neutre", icon: "○" },
-  en_cours: { cssVar: "--crm-st-qualifie", icon: "◎" },
-  qualifie: { cssVar: "--crm-st-signe", icon: "✔︎" },
-  ecarte: { cssVar: "--crm-st-perdu", icon: "✕" },
-};
-
-// --- Recommandation opérationnelle (DÉRIVÉE des scores, ≠ qualification) -----
-export const buyerRecommendedPriorityLabels: Record<BuyerRecommendedPriority, string> = {
-  prioritaire: "Prioritaire",
-  a_qualifier: "À qualifier",
-  a_suivre: "À suivre",
-};
-
-export const buyerRecommendedPriorityVisual: Record<
-  BuyerRecommendedPriority,
-  { cssVar: string; icon: string }
-> = {
-  prioritaire: { cssVar: "--crm-st-signe", icon: "★" },
-  a_qualifier: { cssVar: "--crm-st-qualifie", icon: "◎" },
-  a_suivre: { cssVar: "--crm-st-neutre", icon: "•" },
-};
+/*
+ * `buyerQualificationLabels` / `buyerQualificationVisual` (ancienne échelle par
+ * personne) et `buyerRecommendedPriorityLabels` / `…Visual` (recommandation
+ * calculée) vivaient ici. Ils ont été retirés : la qualification est unique et
+ * se lit dans `./qualification.ts`, la recommandation ne s'affiche plus.
+ *
+ * Les colonnes `buyer_profiles.qualification_status` et `recommended_priority`
+ * existent toujours en base, avec leur valeur et leur historique.
+ */
 
 // --- Résultat commercial du dossier ------------------------------------------
 export const buyerOutcomeLabels: Record<string, string> = {

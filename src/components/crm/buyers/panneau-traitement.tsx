@@ -241,8 +241,8 @@ export function PanneauTraitement({
             </Link>
           </h2>
           <div className="crm-panneau__meta">
-            {row.lastPropertyId && row.lastPropertyLabel ? (
-              <BadgeProjet propertyId={row.lastPropertyId} label={row.lastPropertyLabel} />
+            {row.propertyId && row.propertyLabel ? (
+              <BadgeProjet propertyId={row.propertyId} label={row.propertyLabel} />
             ) : null}
             {budget ? <span className="crm-panneau__budget">{budget}</span> : null}
           </div>

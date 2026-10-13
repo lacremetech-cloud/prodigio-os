@@ -17,15 +17,19 @@ const card = (over: Partial<BuyerKanbanCard> = {}): BuyerKanbanCard => ({
   name: "Léa Bernard",
   propertyLabel: "Villa Belvédère",
   city: "Megève",
-  bestScore: 70,
-  recommendedPriority: "a_qualifier",
-  qualificationLabel: "Non qualifié",
+  emailMasked: null,
+  phoneMasked: null,
+  qualification: "a_qualifier",
+  callAttempts: 0,
+  nextActionAt: null,
+  assigneeIds: [],
+  budgetMinCents: null,
+  budgetMaxCents: null,
   interestCount: 1,
   unassigned: false,
   overdue: false,
   noNextAction: false,
   newInterest: false,
-  phoneMasked: null,
   ...over,
 });
 
@@ -124,7 +128,7 @@ describe("movableBuyerStages", () => {
 describe("buyerUrgencyWeight", () => {
   it("place un rappel en retard au-dessus d'un simple fort potentiel", () => {
     const late = buyerUrgencyWeight(card({ overdue: true }));
-    const potential = buyerUrgencyWeight(card({ recommendedPriority: "prioritaire" }));
+    const potential = buyerUrgencyWeight(card({ qualification: "gros_potentiel" }));
     expect(late).toBeGreaterThan(potential);
   });
 
@@ -137,6 +141,6 @@ describe("buyerUrgencyWeight", () => {
   });
 
   it("un dossier sans aucun signal n'est pas urgent", () => {
-    expect(buyerUrgencyWeight(card({ recommendedPriority: null }))).toBe(0);
+    expect(buyerUrgencyWeight(card({ qualification: "a_qualifier" }))).toBe(0);
   });
 });

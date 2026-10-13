@@ -5,7 +5,6 @@ import {
   assignBuyerAction,
   createBuyerTaskAction,
   logBuyerActivityAction,
-  qualifyBuyerAction,
   recordBuyerOfferAction,
   recordBuyerOutcomeAction,
   reopenBuyerAction,
@@ -16,7 +15,6 @@ import {
   upsertBuyerCriteriaAction,
 } from "@/modules/buyers/crm/actions";
 import {
-  buyerQualificationLabels,
   buyerResponsibilityLabels,
   buyerStageLabels,
 } from "@/modules/buyers/crm/labels";
@@ -25,7 +23,6 @@ import { centsToEuros, parseList } from "@/modules/buyers/crm/criteria";
 import { activityOutcomeLabels, activityTypeLabels } from "@/modules/crm/labels";
 import { FieldError, Saved, parseNumber, useAction } from "@/components/crm/property/shared";
 import type {
-  BuyerQualificationStatus,
   BuyerSearchCriteriaRow,
   TaskRow,
 } from "@/lib/supabase/types";
@@ -39,71 +36,16 @@ import type {
  */
 
 // ------------------------------------------------------------ Qualification
-export function BuyerQualificationForm({
-  buyerProfileId,
-  status,
-  reason,
-}: {
-  buyerProfileId: string;
-  status: string;
-  reason: string | null;
-}) {
-  const { pending, error, done, run } = useAction();
-  const [next, setNext] = useState(status);
-  const [why, setWhy] = useState(reason ?? "");
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="crm-label">Qualification (décision humaine)</span>
-          <select
-            className="crm-select"
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            aria-label="Statut de qualification"
-          >
-            {(Object.keys(buyerQualificationLabels) as BuyerQualificationStatus[]).map((k) => (
-              <option key={k} value={k}>
-                {buyerQualificationLabels[k]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="crm-btn crm-btn--sm crm-btn--primaire"
-          disabled={pending}
-          onClick={() =>
-            run(() =>
-              qualifyBuyerAction({ buyerProfileId, status: next, reason: why.trim() || null }),
-            )
-          }
-        >
-          {pending ? "…" : "Enregistrer"}
-        </button>
-        <Saved show={done} />
-      </div>
-      <label className="flex flex-col gap-1">
-        <span className="crm-label">
-          Motif {next === "ecarte" ? "(obligatoire pour écarter)" : "(facultatif)"}
-        </span>
-        <textarea
-          className="crm-textarea"
-          rows={2}
-          value={why}
-          onChange={(e) => setWhy(e.target.value)}
-          placeholder="Ce qui justifie cette décision…"
-        />
-      </label>
-      <p className="text-[11px] text-[var(--crm-text-faint)]">
-        La qualification est une décision humaine : elle ne se déduit jamais du score automatique
-        ni de la recommandation opérationnelle.
-      </p>
-      <FieldError error={error} />
-    </div>
-  );
-}
+/*
+ * `BuyerQualificationForm` vivait ici : un sélecteur « Qualification (décision
+ * humaine) » sur l'ANCIENNE échelle, par personne, qui n'était plus monté nulle
+ * part depuis que le panneau de traitement porte la qualification — par
+ * dossier, au moment de l'appel, là où la décision se prend réellement. Deux
+ * formulaires pour un même mot, c'était un de trop.
+ *
+ * L'action serveur `qualifyBuyerAction` et la colonne qu'elle écrit restent en
+ * place : leur sort se décidera après inventaire, séparément.
+ */
 
 // -------------------------------------------------------------------- Étape
 /**

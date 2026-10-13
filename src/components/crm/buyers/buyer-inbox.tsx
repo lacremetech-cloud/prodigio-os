@@ -15,20 +15,22 @@ import {
   QUALIFICATION_TEINTE,
 } from "@/modules/buyers/crm/qualification";
 import { BadgeProjet } from "./barre-projets";
+import { BarreFiltres } from "./barre-filtres";
 import { numeroAppelable } from "@/modules/buyers/crm/telephone";
 import { formatDateTime } from "@/modules/crm/format";
-import {
-  buyerStageLabels,
-  buyerStageVisual,
-  BUYER_PIPELINE_STAGES,
-} from "@/modules/buyers/crm/labels";
-import { budgetBandBounds } from "@/modules/buyers/crm/criteria";
+import { buyerStageVisual } from "@/modules/buyers/crm/labels";
 import {
   BUDGET_CHOICE_COURT,
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
-import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
+import {
+  FILTRES_AVANCES_VIDES,
+  filtrer,
+  type Echeance,
+  type FiltresAvances,
+  type Signal,
+} from "@/modules/buyers/crm/filtres";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -43,41 +45,21 @@ import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/cr
 
 type SortKey = "urgence" | "arrivee" | "activite";
 
-const BUDGET_FILTERS = [
-  { value: "tous", label: "Tous budgets" },
-  { value: "moins_800k", label: "< 800 k€" },
-  { value: "800k_1_2m", label: "800 k€ – 1,2 M€" },
-  { value: "1_2m_2m", label: "1,2 – 2 M€" },
-  { value: "2m_3m", label: "2 – 3 M€" },
-  { value: "plus_3m", label: "> 3 M€" },
-] as const;
-
 /**
- * Un dossier correspond à une tranche de budget si sa fourchette de recherche
- * **recoupe** cette tranche (bornes absentes = non bornées). Un dossier dont le
- * budget n'est pas renseigné du tout est exclu du filtre : on ne lui invente pas
- * une fourchette pour le faire correspondre.
+ * Poids d'urgence : ce qui remonte un dossier quand on trie « par urgence ».
+ *
+ * Le score du formulaire et la recommandation qui en dérivait pesaient ici.
+ * Ils ont été retirés : un chiffre calculé à l'inscription ne dit rien de
+ * l'urgence d'un rappel promis pour hier, et il mettait devant des dossiers
+ * que personne n'avait jugés. Le jugement du commercial, lui, compte.
  */
-function budgetOverlaps(
-  row: BuyerInboxRow,
-  bounds: { minCents: number | null; maxCents: number | null },
-): boolean {
-  if (row.budgetMinCents == null && row.budgetMaxCents == null) return false;
-  const rowMin = row.budgetMinCents ?? Number.NEGATIVE_INFINITY;
-  const rowMax = row.budgetMaxCents ?? Number.POSITIVE_INFINITY;
-  const bandMin = bounds.minCents ?? Number.NEGATIVE_INFINITY;
-  const bandMax = bounds.maxCents ?? Number.POSITIVE_INFINITY;
-  return rowMin <= bandMax && rowMax >= bandMin;
-}
-
 function urgency(row: BuyerInboxRow): number {
   let w = 0;
   if (row.overdue) w += 8;
   if (row.newInterest) w += 5;
   if (row.unassigned) w += 4;
   if (row.noNextAction) w += 3;
-  if (row.recommendedPriority === "prioritaire") w += 2;
-  else if (row.recommendedPriority === "a_qualifier") w += 1;
+  if (row.qualification === "gros_potentiel") w += 2;
   return w;
 }
 
@@ -85,6 +67,7 @@ export function BuyerInbox({
   rows,
   members,
   signalInitial = "tous",
+  echeanceInitiale = "toutes",
   montrerProjet = true,
   contexte = "",
   chargeA,
@@ -93,6 +76,8 @@ export function BuyerInbox({
   members: { userId: string; name: string }[];
   /** Signal pre-selectionne, lu dans l'URL par la page serveur. */
   signalInitial?: Signal;
+  /** Affinage de « A rappeler », lu dans l'URL (tuiles du tableau de bord). */
+  echeanceInitiale?: Echeance;
   /** Afficher le badge de projet sur chaque ligne. */
   montrerProjet?: boolean;
   /**
@@ -105,6 +90,7 @@ export function BuyerInbox({
   chargeA: string;
 }) {
   const [signal, setSignal] = useState<Signal>(signalInitial);
+  const [echeance, setEcheance] = useState<Echeance>(echeanceInitiale);
   const [search, setSearch] = useState("");
 
   /*
@@ -126,6 +112,11 @@ export function BuyerInbox({
      abandonne le jour meme. */
   const saleRef = useRef(false);
 
+  /* Sur telephone, « Trier » et « Filtres » ouvrent une feuille. Les laisser
+     deplies poussait le premier lead a 1211 px du haut d'un ecran de 740 :
+     une page entiere et demie de reglages avant le moindre dossier. */
+  const [feuille, setFeuille] = useState<"aucune" | "trier" | "filtres">("aucune");
+
   /** Vrai si l'on peut quitter le dossier ouvert : sinon on demande. */
   function peutQuitter(): boolean {
     if (!saleRef.current) return true;
@@ -133,55 +124,38 @@ export function BuyerInbox({
       "Vous avez une saisie non enregistrée sur ce dossier. La perdre ?",
     );
   }
-  const [stage, setStage] = useState<string>("tous");
-  const [budget, setBudget] = useState<string>("tous");
-  const [owner, setOwner] = useState<string>("tous");
+  /* Les quatre filtres replies tiennent dans UN etat : ils s'appliquent et se
+     remettent a zero ensemble, et la feuille mobile n'a qu'une chose a
+     recopier pour proposer « Annuler ». */
+  const [avances, setAvances] = useState<FiltresAvances>(FILTRES_AVANCES_VIDES);
 
   const [sort, setSort] = useState<SortKey>("urgence");
 
+  /* L'instant de reference vient du SERVEUR (`chargeA`). Lire l'horloge
+     pendant le rendu donnerait un « aujourd'hui » different au serveur et au
+     navigateur — et un rendu non reproductible, que React refuse a juste
+     titre. La recherche porte sur ce qui est AFFICHE : une coordonnee masquee
+     n'est pas interrogeable, elle n'a jamais quitte le serveur. */
+  const maintenant = Date.parse(chargeA);
+
   const visible = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    const bounds = budget === "tous" ? null : budgetBandBounds(budget);
-
-    const filtered = rows.filter((r) => {
-      if (needle) {
-        // La recherche porte sur ce qui est AFFICHÉ : une coordonnée masquée
-        // n'est pas interrogeable (elle n'a jamais quitté le serveur).
-        const hay = [r.name, r.emailMasked, r.phoneMasked, r.city, r.lastPropertyLabel]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!hay.includes(needle)) return false;
-      }
-      if (stage !== "tous" && r.stage !== stage) return false;
-      if (owner !== "tous") {
-        if (owner === "aucun" ? !r.unassigned : !r.assigneeIds.includes(owner)) return false;
-      }
-      if (bounds && !budgetOverlaps(r, bounds)) return false;
-      if (!porteLeSignal(r, signal)) return false;
-      return true;
-    });
-
-    const sorted = [...filtered];
+    const retenus = filtrer(rows, { signal, echeance, recherche: search, avances }, maintenant);
+    const sorted = [...retenus];
     if (sort === "urgence") {
-      sorted.sort((a, b) => urgency(b) - urgency(a) || (b.bestScore ?? 0) - (a.bestScore ?? 0));
+      sorted.sort((a, b) => urgency(b) - urgency(a) || a.createdAt.localeCompare(b.createdAt));
     } else if (sort === "arrivee") {
       sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     } else {
       sorted.sort((a, b) => (b.lastInterestAt ?? "").localeCompare(a.lastInterestAt ?? ""));
     }
     return sorted;
-  }, [rows, search, stage, budget, owner, sort, signal]);
+  }, [rows, search, avances, sort, signal, echeance, maintenant]);
 
   /**
    * La file d'appels porte sur ce qui est À L'ÉCRAN : filtrer par projet ou par
    * qualification doit restreindre la session, sinon « commencer les appels »
    * ramène les dossiers qu'on venait justement d'écarter.
    */
-  /* L'instant de référence vient du SERVEUR (`chargeA`). Lire l'horloge
-     pendant le rendu donnerait une file différente au serveur et au navigateur
-     — et un rendu non reproductible, que React refuse à juste titre. */
-  const maintenant = Date.parse(chargeA);
   const file = useMemo(() => fileDAppels(visible, maintenant), [visible, maintenant]);
 
   const rowOuverte = useMemo(
@@ -209,101 +183,48 @@ export function BuyerInbox({
     setOuvert(ordre[0] ?? null);
   }
 
-  const counters = useMemo(
-    () => ({
-      total: rows.length,
-      nouveaux: rows.filter((r) => r.stage === "nouveau").length,
-      enRetard: rows.filter((r) => r.overdue).length,
-      sansAction: rows.filter((r) => r.noNextAction).length,
-      nonAffectes: rows.filter((r) => r.unassigned).length,
-    }),
-    [rows],
-  );
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Compteurs reels, et cliquables : le compteur EST le filtre. */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Counter label="Dossiers" value={counters.total}
-                 signal="tous" actif={signal} onChoisir={setSignal} />
-        <Counter label="Nouveaux" value={counters.nouveaux} accent="--crm-st-nouveau"
-                 signal="nouveaux" actif={signal} onChoisir={setSignal} />
-        <Counter label="En retard" value={counters.enRetard} accent="--crm-st-perdu"
-                 signal="en_retard" actif={signal} onChoisir={setSignal} />
-        <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter"
-                 signal="sans_action" actif={signal} onChoisir={setSignal} />
-        <Counter label="Non affectés" value={counters.nonAffectes} accent="--crm-st-perdu"
-                 signal="non_affectes" actif={signal} onChoisir={setSignal} />
-      </div>
-
-      {/* Recherche + filtres */}
-      <div className="flex flex-col gap-2 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3">
-        {/* Sur telephone, la recherche prend toute la largeur : partagee avec
-            « Trier par », elle tombait a sept caracteres visibles. */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <label className="min-w-0 sm:flex-1">
-            <span className="sr-only">Rechercher un acquéreur</span>
-            <input
-              className="crm-input"
-              type="search"
-              placeholder="Rechercher (nom, e-mail, téléphone, ville…)"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
-          <label className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
-            <span className="crm-label shrink-0">Trier par</span>
-            <select
-              className="crm-select text-xs"
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-            >
-              <option value="urgence">Urgence</option>
-              <option value="arrivee">Date d’arrivée</option>
-              <option value="activite">Dernière activité</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-          <Select label="Étape" value={stage} onChange={setStage} options={[
-            { value: "tous", label: "Toutes les étapes" },
-            ...BUYER_PIPELINE_STAGES.map((s) => ({
-              value: s as string,
-              label: buyerStageLabels[s] ?? s,
-            })),
-          ]} />
-          <Select label="Budget" value={budget} onChange={setBudget}
-            options={BUDGET_FILTERS.map((b) => ({ value: b.value, label: b.label }))} />
-          <Select label="Responsable" value={owner} onChange={setOwner} options={[
-            { value: "tous", label: "Tous" },
-            { value: "aucun", label: "Non affectés" },
-            ...members.map((m) => ({ value: m.userId, label: m.name })),
-          ]} />
-        </div>
-      </div>
-
-      {/* Filtres rapides : une pastille, un clic, et la liste dit exactement ce
-          que la pastille annonce. Ils se combinent avec les filtres detailles
-          en dessous, et « Tous » les reinitialise. */}
-      <div className="crm-rapides" role="group" aria-label="Filtres rapides">
-        {FILTRES_RAPIDES.map((f) => {
-          const n =
-            f.signal === "tous" ? rows.length : rows.filter((r) => porteLeSignal(r, f.signal)).length;
-          return (
+    <div className="flex flex-col gap-3">
+      <BarreFiltres
+        dossiers={rows}
+        members={members}
+        maintenant={maintenant}
+        signal={signal}
+        setSignal={setSignal}
+        echeance={echeance}
+        setEcheance={setEcheance}
+        recherche={search}
+        setRecherche={setSearch}
+        avances={avances}
+        setAvances={setAvances}
+        feuilleOuverte={feuille === "filtres"}
+        setFeuilleOuverte={(v) => setFeuille(v ? "filtres" : "aucune")}
+        tri={
+          <>
+            <label className="hidden items-center gap-1.5 sm:flex">
+              <span className="crm-label shrink-0">Trier par</span>
+              <select
+                className="crm-select text-xs"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+              >
+                <option value="urgence">Urgence</option>
+                <option value="arrivee">Date d’arrivée</option>
+                <option value="activite">Dernière activité</option>
+              </select>
+            </label>
             <button
-              key={f.signal}
               type="button"
-              className="crm-rapide"
-              aria-pressed={signal === f.signal}
-              onClick={() => setSignal(f.signal)}
+              className="crm-commande sm:hidden"
+              onClick={() => setFeuille("trier")}
+              aria-haspopup="dialog"
             >
-              {f.label}
-              <span className="crm-rapide__n">{n}</span>
+              Trier
             </button>
-          );
-        })}
-      </div>
+          </>
+        }
+      />
 
       {/* La session d'appels : combien de dossiers attendent, et par où
           commencer. Sans ce point d'entrée, « qui j'appelle maintenant » se
@@ -386,6 +307,49 @@ export function BuyerInbox({
         </>
       )}
 
+      {/* --- Feuille « Trier » (telephone) ---------------------------------
+          Les filtres ont la leur, dans la barre partagee. Celle-ci ne porte
+          que le tri, que le Kanban n'a pas. */}
+      {feuille === "trier" ? (
+        <div className="crm-feuille" role="dialog" aria-modal="true" aria-label="Trier">
+          <button
+            type="button"
+            className="crm-feuille__fond"
+            aria-label="Fermer"
+            onClick={() => setFeuille("aucune")}
+          />
+          <div className="crm-feuille__corps">
+            <div className="crm-feuille__tete">
+              <h2 className="crm-feuille__titre">Trier</h2>
+              <button type="button" className="crm-panneau__fermer" aria-label="Fermer"
+                      onClick={() => setFeuille("aucune")}>
+                ✕
+              </button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {([
+                ["urgence", "Urgence"],
+                ["arrivee", "Date d’arrivée"],
+                ["activite", "Dernière activité"],
+              ] as [SortKey, string][]).map(([v, libelle]) => (
+                <button
+                  key={v}
+                  type="button"
+                  className="crm-feuille__option"
+                  aria-pressed={sort === v}
+                  onClick={() => {
+                    setSort(v);
+                    setFeuille("aucune");
+                  }}
+                >
+                  {libelle}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {rowOuverte ? (
         <PanneauTraitement
           /* La CLÉ porte la remise à zéro : changer de dossier remonte le
@@ -411,99 +375,7 @@ export function BuyerInbox({
   );
 }
 
-/**
- * Tuile de compteur. Elle etait posee sur la surface douce, a meme la toile :
- * deux gris a un pour cent l'un de l'autre, le chiffre flottait dans le vide.
- * C'est une CARTE blanche, avec un filet de la couleur du compteur — on voit
- * la tuile, puis le chiffre, puis ce qu'il compte.
- *
- * Elle est surtout CLIQUABLE : lire « 4 en retard » sans pouvoir ouvrir les
- * quatre dossiers obligeait a aller rechercher soi-meme ce que le compteur
- * venait d'annoncer. Un second clic revient a la liste complete.
- *
- * Un compteur a zero n'est jamais mis en couleur, ni cliquable : zero « en
- * retard » est une bonne nouvelle, et un filtre qui ouvre le vide n'aide pas.
- */
-function Counter({
-  label,
-  value,
-  accent,
-  signal,
-  actif,
-  onChoisir,
-}: {
-  label: string;
-  value: number;
-  accent?: string;
-  signal: Signal;
-  actif: Signal;
-  onChoisir: (s: Signal) => void;
-}) {
-  const vif = Boolean(accent) && value > 0;
-  const estActif = actif === signal && signal !== "tous";
-  // « Dossiers » remet toujours la liste a plat ; les autres se decrochent.
-  const cliquable = signal === "tous" ? actif !== "tous" : value > 0;
-  const couleur = accent ? cssVarRef(accent) : "var(--crm-univers)";
 
-  return (
-    <button
-      type="button"
-      disabled={!cliquable && !estActif}
-      aria-pressed={estActif}
-      onClick={() => onChoisir(estActif ? "tous" : signal)}
-      className="crm-panel crm-compteur flex flex-col gap-0.5 px-3.5 py-3 text-left"
-      style={
-        {
-          /* Le liseré ne se colore QUE si le compteur compte quelque chose.
-             Un « 0 en retard » borde de rouge se lit comme une alerte, alors
-             que c'est exactement la bonne nouvelle. */
-          ...(accent && value > 0
-            ? { borderInlineStartWidth: "3px", borderInlineStartColor: couleur }
-            : {}),
-          ["--compteur" as keyof CSSProperties]: couleur,
-        } as CSSProperties
-      }
-    >
-      <span
-        className="text-[1.5rem] font-bold leading-tight tabular-nums text-[var(--crm-text)]"
-        style={vif ? ({ color: couleur } as CSSProperties) : undefined}
-      >
-        {value}
-      </span>
-      <span className="crm-kpi__label crm-wrap">{label}</span>
-    </button>
-  );
-}
-
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <label className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
-      <span className="crm-label shrink-0">{label}</span>
-      <select
-        className="crm-select text-xs"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 /**
  * `phoneMasked` porte le vrai numero quand le role a le droit de le voir, et
@@ -611,12 +483,12 @@ function BuyerRow({
             indiscernables. Le nom est ECRIT — la couleur ne fait qu'aider. */}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {montrerProjet ? (
-            <BadgeProjet propertyId={row.lastPropertyId} label={row.lastPropertyLabel} />
+            <BadgeProjet propertyId={row.propertyId} label={row.propertyLabel} />
           ) : null}
           {!montrerProjet && row.city ? (
             <span className="text-[12.5px] text-[var(--crm-text-dim)]">{row.city}</span>
           ) : null}
-          {!row.lastPropertyLabel ? (
+          {!row.propertyLabel ? (
             <span className="text-[12.5px] text-[var(--crm-text-faint)]">
               Aucun projet rattaché
             </span>
