@@ -20,7 +20,7 @@ import {
   universalStepTwoSchema,
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
-import { notifyParentHeight } from "./embed-bridge";
+import { isEmbedded, notifyParentBrochure, notifyParentHeight } from "./embed-bridge";
 
 /**
  * Formulaire acquéreur **universel** — deux écrans, et jamais un troisième.
@@ -104,6 +104,32 @@ export function UniversalBuyerForm({
   useEffect(() => {
     notifyParentHeight(rootRef.current);
   }, [step, status, errors, brochureUrl]);
+
+  /**
+   * Demande enregistrée et dossier disponible : on y conduit directement.
+   *
+   * L'écran « Votre demande est enregistrée » n'apprenait rien de plus que la
+   * page d'arrivée, qui porte déjà la même phrase — c'était un clic pour rien.
+   *
+   * Hors cadre, on remplace l'entrée d'historique : revenir en arrière doit
+   * ramener d'où l'on vient, pas sur un formulaire déjà envoyé. Dans un cadre,
+   * seul le parent peut se déplacer ; on le lui demande, et c'est lui qui
+   * décide (il n'accepte qu'une adresse de sa propre origine). S'il n'écoute
+   * pas — page hôte plus ancienne, script en erreur — le bouton reste affiché
+   * dessous : personne ne se retrouve bloqué.
+   */
+  useEffect(() => {
+    if (status !== "done" || !brochureUrl) return;
+    if (isEmbedded()) {
+      notifyParentBrochure(brochureUrl);
+      return;
+    }
+    try {
+      window.location.replace(brochureUrl);
+    } catch {
+      // Navigation refusée : le bouton ci-dessous prend le relais.
+    }
+  }, [status, brochureUrl]);
 
   /**
    * Le jeton vit dans une ref (lue au moment de l'envoi) ET dans un etat (pour

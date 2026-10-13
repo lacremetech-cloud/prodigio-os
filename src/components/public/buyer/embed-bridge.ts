@@ -14,9 +14,23 @@
 
 export const EMBED_MESSAGE_TYPE = "prodigio:buyer-form:height" as const;
 
+/**
+ * Second et dernier message : l'adresse du dossier, une fois la demande
+ * enregistrée. Elle permet à la page hôte d'y conduire la personne
+ * directement, au lieu de lui faire cliquer sur un bouton qui ne dit rien de
+ * plus que la page d'arrivée. Ce n'est pas une donnée privée : c'est la page
+ * publique de remise du dossier, celle-là même que le bouton ouvrait.
+ */
+export const EMBED_BROCHURE_MESSAGE_TYPE = "prodigio:buyer-form:brochure" as const;
+
 export interface EmbedHeightMessage {
   type: typeof EMBED_MESSAGE_TYPE;
   height: number;
+}
+
+export interface EmbedBrochureMessage {
+  type: typeof EMBED_BROCHURE_MESSAGE_TYPE;
+  url: string;
 }
 
 /** Vrai si la page est rendue dans une iframe. */
@@ -43,6 +57,23 @@ export function notifyParentHeight(node: HTMLElement | null): void {
 }
 
 /**
+ * Publie l'adresse du dossier au parent. Sans effet hors iframe.
+ *
+ * L'hôte reste seul juge : il n'accepte ce message que de cette iframe, et ne
+ * se déplace que vers une adresse de SA PROPRE origine. Une redirection vers
+ * un site tiers est donc impossible, quoi qu'on configure côté CRM.
+ */
+export function notifyParentBrochure(url: string | null | undefined): void {
+  if (typeof window === "undefined" || !url || !isEmbedded()) return;
+  const message: EmbedBrochureMessage = { type: EMBED_BROCHURE_MESSAGE_TYPE, url };
+  try {
+    window.parent.postMessage(message, "*");
+  } catch {
+    // Un parent injoignable laisse simplement le bouton de repli en place.
+  }
+}
+
+/**
  * Code d'intégration remis dans le cockpit.
  *
  * Le message de hauteur n'est accepté que s'il provient de l'iframe elle-même
@@ -53,11 +84,21 @@ export function buildEmbedSnippet(formUrl: string): string {
   return `<iframe id="prodigio-form" src="${formUrl}" title="Demander la brochure" loading="lazy" style="width:100%;border:0;min-height:520px;display:block"></iframe>
 <script>
   window.addEventListener("message", function (e) {
-    if (!e.data || e.data.type !== "${EMBED_MESSAGE_TYPE}") return;
     var f = document.getElementById("prodigio-form");
-    if (!f || e.source !== f.contentWindow) return;
-    if (typeof e.data.height !== "number" || e.data.height <= 0) return;
-    f.style.height = e.data.height + "px";
+    if (!f || !e.data || e.source !== f.contentWindow) return;
+    if (e.data.type === "${EMBED_MESSAGE_TYPE}") {
+      if (typeof e.data.height !== "number" || e.data.height <= 0) return;
+      f.style.height = e.data.height + "px";
+      return;
+    }
+    if (e.data.type === "${EMBED_BROCHURE_MESSAGE_TYPE}") {
+      // On ne se deplace que chez soi : jamais vers une origine tierce.
+      try {
+        var u = new URL(e.data.url, window.location.href);
+        if (u.origin !== window.location.origin) return;
+        window.location.href = u.href;
+      } catch (err) {}
+    }
   });
 </script>`;
 }
