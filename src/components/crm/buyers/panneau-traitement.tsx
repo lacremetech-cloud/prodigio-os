@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { MutableRefObject } from "react";
 import Link from "next/link";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
@@ -79,6 +80,7 @@ export function PanneauTraitement({
   onSuivant,
   resteUnSuivant,
   saleRef,
+  contexte,
 }: {
   row: BuyerInboxRow;
   position: number;
@@ -98,6 +100,10 @@ export function PanneauTraitement({
    * moment du clic, jamais pour se redessiner.
    */
   saleRef: MutableRefObject<boolean>;
+  /** Projet, vue et filtre, recopiés dans le lien : c'est ce qui permet au
+      « Retour à la liste » de la fiche complète de rendre l'écran d'où l'on
+      vient, et pas la liste remise à zéro. */
+  contexte: string;
 }) {
   const [resultat, setResultat] = useState<ResultatAppel | null>(null);
   const [qualification, setQualification] = useState<string | null>(null);
@@ -107,7 +113,10 @@ export function PanneauTraitement({
   const [quand, setQuand] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  /** Vrai quand on a demandé la fiche complète avec une saisie en cours. */
+  const [arbitrage, setArbitrage] = useState(false);
   const envoiRef = useRef(false);
+  const router = useRouter();
 
   /*
    * La saisie n'est PAS remise à zéro par un effet : le panneau est remonté par
@@ -190,6 +199,29 @@ export function PanneauTraitement({
     if (puisSuivant) onSuivant();
   }
 
+  const lienFiche = `/crm/acquereurs/${row.buyerProfileId}${contexte}`;
+
+  /**
+   * Ouvrir la fiche complète. Avec une saisie en cours, on ne tranche PAS à la
+   * place de la personne : on lui demande si elle enregistre ou abandonne.
+   * Une boîte native ne propose que deux issues ; il en faut trois, et la
+   * troisième est « je reste ici ».
+   */
+  function ouvrirLaFiche() {
+    if (saleRef.current) {
+      setArbitrage(true);
+      return;
+    }
+    router.push(lienFiche);
+  }
+
+  async function enregistrerPuisOuvrir() {
+    await enregistrer(false);
+    // On n'ouvre QUE si l'enregistrement a reellement abouti : sinon la note
+    // partirait avec la navigation, ce qui est exactement ce qu'on evite.
+    if (!saleRef.current) router.push(lienFiche);
+  }
+
   const peutEnregistrer = sale;
   const budget = row.budgetChoice
     ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
@@ -226,6 +258,57 @@ export function PanneauTraitement({
           ✕
         </button>
       </header>
+
+      {/*
+        Le panneau COMPLETE la fiche, il ne la remplace pas. Tant que le seul
+        chemin vers elle etait le nom — un texte, parmi d'autres textes — elle
+        etait fonctionnelle mais introuvable : le geste naturel, cliquer la
+        ligne, donnait le panneau. Un bouton, avec son icone ET son libelle.
+      */}
+      <div className="crm-panneau__vers-fiche">
+        <button type="button" className="crm-lien-fiche" onClick={ouvrirLaFiche}>
+          <span aria-hidden>⤢</span>
+          Ouvrir la fiche complète
+          <span aria-hidden>↗</span>
+        </button>
+      </div>
+
+      {arbitrage ? (
+        <div className="crm-arbitrage" role="alertdialog" aria-label="Saisie non enregistrée">
+          <p className="crm-arbitrage__texte">
+            Vous avez une saisie non enregistrée sur ce dossier.
+          </p>
+          <div className="crm-arbitrage__choix">
+            <button
+              type="button"
+              className="crm-btn crm-btn--primaire"
+              disabled={enCours}
+              onClick={enregistrerPuisOuvrir}
+            >
+              {enCours ? "Enregistrement…" : "Enregistrer et ouvrir"}
+            </button>
+            <button
+              type="button"
+              className="crm-btn crm-btn--secondaire"
+              disabled={enCours}
+              onClick={() => {
+                saleRef.current = false;
+                router.push(lienFiche);
+              }}
+            >
+              Abandonner et ouvrir
+            </button>
+            <button
+              type="button"
+              className="crm-btn crm-btn--secondaire"
+              disabled={enCours}
+              onClick={() => setArbitrage(false)}
+            >
+              Rester ici
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="crm-panneau__actions-contact">
         <ContactRapide numero={row.phoneMasked} email={row.emailMasked} />

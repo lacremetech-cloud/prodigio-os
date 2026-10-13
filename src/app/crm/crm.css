@@ -2031,3 +2031,58 @@
   font-size: 10.5px;
   color: var(--crm-text-faint);
 }
+
+/* ===================================================================== */
+/*  Du panneau vers la fiche complete                                     */
+/* ===================================================================== */
+/*
+ * Le panneau COMPLETE la fiche, il ne la remplace pas. Tant que le seul chemin
+ * vers elle etait le nom — un texte parmi d'autres textes — elle etait
+ * fonctionnelle mais introuvable : le geste naturel, cliquer la ligne, donnait
+ * le panneau. D'ou un bouton, avec son icone ET son libelle.
+ */
+.crm-panneau__vers-fiche {
+  padding: 0 18px 10px;
+}
+.crm-lien-fiche {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 110ms ease, border-color 110ms ease;
+}
+.crm-lien-fiche:hover {
+  background: var(--crm-hover);
+  border-color: var(--crm-univers);
+}
+.crm-lien-fiche span:last-child { margin-left: auto; }
+
+/* Trois issues, pas deux : une boite native n'en propose que deux, et la
+   troisieme — « je reste ici » — est celle qu'on choisit le plus souvent. */
+.crm-arbitrage {
+  margin: 0 18px 10px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--crm-warning) 45%, transparent);
+  background: color-mix(in srgb, var(--crm-warning) 10%, var(--crm-panel));
+}
+.crm-arbitrage__texte {
+  margin: 0 0 9px;
+  font-size: 13px;
+  color: var(--crm-text);
+}
+.crm-arbitrage__choix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.crm-arbitrage__choix .crm-btn { font-size: 12.5px; padding: 0 12px; }

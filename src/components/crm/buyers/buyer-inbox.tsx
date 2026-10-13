@@ -396,6 +396,7 @@ export function BuyerInbox({
           total={totalFile}
           resteUnSuivant={suivantDansLaFile(ordreFile, ouvert) !== null}
           saleRef={saleRef}
+          contexte={contexte}
           onFermer={() => {
             if (peutQuitter()) setOuvert(null);
           }}
