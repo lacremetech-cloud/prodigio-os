@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/modules/crm/auth/actions";
@@ -210,11 +211,32 @@ function NavLinks({
  */
 function Brand() {
   return (
-    <Link href="/crm" className="block leading-tight">
-      <span className="block text-[19px] font-bold lowercase tracking-tight text-[var(--crm-sb-texte)]">
-        prodigio
-      </span>
-      <span className="mt-0.5 block text-[10px] uppercase tracking-[0.18em] text-[var(--crm-sb-faible)]">
+    <Link href="/crm" className="block">
+      {/*
+        Le logo de marque, en blanc : il ne vit que sur la barre laterale
+        anthracite, donc une seule version suffit. Sur une surface claire il
+        serait invisible — s'il doit un jour sortir d'ici, il faudra la
+        variante sombre.
+
+        Pose en `Image` avec ses dimensions reelles : sans elles, la page
+        saute au chargement le temps que le navigateur decouvre la hauteur.
+      */}
+      <Image
+        src="/images/brand/prodigio-blanc.png"
+        alt="Prodigio"
+        width={400}
+        height={92}
+        className="h-auto w-[164px]"
+        priority
+      />
+      {/*
+        Le logo porte deja sa signature (« immobilier d'exception »). Posee
+        juste dessous dans la meme graisse, « Espace commercial » se lisait
+        comme une deuxieme signature, et les deux se brouillaient. Un filet et
+        de l'air la detachent : elle ne dit pas la meme chose — l'une est la
+        marque, l'autre l'endroit du produit ou l'on se trouve.
+      */}
+      <span className="mt-3 block border-t border-white/10 pt-2.5 text-[9.5px] uppercase tracking-[0.26em] text-[var(--crm-sb-faible)]">
         Espace commercial
       </span>
     </Link>
