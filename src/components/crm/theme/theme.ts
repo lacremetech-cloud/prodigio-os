@@ -6,8 +6,11 @@
  * `data-crm-theme`, un script en ligne corrige le cas « système » avant le
  * premier rendu. Aucune migration : la préférence est purement locale.
  *
- * Le thème **sombre** reste le défaut. Limité aux interfaces privées `/crm` :
- * les pages publiques et le funnel ne sont pas concernés.
+ * Le thème **clair** est le défaut : c'est lui qui porte la charte — anthracite,
+ * gris froid, cartes blanches, émeraude — et c'est en clair que les couleurs de
+ * qualification et de projet se lisent. Le sombre reste disponible, choisi.
+ * Limité aux interfaces privées `/crm` : les pages publiques et le funnel ne
+ * sont pas concernés.
  */
 
 export type ThemePreference = "dark" | "light" | "system";
@@ -16,7 +19,7 @@ export type ResolvedTheme = "dark" | "light";
 export const THEME_PREFERENCES: ThemePreference[] = ["dark", "light", "system"];
 
 export const THEME_COOKIE = "crm-theme";
-export const DEFAULT_PREFERENCE: ThemePreference = "dark";
+export const DEFAULT_PREFERENCE: ThemePreference = "light";
 
 export const THEME_LABELS: Record<ThemePreference, string> = {
   dark: "Sombre",
@@ -25,12 +28,12 @@ export const THEME_LABELS: Record<ThemePreference, string> = {
 };
 
 export const THEME_HINTS: Record<ThemePreference, string> = {
-  dark: "Interface sombre premium (par défaut).",
-  light: "Interface claire, contrastée.",
+  dark: "Interface sombre premium.",
+  light: "Interface claire, contrastée (par défaut).",
   system: "Suit le réglage clair/sombre de votre appareil.",
 };
 
-/** Normalise une valeur inconnue vers une préférence valide (défaut : sombre). */
+/** Normalise une valeur inconnue vers une préférence valide (défaut : clair). */
 export function normalizePreference(value: string | null | undefined): ThemePreference {
   return value === "light" || value === "dark" || value === "system" ? value : DEFAULT_PREFERENCE;
 }
@@ -38,7 +41,7 @@ export function normalizePreference(value: string | null | undefined): ThemePref
 /**
  * Résout la préférence en thème concret. Pour « système », `systemPrefersLight`
  * tranche (côté client : `matchMedia`). Côté serveur, on ne connaît pas l'OS →
- * on retombe sur le défaut sombre (le script en ligne corrigera avant le paint).
+ * on retombe sur le défaut clair (le script en ligne corrigera avant le paint).
  */
 export function resolveTheme(
   preference: ThemePreference,
@@ -47,7 +50,7 @@ export function resolveTheme(
   if (preference === "light") return "light";
   if (preference === "dark") return "dark";
   // système
-  if (systemPrefersLight == null) return "dark";
+  if (systemPrefersLight == null) return "light";
   return systemPrefersLight ? "light" : "dark";
 }
 
