@@ -67,8 +67,27 @@ export interface BuyerFormContext {
   allowedOrigins: string[];
 }
 
+/**
+ * Mémoire courte de la configuration publique, par bien.
+ *
+ * La page du formulaire est rendue à la demande, et elle attendait la base
+ * avant d'écrire le premier octet. Pendant ce temps, le visiteur regarde un
+ * cadre vide dans une modale qu'il vient d'ouvrir — c'est là qu'on le perd.
+ *
+ * Une minute, la même durée que la mémoire des origines autorisées dans le
+ * middleware, pour que les deux ne se contredisent jamais plus d'un instant.
+ * Un échec n'est jamais mis en mémoire : une base momentanément injoignable ne
+ * doit pas rendre un formulaire introuvable pendant une minute.
+ */
+const DUREE_MEMOIRE_MS = 60_000;
+const memoireContexte = new Map<string, { contexte: BuyerFormContext; expire: number }>();
+
 export async function getBuyerFormContext(slug: string): Promise<BuyerFormContext | null> {
   if (!isSupabaseConfigured()) return null;
+
+  const connu = memoireContexte.get(slug);
+  if (connu && connu.expire > Date.now()) return connu.contexte;
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("buyer_form_context", { p_slug: slug });
   if (error || !data || typeof data !== "object") return null;
@@ -77,7 +96,7 @@ export async function getBuyerFormContext(slug: string): Promise<BuyerFormContex
   const resolved = typeof row.slug === "string" ? row.slug : null;
   if (!resolved) return null;
 
-  return {
+  const contexte: BuyerFormContext = {
     slug: resolved,
     publicName: typeof row.public_name === "string" ? row.public_name : null,
     published: row.published === true,
@@ -86,4 +105,7 @@ export async function getBuyerFormContext(slug: string): Promise<BuyerFormContex
       ? row.allowed_origins.filter((o): o is string => typeof o === "string")
       : [],
   };
+
+  memoireContexte.set(slug, { contexte, expire: Date.now() + DUREE_MEMOIRE_MS });
+  return contexte;
 }

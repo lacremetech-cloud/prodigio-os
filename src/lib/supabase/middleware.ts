@@ -36,6 +36,27 @@ export async function updateSession(
     return response;
   }
 
+  /*
+   * Aucun cookie d'authentification : il n'y a rien à rafraîchir.
+   *
+   * `getUser()` revalide le jeton AUPRÈS DU SERVEUR AUTH — un aller-retour
+   * réseau. Il s'exécutait pour chaque visiteur anonyme, donc pour chaque
+   * ouverture du formulaire acquéreur public, et s'ajoutait au temps avant le
+   * premier octet d'une page que le visiteur attend, les yeux sur un cadre
+   * vide. Sans cookie, la réponse de ce serveur est connue d'avance : pas de
+   * session.
+   */
+  const aUnCookieAuth = request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
+  if (!aUnCookieAuth) {
+    if (isCrm) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/connexion";
+      url.searchParams.set("redirect", request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+    return response;
+  }
+
   const supabase = createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL as string,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string,
