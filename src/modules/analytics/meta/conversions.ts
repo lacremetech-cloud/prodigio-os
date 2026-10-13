@@ -189,3 +189,30 @@ export async function conversionRendezVous(
     customData: contexte.customData,
   });
 }
+
+/**
+ * `PageView` — une page d'un bien vient d'être vue.
+ *
+ * Seul événement émis pour quelqu'un qui n'a encore rien laissé. Il n'ouvre
+ * aucune audience de reciblage : un visiteur anonyme ne donne pas de quoi en
+ * construire une. Ce qu'il donne, et c'est tout ce qu'on lui demande, c'est le
+ * nombre de visites en face du nombre de demandes.
+ *
+ * L'identifiant vient de la page et non du serveur : si la balise part deux
+ * fois (reprise réseau, onglet restauré), Meta dédoublonne de lui-même. Deux
+ * visites réelles portent, elles, deux identifiants différents.
+ */
+export function conversionVisite(input: {
+  eventId: string;
+  identity: MetaIdentity;
+  sourceUrl?: string | null;
+  propertyName?: string | null;
+}): Promise<MetaSendOutcome> {
+  return envoyerConversionMeta({
+    eventName: "PageView",
+    eventId: input.eventId,
+    eventSourceUrl: input.sourceUrl ?? null,
+    identity: input.identity,
+    customData: donneesDuBien(input.propertyName ?? null, null),
+  });
+}

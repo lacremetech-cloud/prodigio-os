@@ -32,8 +32,15 @@ import {
 const META_API_VERSION = "v21.0";
 const TIMEOUT_MS = 4000;
 
-/** Les trois conversions suivies, dans le vocabulaire standard de Meta. */
-export type MetaEventName = "Lead" | "CompleteRegistration" | "Schedule";
+/**
+ * Les événements suivis, dans le vocabulaire standard de Meta.
+ *
+ * `PageView` est d'une autre nature que les trois autres : il ne rapporte
+ * aucun fait commercial, seulement qu'une page a été vue. Il donne le
+ * DÉNOMINATEUR — sans lui, on connaît le nombre de demandes sans jamais savoir
+ * combien de visites il a fallu pour les obtenir.
+ */
+export type MetaEventName = "PageView" | "Lead" | "CompleteRegistration" | "Schedule";
 
 export interface MetaIdentity {
   email?: string | null;
@@ -101,6 +108,26 @@ export function hasMatchSignal(userData: Record<string, unknown>): boolean {
   return Boolean(userData.em || userData.ph || userData.fbc);
 }
 
+/**
+ * Un visiteur anonyme n'a ni e-mail ni téléphone à offrir, et s'il n'est pas
+ * venu d'une publicité il n'a pas non plus de `fbclid`. Exiger de `PageView`
+ * les mêmes clés que d'une conversion commerciale reviendrait à ne jamais
+ * l'envoyer — c'est-à-dire à ne jamais connaître le dénominateur.
+ *
+ * Ses clés à lui sont l'adresse IP et le navigateur, que Meta accepte comme
+ * telles. La correspondance est faible, et c'est normal : on ne cherche pas à
+ * reconnaître quelqu'un, on cherche à compter. Les trois conversions
+ * commerciales, elles, gardent l'exigence stricte.
+ */
+export function peutEtreRattache(
+  eventName: MetaEventName,
+  userData: Record<string, unknown>,
+): boolean {
+  if (hasMatchSignal(userData)) return true;
+  if (eventName !== "PageView") return false;
+  return Boolean(userData.client_ip_address && userData.client_user_agent);
+}
+
 export function buildEventPayload(conversion: MetaConversion): Record<string, unknown> {
   const userData = buildUserData(conversion.identity);
   const event: Record<string, unknown> = {
@@ -129,7 +156,7 @@ export async function envoyerConversionMeta(
 
   const event = buildEventPayload(conversion);
   const userData = event.user_data as Record<string, unknown>;
-  if (!hasMatchSignal(userData)) {
+  if (!peutEtreRattache(conversion.eventName, userData)) {
     // Sans e-mail, téléphone ni `fbclid`, l'événement serait compté sans jamais
     // être rattaché à une personne : mieux vaut ne rien envoyer et le dire.
     console.warn("conversion Meta sans signal de correspondance", {

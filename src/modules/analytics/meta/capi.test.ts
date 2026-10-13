@@ -16,7 +16,7 @@ vi.mock("@/config", async (importOriginal) => {
   };
 });
 
-const { buildEventPayload, buildUserData, envoyerConversionMeta, hasMatchSignal } =
+const { buildEventPayload, buildUserData, envoyerConversionMeta, hasMatchSignal, peutEtreRattache } =
   await import("./capi");
 
 const IDENTITE = {
@@ -146,5 +146,29 @@ describe("envoyerConversionMeta", () => {
     await expect(
       envoyerConversionMeta({ eventName: "Lead", eventId: "l", identity: IDENTITE }),
     ).resolves.toEqual({ sent: false, reason: "erreur" });
+  });
+});
+
+describe("peutEtreRattache", () => {
+  const anonyme = { client_ip_address: "81.2.3.4", client_user_agent: "Mozilla/5.0" };
+
+  it("accepte une visite anonyme : IP et navigateur lui suffisent", () => {
+    expect(peutEtreRattache("PageView", anonyme)).toBe(true);
+  });
+
+  it("refuse la meme visite si elle n a ni IP ni navigateur", () => {
+    expect(peutEtreRattache("PageView", {})).toBe(false);
+    expect(peutEtreRattache("PageView", { client_ip_address: "81.2.3.4" })).toBe(false);
+  });
+
+  it("garde l exigence stricte pour les conversions commerciales", () => {
+    expect(peutEtreRattache("Lead", anonyme)).toBe(false);
+    expect(peutEtreRattache("CompleteRegistration", anonyme)).toBe(false);
+    expect(peutEtreRattache("Schedule", anonyme)).toBe(false);
+  });
+
+  it("accepte une conversion commerciale des qu elle porte une vraie cle", () => {
+    expect(peutEtreRattache("Lead", { ...anonyme, em: ["abc"] })).toBe(true);
+    expect(peutEtreRattache("Lead", { fbc: "fb.1.2.3" })).toBe(true);
   });
 });
