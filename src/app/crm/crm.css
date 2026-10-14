@@ -84,6 +84,31 @@
   --crm-st-signe: #54c98a;              /* vert émeraude */
   --crm-st-perdu: #d98a8a;              /* rouge atténué */
   --crm-st-neutre: #8b8e97;             /* gris */
+
+  /* --- Acquereurs : les huit etapes de traitement -------------------------
+     Legende arretee avec l'agence. La couleur ne porte JAMAIS seule : chaque
+     pastille affiche son libelle a cote. Les quatre dernieres sortent la
+     personne de la file active, et leurs gris disent cette mise a l'ecart
+     sans crier — seul « pas interesse » reste rouge, parce qu'un refus est un
+     fait net. */
+  --crm-acq-a_contacter: #6aa6ff;        /* bleu */
+  --crm-acq-a_rappeler: #e6b45c;         /* orange */
+  --crm-acq-en_discussion: #45c9b0;      /* turquoise */
+  --crm-acq-visite_planifiee: #3b82f6;   /* bleu soutenu */
+  --crm-acq-vivier: #8b8e97;             /* gris */
+  --crm-acq-pas_interesse: #e8807f;      /* rouge */
+  --crm-acq-ecarte: #5c6370;             /* gris fonce */
+  /* Sur fond sombre, un noir pur disparaitrait dans la page : on garde le
+     plus sombre qui reste visible, et il porte du blanc. */
+  --crm-acq-mauvais_numero: #242830;
+  --crm-acq-sur-etape: #0b0e13;
+  --crm-acq-sur-mauvais_numero: #ffffff;
+
+  /* --- Acquereurs : les quatre qualifications --------------------------- */
+  --crm-acq-q-a_qualifier: #8b8e97;      /* gris */
+  --crm-acq-q-qualifie: #6aa6ff;         /* bleu */
+  --crm-acq-q-gros_potentiel: #56c98a;   /* vert */
+  --crm-acq-q-non_qualifie: #e8807f;     /* rouge */
   /* ------------------------------------------------------------------ Aplats
    * Deux echelles, et c'est la distinction qui manquait : une couleur de TEXTE
    * doit etre sombre pour se lire sur blanc, un APLAT doit etre vif et porter
@@ -176,6 +201,24 @@
   --crm-st-signe: #136c34;
   --crm-st-perdu: #c62828;
   --crm-st-neutre: #616c7e;
+
+  /* --- Acquereurs : les huit etapes de traitement ---------------------- */
+  --crm-acq-a_contacter: #2560c4;
+  --crm-acq-a_rappeler: #b45309;
+  --crm-acq-en_discussion: #0f766e;
+  --crm-acq-visite_planifiee: #1d4ed8;
+  --crm-acq-vivier: #616c7e;
+  --crm-acq-pas_interesse: #c62828;
+  --crm-acq-ecarte: #3f4654;
+  --crm-acq-mauvais_numero: #111827;     /* noir */
+  --crm-acq-sur-etape: #ffffff;
+  --crm-acq-sur-mauvais_numero: #ffffff;
+
+  /* --- Acquereurs : les quatre qualifications --------------------------- */
+  --crm-acq-q-a_qualifier: #616c7e;
+  --crm-acq-q-qualifie: #2560c4;
+  --crm-acq-q-gros_potentiel: #136c34;
+  --crm-acq-q-non_qualifie: #c62828;
   /* Aplats : vifs, et ils portent du blanc. Le libelle qu'ils portent est en
      14 px/800, soit du « grand texte » au sens WCAG : le seuil tombe de 4.5 a
      3:1, ce qui autorise cette saturation. Chaque valeur est mesuree. */
