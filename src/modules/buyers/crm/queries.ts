@@ -173,7 +173,7 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       .not("buyer_profile_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(PLAFOND_LISTE),
-    supabase.from("buyer_assignments").select("*").limit(PLAFOND_LISTE),
+    supabase.from("buyer_assignments").select("*").is("released_at", null).limit(PLAFOND_LISTE),
     supabase
       .from("tasks")
       .select("*")
@@ -565,7 +565,7 @@ export async function getBuyerProfileDetail(
       .select("*")
       .eq("buyer_profile_id", buyerProfileId)
       .order("created_at", { ascending: false }),
-    supabase.from("buyer_assignments").select("*").eq("buyer_profile_id", buyerProfileId),
+    supabase.from("buyer_assignments").select("*").is("released_at", null).eq("buyer_profile_id", buyerProfileId),
     supabase
       .from("tasks")
       .select("*")
@@ -674,7 +674,7 @@ export async function listBuyersForProperty(
 
   const [{ data: profileRows }, { data: assignmentRows }, members] = await Promise.all([
     supabase.from("buyer_profiles").select("*").in("id", profileIds),
-    supabase.from("buyer_assignments").select("*").in("buyer_profile_id", profileIds),
+    supabase.from("buyer_assignments").select("*").is("released_at", null).in("buyer_profile_id", profileIds),
     getMembersMap(),
   ]);
 

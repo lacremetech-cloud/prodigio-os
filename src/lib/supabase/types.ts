@@ -919,8 +919,20 @@ export type BuyerAssignmentRow = {
   created_at: string;
   buyer_profile_id: string;
   user_id: string;
-  responsibility: "setter" | "manager" | "agent_immobilier" | "responsable_marketing";
+  responsibility:
+    | "setter"
+    | "manager"
+    | "agent_immobilier"
+    | "responsable_marketing"
+    | "commercial";
   assigned_by: string | null;
+  /**
+   * Date à laquelle le responsable a rendu le dossier ; `null` = affectation
+   * active. La ligne n'est JAMAIS supprimée : qui a suivi ce dossier, et
+   * quand, doit rester lisible. Toute lecture qui cherche « le responsable »
+   * filtre donc sur `released_at is null`.
+   */
+  released_at: string | null;
 };
 
 /** Facteur de matching explicable (miroir des tokens SQL). */
@@ -1385,6 +1397,19 @@ export interface Database {
       brochure_cible: {
         Args: { p_slug: string };
         Returns: { property_id: string; brochure_url: string }[];
+      };
+      /** Prendre pour soi un dossier SANS responsable. Ne réaffecte jamais :
+          un dossier déjà suivi rend `ok: false` en nommant son responsable,
+          pour que l'écran puisse l'afficher et se rafraîchir. */
+      crm_buyer_claim: {
+        Args: { p_buyer_profile_id: string };
+        Returns: Json;
+      };
+      /** Rendre un dossier qu'on suit soi-même. La ligne est datée comme
+          rendue, jamais supprimée. */
+      crm_buyer_release: {
+        Args: { p_buyer_profile_id: string };
+        Returns: Json;
       };
       crm_list_members_v2: {
         Args: Record<string, never>;
