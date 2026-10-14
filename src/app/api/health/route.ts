@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  brochureBaseUrl,
   isBuyerSlackConfigured,
   isMetaCapiConfigured,
   isSmsFactorConfigured,
@@ -42,6 +43,12 @@ export function GET() {
            externe, ou ne part pas du tout : autant le voir ici. */
         sms_accuse: isSmsFactorConfigured(),
       },
+      /* Le domaine, pas un secret : c'est l'adresse publique que portera le
+         prochain SMS. Il est ici parce qu'une variable posée dans Vercel ne
+         prend effet qu'au build suivant — et que la seule autre façon de
+         vérifier quelle base est réellement en ligne serait d'envoyer un vrai
+         SMS à un vrai acquéreur. */
+      lien_brochure: brochureBaseUrl(),
     },
     { headers: { "cache-control": "no-store" } },
   );
