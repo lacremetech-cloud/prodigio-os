@@ -10,10 +10,12 @@ import { normalizePhone } from "@/modules/mandates/funnel/normalize";
 
 import {
   env,
+  isSupabaseAdminConfigured,
   isSupabaseConfigured,
   isTurnstileConfigured,
   isTurnstileProductionSafe,
 } from "@/config";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 import { buyerFunnel } from "./content";
@@ -126,6 +128,22 @@ export async function submitUniversalInterestAction(
          Les scores sont relus en base plutot que recalcules ici, pour que
          l'alerte dise exactement ce que le CRM affichera. */
       const interetId = result.interest_id;
+
+      /* Le depot est ANONYME : le client qui vient d'ecrire n'a aucun droit de
+         RELECTURE. `properties` et `buyer_interests` n'ouvrent leur lecture
+         qu'au role `authenticated` — verifie en base. Toute relecture faite
+         avec ce client-la rendait donc vide, en silence :
+
+           — l'alerte Slack annoncait « Bien non nomme » pour chaque demande,
+             alors que le bien etait parfaitement rattache ;
+           — elle n'affichait aucun score, pour la meme raison ;
+           — et la conversion Meta partait sans nom de bien, donc sans moyen de
+             ventiler les conversions par bien dans le Gestionnaire.
+
+         Ces trois lectures sont internes : elles ont lieu APRES la reponse, et
+         rien de ce qu'elles ramenent ne retourne au visiteur. Elles passent
+         donc par le client serveur, qui n'est jamais expose au navigateur. */
+      const lecteur = isSupabaseAdminConfigured() ? getSupabaseAdminClient() : supabase;
       /* Conversion « prospect » vers Meta. Emise ici et non par le pixel du
          navigateur : bloqueurs, cookies tiers refuses et iOS en font disparaitre
          une part importante. Les coordonnees sont hachees avant de partir. */
@@ -135,7 +153,7 @@ export async function submitUniversalInterestAction(
           // Le bien est relu en base : il permet de ventiler les conversions
           // par bien dans le Gestionnaire de publicites, sans dependre du nom
           // donne aux campagnes.
-          const bien = await bienDeLaManifestation(supabase, interetId);
+          const bien = await bienDeLaManifestation(lecteur, interetId);
           await conversionProspect({
             interestId: interetId,
             propertyName: bien?.nom ?? null,
@@ -168,7 +186,7 @@ export async function submitUniversalInterestAction(
            refusee remonterait en rejet non capture — hors du try/catch de
            l'action, puisque `after` s'execute apres la reponse. */
         try {
-          const { data: ligne } = await supabase
+          const { data: ligne } = await lecteur
             .from("buyer_interests")
             .select("overall_score, priority, budget_score, property_id, buyer_profile_id")
             .eq("id", interetId)
@@ -177,7 +195,7 @@ export async function submitUniversalInterestAction(
              « Bien non nomme » pour toute demande, y compris quand le bien
              etait parfaitement rattache — ce qui etait le cas de toutes. On
              reutilise la lecture deja ecrite pour les conversions. */
-          const bienAlerte = await bienDeLaManifestation(supabase, interetId);
+          const bienAlerte = await bienDeLaManifestation(lecteur, interetId);
           await alerterNouvelleDemande({
             request,
             interestId: interetId,
