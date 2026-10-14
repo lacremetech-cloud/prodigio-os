@@ -215,7 +215,7 @@ export async function listAssignableMembers(): Promise<AssignableMember[]> {
   for (const [userId, info] of members) {
     out.push({
       userId,
-      name: info.email ? info.email.split("@")[0] || info.email : `Membre ${userId.slice(0, 6)}`,
+      name: memberDisplayName(userId, members),
       role: info.role,
     });
   }

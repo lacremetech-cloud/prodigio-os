@@ -24,26 +24,42 @@ import type {
 export interface MemberInfo {
   email: string | null;
   role: string;
+  /** Nom court choisi par l'organisation. Absent tant qu'il n'est pas saisi. */
+  displayName: string | null;
 }
 
 export async function getMembersMap(): Promise<Map<string, MemberInfo>> {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.rpc("crm_list_members");
+  const { data } = await supabase.rpc("crm_list_members_v2");
   const map = new Map<string, MemberInfo>();
   if (Array.isArray(data)) {
     for (const m of data) {
-      map.set(m.user_id, { email: m.email ?? null, role: m.role });
+      map.set(m.user_id, {
+        email: m.email ?? null,
+        role: m.role,
+        displayName: m.display_name ?? null,
+      });
     }
   }
   return map;
 }
 
-/** Nom affichable d'un membre : partie locale de l'e-mail, sinon identifiant court. */
+/**
+ * Nom affichable d'un membre. UNIQUE endroit où cette décision se prend :
+ * elle était recopiée dans cinq fichiers, qui divergeaient déjà.
+ *
+ * Le nom choisi par l'organisation d'abord. À défaut, la partie locale de
+ * l'e-mail — lisible par personne (« casteljc69 »), mais toujours préférable à
+ * un identifiant. À défaut encore, un identifiant court, qui ne devrait jamais
+ * s'afficher.
+ */
 export function memberDisplayName(
   userId: string,
   members: Map<string, MemberInfo>,
 ): string {
   const info = members.get(userId);
+  const nom = info?.displayName?.trim();
+  if (nom) return nom;
   if (info?.email) return info.email.split("@")[0] || info.email;
   return `Membre ${userId.slice(0, 6)}`;
 }

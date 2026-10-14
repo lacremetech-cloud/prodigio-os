@@ -152,7 +152,7 @@ export default async function BuyerProfilePage({
 
   const memberOptions = [...members.entries()].map(([userId, info]) => ({
     userId,
-    name: info.email ? info.email.split("@")[0] || info.email : `Membre ${userId.slice(0, 6)}`,
+    name: memberDisplayName(userId, members),
   }));
 
   /* Donnees du bandeau de tete. Toutes viennent de ce qui est deja charge :

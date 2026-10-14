@@ -1341,6 +1341,8 @@ export interface Database {
       submit_mandate_funnel: { Args: { payload: Json }; Returns: Json };
       crm_active_roles: { Args: Record<string, never>; Returns: string[] };
       crm_has_access: { Args: Record<string, never>; Returns: boolean };
+      /** Remplacée par `crm_list_members_v2`. Conservée le temps qu'un
+          `drop function` puisse être passé ; plus aucun appel ne la vise. */
       crm_list_members: {
         Args: Record<string, never>;
         Returns: {
@@ -1349,6 +1351,21 @@ export interface Database {
           role: string;
           organization_id: string;
           status: string;
+        }[];
+      };
+      /** Même contenu, plus le nom affichable du membre. Fonction distincte
+          plutôt qu'élargie, pour la raison déjà retenue juste en dessous :
+          changer un type de retour impose un `drop function`, donc une fenêtre
+          pendant laquelle toute page qui l'appelle échoue. */
+      crm_list_members_v2: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string | null;
+          role: string;
+          organization_id: string;
+          status: string;
+          display_name: string | null;
         }[];
       };
       /** Photos de profil des membres de l'organisation. Fonction dédiée : élargir

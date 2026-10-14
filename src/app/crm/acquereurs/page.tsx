@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { memberDisplayName } from "@/modules/crm/data/queries";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
@@ -55,7 +56,7 @@ export default async function BuyersInboxPage({
 
   const memberOptions = [...members.entries()].map(([userId, info]) => ({
     userId,
-    name: info.email ? info.email.split("@")[0] || info.email : `Membre ${userId.slice(0, 6)}`,
+    name: memberDisplayName(userId, members),
   }));
 
   return (
