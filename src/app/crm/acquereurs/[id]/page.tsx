@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import {
   canDecideMandate,
+  canOperate,
   canTreatBuyers,
   canViewAudit,
   canViewContactDetails,
@@ -103,6 +104,11 @@ export default async function BuyerProfilePage({
   const session = await requireCrmSession(`/crm/acquereurs/${id}`);
   const canViewContacts = canViewContactDetails(session.roles);
   const canOperateBuyers = canTreatBuyers(session.roles);
+  /* Réaffecter — donner un dossier à quelqu'un, retirer celui d'un autre —
+     reste un acte d'encadrement. Un commercial prend un dossier libre et rend
+     le sien, rien de plus : entre deux associés, pouvoir se reprendre un
+     dossier en silence est une source de conflit. */
+  const canReassignBuyers = canOperate(session.roles);
   const canDecide = canDecideMandate(session.roles);
   const showAudit = canViewAudit(session.roles);
 
@@ -510,7 +516,9 @@ export default async function BuyerProfilePage({
               buyerProfileId={profile.id}
               assignees={assignees}
               members={memberOptions}
-              canAssign={canOperateBuyers}
+              canAssign={canReassignBuyers}
+              canSelfAssign={canOperateBuyers}
+              currentUserId={session.userId}
             />
           </section>
 

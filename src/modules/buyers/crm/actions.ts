@@ -204,17 +204,72 @@ export async function assignBuyerAction(input: unknown): Promise<ActionResult> {
   return { ok: true };
 }
 
+/**
+ * « M'attribuer ce lead ».
+ *
+ * Passe par `crm_buyer_claim` et NON par `crm_buyer_assign` : prendre un
+ * dossier libre et réaffecter celui d'un collègue sont deux actes différents.
+ * Le second reste réservé à l'encadrement — sans quoi deux associés pourraient
+ * se reprendre leurs dossiers sans que l'autre le sache.
+ *
+ * Un dossier déjà suivi ne lève pas d'erreur : la fonction RENVOIE le nom du
+ * responsable, pour qu'on l'affiche. « Jean-Charles suit déjà ce dossier » dit
+ * quoi faire ; « droits insuffisants » ne dit rien.
+ */
 export async function selfAssignBuyerAction(input: unknown): Promise<ActionResult> {
-  const session = await requireCrmSession();
+  await requireCrmSession();
   const parsed = z.object({ buyerProfileId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Saisie invalide." };
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("crm_buyer_assign", {
+  const { data, error } = await supabase.rpc("crm_buyer_claim", {
     p_buyer_profile_id: parsed.data.buyerProfileId,
-    p_user_id: session.userId,
-    p_responsibility: "setter",
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+
+  const reponse = (data ?? {}) as {
+    ok?: boolean;
+    raison?: string;
+    responsable_nom?: string | null;
+  };
+  if (reponse.ok === false) {
+    /* La liste est rafraîchie DANS les deux cas : celui qui perd la course doit
+       voir le responsable apparaître, pas seulement lire qu'il a perdu. */
+    revalidateBuyer(parsed.data.buyerProfileId);
+    const nom = reponse.responsable_nom?.trim();
+    return {
+      ok: false,
+      error: nom
+        ? `${nom} suit déjà ce dossier.`
+        : "Ce dossier a déjà un responsable.",
+    };
+  }
+
+  revalidateBuyer(parsed.data.buyerProfileId);
+  return { ok: true };
+}
+
+/**
+ * Rendre un dossier qu'on suit soi-même.
+ *
+ * Sans cela, un clic malheureux serait définitif pour un commercial : il
+ * devrait demander à l'agence de lui retirer un dossier qu'il vient de
+ * prendre. Rendre LE SIEN ne touche à l'organisation de personne, et la ligne
+ * d'affectation est conservée, datée comme rendue.
+ */
+export async function releaseBuyerAction(input: unknown): Promise<ActionResult> {
+  await requireCrmSession();
+  const parsed = z.object({ buyerProfileId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Saisie invalide." };
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("crm_buyer_release", {
+    p_buyer_profile_id: parsed.data.buyerProfileId,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+
+  const reponse = (data ?? {}) as { ok?: boolean };
+  if (reponse.ok === false) {
+    return { ok: false, error: "Ce dossier n'est pas le vôtre." };
+  }
   revalidateBuyer(parsed.data.buyerProfileId);
   return { ok: true };
 }

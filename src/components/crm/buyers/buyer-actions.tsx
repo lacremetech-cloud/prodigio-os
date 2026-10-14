@@ -9,6 +9,7 @@ import {
   recordBuyerOfferAction,
   recordBuyerOutcomeAction,
   reopenBuyerAction,
+  releaseBuyerAction,
   selfAssignBuyerAction,
   setBuyerStageAction,
   setBuyerTaskStatusAction,
@@ -168,16 +169,34 @@ export function BuyerStageForm({
 }
 
 // -------------------------------------------------------------- Affectation
+/**
+ * Deux droits distincts, et c'est volontaire.
+ *
+ *  • `canAssign` — RÉAFFECTER : donner le dossier à quelqu'un, ou retirer
+ *    celui d'un autre. Acte d'encadrement, réservé à l'agence. Entre deux
+ *    associés qui se répartissent un portefeuille, pouvoir se reprendre un
+ *    dossier sans que l'autre le sache est une source de conflit, pas un
+ *    confort.
+ *  • `canSelfAssign` — PRENDRE un dossier que personne ne suit, et rendre le
+ *    sien. Acte de travail, ouvert à qui traite les dossiers.
+ *
+ * Le serveur applique la même séparation : afficher ou cacher un bouton n'a
+ * jamais protégé quoi que ce soit.
+ */
 export function BuyerAssignmentForm({
   buyerProfileId,
   assignees,
   members,
   canAssign,
+  canSelfAssign = false,
+  currentUserId = null,
 }: {
   buyerProfileId: string;
   assignees: { userId: string; name: string; responsibility: string }[];
   members: { userId: string; name: string }[];
   canAssign: boolean;
+  canSelfAssign?: boolean;
+  currentUserId?: string | null;
 }) {
   const { pending, error, done, run } = useAction();
   const [userId, setUserId] = useState("");
@@ -199,6 +218,18 @@ export function BuyerAssignmentForm({
                   aria-label={`Retirer ${a.name}`}
                   disabled={pending}
                   onClick={() => run(() => unassignBuyerAction({ buyerProfileId, userId: a.userId }))}
+                >
+                  ✕
+                </button>
+              ) : canSelfAssign && a.userId === currentUserId ? (
+                /* Rendre LE SIEN : un dossier pris par erreur ne doit pas
+                   obliger à appeler l'agence. */
+                <button
+                  type="button"
+                  className="ml-1.5 text-[var(--crm-danger)]"
+                  aria-label="Rendre ce dossier"
+                  disabled={pending}
+                  onClick={() => run(() => releaseBuyerAction({ buyerProfileId }))}
                 >
                   ✕
                 </button>
@@ -249,13 +280,22 @@ export function BuyerAssignmentForm({
           >
             Affecter
           </button>
+          <Saved show={done} />
+        </div>
+      ) : null}
+
+      {/* « M'attribuer » vit HORS du bloc de réaffectation : un commercial y a
+          droit, au menu « Affecter à » non. Et il ne sert à rien quand le
+          dossier a déjà un responsable. */}
+      {canSelfAssign && assignees.length === 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="crm-btn crm-btn--sm crm-btn--ghost"
+            className="crm-btn crm-btn--sm"
             disabled={pending}
             onClick={() => run(() => selfAssignBuyerAction({ buyerProfileId }))}
           >
-            M’affecter
+            M’attribuer ce lead
           </button>
           <Saved show={done} />
         </div>
