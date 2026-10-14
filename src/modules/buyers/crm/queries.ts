@@ -374,7 +374,16 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
     tronquee: (profiles ?? []).length >= PLAFOND_LISTE,
     counters: {
       total: items.length,
-      nouveaux: items.filter((i) => i.profile.pipeline_stage === "nouveau").length,
+      /* « a_contacter » est le nouveau nom de « nouveau ». Les deux sont
+         acceptés le temps que les écrans basculent : la reprise a renommé la
+         valeur sur la personne, les manifestations gardent l'ancienne comme
+         historique, et un compteur qui ne connaîtrait qu'un seul des deux
+         afficherait zéro sans rien signaler. */
+      nouveaux: items.filter(
+        (i) =>
+          i.profile.pipeline_stage === "a_contacter" ||
+          i.profile.pipeline_stage === "nouveau",
+      ).length,
       nonAffectes: items.filter((i) => i.assignees.length === 0).length,
       enRetard: items.filter((i) => i.overdue).length,
       sansProchaineAction: items.filter((i) => i.noNextAction).length,

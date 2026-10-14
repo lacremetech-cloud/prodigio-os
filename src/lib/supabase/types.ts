@@ -830,18 +830,51 @@ export type BuyerInterestRow = {
 
 // --- CRM Acquéreurs ----------------------------------------------------------
 
-/** Étape COMMERCIALE du pipeline acquéreur (distincte du pipeline Mandats). */
+/**
+ * Étape de TRAITEMENT d'un acquéreur (distincte du pipeline Mandats).
+ *
+ * Deux vocabulaires cohabitent le temps de la bascule des écrans :
+ *
+ *  • les SEPT valeurs du haut sont les nouvelles. Elles vivent sur la
+ *    PERSONNE (`buyer_profiles.pipeline_stage`) depuis la reprise du
+ *    14/10/2026, et c'est la seule source de vérité ;
+ *  • les cinq suivantes sont l'ancien vocabulaire, figé sur les
+ *    manifestations (`buyer_interests.pipeline_stage`) à titre d'historique.
+ *    Aucun écran ne devra plus les lire une fois la bascule terminée.
+ *
+ * Elles sont réunies ici plutôt que séparées parce que les deux colonnes
+ * portent le même type côté base, et qu'un type trop étroit ferait échouer la
+ * compilation sur des lectures d'historique parfaitement légitimes.
+ */
 export type BuyerPipelineStage =
-  | "nouveau"
+  // Le vocabulaire en service, porté par la personne.
+  | "a_contacter"
   | "a_rappeler"
   | "en_discussion"
+  | "visite_planifiee"
+  | "vivier"
+  | "pas_interesse"
+  | "mauvais_numero"
+  // Figé — historique des manifestations, antérieur au 14/10/2026.
+  | "nouveau"
   | "visite"
   | "offre"
-  | "vivier"
   | "gagne"
   | "perdu";
 
-/** Qualification validée par un HUMAIN (jamais déduite d'un score). */
+/**
+ * Qualification portée par la PERSONNE. Quatre valeurs depuis la reprise du
+ * 14/10/2026 : qualifier quelqu'un sur une villa le qualifie partout.
+ * Jamais déduite d'un budget déclaré — c'est un jugement, posé par quelqu'un
+ * qui a eu la personne au téléphone.
+ */
+export type BuyerQualificationPersonne =
+  | "a_qualifier"
+  | "qualifie"
+  | "gros_potentiel"
+  | "non_qualifie";
+
+/** FIGÉ — ancienne qualification du profil, conservée pour la traçabilité. */
 export type BuyerQualificationStatus = "non_qualifie" | "en_cours" | "qualifie" | "ecarte";
 
 /**
@@ -866,9 +899,18 @@ export type BuyerProfileRow = {
   updated_at: string;
   organization_id: string;
   contact_id: string;
+  /** Où en est le TRAITEMENT. Source de vérité depuis la reprise du 14/10. */
   pipeline_stage: BuyerPipelineStage;
-  qualification_status: BuyerQualificationStatus;
+  /**
+   * Ce qu'on pense du POTENTIEL de la personne. Source de vérité depuis la
+   * reprise du 14/10 : qualifier quelqu'un sur une villa le qualifie partout.
+   */
+  qualification: BuyerQualificationPersonne;
   qualification_reason: string | null;
+  qualification_by: string | null;
+  qualification_at: string | null;
+  /** FIGÉ — ancienne qualification, conservée pour la traçabilité. */
+  qualification_status: BuyerQualificationStatus;
   qualified_by: string | null;
   qualified_at: string | null;
   recommended_priority: BuyerRecommendedPriority | null;
