@@ -47,17 +47,28 @@ export interface BuyerKanbanCard {
 }
 
 /**
- * Étapes exigeant une action métier dédiée (jamais un simple changement
- * d'étape). Déplacer une carte vers l'une d'elles est refusé.
+ * Étapes exigeant une action métier dédiée. **Il n'y en a plus aucune.**
+ *
+ * Il y en avait trois — offre, gagné, perdu — parce qu'elles engageaient : on
+ * ne gagne pas un acquéreur en faisant glisser une carte. Elles ont quitté le
+ * pipeline à la reprise du 14/10/2026 : une offre et une issue commerciale
+ * appartiennent à l'AFFAIRE, donc au bien. Éric peut acheter Verdun sans
+ * jamais donner suite sur Jean Jaurès — une seule étape de traitement pour
+ * lui, deux issues distinctes.
+ *
+ * Les sept étapes restantes décrivent toutes où en est la CONVERSATION, et
+ * une conversation se déplace librement. Le registre est conservé plutôt que
+ * supprimé : le jour où une étape redeviendra engageante, elle a sa place.
  */
-export const PROTECTED_BUYER_STAGES: Record<string, "offre" | "resultat"> = {
-  offre: "offre",
-  gagne: "resultat",
-  perdu: "resultat",
-};
+export const PROTECTED_BUYER_STAGES: Record<string, "offre" | "resultat"> = {};
 
-/** Étapes terminales : un dossier clos ne se rouvre pas par glisser-déposer. */
-export const CLOSED_BUYER_STAGES: readonly string[] = ["gagne", "perdu"];
+/**
+ * Étapes terminales. Vide pour la même raison : « pas intéressé » et « mauvais
+ * numéro » n'enferment personne. Un numéro se corrige, et quelqu'un qui a dit
+ * non à une villa dira peut-être oui à la suivante — c'est précisément à quoi
+ * sert le vivier.
+ */
+export const CLOSED_BUYER_STAGES: readonly string[] = [];
 
 export interface BuyerMoveEvaluation {
   allowed: boolean;

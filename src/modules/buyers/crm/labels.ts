@@ -13,6 +13,7 @@
  *   • l'étape commerciale du pipeline     → `pipeline_stage`
  */
 
+import { ETAPES } from "./vocabulaire";
 import type {
   BuyerMatchFactor,
   BuyerPipelineStage,
@@ -20,58 +21,43 @@ import type {
   BuyerRecommendedPriority,
 } from "@/lib/supabase/types";
 
-// --- Étapes du pipeline acquéreur (ordre = progression) ----------------------
-export const BUYER_PIPELINE_STAGES: readonly BuyerPipelineStage[] = [
-  "nouveau",
-  "a_rappeler",
-  "en_discussion",
-  "visite",
-  "offre",
-  "gagne",
-  "perdu",
-  "vivier",
-] as const;
+// --- Étapes de traitement ----------------------------------------------------
+/* La liste, les libellés et les couleurs vivent dans `vocabulaire.ts`, seul
+   endroit où elles sont écrites. Ce fichier les ré-expose sous les noms que
+   les écrans utilisent déjà, pour que la bascule ne demande pas de toucher à
+   treize composants le même jour. */
+export const BUYER_PIPELINE_STAGES = ETAPES.map((e) => e.valeur);
 
-/**
- * Huit colonnes, chacune repondant a « quelle est ma prochaine action ».
- *
- * Il y en avait onze, dont quatre — a contacter, contact en cours, qualifie,
- * bien a proposer — decrivaient un seul moment reel : on lui parle. Au-dela de
- * sept ou huit colonnes, chacun invente sa propre regle de rangement et le
- * tableau cesse de dire la verite.
- *
- * « Visite » couvre a planifier, planifiee et le suivi d'apres-visite : c'est
- * la date portee par la carte qui les distingue, pas trois colonnes.
- *
- * « Vivier » est la reponse a un besoin que rien ne couvrait : la personne qui
- * n'achetera pas CE bien mais qu'on rappellera au suivant. Elle finissait en
- * « Perdu », qui l'enterrait.
- */
 export const buyerStageLabels: Record<string, string> = {
-  nouveau: "Nouveau",
-  a_rappeler: "À rappeler",
-  en_discussion: "En discussion",
-  visite: "Visite",
-  offre: "Offre",
-  gagne: "Gagné",
-  perdu: "Perdu",
-  vivier: "Vivier",
+  ...Object.fromEntries(ETAPES.map((e) => [e.valeur, e.label])),
+  /* L'ancien vocabulaire reste traduit : il subsiste sur les manifestations,
+     figé, et un historique qui afficherait « nouveau » en brut serait pire
+     qu'un historique traduit. */
+  nouveau: "À contacter",
+  visite: "Visite planifiée",
+  offre: "En discussion",
+  gagne: "En discussion",
+  perdu: "Pas intéressé",
 };
 
-/** Colonnes du Kanban Acquéreurs : toutes les étapes, dans l'ordre du cycle. */
-export const BUYER_KANBAN_COLUMNS: readonly BuyerPipelineStage[] = BUYER_PIPELINE_STAGES;
+/** Colonnes du Kanban Acquéreurs : les sept étapes, dans l'ordre du cycle. */
+export const BUYER_KANBAN_COLUMNS = BUYER_PIPELINE_STAGES;
 
 const BUYER_STAGE_VISUALS: Record<string, { cssVar: string; icon: string }> = {
-  nouveau: { cssVar: "--crm-st-nouveau", icon: "✦" },
-  a_rappeler: { cssVar: "--crm-st-a_contacter", icon: "☎︎" },
-  en_discussion: { cssVar: "--crm-st-contact", icon: "◗" },
-  visite: { cssVar: "--crm-st-rdv_planifie", icon: "◷" },
-  offre: { cssVar: "--crm-st-proposition", icon: "✎︎" },
-  gagne: { cssVar: "--crm-st-signe", icon: "✔︎" },
-  perdu: { cssVar: "--crm-st-perdu", icon: "✕" },
-  vivier: { cssVar: "--crm-st-qualifie", icon: "◈" },
+  a_contacter: { cssVar: "--crm-acq-a_contacter", icon: "✦" },
+  a_rappeler: { cssVar: "--crm-acq-a_rappeler", icon: "☎︎" },
+  en_discussion: { cssVar: "--crm-acq-en_discussion", icon: "◗" },
+  visite_planifiee: { cssVar: "--crm-acq-visite_planifiee", icon: "◷" },
+  vivier: { cssVar: "--crm-acq-vivier", icon: "◈" },
+  pas_interesse: { cssVar: "--crm-acq-pas_interesse", icon: "✕" },
+  mauvais_numero: { cssVar: "--crm-acq-mauvais_numero", icon: "⊘" },
+  // Ancien vocabulaire, figé sur les manifestations.
+  nouveau: { cssVar: "--crm-acq-a_contacter", icon: "✦" },
+  visite: { cssVar: "--crm-acq-visite_planifiee", icon: "◷" },
+  offre: { cssVar: "--crm-acq-en_discussion", icon: "◗" },
+  gagne: { cssVar: "--crm-acq-en_discussion", icon: "◗" },
+  perdu: { cssVar: "--crm-acq-pas_interesse", icon: "✕" },
 };
-
 
 export function buyerStageVisual(stage: string): {
   cssVar: string;

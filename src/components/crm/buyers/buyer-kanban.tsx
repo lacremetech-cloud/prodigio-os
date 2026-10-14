@@ -487,7 +487,7 @@ function Card({
             {/* Les colonnes pilotees par une action dediee figurent quand meme,
                 desactivees et annotees : une liste amputee sans explication
                 laissait croire a un bug. On dit pourquoi, au lieu de taire. */}
-            {BUYER_KANBAN_COLUMNS.filter((s) => isProtectedBuyerStage(s) || s === "perdu").map((s) => (
+            {BUYER_KANBAN_COLUMNS.filter((s) => isProtectedBuyerStage(s)).map((s) => (
               <option key={s} value={s} disabled>
                 {buyerStageLabels[s]} — par l&rsquo;action dédiée
               </option>

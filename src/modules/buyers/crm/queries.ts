@@ -294,68 +294,69 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       budgetMaxCents: criteriaByProfile.get(profile.id)?.budget_max_cents ?? null,
     };
 
-    // Un dossier sans aucune manifestation ne devrait pas exister (il naît
-    // d'une manifestation). S'il en existe un, il garde une ligne plutôt que
-    // de disparaître silencieusement de la liste.
-    if (profileInterests.length === 0) {
-      const nextTask = nextTaskPour(profile.id, null);
-      items.push({
-        ...identite,
-        interestId: null,
-        propertyId: null,
-        propertyLabel: null,
-        stage: profile.outcome ?? profile.pipeline_stage,
-        city: null,
-        nextTask,
-        overdue: Boolean(nextTask?.due_at && new Date(nextTask.due_at).getTime() < now),
-        noNextAction: nextTask == null,
-        newInterest: false,
-        budgetChoice: null,
-        qualification: "a_qualifier",
-        qualificationReason: null,
-        callAttempts: 0,
-        lastCallAt: null,
-        lastCallOutcome: null,
-        lastNote: null,
-        lastNoteAt: null,
-        lastNoteBy: null,
-        phoneInvalid: contact?.phone_status === "invalide",
-      });
-      continue;
-    }
+    /* UNE LIGNE PAR PERSONNE, et non par manifestation.
+     *
+     * Avant la reprise, cette boucle produisait une ligne par bien : Eric
+     * Patalano, interesse par Jean Jaures et par Verdun, occupait deux cartes
+     * du pipeline, portait deux qualifications a poser et se faisait rappeler
+     * deux fois. On appelle quelqu'un UNE fois.
+     *
+     * Ce qui reste attache au bien — les reponses au formulaire, les visites,
+     * les offres, l'issue commerciale — ne disparait pas : c'est la fiche qui
+     * les presente par bien. La LISTE, elle, parle de personnes. */
+    const parDate = [...profileInterests].sort((a, b) =>
+      (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+    );
+    const principale = parDate[0] ?? null;
+    const property = principale ? propertyById.get(principale.property_id) : undefined;
 
-    for (const interet of profileInterests) {
-      const property = propertyById.get(interet.property_id);
-      const nextTask = nextTaskPour(profile.id, interet.id);
-      const activite = activiteParManifestation.get(interet.id);
-      items.push({
-        ...identite,
-        interestId: interet.id,
-        propertyId: interet.property_id,
-        propertyLabel: propertyLabelOf(property),
-        // Un dossier clos au niveau de la personne ferme toutes ses
-        // manifestations : la règle vit ici, en un seul endroit.
-        stage: profile.outcome ?? interet.pipeline_stage,
-        city: property?.location_city ?? null,
-        nextTask,
-        overdue: Boolean(nextTask?.due_at && new Date(nextTask.due_at).getTime() < now),
-        noNextAction: nextTask == null,
-        newInterest: interet.review_status === "nouveau",
-        // Le budget DÉCLARÉ vient de la réponse au questionnaire de CETTE
-        // manifestation : c'est la seule qu'on ait pour un lead du funnel.
-        budgetChoice: interet.budget_choice ?? null,
-        qualification: interet.qualification,
-        qualificationReason: interet.qualification_reason,
-        callAttempts: activite?.call_attempts ?? 0,
-        lastCallAt: activite?.last_call_at ?? null,
-        lastCallOutcome: activite?.last_call_outcome ?? null,
-        lastNote: activite?.last_note ?? null,
-        lastNoteAt: activite?.last_note_at ?? null,
-        lastNoteBy: activite?.last_note_by ?? null,
-        // Le numéro appartient à la PERSONNE : invalide ici, invalide partout.
-        phoneInvalid: contact?.phone_status === "invalide",
-      });
-    }
+    /* L'historique se cumule sur toutes les manifestations : trois tentatives
+       sur Verdun et une sur Jean Jaures font quatre tentatives sur la
+       personne, pas deux colonnes de deux. */
+    const activites = profileInterests
+      .map((i) => activiteParManifestation.get(i.id))
+      .filter((a): a is ResumeActivite => Boolean(a));
+    const plusRecent = <T,>(
+      valeur: (a: ResumeActivite) => string | null,
+      champ: (a: ResumeActivite) => T,
+    ): T | null => {
+      let gagnant: ResumeActivite | null = null;
+      for (const a of activites) {
+        const d = valeur(a);
+        if (!d) continue;
+        if (!gagnant || d > (valeur(gagnant) ?? "")) gagnant = a;
+      }
+      return gagnant ? champ(gagnant) : null;
+    };
+
+    const nextTask = nextTaskPour(profile.id, principale?.id ?? null);
+
+    items.push({
+      ...identite,
+      interestId: principale?.id ?? null,
+      propertyId: principale?.property_id ?? null,
+      propertyLabel: propertyLabelOf(property) ?? null,
+      /* L'etape et la qualification viennent de la PERSONNE. Les colonnes des
+         manifestations sont figees depuis la reprise du 14/10/2026 : les lire
+         reafficherait un etat mort. */
+      stage: profile.pipeline_stage,
+      qualification: profile.qualification,
+      qualificationReason: profile.qualification_reason,
+      city: property?.location_city ?? null,
+      nextTask,
+      overdue: Boolean(nextTask?.due_at && new Date(nextTask.due_at).getTime() < now),
+      noNextAction: nextTask == null,
+      newInterest: profileInterests.some((i) => i.review_status === "nouveau"),
+      budgetChoice: principale?.budget_choice ?? null,
+      callAttempts: activites.reduce((n, a) => n + (a.call_attempts ?? 0), 0),
+      lastCallAt: plusRecent((a) => a.last_call_at, (a) => a.last_call_at),
+      lastCallOutcome: plusRecent((a) => a.last_call_at, (a) => a.last_call_outcome),
+      lastNote: plusRecent((a) => a.last_note_at, (a) => a.last_note),
+      lastNoteAt: plusRecent((a) => a.last_note_at, (a) => a.last_note_at),
+      lastNoteBy: plusRecent((a) => a.last_note_at, (a) => a.last_note_by),
+      // Le numéro appartient à la PERSONNE : invalide ici, invalide partout.
+      phoneInvalid: contact?.phone_status === "invalide",
+    });
   }
 
   const projets: ProjetAccessible[] = ((properties ?? []) as PropertyRow[])

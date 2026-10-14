@@ -22,9 +22,7 @@ export type Signal =
   | "tous"
   | "a_contacter"
   | "a_rappeler"
-  | "injoignables"
   | "gros_potentiel"
-  | "en_reflexion"
   | "non_qualifies"
   | "numero_invalide"
   | "en_cours"
@@ -38,9 +36,7 @@ const SIGNAUX: Signal[] = [
   "tous",
   "a_contacter",
   "a_rappeler",
-  "injoignables",
   "gros_potentiel",
-  "en_reflexion",
   "non_qualifies",
   "numero_invalide",
   "en_cours",
@@ -60,17 +56,30 @@ export const FILTRES_RAPIDES: { signal: Signal; label: string }[] = [
   { signal: "tous", label: "Tous" },
   { signal: "a_contacter", label: "À contacter" },
   { signal: "a_rappeler", label: "À rappeler" },
-  { signal: "injoignables", label: "Injoignables" },
-  { signal: "gros_potentiel", label: "Gros potentiel" },
-  { signal: "en_reflexion", label: "En réflexion" },
-  { signal: "non_qualifies", label: "Non qualifiés" },
-  { signal: "numero_invalide", label: "Numéros invalides" },
 ];
 
 /** Normalise un paramètre d'URL : une valeur inconnue ne filtre rien. */
 export function lireSignal(valeur: string | string[] | undefined): Signal {
   const v = Array.isArray(valeur) ? valeur[0] : valeur;
   return SIGNAUX.includes(v as Signal) ? (v as Signal) : "tous";
+}
+
+/**
+ * Dans le TRAITEMENT ACTIF : quelqu'un dont on attend encore quelque chose.
+ *
+ * Trois sorties, et une seule vient de l'étape. « Non qualifié » est un
+ * jugement sur la personne, pas une case du pipeline : il la retire de la file
+ * sans la déplacer, ce qui laisse lisible où en était la conversation le jour
+ * où on la requalifie. C'est ce qui corrige la plainte d'origine — un dossier
+ * passé en non qualifié restait dans « à contacter » et revenait tous les
+ * matins.
+ *
+ * Ces personnes ne disparaissent pas : « Tous » et le filtre « Non qualifiés »
+ * les retrouvent, avec leurs notes.
+ */
+function estEnTraitementActif(row: BuyerInboxRow): boolean {
+  if (row.qualification === "non_qualifie") return false;
+  return row.stage !== "pas_interesse" && row.stage !== "mauvais_numero";
 }
 
 /** Un dossier porte-t-il ce signal ? Fonction pure. */
@@ -81,28 +90,25 @@ export function porteLeSignal(row: BuyerInboxRow, signal: Signal): boolean {
        déjà appelé trois fois sans succès n'est plus à contacter, il est à
        rappeler. */
     case "a_contacter":
-      return row.callAttempts === 0;
+      return row.stage === "a_contacter" && estEnTraitementActif(row);
     case "a_rappeler":
-      return row.nextActionAt !== null;
-    /* Injoignable = le DERNIER appel n'a mené à personne. Un dossier qu'on a
-       fini par joindre n'est plus injoignable, même s'il l'a été dix fois. */
-    case "injoignables":
-      return row.lastCallOutcome === "sans_reponse" || row.lastCallOutcome === "message_laisse";
+      return row.stage === "a_rappeler" && estEnTraitementActif(row);
     case "gros_potentiel":
       return row.qualification === "gros_potentiel";
-    case "en_reflexion":
-      return row.qualification === "en_reflexion";
     case "non_qualifies":
       return row.qualification === "non_qualifie";
     case "numero_invalide":
-      return row.phoneInvalid;
+      return row.phoneInvalid || row.stage === "mauvais_numero";
     /* « En cours » : un échange est engagé. Le compteur du tableau de bord et
        ce filtre doivent compter la MÊME chose — un compteur qui ouvre une
        autre liste que celle qu'il annonce est un compteur qui ment. */
     case "en_cours":
-      return ["a_rappeler", "en_discussion", "visite", "offre"].includes(row.stage);
+      return (
+        ["a_rappeler", "en_discussion", "visite_planifiee"].includes(row.stage) &&
+        estEnTraitementActif(row)
+      );
     case "nouveaux":
-      return row.stage === "nouveau";
+      return row.stage === "a_contacter" && estEnTraitementActif(row);
     case "en_retard":
       return row.overdue;
     case "fort_potentiel":
