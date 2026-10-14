@@ -219,7 +219,6 @@ export async function submitUniversalInterestAction(
                n'a pas de slug. */
             const texte = composerMessage({
               firstName: request.answers.firstName,
-              propertyName: config.publicName ?? bien?.nom ?? null,
               brochureUrl: lienBrochure(config.brochureSlug ?? config.slug) ?? config.brochureUrl,
             });
             if (!texte) return;

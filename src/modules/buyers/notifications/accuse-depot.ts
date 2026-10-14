@@ -221,17 +221,21 @@ export function pourSms(v: string): string {
  * ouvrées », qui est une clause ; pas de signature en capitales, qui est un
  * logo. Deux prénoms à la place — ce sont eux qui rappelleront.
  *
- * Le nom du bien est posé en apposition (« votre brochure Villa Verdun »)
- * plutôt qu'introduit par un article : « de la Villa Verdun » se lirait mal le
- * jour où un bien s'appellera « Mas des Oliviers », et rien dans la fiche ne
- * nous dit son genre.
+ * Le nom du bien n'y figure PAS, et c'est délibéré : le lien le porte déjà,
+ * en toutes lettres et juste après (« …prodigio.fr/verdun »). L'écrire deux
+ * fois en cent trente caractères sonne comme un publipostage, là où le but est
+ * exactement l'inverse.
+ *
+ * Et aucun nom commun non plus — ni « la villa », ni « le bien ». Le premier
+ * devient faux le jour où un bien s'appellera « Mas des Oliviers » ; le second
+ * est du vocabulaire d'agence, pas de personne. « Votre brochure » marche pour
+ * tout, et le possessif fait le travail que le nom aurait fait.
  *
  * Le lien est le lien court : il tient l'ensemble dans un seul SMS, il nomme
  * l'agence, et il survivra à un déménagement de la vitrine.
  */
 export function composerMessage(input: {
   firstName?: string | null;
-  propertyName?: string | null;
   brochureUrl?: string | null;
 }): string | null {
   const lien = net(input.brochureUrl);
@@ -240,10 +244,7 @@ export function composerMessage(input: {
   if (!lien) return null;
 
   const prenom = net(input.firstName);
-  const bien = net(input.propertyName);
-
   const salutation = prenom ? `Bonjour ${pourSms(prenom)},` : "Bonjour,";
-  const objet = bien ? `votre brochure ${pourSms(bien)}` : "votre brochure";
 
-  return `${salutation} voici ${objet} : ${lien}\n\nNous vous appelons très vite.\nJC & Antoine`;
+  return `${salutation} voici votre brochure : ${lien}\n\nNous vous appelons très vite.\nJC & Antoine`;
 }

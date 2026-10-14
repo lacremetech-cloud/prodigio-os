@@ -141,14 +141,20 @@ describe("alphabet GSM-7", () => {
 describe("texte de l'accusé", () => {
   const LIEN = "https://brochure.prodigio.fr/verdun";
 
-  it("nomme la personne, le bien, et donne le lien", () => {
-    expect(
-      composerMessage({ firstName: "Rayyan", propertyName: "Villa Verdun", brochureUrl: LIEN }),
-    ).toBe(
-      "Bonjour Rayyan, voici votre brochure Villa Verdun : " +
+  it("nomme la personne et donne le lien", () => {
+    expect(composerMessage({ firstName: "Rayyan", brochureUrl: LIEN })).toBe(
+      "Bonjour Rayyan, voici votre brochure : " +
         LIEN +
         "\n\nNous vous appelons très vite.\nJC & Antoine",
     );
+  });
+
+  it("ne répète pas le nom du bien, que le lien porte déjà", () => {
+    /* « votre brochure Villa Verdun : …/verdun » le disait deux fois en cent
+       trente caractères, ce qui sonne comme un publipostage. */
+    const t = composerMessage({ firstName: "Rayyan", brochureUrl: LIEN })!;
+    expect(t).not.toMatch(/villa/i);
+    expect(t).toContain("/verdun");
   });
 
   it("est signé par des personnes, pas par une marque", () => {
@@ -165,10 +171,9 @@ describe("texte de l'accusé", () => {
     expect(t).not.toMatch(/ouvr/i);
   });
 
-  it("tient en un seul SMS sur le bien au nom le plus long", () => {
+  it("tient en un seul SMS sur le bien au lien le plus long", () => {
     const t = composerMessage({
       firstName: "Rayyan",
-      propertyName: "Villa Jean Jaurès",
       brochureUrl: "https://brochure.prodigio.fr/jean-jaures",
     })!;
     expect(tientEnGsm7(t)).toBe(true);
@@ -180,7 +185,6 @@ describe("texte de l'accusé", () => {
        entier, et le prénom n'est pas écrit par nous. */
     const t = composerMessage({
       firstName: "François",
-      propertyName: "Villa Jean Jaurès",
       brochureUrl: "https://brochure.prodigio.fr/jean-jaures",
     })!;
     expect(t).toContain("Francois");
@@ -193,7 +197,7 @@ describe("texte de l'accusé", () => {
     expect(t).toContain("très vite");
   });
 
-  it("reste correct sans prénom et sans nom de bien", () => {
+  it("reste correct sans prénom", () => {
     expect(composerMessage({ brochureUrl: LIEN })).toBe(
       "Bonjour, voici votre brochure : " +
         LIEN +
@@ -202,7 +206,7 @@ describe("texte de l'accusé", () => {
   });
 
   it("n'envoie rien sans lien : un accusé qui ne dit pas où est la brochure n'a pas d'objet", () => {
-    expect(composerMessage({ firstName: "Rayyan", propertyName: "Villa Verdun" })).toBeNull();
+    expect(composerMessage({ firstName: "Rayyan" })).toBeNull();
     expect(composerMessage({ brochureUrl: "   " })).toBeNull();
   });
 });
