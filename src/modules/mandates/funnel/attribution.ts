@@ -30,11 +30,29 @@ const UTM_KEYS = [
   "utm_content",
 ] as const;
 
+/**
+ * Plafond des parametres de campagne. Large, mais borne : ces valeurs
+ * viennent de l'adresse, donc de l'exterieur.
+ */
+const PLAFOND = 300;
+
+/**
+ * Les identifiants de clic publicitaire ont leur propre plafond, bien plus
+ * haut. Meta refuse un `fbclid` tronque : il signale alors une « valeur
+ * modifiee » et degrade la qualite de correspondance des evenements. Or ces
+ * identifiants s'allongent au fil des annees — ceux recus aujourd'hui font 195
+ * a 201 caracteres, soit les deux tiers de l'ancien plafond de 300. Couper un
+ * jour a 300 aurait casse l'attribution sans que rien ne le signale ici.
+ */
+const PLAFOND_CLIC = 1000;
+
 function pick(params: URLSearchParams, key: string): string | null {
   const value = params.get(key);
   if (value === null) return null;
   const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed.slice(0, 300);
+  if (trimmed.length === 0) return null;
+  const plafond = key === "fbclid" || key === "gclid" ? PLAFOND_CLIC : PLAFOND;
+  return trimmed.slice(0, plafond);
 }
 
 /**

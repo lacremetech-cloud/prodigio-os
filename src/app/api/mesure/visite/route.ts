@@ -86,7 +86,9 @@ export async function POST(request: Request): Promise<Response> {
       sourceUrl: texteCourt(charge.url, 500),
       propertyName: contexte.publicName,
       identity: {
-        fbclid: texteCourt(charge.fbclid, 300),
+        /* Meme plafond large que le depot : un `fbclid` tronque est refuse
+           par Meta, qui signale alors une « valeur modifiee ». */
+        fbclid: texteCourt(charge.fbclid, 1000),
         clickedAt: at ? new Date(at) : null,
         clientIpAddress: adresseDuVisiteur(request),
         clientUserAgent: texteCourt(request.headers.get("user-agent"), 500),
