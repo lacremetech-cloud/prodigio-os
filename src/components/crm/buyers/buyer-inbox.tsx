@@ -147,7 +147,13 @@ export function BuyerInbox({
       if (needle) {
         // La recherche porte sur ce qui est AFFICHÉ : une coordonnée masquée
         // n'est pas interrogeable (elle n'a jamais quitté le serveur).
-        const hay = [r.name, r.emailMasked, r.phoneMasked, r.city, r.lastPropertyLabel]
+        const hay = [
+          r.name,
+          r.emailMasked,
+          r.phoneMasked,
+          r.city,
+          ...r.properties.map((p) => p.label),
+        ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -611,13 +617,20 @@ function BuyerRow({
           ) : null}
         </div>
 
-        {/* Le projet, en badge lisible, quand plusieurs sont a l'ecran : sans
-            lui, deux lignes de la meme personne sur deux projets seraient
-            indiscernables. Le nom est ECRIT — la couleur ne fait qu'aider. */}
+        {/* UN REPÈRE PAR BIEN. La personne n'a plus qu'une carte : c'est elle
+            qui doit dire sur quoi. Sans ces badges, Éric ressemblerait à un
+            acquéreur de Jean Jaurès alors qu'il regarde aussi Verdun, et on
+            l'appellerait avec la moitié du dossier. Le nom est ÉCRIT — la
+            couleur ne fait qu'aider. */}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          {montrerProjet ? (
-            <BadgeProjet propertyId={row.lastPropertyId} label={row.lastPropertyLabel} />
-          ) : null}
+          {montrerProjet
+            ? (row.properties.length > 0
+                ? row.properties
+                : row.lastPropertyId && row.lastPropertyLabel
+                  ? [{ id: row.lastPropertyId, label: row.lastPropertyLabel }]
+                  : []
+              ).map((p) => <BadgeProjet key={p.id} propertyId={p.id} label={p.label} />)
+            : null}
           {!montrerProjet && row.city ? (
             <span className="text-[12.5px] text-[var(--crm-text-dim)]">{row.city}</span>
           ) : null}

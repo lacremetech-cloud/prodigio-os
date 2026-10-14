@@ -48,6 +48,13 @@ export interface BuyerListItem {
   propertyId: string | null;
   propertyLabel: string | null;
   /**
+   * TOUS les biens qui intéressent cette personne, dans l'ordre d'arrivée.
+   * Une seule carte, mais elle doit dire sur quoi : sans ces repères, Éric
+   * ressemblerait à un acquéreur de Jean Jaurès alors qu'il regarde aussi
+   * Verdun, et le commercial l'appellerait avec la moitié du dossier.
+   */
+  propertyLabels: { id: string; label: string }[];
+  /**
    * Étape de CETTE manifestation. Un dossier clos au niveau de la personne
    * (gagné / perdu) ferme toutes ses manifestations : on ne gagne pas un
    * acquéreur sur un projet en le laissant « nouveau » sur un autre. La règle
@@ -336,6 +343,14 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       interestId: principale?.id ?? null,
       propertyId: principale?.property_id ?? null,
       propertyLabel: propertyLabelOf(property) ?? null,
+      propertyLabels: parDate
+        .slice()
+        .reverse()
+        .map((i) => ({
+          id: i.property_id,
+          label: propertyLabelOf(propertyById.get(i.property_id)) ?? "Bien sans nom",
+        }))
+        .filter((p, i, tous) => tous.findIndex((x) => x.id === p.id) === i),
       /* L'etape et la qualification viennent de la PERSONNE. Les colonnes des
          manifestations sont figees depuis la reprise du 14/10/2026 : les lire
          reafficherait un etat mort. */
@@ -417,6 +432,8 @@ export interface BuyerInboxRow {
   createdAt: string;
   lastPropertyId: string | null;
   lastPropertyLabel: string | null;
+  /** Tous les biens qui l'intéressent — une carte, plusieurs repères. */
+  properties: { id: string; label: string }[];
   assigneeNames: string[];
   assigneeIds: string[];
   nextActionAt: string | null;
@@ -461,6 +478,7 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     createdAt: item.profile.created_at,
     lastPropertyId: item.propertyId,
     lastPropertyLabel: item.propertyLabel,
+    properties: item.propertyLabels,
     assigneeNames: item.assignees.map((a) => a.name),
     assigneeIds: item.assignees.map((a) => a.userId),
     nextActionAt: item.nextTask?.due_at ?? null,

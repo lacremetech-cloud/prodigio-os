@@ -46,6 +46,7 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   createdAt: "2026-10-12T08:00:00.000Z",
   lastPropertyId: "prop-1",
   lastPropertyLabel: "Villa Jean Jaurès",
+  properties: [{ id: "prop-1", label: "Villa Jean Jaurès" }],
   assigneeNames: [],
   assigneeIds: [],
   nextActionAt: null,
