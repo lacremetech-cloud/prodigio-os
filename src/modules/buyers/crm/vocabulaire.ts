@@ -35,7 +35,6 @@ export const ETAPES_ACQUEREUR = [
   "visite_planifiee",
   "vivier",
   "pas_interesse",
-  "ecarte",
   "mauvais_numero",
 ] as const;
 
@@ -118,15 +117,6 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "Pas intéressé",
     sens: "Refus exprimé par la personne",
     couleur: "--crm-acq-pas_interesse",
-    texteClair: true,
-    active: false,
-    appelable: false,
-  },
-  {
-    valeur: "ecarte",
-    label: "Écarté",
-    sens: "Traitement arrêté pour un autre motif — budget incompatible, par exemple",
-    couleur: "--crm-acq-ecarte",
     texteClair: true,
     active: false,
     appelable: false,
@@ -228,23 +218,40 @@ export const MOTIFS_NON_QUALIFIE = [
 // --- Ce qu'une qualification entraîne ----------------------------------------
 
 /**
- * L'étape qu'on PROPOSE quand la qualification change.
+ * « Non qualifié » sort la personne de la file active À LUI SEUL.
  *
- * Proposée, jamais imposée : c'est le commercial qui décide. Mais « non
- * qualifié » doit pouvoir sortir la personne de la file active DANS LE MÊME
- * enregistrement — lui demander ensuite de déplacer la carte à la main était
- * exactement le « je l'ai déjà fait » dont Antoine se plaignait.
+ * Il y avait au départ une étape « Écarté » pour ça. Elle a été retirée : à
+ * l'écran, « Écarté » et « Pas intéressé » étaient deux cases grises voisines
+ * qui disaient presque la même chose, et un pipeline qui finit sur trois
+ * colonnes négatives décourage celui qui le regarde toute la journée.
  *
- * Rend `null` quand il n'y a rien à proposer : qualifier quelqu'un de gros
- * potentiel ne dit rien de l'endroit où en est la conversation.
+ * La sortie de file change donc d'axe. Elle n'est plus une étape où l'on range
+ * les gens, mais une conséquence du jugement porté sur eux. Concrètement :
+ *
+ *   • la personne garde l'étape qu'elle avait — où en était la conversation
+ *     reste vrai, et le jour où elle est requalifiée, on la retrouve au bon
+ *     endroit plutôt qu'au début ;
+ *   • elle ne paraît plus ni dans « à contacter », ni dans la file d'appels,
+ *     ni dans les compteurs du travail à faire ;
+ *   • le filtre « Non qualifié » reste le chemin pour la retrouver.
+ *
+ * C'est ce qui corrige la plainte d'origine — « quand un lead passe en non
+ * qualifié, il reste dans à contacter » — sans ajouter de colonne.
  */
-export function etapeProposeeParQualification(
-  nouvelle: QualificationAcquereur,
-  etapeActuelle: string,
-): EtapeAcquereur | null {
-  if (nouvelle !== "non_qualifie") return null;
-  /* Déjà sortie de la file : ne rien proposer plutôt que de rétrograder un
-     « pas intéressé » en « écarté », qui perdrait l'information du refus. */
-  if (!etape(etapeActuelle).appelable) return null;
-  return "ecarte";
+export function sortDeLaFileActive(
+  qualificationValeur: string,
+  etapeValeur: string,
+): boolean {
+  if (qualificationValeur === "non_qualifie") return true;
+  return !etape(etapeValeur).active;
+}
+
+/**
+ * Appelable : ni un numéro faux, ni un refus, ni un dossier écarté par
+ * jugement. Le vivier, lui, reste appelable — la personne est en attente, pas
+ * écartée.
+ */
+export function estAppelable(qualificationValeur: string, etapeValeur: string): boolean {
+  if (qualificationValeur === "non_qualifie") return false;
+  return etape(etapeValeur).appelable;
 }

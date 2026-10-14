@@ -97,7 +97,6 @@
   --crm-acq-visite_planifiee: #3b82f6;   /* bleu soutenu */
   --crm-acq-vivier: #8b8e97;             /* gris */
   --crm-acq-pas_interesse: #e8807f;      /* rouge */
-  --crm-acq-ecarte: #5c6370;             /* gris fonce */
   /* Sur fond sombre, un noir pur disparaitrait dans la page : on garde le
      plus sombre qui reste visible, et il porte du blanc. */
   --crm-acq-mauvais_numero: #242830;
@@ -209,7 +208,6 @@
   --crm-acq-visite_planifiee: #1d4ed8;
   --crm-acq-vivier: #616c7e;
   --crm-acq-pas_interesse: #c62828;
-  --crm-acq-ecarte: #3f4654;
   --crm-acq-mauvais_numero: #111827;     /* noir */
   --crm-acq-sur-etape: #ffffff;
   --crm-acq-sur-mauvais_numero: #ffffff;

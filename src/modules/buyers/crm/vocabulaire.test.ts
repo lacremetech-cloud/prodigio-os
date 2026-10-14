@@ -6,11 +6,12 @@ import {
   ETAPES_ACTIVES,
   ETAPES_HORS_FILE,
   QUALIFICATIONS,
+  estAppelable,
   estEtapeConnue,
   estQualificationConnue,
   etape,
-  etapeProposeeParQualification,
   qualification,
+  sortDeLaFileActive,
 } from "./vocabulaire";
 
 describe("les huit étapes", () => {
@@ -22,9 +23,16 @@ describe("les huit étapes", () => {
       "Visite planifiée",
       "Vivier",
       "Pas intéressé",
-      "Écarté",
       "Mauvais numéro",
     ]);
+  });
+
+  it("ne contient pas « écarté » : une case grise de trop", () => {
+    /* « Écarté » et « Pas intéressé » étaient deux cases grises voisines qui
+       disaient presque la même chose. Un pipeline qui finit sur trois colonnes
+       négatives décourage celui qui le regarde toute la journée. */
+    expect(ETAPES.map((e) => e.valeur) as string[]).not.toContain("ecarte");
+    expect(ETAPES).toHaveLength(7);
   });
 
   it("ne contient ni « nouveau », ni « perdu », ni « gagné », ni « offre »", () => {
@@ -56,9 +64,9 @@ describe("les huit étapes", () => {
     ]);
   });
 
-  it("trois étapes sortent la personne de la file d'appels, le vivier non", () => {
+  it("deux étapes sortent la personne de la file d'appels, le vivier non", () => {
     /* On rappelle quelqu'un du vivier : il est en attente, pas écarté. */
-    expect(ETAPES_HORS_FILE).toEqual(["pas_interesse", "ecarte", "mauvais_numero"]);
+    expect(ETAPES_HORS_FILE).toEqual(["pas_interesse", "mauvais_numero"]);
     expect(etape("vivier").appelable).toBe(true);
   });
 
@@ -90,25 +98,34 @@ describe("les quatre qualifications", () => {
 });
 
 describe("ce qu'une qualification entraîne", () => {
-  it("« non qualifié » propose de sortir la personne de la file", () => {
-    /* Dans le MÊME enregistrement : lui demander ensuite de déplacer la carte
-       à la main était le « je l'ai déjà fait » dont Antoine se plaignait. */
-    expect(etapeProposeeParQualification("non_qualifie", "a_contacter")).toBe("ecarte");
-    expect(etapeProposeeParQualification("non_qualifie", "en_discussion")).toBe("ecarte");
+  it("« non qualifié » sort la personne de la file active à lui seul", () => {
+    /* C'est la plainte d'origine : « quand un lead passe en non qualifié, il
+       reste dans à contacter ». Plus besoin d'une colonne pour ça. */
+    expect(sortDeLaFileActive("non_qualifie", "a_contacter")).toBe(true);
+    expect(sortDeLaFileActive("non_qualifie", "en_discussion")).toBe(true);
+    expect(estAppelable("non_qualifie", "a_contacter")).toBe(false);
   });
 
-  it("ne rétrograde pas une personne déjà sortie de la file", () => {
-    /* « Pas intéressé » dit qu'elle a refusé ; « écarté » le perdrait. */
-    expect(etapeProposeeParQualification("non_qualifie", "pas_interesse")).toBeNull();
-    expect(etapeProposeeParQualification("non_qualifie", "mauvais_numero")).toBeNull();
+  it("laisse la personne à l'étape où elle en était", () => {
+    /* Où en était la conversation reste vrai. Le jour où elle est
+       requalifiée, on la retrouve au bon endroit, pas au début. */
+    expect(etape("en_discussion").label).toBe("En discussion");
+    expect(sortDeLaFileActive("qualifie", "en_discussion")).toBe(false);
   });
 
-  it("ne propose rien pour les autres qualifications", () => {
-    /* Qualifier quelqu'un de gros potentiel ne dit RIEN de l'endroit où en est
-       la conversation. Les deux axes sont indépendants. */
+  it("les autres qualifications ne déplacent ni n'excluent personne", () => {
+    /* Les deux axes restent indépendants : qualifier quelqu'un de gros
+       potentiel ne dit RIEN de l'endroit où en est la conversation. */
     for (const q of ["a_qualifier", "qualifie", "gros_potentiel"] as const) {
-      expect(etapeProposeeParQualification(q, "a_contacter")).toBeNull();
+      expect(sortDeLaFileActive(q, "a_contacter")).toBe(false);
+      expect(estAppelable(q, "a_rappeler")).toBe(true);
     }
+  });
+
+  it("le vivier reste appelable, un mauvais numéro non", () => {
+    expect(estAppelable("gros_potentiel", "vivier")).toBe(true);
+    expect(sortDeLaFileActive("gros_potentiel", "vivier")).toBe(true);
+    expect(estAppelable("qualifie", "mauvais_numero")).toBe(false);
   });
 });
 
