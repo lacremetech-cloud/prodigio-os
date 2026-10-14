@@ -632,6 +632,13 @@ export type PropertyPublicConfigRow = {
   buyer_form_brochure_url: string | null;
   /** Origines autorisées à embarquer le formulaire (`frame-ancestors`). */
   buyer_form_allowed_origins: string[];
+  /**
+   * Adresse appelée après un dépôt accepté : une automatisation externe y
+   * envoie l'accusé de réception (SMS avec le lien du dossier). Une par bien,
+   * pour qu'un nouveau bien se configure sans redéployer. Jamais exposée au
+   * visiteur, ni par `buyer_form_context`.
+   */
+  buyer_form_webhook_url: string | null;
   created_at: string;
   updated_at: string;
   slug: string | null;

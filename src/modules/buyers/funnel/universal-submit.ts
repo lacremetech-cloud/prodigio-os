@@ -1,6 +1,11 @@
 "use server";
 
 import { after } from "next/server";
+import {
+  configDuDepot,
+  construireCharge,
+  envoyerAccuseDepot,
+} from "../notifications/accuse-depot";
 import { alerterNouvelleDemande } from "../notifications/universal-notify";
 import {
   bienDeLaManifestation,
@@ -180,6 +185,45 @@ export async function submitUniversalInterestAction(
         }
       };
 
+      /* Accusé de réception : l'automatisation envoie un SMS avec le lien du
+         dossier, dans la seconde. C'est le délai de rappel qui distingue un
+         lead traité d'un lead perdu — une demande déposée à 2 h du matin
+         attendrait sinon le premier commercial disponible.
+
+         Comme l'alerte et la conversion : après la réponse, jamais bloquant,
+         et ses erreurs restent chez elle. */
+      const accuse = async () => {
+        try {
+          const config = await configDuDepot(lecteur, interetId);
+          if (!config?.webhookUrl) return;
+          const resultat = await envoyerAccuseDepot(
+            construireCharge({
+              interestId: interetId,
+              config,
+              propertyName: null,
+              firstName: request.answers.firstName,
+              lastName: request.answers.lastName,
+              phone: normalizePhone(request.answers.phoneRaw, request.answers.phoneCountry),
+              email: request.answers.emailRaw,
+              budgetChoice: request.answers.budgetChoice,
+            }),
+            config.webhookUrl,
+          );
+          /* Ni l'adresse appelée ni les coordonnées ne sont journalisées :
+             seulement de quoi comprendre un silence. */
+          if (!resultat.envoye) {
+            console.warn("accuse de depot non envoye", {
+              raison: resultat.raison,
+              status: resultat.status ?? null,
+            });
+          }
+        } catch (cause) {
+          console.warn("accuse de depot en echec", {
+            name: cause instanceof Error ? cause.name : "unknown",
+          });
+        }
+      };
+
       const alerte = async () => {
         /* Une notification ne compromet jamais un depot : l'alerte avale ses
            propres erreurs. Sans cela, un Slack injoignable ou une lecture
@@ -218,8 +262,8 @@ export async function submitUniversalInterestAction(
       };
       const suites = async () => {
         // Independantes : une alerte Slack muette ne doit pas priver Meta de sa
-        // conversion, ni l'inverse.
-        await Promise.allSettled([alerte(), conversion()]);
+        // conversion, ni le prospect de son accuse de reception.
+        await Promise.allSettled([accuse(), alerte(), conversion()]);
       };
       try {
         after(() => suites());
