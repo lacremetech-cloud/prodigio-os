@@ -159,3 +159,45 @@ export async function envoyerAccuseDepot(
     clearTimeout(minuteur);
   }
 }
+
+/**
+ * Retire les accents. Un SMS qui n'emploie que l'alphabet GSM tient en 160
+ * caractères ; un seul caractère hors alphabet le fait basculer en UCS-2, où
+ * la limite tombe à 70 — soit deux crédits au lieu d'un, pour chaque envoi.
+ * Le message est court et impersonnel par nature : il ne perd rien à être
+ * écrit sans accents.
+ */
+export function sansAccents(v: string): string {
+  return v.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+/**
+ * Le texte de l'accusé.
+ *
+ * Trois informations, dans cet ordre : à qui on parle, de quel bien, et où est
+ * le dossier. Puis le délai de rappel, qui est l'engagement pris sur la page,
+ * et la signature.
+ *
+ * Volontairement sans lien raccourci : l'adresse du dossier porte le nom du
+ * bien, ce qui rassure plus qu'une suite de caractères, et ne dépend d'aucun
+ * service tiers qui pourrait expirer.
+ */
+export function composerMessage(input: {
+  firstName?: string | null;
+  propertyName?: string | null;
+  brochureUrl?: string | null;
+}): string | null {
+  const lien = net(input.brochureUrl);
+  /* Sans lien, l'accusé n'a plus d'objet : il annoncerait un dossier sans
+     dire où il est. Mieux vaut ne rien envoyer. */
+  if (!lien) return null;
+
+  const prenom = net(input.firstName);
+  const bien = net(input.propertyName);
+  const salutation = prenom ? `Bonjour ${prenom},` : "Bonjour,";
+  const objet = bien ? `votre dossier ${bien}` : "votre dossier";
+
+  return sansAccents(
+    `${salutation} ${objet} : ${lien} Nous vous rappelons sous 24h ouvrees. PRODIGIO`,
+  );
+}

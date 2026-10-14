@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   isBuyerSlackConfigured,
   isMetaCapiConfigured,
+  isSmsFactorConfigured,
   isSupabaseAdminConfigured,
 } from "@/config";
 import { site } from "@/lib/site";
@@ -37,6 +38,9 @@ export function GET() {
            vide : l'alerte Slack perd le nom du bien et les scores. Le savoir
            d'un coup d'oeil evite de chercher la panne dans le code. */
         lecture_serveur: isSupabaseAdminConfigured(),
+        /* Sans jeton, l'accusé de réception repart vers l'automatisation
+           externe, ou ne part pas du tout : autant le voir ici. */
+        sms_accuse: isSmsFactorConfigured(),
       },
     },
     { headers: { "cache-control": "no-store" } },

@@ -99,3 +99,57 @@ describe("envoi de l'accusé", () => {
     expect(r).toEqual({ envoye: false, raison: "refus", status: 410 });
   });
 });
+
+const { composerMessage, sansAccents } = await import("./accuse-depot");
+
+describe("texte de l'accusé", () => {
+  const LIEN = "https://villa-verdun-cassis.vercel.app/dossier/";
+
+  it("nomme la personne, le bien, et donne le lien", () => {
+    const t = composerMessage({
+      firstName: "Rayyan",
+      propertyName: "Villa Verdun",
+      brochureUrl: LIEN,
+    });
+    expect(t).toBe(
+      "Bonjour Rayyan, votre dossier Villa Verdun : " +
+        LIEN +
+        " Nous vous rappelons sous 24h ouvrees. PRODIGIO",
+    );
+  });
+
+  it("tient en un seul SMS, y compris sur le bien au nom le plus long", () => {
+    const t = composerMessage({
+      firstName: "Jean-Francois",
+      propertyName: "Villa Jean Jaures",
+      brochureUrl: "https://villa-jeanjaures-cassis.vercel.app/dossier/",
+    });
+    expect(t!.length).toBeLessThanOrEqual(160);
+  });
+
+  it("n'ecrit aucun accent : un seul suffirait a doubler le cout", () => {
+    const t = composerMessage({
+      firstName: "Cécile",
+      propertyName: "Villa Jean Jaurès",
+      brochureUrl: LIEN,
+    });
+    expect(t).toContain("Cecile");
+    expect(t).toContain("Villa Jean Jaures");
+    expect(t).not.toMatch(/[àâäéèêëîïôöùûüç]/i);
+  });
+
+  it("reste correct sans prenom et sans nom de bien", () => {
+    expect(composerMessage({ brochureUrl: LIEN })).toBe(
+      "Bonjour, votre dossier : " + LIEN + " Nous vous rappelons sous 24h ouvrees. PRODIGIO",
+    );
+  });
+
+  it("n'envoie rien sans lien : un accuse qui ne dit pas ou est le dossier n'a pas d'objet", () => {
+    expect(composerMessage({ firstName: "Rayyan", propertyName: "Villa Verdun" })).toBeNull();
+    expect(composerMessage({ brochureUrl: "   " })).toBeNull();
+  });
+
+  it("sansAccents ne touche qu'aux accents", () => {
+    expect(sansAccents("Cécile Jaurès — 1 M€")).toBe("Cecile Jaures — 1 M€");
+  });
+});

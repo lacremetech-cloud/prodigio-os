@@ -113,6 +113,17 @@ const envSchema = z.object({
   META_CAPI_ACCESS_TOKEN: z.string().min(1).optional(),
   META_CAPI_TEST_EVENT_CODE: z.string().min(1).optional(),
 
+  // --- SMSFactor (accuse de reception envoye au prospect) ---
+  // Jeton d'API et nom d'expediteur. STRICTEMENT serveur : jamais prefixes
+  // `NEXT_PUBLIC_`, jamais renvoyes au client, jamais journalises. Le jeton
+  // permet de debiter des credits : il se traite comme un mot de passe et se
+  // revoque depuis https://my.smsfactor.com/developers/api-tokens.
+  // Absents (preview/dev) => aucun SMS n'est envoye, le depot fonctionne a
+  // l'identique. L'expediteur est un nom alphanumerique court, declare chez
+  // SMSFactor ; sans lui, c'est le numero par defaut du compte qui s'affiche.
+  SMSFACTOR_API_TOKEN: z.string().min(1).optional(),
+  SMSFACTOR_SENDER: z.string().min(1).max(11).optional(),
+
   // --- Google Calendar (planification des rendez-vous d'estimation) ---
   // Identifiants OAuth du projet Google Cloud. Utilisés EXCLUSIVEMENT côté
   // serveur (construction de l'URL de consentement, échange du code, rafraîchi-
@@ -333,6 +344,18 @@ export function isMetaCapiConfigured(
     typeof id === "string" && id.trim().length > 0 &&
     typeof token === "string" && token.trim().length > 0
   );
+}
+
+/**
+ * Envoi de SMS configure ? Seul le jeton est requis : sans nom d'expediteur,
+ * SMSFactor utilise le numero par defaut du compte, ce qui reste un envoi
+ * valide. Sans jeton, aucun SMS ne part et le depot se deroule a l'identique.
+ */
+export function isSmsFactorConfigured(
+  source: Pick<Env, "SMSFACTOR_API_TOKEN"> = env,
+): boolean {
+  const jeton = source.SMSFACTOR_API_TOKEN;
+  return typeof jeton === "string" && jeton.trim().length > 0;
 }
 
 export function isBuyerSlackConfigured(

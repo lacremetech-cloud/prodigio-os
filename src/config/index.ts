@@ -13,6 +13,7 @@ export {
   isSlackConfigured,
   isEstimationSlackConfigured,
   isBuyerSlackConfigured,
+  isSmsFactorConfigured,
   isMetaCapiConfigured,
   isGoogleCalendarConfigured,
   isCalendarEncryptionConfigured,

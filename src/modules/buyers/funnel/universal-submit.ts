@@ -2,10 +2,12 @@
 
 import { after } from "next/server";
 import {
+  composerMessage,
   configDuDepot,
   construireCharge,
   envoyerAccuseDepot,
 } from "../notifications/accuse-depot";
+import { envoyerSms } from "../notifications/smsfactor";
 import { alerterNouvelleDemande } from "../notifications/universal-notify";
 import {
   bienDeLaManifestation,
@@ -15,6 +17,7 @@ import { normalizePhone } from "@/modules/mandates/funnel/normalize";
 
 import {
   env,
+  isSmsFactorConfigured,
   isSupabaseAdminConfigured,
   isSupabaseConfigured,
   isTurnstileConfigured,
@@ -195,15 +198,44 @@ export async function submitUniversalInterestAction(
       const accuse = async () => {
         try {
           const config = await configDuDepot(lecteur, interetId);
-          if (!config?.webhookUrl) return;
+          if (!config) return;
+          const telephone = normalizePhone(
+            request.answers.phoneRaw,
+            request.answers.phoneCountry,
+          );
+          const bien = await bienDeLaManifestation(lecteur, interetId);
+
+          /* Deux chemins, jamais les deux : sinon la personne recevrait deux
+             fois le meme SMS. L'envoi direct prime des que le jeton existe ;
+             l'automatisation externe reste le chemin de repli tant qu'il
+             n'est pas pose, et pour un bien qui garderait son propre
+             scenario. */
+          if (isSmsFactorConfigured()) {
+            const texte = composerMessage({
+              firstName: request.answers.firstName,
+              propertyName: config.publicName ?? bien?.nom ?? null,
+              brochureUrl: config.brochureUrl,
+            });
+            if (!texte) return;
+            const envoi = await envoyerSms(telephone, texte);
+            if (!envoi.envoye) {
+              console.warn("accuse par SMS non envoye", {
+                raison: envoi.raison,
+                code: envoi.code ?? null,
+              });
+            }
+            return;
+          }
+
+          if (!config.webhookUrl) return;
           const resultat = await envoyerAccuseDepot(
             construireCharge({
               interestId: interetId,
               config,
-              propertyName: null,
+              propertyName: bien?.nom ?? null,
               firstName: request.answers.firstName,
               lastName: request.answers.lastName,
-              phone: normalizePhone(request.answers.phoneRaw, request.answers.phoneCountry),
+              phone: telephone,
               email: request.answers.emailRaw,
               budgetChoice: request.answers.budgetChoice,
             }),
