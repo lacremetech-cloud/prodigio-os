@@ -209,13 +209,18 @@ export function BuyerInbox({
     setOuvert(ordre[0] ?? null);
   }
 
+  /* Chaque compteur est calcule par `porteLeSignal`, EXACTEMENT la fonction
+     qui filtrera la liste quand on cliquera dessus. Les deux etaient ecrits
+     separement, et « Nouveaux » comptait une valeur d'etape qui n'existe plus
+     depuis la reprise : il affichait zero avec treize dossiers a contacter,
+     sans rien signaler. */
   const counters = useMemo(
     () => ({
       total: rows.length,
-      nouveaux: rows.filter((r) => r.stage === "nouveau").length,
-      enRetard: rows.filter((r) => r.overdue).length,
-      sansAction: rows.filter((r) => r.noNextAction).length,
-      nonAffectes: rows.filter((r) => r.unassigned).length,
+      nouveaux: rows.filter((r) => porteLeSignal(r, "a_contacter")).length,
+      enRetard: rows.filter((r) => porteLeSignal(r, "en_retard")).length,
+      sansAction: rows.filter((r) => porteLeSignal(r, "sans_action")).length,
+      nonAffectes: rows.filter((r) => porteLeSignal(r, "non_affectes")).length,
     }),
     [rows],
   );
@@ -226,9 +231,9 @@ export function BuyerInbox({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <Counter label="Dossiers" value={counters.total}
                  signal="tous" actif={signal} onChoisir={setSignal} />
-        <Counter label="Nouveaux" value={counters.nouveaux} accent="--crm-st-nouveau"
-                 signal="nouveaux" actif={signal} onChoisir={setSignal} />
-        <Counter label="En retard" value={counters.enRetard} accent="--crm-st-perdu"
+        <Counter label="À contacter" value={counters.nouveaux} accent="--crm-acq-a_contacter"
+                 signal="a_contacter" actif={signal} onChoisir={setSignal} />
+        <Counter label="En retard" value={counters.enRetard} accent="--crm-acq-pas_interesse"
                  signal="en_retard" actif={signal} onChoisir={setSignal} />
         <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter"
                  signal="sans_action" actif={signal} onChoisir={setSignal} />

@@ -67,8 +67,9 @@ export default async function BuyersInboxPage({
           Boîte de réception acquéreurs
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--crm-text-dim)]">
-          Une ligne par personne et par projet. Une même personne intéressée par deux projets
-          garde une seule fiche contact, mais un suivi commercial distinct sur chacun.
+          Une ligne par personne. Quelqu&rsquo;un qui s&rsquo;intéresse à deux projets apparaît
+          une seule fois, avec les deux biens en repère : une qualification, une étape, un
+          historique. Ce qui tient au bien — visites, offres, issue — reste sur sa fiche.
         </p>
       </header>
 
