@@ -8,6 +8,7 @@ const CONFIG = {
   webhookUrl: "https://hook.eu2.make.test/abc",
   brochureUrl: "https://villa-verdun-cassis.vercel.app/dossier/",
   slug: "villa-verdun",
+  brochureSlug: "verdun" as string | null,
   publicName: null as string | null,
 };
 
@@ -100,56 +101,108 @@ describe("envoi de l'accusé", () => {
   });
 });
 
-const { composerMessage, sansAccents } = await import("./accuse-depot");
+const { composerMessage, pourSms, sansAccents, tientEnGsm7 } = await import(
+  "./accuse-depot"
+);
 
-describe("texte de l'accusé", () => {
-  const LIEN = "https://villa-verdun-cassis.vercel.app/dossier/";
-
-  it("nomme la personne, le bien, et donne le lien", () => {
-    const t = composerMessage({
-      firstName: "Rayyan",
-      propertyName: "Villa Verdun",
-      brochureUrl: LIEN,
-    });
-    expect(t).toBe(
-      "Bonjour Rayyan, votre dossier Villa Verdun : " +
-        LIEN +
-        " Nous vous rappelons sous 24h ouvrees. PRODIGIO",
-    );
+describe("alphabet GSM-7", () => {
+  it("accepte les accents qui ne coutent rien", () => {
+    /* Ceux-la sont DANS l'alphabet : les retirer serait appauvrir le message
+       sans economiser un centime. */
+    expect(tientEnGsm7("brochure détaillée")).toBe(true);
+    expect(tientEnGsm7("très vite")).toBe(true);
+    expect(tientEnGsm7("Cécile")).toBe(true);
+    expect(tientEnGsm7("à")).toBe(true);
   });
 
-  it("tient en un seul SMS, y compris sur le bien au nom le plus long", () => {
-    const t = composerMessage({
-      firstName: "Jean-Francois",
-      propertyName: "Villa Jean Jaures",
-      brochureUrl: "https://villa-jeanjaures-cassis.vercel.app/dossier/",
-    });
-    expect(t!.length).toBeLessThanOrEqual(160);
+  it("refuse ceux qui font basculer en UCS-2", () => {
+    expect(tientEnGsm7("François")).toBe(false); // ç
+    expect(tientEnGsm7("Jérôme")).toBe(false); // ô
+    expect(tientEnGsm7("Benoît")).toBe(false); // î
+    expect(tientEnGsm7("Gaëlle")).toBe(false); // ë
+    expect(tientEnGsm7("À très vite")).toBe(false); // majuscule accentuee
+    expect(tientEnGsm7("tiret — long")).toBe(false); // cadratin
   });
 
-  it("n'ecrit aucun accent : un seul suffirait a doubler le cout", () => {
-    const t = composerMessage({
-      firstName: "Cécile",
-      propertyName: "Villa Jean Jaurès",
-      brochureUrl: LIEN,
-    });
-    expect(t).toContain("Cecile");
-    expect(t).toContain("Villa Jean Jaures");
-    expect(t).not.toMatch(/[àâäéèêëîïôöùûüç]/i);
-  });
-
-  it("reste correct sans prenom et sans nom de bien", () => {
-    expect(composerMessage({ brochureUrl: LIEN })).toBe(
-      "Bonjour, votre dossier : " + LIEN + " Nous vous rappelons sous 24h ouvrees. PRODIGIO",
-    );
-  });
-
-  it("n'envoie rien sans lien : un accuse qui ne dit pas ou est le dossier n'a pas d'objet", () => {
-    expect(composerMessage({ firstName: "Rayyan", propertyName: "Villa Verdun" })).toBeNull();
-    expect(composerMessage({ brochureUrl: "   " })).toBeNull();
+  it("pourSms ne touche au champ que s'il coute quelque chose", () => {
+    expect(pourSms("Cécile")).toBe("Cécile");
+    expect(pourSms("Chloé")).toBe("Chloé");
+    expect(pourSms("François")).toBe("Francois");
+    /* Tous les accents du champ partent, pas seulement le fautif : « Jérome »
+       serait une faute, « Jerome » une graphie admise. */
+    expect(pourSms("Jérôme")).toBe("Jerome");
   });
 
   it("sansAccents ne touche qu'aux accents", () => {
-    expect(sansAccents("Cécile Jaurès — 1 M€")).toBe("Cecile Jaures — 1 M€");
+    expect(sansAccents("Cécile Jaurès")).toBe("Cecile Jaures");
+  });
+});
+
+describe("texte de l'accusé", () => {
+  const LIEN = "https://brochure.prodigio.fr/verdun";
+
+  it("nomme la personne, le bien, et donne le lien", () => {
+    expect(
+      composerMessage({ firstName: "Rayyan", propertyName: "Villa Verdun", brochureUrl: LIEN }),
+    ).toBe(
+      "Bonjour Rayyan, voici votre brochure Villa Verdun : " +
+        LIEN +
+        "\n\nNous vous appelons très vite.\nJC & Antoine",
+    );
+  });
+
+  it("est signé par des personnes, pas par une marque", () => {
+    const t = composerMessage({ firstName: "Rayyan", brochureUrl: LIEN })!;
+    expect(t).toContain("JC & Antoine");
+    expect(t).not.toContain("PRODIGIO");
+  });
+
+  it("ne promet plus de délai de rappel", () => {
+    /* L'engagement « sous 24h ouvrées » a été retiré de la page : le SMS ne
+       doit pas le réintroduire tout seul. */
+    const t = composerMessage({ firstName: "Rayyan", brochureUrl: LIEN })!;
+    expect(t).not.toMatch(/24\s*h/i);
+    expect(t).not.toMatch(/ouvr/i);
+  });
+
+  it("tient en un seul SMS sur le bien au nom le plus long", () => {
+    const t = composerMessage({
+      firstName: "Rayyan",
+      propertyName: "Villa Jean Jaurès",
+      brochureUrl: "https://brochure.prodigio.fr/jean-jaures",
+    })!;
+    expect(tientEnGsm7(t)).toBe(true);
+    expect(t.length).toBeLessThanOrEqual(160);
+  });
+
+  it("reste en GSM-7 même avec un prénom qui en sortirait", () => {
+    /* C'est le vrai piège : un seul « ç » triplerait le coût du message
+       entier, et le prénom n'est pas écrit par nous. */
+    const t = composerMessage({
+      firstName: "François",
+      propertyName: "Villa Jean Jaurès",
+      brochureUrl: "https://brochure.prodigio.fr/jean-jaures",
+    })!;
+    expect(t).toContain("Francois");
+    expect(tientEnGsm7(t)).toBe(true);
+    expect(t.length).toBeLessThanOrEqual(160);
+  });
+
+  it("garde les accents du texte fixe, qui ne coûtent rien", () => {
+    const t = composerMessage({ firstName: "Rayyan", brochureUrl: LIEN })!;
+    expect(t).toContain("très vite");
+  });
+
+  it("reste correct sans prénom et sans nom de bien", () => {
+    expect(composerMessage({ brochureUrl: LIEN })).toBe(
+      "Bonjour, voici votre brochure : " +
+        LIEN +
+        "\n\nNous vous appelons très vite.\nJC & Antoine",
+    );
+  });
+
+  it("n'envoie rien sans lien : un accusé qui ne dit pas où est la brochure n'a pas d'objet", () => {
+    expect(composerMessage({ firstName: "Rayyan", propertyName: "Villa Verdun" })).toBeNull();
+    expect(composerMessage({ brochureUrl: "   " })).toBeNull();
   });
 });

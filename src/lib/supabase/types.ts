@@ -624,6 +624,21 @@ export type PublicationStatus =
   | "depublie"
   | "archive";
 
+/**
+ * Ouverture d'une brochure par son lien court. Écrit UNIQUEMENT par la route
+ * de redirection, via le rôle service ; lu par les membres de l'organisation.
+ */
+export type BrochureOpenRow = {
+  id: string;
+  occurred_at: string;
+  property_id: string;
+  slug: string;
+  /** Vide tant que le lien ne porte qu'un code de bien, et non de personne. */
+  buyer_interest_id: string | null;
+  user_agent: string | null;
+  referer: string | null;
+};
+
 export type PropertyPublicConfigRow = {
   property_id: string;
   /** Collecte des demandes acquéreur — INDÉPENDANTE de `publication_status`. */
@@ -639,6 +654,12 @@ export type PropertyPublicConfigRow = {
    * visiteur, ni par `buyer_form_context`.
    */
   buyer_form_webhook_url: string | null;
+  /**
+   * Code court du lien de brochure (`brochure.prodigio.fr/<code>`). Distinct
+   * du slug vitrine : celui-ci sert le référencement et peut changer, alors
+   * que le code est gravé dans des SMS déjà reçus et ne peut plus bouger.
+   */
+  brochure_slug: string | null;
   created_at: string;
   updated_at: string;
   slug: string | null;
@@ -1323,6 +1344,7 @@ export interface Database {
       property_documents: WithMutations<PropertyDocumentRow>;
       property_production_items: WithMutations<PropertyProductionItemRow>;
       property_public_config: WithMutations<PropertyPublicConfigRow>;
+      brochure_opens: WithMutations<BrochureOpenRow>;
       property_public_media: WithMutations<PropertyPublicMediaRow>;
       property_public_snapshots: WithMutations<PropertyPublicSnapshotRow>;
       buyer_interests: WithMutations<BuyerInterestRow>;
@@ -1357,6 +1379,13 @@ export interface Database {
           plutôt qu'élargie, pour la raison déjà retenue juste en dessous :
           changer un type de retour impose un `drop function`, donc une fenêtre
           pendant laquelle toute page qui l'appelle échoue. */
+      /** Cible d'un lien court de brochure. Réservée au rôle service : elle
+          renvoie une adresse que `buyer_form_context`, ouverte à l'anonyme,
+          ne laisse volontairement pas sortir. */
+      brochure_cible: {
+        Args: { p_slug: string };
+        Returns: { property_id: string; brochure_url: string }[];
+      };
       crm_list_members_v2: {
         Args: Record<string, never>;
         Returns: {

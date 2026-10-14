@@ -124,6 +124,13 @@ const envSchema = z.object({
   SMSFACTOR_API_TOKEN: z.string().min(1).optional(),
   SMSFACTOR_SENDER: z.string().min(1).max(11).optional(),
 
+  // --- Lien court des brochures ---
+  // Base du lien envoye par SMS : `https://brochure.prodigio.fr`. Elle est ici
+  // et non dans le code parce qu'elle change une fois (le jour ou le
+  // sous-domaine est en service) et ne doit alors demander aucun deploiement.
+  // Absente => on retombe sur le domaine canonique, qui sert deja l'appli.
+  BROCHURE_BASE_URL: z.url().optional(),
+
   // --- Google Calendar (planification des rendez-vous d'estimation) ---
   // Identifiants OAuth du projet Google Cloud. Utilisés EXCLUSIVEMENT côté
   // serveur (construction de l'URL de consentement, échange du code, rafraîchi-
@@ -391,6 +398,29 @@ export function mandateCrmBaseUrl(
 export function canonicalSiteUrl(
   source: Pick<Env, "NEXT_PUBLIC_SITE_URL" | "NODE_ENV"> = env,
 ): string {
+  return mandateCrmBaseUrl(source);
+}
+
+/**
+ * Base des liens courts de brochure, sans barre finale.
+ *
+ * Le SMS d'accusé porte `<base>/<slug>`. La base est une variable parce que le
+ * sous-domaine dédié (`brochure.prodigio.fr`) se pose côté DNS, pas côté code :
+ * tant qu'il n'est pas en service, les liens partent sur le domaine canonique,
+ * qui sert déjà cette même route. Le jour où le DNS est prêt, une variable
+ * change et rien d'autre.
+ *
+ * Les messages DÉJÀ ENVOYÉS continuent de fonctionner : l'ancienne base reste
+ * servie par la même application. Un SMS ne se corrige pas après coup, c'est
+ * la seule raison pour laquelle on ne remplace jamais un domaine, on en ajoute.
+ */
+export function brochureBaseUrl(
+  source: Pick<Env, "BROCHURE_BASE_URL" | "NEXT_PUBLIC_SITE_URL" | "NODE_ENV"> = env,
+): string {
+  const explicit = source.BROCHURE_BASE_URL;
+  if (typeof explicit === "string" && /^https?:\/\/\S+$/i.test(explicit.trim())) {
+    return explicit.trim().replace(/\/+$/, "");
+  }
   return mandateCrmBaseUrl(source);
 }
 

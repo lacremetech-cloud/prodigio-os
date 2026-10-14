@@ -43,6 +43,8 @@ export interface ConfigDepot {
   webhookUrl: string | null;
   brochureUrl: string | null;
   slug: string | null;
+  /** Code court du lien de brochure. À défaut, `slug` fait l'affaire. */
+  brochureSlug: string | null;
   publicName: string | null;
 }
 
@@ -69,12 +71,13 @@ export async function configDuDepot(
 
   const { data: config } = await supabase
     .from("property_public_config")
-    .select("slug, public_name, buyer_form_brochure_url, buyer_form_webhook_url")
+    .select("slug, public_name, brochure_slug, buyer_form_brochure_url, buyer_form_webhook_url")
     .eq("property_id", propertyId)
     .maybeSingle();
   const ligne = config as {
     slug: string | null;
     public_name: string | null;
+    brochure_slug: string | null;
     buyer_form_brochure_url: string | null;
     buyer_form_webhook_url: string | null;
   } | null;
@@ -84,6 +87,7 @@ export async function configDuDepot(
     webhookUrl: ligne.buyer_form_webhook_url,
     brochureUrl: ligne.buyer_form_brochure_url,
     slug: ligne.slug,
+    brochureSlug: ligne.brochure_slug,
     publicName: ligne.public_name,
   };
 }
@@ -161,26 +165,69 @@ export async function envoyerAccuseDepot(
 }
 
 /**
- * Retire les accents. Un SMS qui n'emploie que l'alphabet GSM tient en 160
- * caractères ; un seul caractère hors alphabet le fait basculer en UCS-2, où
- * la limite tombe à 70 — soit deux crédits au lieu d'un, pour chaque envoi.
- * Le message est court et impersonnel par nature : il ne perd rien à être
- * écrit sans accents.
+ * Alphabet GSM-7, celui que tout téléphone sait lire sans surcoût.
+ *
+ * Un SMS écrit entièrement dans cet alphabet tient en 160 caractères. Un seul
+ * caractère en dehors le fait basculer en UCS-2, où la limite tombe à 70 : un
+ * message de 140 caractères passe alors de 1 à 3 crédits.
+ *
+ * Le point important, et contre-intuitif : **la plupart des accents français
+ * sont dedans**. `é è à ù ì ò ä ö ü ñ` ne coûtent rien. Ce sont les
+ * circonflexes et les trémas qui sortent — `ê â î ô û ë ï` — ainsi que le `ç`
+ * minuscule et les majuscules accentuées comme `À`.
+ *
+ * Écrire tout le message sans accents serait donc payer un prix qu'on ne doit
+ * pas : « brochure détaillée » et « très vite » sont gratuits.
  */
+const ALPHABET_GSM7 = new Set(
+  "@£$¥èéùìòÇ\n\fØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡" +
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà",
+);
+
+/** Vrai si tout le texte tient dans l'alphabet GSM-7. */
+export function tientEnGsm7(v: string): boolean {
+  for (const c of v) if (!ALPHABET_GSM7.has(c)) return false;
+  return true;
+}
+
+/** Retire les signes diacritiques : « Jérôme » → « Jerome ». */
 export function sansAccents(v: string): string {
   return v.normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
 /**
+ * Prépare une valeur VARIABLE pour le SMS.
+ *
+ * Le prénom et le nom du bien ne sont pas écrits par nous : ils viennent du
+ * formulaire et de la fiche. « François », « Jérôme », « Benoît », « Gaëlle »
+ * contiennent chacun un caractère hors alphabet, et un seul suffit à tripler
+ * le coût du message entier.
+ *
+ * On n'enlève donc les accents QUE si le champ en contient un qui coûte — et
+ * alors on les enlève tous, car « Jérome » (le `ô` seul retiré) serait une
+ * faute, là où « Jerome » est une graphie admise. « Cécile » et « Chloé », eux,
+ * gardent leur accent : il ne coûte rien.
+ */
+export function pourSms(v: string): string {
+  return tientEnGsm7(v) ? v : sansAccents(v);
+}
+
+/**
  * Le texte de l'accusé.
  *
- * Trois informations, dans cet ordre : à qui on parle, de quel bien, et où est
- * le dossier. Puis le délai de rappel, qui est l'engagement pris sur la page,
- * et la signature.
+ * Il part dans la seconde qui suit le dépôt, souvent la nuit, et c'est le
+ * premier mot que l'agence adresse à la personne. Il est donc écrit comme un
+ * message de personne à personne : pas de « Nous vous rappelons sous 24h
+ * ouvrées », qui est une clause ; pas de signature en capitales, qui est un
+ * logo. Deux prénoms à la place — ce sont eux qui rappelleront.
  *
- * Volontairement sans lien raccourci : l'adresse du dossier porte le nom du
- * bien, ce qui rassure plus qu'une suite de caractères, et ne dépend d'aucun
- * service tiers qui pourrait expirer.
+ * Le nom du bien est posé en apposition (« votre brochure Villa Verdun »)
+ * plutôt qu'introduit par un article : « de la Villa Verdun » se lirait mal le
+ * jour où un bien s'appellera « Mas des Oliviers », et rien dans la fiche ne
+ * nous dit son genre.
+ *
+ * Le lien est le lien court : il tient l'ensemble dans un seul SMS, il nomme
+ * l'agence, et il survivra à un déménagement de la vitrine.
  */
 export function composerMessage(input: {
   firstName?: string | null;
@@ -188,16 +235,15 @@ export function composerMessage(input: {
   brochureUrl?: string | null;
 }): string | null {
   const lien = net(input.brochureUrl);
-  /* Sans lien, l'accusé n'a plus d'objet : il annoncerait un dossier sans
-     dire où il est. Mieux vaut ne rien envoyer. */
+  /* Sans lien, l'accusé n'a plus d'objet : il annoncerait une brochure sans
+     dire où elle est. Mieux vaut ne rien envoyer. */
   if (!lien) return null;
 
   const prenom = net(input.firstName);
   const bien = net(input.propertyName);
-  const salutation = prenom ? `Bonjour ${prenom},` : "Bonjour,";
-  const objet = bien ? `votre dossier ${bien}` : "votre dossier";
 
-  return sansAccents(
-    `${salutation} ${objet} : ${lien} Nous vous rappelons sous 24h ouvrees. PRODIGIO`,
-  );
+  const salutation = prenom ? `Bonjour ${pourSms(prenom)},` : "Bonjour,";
+  const objet = bien ? `votre brochure ${pourSms(bien)}` : "votre brochure";
+
+  return `${salutation} voici ${objet} : ${lien}\n\nNous vous appelons très vite.\nJC & Antoine`;
 }

@@ -5,6 +5,7 @@ export {
   isSupabaseAdminConfigured,
   isPreviewDeployment,
   canonicalSiteUrl,
+  brochureBaseUrl,
   safeInternalPath,
   isTurnstileConfigured,
   isTurnstileProductionSafe,

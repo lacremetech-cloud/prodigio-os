@@ -8,6 +8,7 @@ import {
   envoyerAccuseDepot,
 } from "../notifications/accuse-depot";
 import { envoyerSms } from "../notifications/smsfactor";
+import { lienBrochure } from "../notifications/lien-brochure";
 import { alerterNouvelleDemande } from "../notifications/universal-notify";
 import {
   bienDeLaManifestation,
@@ -211,10 +212,15 @@ export async function submitUniversalInterestAction(
              n'est pas pose, et pour un bien qui garderait son propre
              scenario. */
           if (isSmsFactorConfigured()) {
+            /* Le lien court plutot que l'adresse de deploiement : il tient
+               l'accuse dans un seul SMS, il nomme l'agence, et il survit a un
+               demenagement de la vitrine — ce qu'un SMS deja parti ne peut
+               pas faire. L'adresse directe reste le repli tant qu'un bien
+               n'a pas de slug. */
             const texte = composerMessage({
               firstName: request.answers.firstName,
               propertyName: config.publicName ?? bien?.nom ?? null,
-              brochureUrl: config.brochureUrl,
+              brochureUrl: lienBrochure(config.brochureSlug ?? config.slug) ?? config.brochureUrl,
             });
             if (!texte) return;
             const envoi = await envoyerSms(telephone, texte);
