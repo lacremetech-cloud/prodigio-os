@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PhoneField } from "@/components/mandate/analyse/phone-field";
 import { TurnstileWidget } from "@/components/mandate/analyse/turnstile-widget";
-import { ATTRIBUTION_STORAGE_KEY } from "@/modules/mandates/funnel/attribution";
+import {
+  ATTRIBUTION_STORAGE_KEY,
+  buildTouch,
+  mergeAttribution,
+  type StoredAttribution,
+} from "@/modules/mandates/funnel/attribution";
 import { generateIdempotencyKey } from "@/modules/mandates/funnel/idempotency";
 import { BUYER_TURNSTILE_ACTION } from "@/modules/buyers/funnel/turnstile";
 import { submitUniversalInterestAction } from "@/modules/buyers/funnel/universal-submit";
@@ -62,11 +67,6 @@ const emptyDraft: Draft = {
   phoneCountry: "FR",
   company: "",
 };
-
-interface StoredAttribution {
-  first?: unknown;
-  last?: unknown;
-}
 
 function readAttribution(): StoredAttribution | null {
   try {
@@ -211,7 +211,28 @@ export function UniversalBuyerForm({
     }
     setErrors({});
 
-    const attribution = readAttribution();
+    /* L'attribution est RECONSTRUITE depuis l'adresse de la page, et non plus
+       seulement relue dans le stockage de session.
+
+       Le stockage ne suffit pas : ce formulaire vit dans un cadre d'une AUTRE
+       origine que la vitrine, et plusieurs navigateurs — Safari en tête —
+       refusent ou cloisonnent le stockage d'un cadre tiers. L'écriture échoue
+       en silence (elle est dans un `try`), la relecture rend vide, et la
+       demande arrive sans campagne. C'est ce qui s'est produit : une demande
+       venue d'une publicité Instagram, avec `utm_campaign` et `fbclid` bien
+       présents dans l'adresse, a été enregistrée avec toutes ses colonnes
+       d'attribution à NULL.
+
+       L'adresse de la page, elle, porte ces paramètres et ne peut pas être
+       bloquée. Le stockage reste utile pour le PREMIER contact d'un visiteur
+       arrivé plusieurs fois : `mergeAttribution` le conserve quand il existe,
+       et prend l'adresse courante comme dernier contact. */
+    const toucheCourante = buildTouch(
+      window.location.href,
+      document.referrer || null,
+      new Date().toISOString(),
+    );
+    const attribution = mergeAttribution(readAttribution(), toucheCourante);
     const request = universalSubmissionRequestSchema.safeParse({
       slug,
       answers: {
@@ -224,8 +245,8 @@ export function UniversalBuyerForm({
         originUrl: window.location.href,
         referrer: document.referrer || null,
         userAgent: navigator.userAgent || null,
-        firstTouch: attribution?.first ?? null,
-        lastTouch: attribution?.last ?? null,
+        firstTouch: attribution.first ?? null,
+        lastTouch: attribution.last ?? null,
         submittedAt: new Date().toISOString(),
       },
     });

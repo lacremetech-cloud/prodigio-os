@@ -55,6 +55,32 @@ function net(v: string | null | undefined): string | null {
   return s.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] as string);
 }
 
+/**
+ * D'ou vient cette demande, en une ligne.
+ *
+ * La campagne et l'annonce priment sur la source : savoir qu'un acquereur
+ * vient d'Instagram ne dit pas QUELLE publicite a ete payee pour l'amener.
+ * Un `fbclid` sans campagne est signale comme tel plutot que tu : il veut dire
+ * que la publicite ne transmet pas ses parametres de suivi.
+ */
+export function origineDeLaDemande(
+  contexte: AlerteAcquereurInput["request"]["context"],
+): string | null {
+  const t = contexte.lastTouch ?? contexte.firstTouch ?? null;
+  if (!t) return null;
+  const campagne = net(t.utm_campaign);
+  const annonce = net(t.utm_content);
+  const source = [net(t.utm_source), net(t.utm_medium)].filter(Boolean).join(" · ");
+  if (campagne || annonce) {
+    const titre = [campagne, annonce].filter(Boolean).join(" › ");
+    return source ? `${titre} (${source})` : titre;
+  }
+  if (source) return source;
+  if (net(t.fbclid)) return "Publicité Meta · campagne non transmise";
+  if (net(t.gclid)) return "Publicité Google · campagne non transmise";
+  return null;
+}
+
 export function construireAlerte(input: AlerteAcquereurInput) {
   const a = input.request.answers;
   const nom = net(`${a.firstName ?? ""} ${a.lastName ?? ""}`.trim()) ?? "Acquéreur";
@@ -65,6 +91,8 @@ export function construireAlerte(input: AlerteAcquereurInput) {
   }`;
 
   const champs: string[] = [`*Bien*\n${bien}`, `*Budget annoncé*\n${budget}`];
+  const provenance = origineDeLaDemande(input.request.context);
+  if (provenance) champs.push(`*Provenance*\n${provenance}`);
   if (net(a.phoneRaw)) champs.push(`*Téléphone*\n${net(a.phoneRaw)}`);
   if (net(a.emailRaw)) champs.push(`*E-mail*\n${net(a.emailRaw)}`);
   if (input.score?.overall != null) {

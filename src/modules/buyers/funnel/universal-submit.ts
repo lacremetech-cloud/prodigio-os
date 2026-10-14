@@ -173,11 +173,16 @@ export async function submitUniversalInterestAction(
             .select("overall_score, priority, budget_score, property_id, buyer_profile_id")
             .eq("id", interetId)
             .maybeSingle();
+          /* Le nom du bien valait `null` EN DUR : l'alerte Slack annoncait donc
+             « Bien non nomme » pour toute demande, y compris quand le bien
+             etait parfaitement rattache — ce qui etait le cas de toutes. On
+             reutilise la lecture deja ecrite pour les conversions. */
+          const bienAlerte = await bienDeLaManifestation(supabase, interetId);
           await alerterNouvelleDemande({
             request,
             interestId: interetId,
             propertyId: ligne?.property_id ?? "",
-            propertyName: null,
+            propertyName: bienAlerte?.nom ?? null,
             buyerProfileId: ligne?.buyer_profile_id ?? null,
             score: ligne
               ? {

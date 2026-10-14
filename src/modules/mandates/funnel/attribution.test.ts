@@ -71,3 +71,50 @@ describe("mergeAttribution", () => {
     expect(merged.last).not.toBeNull();
   });
 });
+
+/**
+ * Regression : une demande venue d'une publicite Instagram a ete enregistree
+ * avec toutes ses colonnes d'attribution a NULL, alors que `utm_campaign` et
+ * `fbclid` figuraient bien dans l'adresse de la page.
+ *
+ * La cause : l'attribution n'etait relue QUE dans le stockage de session. Or
+ * le formulaire vit dans un cadre d'une autre origine, et plusieurs
+ * navigateurs refusent ou cloisonnent le stockage d'un cadre tiers. L'ecriture
+ * echoue en silence, la relecture rend vide, la campagne est perdue.
+ *
+ * Le depot compose desormais le stockage AVEC l'adresse courante. Ces deux
+ * tests fixent ce comportement : stockage vide, la campagne passe quand meme ;
+ * stockage rempli, le premier contact est preserve.
+ */
+describe("attribution quand le stockage de session est indisponible", () => {
+  const ADRESSE =
+    "https://go.prodigio.fr/bien/villa-verdun/interet" +
+    "?fbclid=PAZTEST123&utm_source=ig&utm_medium=paid" +
+    "&utm_campaign=120252600271810565&utm_content=120252600515880565";
+
+  it("retient la campagne depuis l'adresse, sans aucun stockage", () => {
+    const courante = buildTouch(ADRESSE, null, "2026-10-14T00:49:00.000Z");
+    const fusion = mergeAttribution(null, courante);
+
+    expect(fusion.last?.utm_campaign).toBe("120252600271810565");
+    expect(fusion.last?.utm_content).toBe("120252600515880565");
+    expect(fusion.last?.utm_source).toBe("ig");
+    expect(fusion.last?.utm_medium).toBe("paid");
+    expect(fusion.last?.fbclid).toBe("PAZTEST123");
+    // Sans stockage, la visite publicitaire est AUSSI le premier contact.
+    expect(fusion.first?.utm_campaign).toBe("120252600271810565");
+  });
+
+  it("preserve le premier contact quand le stockage a survecu", () => {
+    const premier = buildTouch(
+      "https://villa-verdun-cassis.vercel.app/?utm_campaign=CAMPAGNE_INITIALE",
+      null,
+      "2026-10-13T08:00:00.000Z",
+    );
+    const courante = buildTouch(ADRESSE, null, "2026-10-14T00:49:00.000Z");
+    const fusion = mergeAttribution({ first: premier, last: premier }, courante);
+
+    expect(fusion.first?.utm_campaign).toBe("CAMPAGNE_INITIALE");
+    expect(fusion.last?.utm_campaign).toBe("120252600271810565");
+  });
+});
