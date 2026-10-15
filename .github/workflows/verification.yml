@@ -1,0 +1,39 @@
+# Vérification à chaque poussée. Elle ne remplace pas la barrière de
+# déploiement — `vercel-build` lance les mêmes contrôles avant de publier —
+# mais elle donne un résultat visible sur GitHub, y compris sur les branches
+# que Vercel ne construit pas.
+name: Vérification
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verifier:
+    name: Types, tests, construction
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm run test:run
+
+      - name: Construction
+        run: npm run build
+        env:
+          # La construction n'appelle aucun service : des valeurs de forme
+          # suffisent. Aucun secret réel ne transite par l'intégration continue.
+          NEXT_PUBLIC_SUPABASE_URL: https://exemple.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: cle-de-construction
