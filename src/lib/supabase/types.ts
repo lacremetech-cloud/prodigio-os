@@ -1443,6 +1443,27 @@ export interface Database {
       /** Prendre pour soi un dossier SANS responsable. Ne réaffecte jamais :
           un dossier déjà suivi rend `ok: false` en nommant son responsable,
           pour que l'écran puisse l'afficher et se rafraîchir. */
+      /** Enregistre en UNE fois l'activité, la qualification, l'étape et la
+          prochaine tâche. Les quatre partaient auparavant par des chemins
+          différents, ce qui obligeait à sauvegarder plusieurs fois le même
+          traitement. Soit tout est écrit, soit rien ne l'est. */
+      crm_buyer_enregistrer: {
+        Args: {
+          p_interest_id: string;
+          p_activite: string | null;
+          p_occurred_at: string | null;
+          p_note: string | null;
+          p_qualification: string | null;
+          p_qualification_reason: string | null;
+          p_stage: string | null;
+          p_next_action_kind: string | null;
+          p_next_action_at: string | null;
+          p_next_action_title: string | null;
+          p_next_action_assignee: string | null;
+          p_complete_task_id: string | null;
+        };
+        Returns: Json;
+      };
       crm_buyer_claim: {
         Args: { p_buyer_profile_id: string };
         Returns: Json;

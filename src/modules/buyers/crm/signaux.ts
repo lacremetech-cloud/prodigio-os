@@ -77,7 +77,7 @@ export function lireSignal(valeur: string | string[] | undefined): Signal {
  * Ces personnes ne disparaissent pas : « Tous » et le filtre « Non qualifiés »
  * les retrouvent, avec leurs notes.
  */
-function estEnTraitementActif(row: BuyerInboxRow): boolean {
+export function estEnTraitementActif(row: BuyerInboxRow): boolean {
   if (row.qualification === "non_qualifie") return false;
   return row.stage !== "pas_interesse" && row.stage !== "mauvais_numero";
 }
@@ -121,4 +121,32 @@ export function porteLeSignal(row: BuyerInboxRow, signal: Signal): boolean {
     default:
       return true;
   }
+}
+
+/**
+ * Le compte qui doit s'afficher en haut de la file : combien de personnes on
+ * travaille, et combien sont mises de côté.
+ *
+ * Les deux nombres sont calculés ICI, une fois, et lus par la liste comme par
+ * le pipeline. Les avoir comptés de chaque côté est exactement ce qui a produit
+ * « 10 dans le pipeline » en face de « 8 dans la liste » : deux écrans, deux
+ * additions, et plus personne pour dire laquelle était bonne.
+ */
+export function comptesDeLaFile(rows: BuyerInboxRow[]): {
+  actifs: number;
+  nonQualifies: number;
+  /** Qualifiées, mais sorties par l'étape : « pas intéressé », « mauvais
+      numéro ». Affichées seulement si elles existent — les trois nombres
+      doivent s'additionner au total de la liste, sinon le bandeau ment. */
+  sorties: number;
+} {
+  let actifs = 0;
+  let nonQualifies = 0;
+  let sorties = 0;
+  for (const row of rows) {
+    if (row.qualification === "non_qualifie") nonQualifies += 1;
+    else if (estEnTraitementActif(row)) actifs += 1;
+    else sorties += 1;
+  }
+  return { actifs, nonQualifies, sorties };
 }

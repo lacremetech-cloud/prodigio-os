@@ -1869,8 +1869,98 @@
   border-color: var(--crm-line);
 }
 
+/* ---------------------------------------------------------------------------
+   Téléphone : le seul écran où l'on travaille vraiment en mobilité
+   ---------------------------------------------------------------------------
+   Trois défauts constatés, trois corrections.
+
+   1. Le premier dossier arrivait à plus de 700 px du haut : compteurs sur
+      trois lignes, recherche, tri, trois menus. On ouvrait la file d'appels
+      et on ne voyait aucun nom. Les compteurs défilent sur une rangée, les
+      menus se replient.
+
+   2. Le panneau occupait 100vw mais pas toute la hauteur utile.
+
+   3. « Enregistrer » passait SOUS le clavier. C'est le défaut grave : on
+      dicte une note, on tape « Enregistrer »… et le bouton n'est pas là. Le
+      panneau suit donc la hauteur du viewport VISUEL (voir le hook
+      `useHauteurVisible`), pas celle de la page : c'est la seule mesure qui
+      recule quand le clavier monte.
+*/
+.crm-compteurs-file {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 640px) { .crm-compteurs-file { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .crm-compteurs-file { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 639px) {
+  .crm-compteurs-file {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    /* Le défilement horizontal doit se voir : sans dépassement, personne ne
+       devine qu'il reste des compteurs à droite. */
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .crm-compteurs-file > * {
+    flex: 0 0 auto;
+    min-width: 122px;
+    scroll-snap-align: start;
+  }
+}
+
+/* Le replieur des filtres. Il porte le nombre de filtres actifs : un filtre
+   replié qui filtre encore est un piège — on cherche un nom, il n'apparaît
+   pas, et rien à l'écran ne dit pourquoi. */
+.crm-replier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.crm-replier__pastille {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--crm-univers);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 @media (max-width: 640px) {
-  .crm-panneau { width: 100vw; }
+  .crm-panneau {
+    width: 100vw;
+    /* `--crm-vh` est posée par le panneau depuis `visualViewport` ; les deux
+       replis servent les navigateurs qui ne l'exposent pas. `svh` et non
+       `vh` : `vh` est la hauteur barres d'outils MASQUÉES, donc trop grande
+       tant qu'elles sont visibles, et le bas du panneau sort de l'écran. */
+    height: var(--crm-vh, 100svh);
+    bottom: auto;
+  }
+  /* Le pied ne défile pas avec le corps : « Enregistrer » est la raison d'être
+     de l'écran, il reste à portée de pouce quoi qu'il arrive au-dessus. */
+  .crm-panneau__pied {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
 }
 
 /* Un plafond de chargement atteint se DIT : travailler sur un sous-ensemble
@@ -1883,6 +1973,29 @@
   color: var(--crm-text);
   font-size: 13px;
 }
+
+/* Le compte de la file : ce qu'il y a à travailler, avant les filtres.
+   Discret par construction — c'est un repère, pas une alerte. */
+.crm-bandeau-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line-soft);
+  background: var(--crm-surface-2, transparent);
+  color: var(--crm-text-dim);
+  font-size: 13px;
+}
+.crm-bandeau-file strong { color: var(--crm-text); font-weight: 600; }
+.crm-bandeau-file__lien {
+  color: var(--crm-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.crm-bandeau-file__lien:hover { color: var(--crm-accent, var(--crm-text)); }
+.crm-bandeau-file__reste { color: var(--crm-text-faint); }
 
 /* Filtres rapides : une pastille = une question qu'on se pose vraiment. */
 .crm-rapides { display: flex; flex-wrap: wrap; gap: 6px; }

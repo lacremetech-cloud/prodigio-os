@@ -577,6 +577,89 @@ export async function setBuyerTaskStatusAction(input: unknown): Promise<ActionRe
  * discussion » est un état parfaitement cohérent, et le système doit savoir
  * l'écrire.
  */
+/**
+ * Un enregistrement de traitement : l'activité, la qualification, l'étape et
+ * la prochaine tâche, en UNE fois.
+ *
+ * Les quatre partaient auparavant par des chemins différents — c'est ce qui
+ * obligeait Antoine à sauvegarder, attendre, puis recommencer ailleurs. Un
+ * seul appel, une seule transaction : soit tout est écrit, soit rien ne l'est
+ * et la saisie reste à l'écran.
+ */
+const enregistrementSchema = z.object({
+  buyerProfileId: uuid,
+  interestId: uuid,
+  activite: z
+    .enum([
+      "appel_sans_reponse",
+      "appel_echange",
+      "message_vocal",
+      "whatsapp",
+      "sms",
+      "email",
+      "note",
+    ])
+    .nullable()
+    .optional(),
+  /** Quand l'échange a RÉELLEMENT eu lieu. La date de saisie est à part. */
+  occurredAt: z.string().datetime({ offset: true }).nullable().optional(),
+  note: optionalText(4000),
+  qualification: z
+    .enum(["a_qualifier", "gros_potentiel", "qualifie", "non_qualifie"])
+    .nullable()
+    .optional(),
+  qualificationReason: optionalText(300),
+  stage: z
+    .enum([
+      "a_contacter",
+      "a_rappeler",
+      "en_discussion",
+      "visite_planifiee",
+      "vivier",
+      "pas_interesse",
+      "mauvais_numero",
+    ])
+    .nullable()
+    .optional(),
+  nextActionKind: z.enum(["rappel", "tache", "visite"]).nullable().optional(),
+  nextActionAt: z.string().datetime({ offset: true }).nullable().optional(),
+  nextActionTitle: optionalText(200),
+  nextActionAssignee: uuid.nullable().optional(),
+  completeTaskId: uuid.nullable().optional(),
+});
+
+export async function enregistrerTraitementAction(input: unknown): Promise<ActionResult> {
+  await requireCrmSession();
+  const parsed = enregistrementSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Saisie invalide. Vérifiez les champs." };
+  const d = parsed.data;
+
+  /* Dit ici plutôt que renvoyé par la base : « un motif est requis » est une
+     phrase qu'on comprend, « violation de contrainte » non. */
+  if (d.qualification === "non_qualifie" && !d.qualificationReason?.trim()) {
+    return { ok: false, error: "Indiquez un motif pour écarter ce dossier." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("crm_buyer_enregistrer", {
+    p_interest_id: d.interestId,
+    p_activite: d.activite ?? null,
+    p_occurred_at: d.occurredAt ?? null,
+    p_note: d.note ?? null,
+    p_qualification: d.qualification ?? null,
+    p_qualification_reason: d.qualificationReason ?? null,
+    p_stage: d.stage ?? null,
+    p_next_action_kind: d.nextActionKind ?? null,
+    p_next_action_at: d.nextActionAt ?? null,
+    p_next_action_title: d.nextActionTitle ?? null,
+    p_next_action_assignee: d.nextActionAssignee ?? null,
+    p_complete_task_id: d.completeTaskId ?? null,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+  revalidateBuyer(d.buyerProfileId);
+  return { ok: true };
+}
+
 const traitementSchema = z.object({
   buyerProfileId: uuid,
   interestId: uuid,

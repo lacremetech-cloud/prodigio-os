@@ -4,6 +4,7 @@ import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles"
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
+import { BandeauFile } from "@/components/crm/buyers/bandeau-file";
 import {
   dansLaSelection,
   ecrireNavigation,
@@ -77,7 +78,7 @@ export default async function BuyersPipelinePage({
         <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">
           Pipeline Acquéreurs
         </h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--crm-text-dim)]">
+        <p className="mt-1 hidden max-w-2xl text-sm text-[var(--crm-text-dim)] sm:block">
           {cards.length} carte{cards.length > 1 ? "s" : ""} — une par personne. Déplacer une
           carte déplace son traitement, pas un de ses projets : l&rsquo;étape et la qualification
           sont communes. Ce qui tient au bien — visites, offres, issue — reste sur sa fiche.
@@ -91,6 +92,20 @@ export default async function BuyersPipelinePage({
         signal={signal}
         comptes={comptes}
         base={{ liste: "/crm/acquereurs", pipeline: "/crm/acquereurs/pipeline" }}
+      />
+
+      {/* Le MÊME bandeau et les MÊMES nombres que la liste, calculés par la
+          même fonction : c'est ce qui empêche « 10 dans le pipeline » en face
+          de « 8 dans la liste » de revenir. Il porte sur la sélection de
+          projet, sans le filtre rapide — sinon le total changerait à chaque
+          pastille et ne dirait plus où est le travail. */}
+      <BandeauFile
+        rows={visibles.map(toInboxRow)}
+        base="/crm/acquereurs"
+        /* `vue: "liste"` et non la vue courante : les personnes écartées
+           n'apparaissent PAS dans le pipeline, donc le lien doit ouvrir la
+           liste, sinon il renvoie sur un écran où elles sont invisibles. */
+        contexte={ecrireNavigation({ projets: selection, vue: "liste" })}
       />
 
       <BuyerKanbanBoard

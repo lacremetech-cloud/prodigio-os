@@ -5,6 +5,7 @@ import { canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
 import { BuyerInbox } from "@/components/crm/buyers/buyer-inbox";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
+import { BandeauFile } from "@/components/crm/buyers/bandeau-file";
 import { lireSignal } from "@/modules/buyers/crm/signaux";
 import {
   dansLaSelection,
@@ -66,7 +67,10 @@ export default async function BuyersInboxPage({
         <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">
           Boîte de réception acquéreurs
         </h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--crm-text-dim)]">
+        {/* Masquée sur téléphone : ces trois lignes expliquent une règle qu'on
+            apprend le premier jour, et elles coûtaient 90 px avant le premier
+            nom — sur le seul écran où l'on travaille debout. */}
+        <p className="mt-1 hidden max-w-2xl text-sm text-[var(--crm-text-dim)] sm:block">
           Une ligne par personne. Quelqu&rsquo;un qui s&rsquo;intéresse à deux projets apparaît
           une seule fois, avec les deux biens en repère : une qualification, une étape, un
           historique. Ce qui tient au bien — visites, offres, issue — reste sur sa fiche.
@@ -89,6 +93,14 @@ export default async function BuyersInboxPage({
         signal={signal}
         comptes={comptes}
         base={{ liste: "/crm/acquereurs", pipeline: "/crm/acquereurs/pipeline" }}
+      />
+
+      {/* Ce qu'il y a à travailler, avant les filtres : « 16 dossiers » laisse
+          croire à 16 appels à passer alors que deux sont écartés. */}
+      <BandeauFile
+        rows={rows}
+        base="/crm/acquereurs"
+        contexte={ecrireNavigation({ projets: selection, vue })}
       />
 
       <BuyerInbox

@@ -106,6 +106,8 @@ export function BuyerInbox({
 }) {
   const [signal, setSignal] = useState<Signal>(signalInitial);
   const [search, setSearch] = useState("");
+  /* Replies sur telephone, deployes au-dela : voir le bloc de filtres. */
+  const [filtresDeplies, setFiltresDeplies] = useState(false);
 
   /*
    * Le dossier ouvert dans le panneau, et l'ORDRE DE LA FILE figé au moment où
@@ -138,6 +140,13 @@ export function BuyerInbox({
   const [owner, setOwner] = useState<string>("tous");
 
   const [sort, setSort] = useState<SortKey>("urgence");
+
+  /* Un filtre replie qui filtre encore est un piege : on cherche un nom, il
+     n'apparait pas, et rien a l'ecran ne dit pourquoi. La pastille porte donc
+     le nombre de filtres actifs meme quand le bloc est ferme. */
+  const filtresActifs =
+    (stage !== "tous" ? 1 : 0) + (budget !== "tous" ? 1 : 0) + (owner !== "tous" ? 1 : 0);
+
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -233,8 +242,12 @@ export function BuyerInbox({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Compteurs reels, et cliquables : le compteur EST le filtre. */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      {/* Compteurs reels, et cliquables : le compteur EST le filtre.
+
+          Sur telephone ils defilent sur UNE rangee au lieu d'occuper trois
+          lignes de grille. Les trois lignes coutaient 180 px avant le premier
+          dossier : on arrivait sur l'ecran et on ne voyait aucun nom. */}
+      <div className="crm-compteurs-file">
         <Counter label="Dossiers" value={counters.total}
                  signal="tous" actif={signal} onChoisir={setSignal} />
         <Counter label="À contacter" value={counters.nouveaux} accent="--crm-acq-a_contacter"
@@ -247,10 +260,15 @@ export function BuyerInbox({
                  signal="non_affectes" actif={signal} onChoisir={setSignal} />
       </div>
 
-      {/* Recherche + filtres */}
+      {/* Recherche + filtres
+
+          La recherche reste TOUJOURS visible : c'est le geste le plus fréquent.
+          Le tri et les trois menus, eux, se replient sur téléphone. Dépliés,
+          ils poussaient le premier dossier à plus de 700 px du haut : on
+          traversait tout l'appareil de filtrage pour atteindre le premier nom,
+          et le seul écran où l'on travaille vraiment en mobilité était le seul
+          où l'on ne voyait personne. */}
       <div className="flex flex-col gap-2 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3">
-        {/* Sur telephone, la recherche prend toute la largeur : partagee avec
-            « Trier par », elle tombait a sept caracteres visibles. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <label className="min-w-0 sm:flex-1">
             <span className="sr-only">Rechercher un acquéreur</span>
@@ -262,7 +280,18 @@ export function BuyerInbox({
               onChange={(e) => setSearch(e.target.value)}
             />
           </label>
-          <label className="flex w-full min-w-0 items-center gap-1.5 sm:w-auto">
+          <button
+            type="button"
+            className="crm-replier sm:hidden"
+            aria-expanded={filtresDeplies}
+            onClick={() => setFiltresDeplies((v) => !v)}
+          >
+            {filtresDeplies ? "Masquer les filtres" : "Filtrer et trier"}
+            {filtresActifs > 0 ? <span className="crm-replier__pastille">{filtresActifs}</span> : null}
+          </button>
+          <label
+            className={`${filtresDeplies ? "flex" : "hidden sm:flex"} w-full min-w-0 items-center gap-1.5 sm:w-auto`}
+          >
             <span className="crm-label shrink-0">Trier par</span>
             <select
               className="crm-select text-xs"
@@ -276,7 +305,9 @@ export function BuyerInbox({
           </label>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+        <div
+          className={`${filtresDeplies ? "grid" : "hidden sm:grid"} grid-cols-1 gap-2 sm:flex sm:flex-wrap`}
+        >
           <Select label="Étape" value={stage} onChange={setStage} options={[
             { value: "tous", label: "Toutes les étapes" },
             ...BUYER_PIPELINE_STAGES.map((s) => ({
@@ -407,6 +438,7 @@ export function BuyerInbox({
           total={totalFile}
           resteUnSuivant={suivantDansLaFile(ordreFile, ouvert) !== null}
           saleRef={saleRef}
+          membres={members}
           contexte={contexte}
           onFermer={() => {
             if (peutQuitter()) setOuvert(null);

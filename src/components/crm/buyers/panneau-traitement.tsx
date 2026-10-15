@@ -6,19 +6,22 @@ import { useRouter } from "next/navigation";
 import type { MutableRefObject } from "react";
 import Link from "next/link";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
-import { recordBuyerTreatmentAction } from "@/modules/buyers/crm/actions";
+import { enregistrerTraitementAction } from "@/modules/buyers/crm/actions";
 import { safeAction } from "@/modules/crm/safe-action";
+import { MOTIFS_NON_QUALIFIE, QUALIFICATION_LABELS } from "@/modules/buyers/crm/qualification";
 import {
-  MOTIFS_NON_QUALIFIE,
-  QUALIFICATION_LABELS,
-  BUYER_QUALIFICATIONS,
-  RESULTATS_APPEL,
-  proposeUnRappel,
-  type ResultatAppel,
-} from "@/modules/buyers/crm/qualification";
-import { ChoixEtape, ChoixQualification } from "./choix-vocabulaire";
-import { etape as definitionEtape } from "@/modules/buyers/crm/vocabulaire";
+  BlocActivite,
+  BlocProchaineAction,
+  ChoixEtape,
+  ChoixQualification,
+  dansNJours,
+  depuisChampLocal,
+  maintenantLocal,
+  type TypeProchaineAction,
+} from "./choix-vocabulaire";
+import { appelleUnRappel, etape as definitionEtape } from "@/modules/buyers/crm/vocabulaire";
 import { ContactRapide } from "./contact-rapide";
+import { useHauteurVisible } from "./hauteur-visible";
 import { BadgeProjet } from "./barre-projets";
 import { BUDGET_CHOICE_COURT, type BuyerBudgetChoice } from "@/modules/buyers/funnel/universal";
 
@@ -41,32 +44,9 @@ import { BUDGET_CHOICE_COURT, type BuyerBudgetChoice } from "@/modules/buyers/fu
  * potentiel.
  */
 
-type TypeAction = "aucune" | "rappel" | "visite";
-
 /** Libellé de l'étape actuelle, traduit depuis l'historique au besoin. */
 function etapeLabel(valeur: string): string {
   return definitionEtape(valeur).label;
-}
-
-function dansNJours(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  d.setHours(10, 0, 0, 0);
-  return versChampLocal(d.toISOString());
-}
-
-/** `datetime-local` veut une heure locale sans fuseau ; l'ISO en porte un. */
-function versChampLocal(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-function depuisChampLocal(valeur: string): string | null {
-  if (!valeur) return null;
-  const d = new Date(valeur);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 /* Déléguée au formateur commun : celui du panneau s'en remettait au fuseau du
@@ -83,6 +63,7 @@ export function PanneauTraitement({
   onSuivant,
   resteUnSuivant,
   saleRef,
+  membres,
   contexte,
 }: {
   row: BuyerInboxRow;
@@ -103,12 +84,17 @@ export function PanneauTraitement({
    * moment du clic, jamais pour se redessiner.
    */
   saleRef: MutableRefObject<boolean>;
+  /** L'équipe, pour choisir le responsable du rappel. */
+  membres: { userId: string; name: string }[];
   /** Projet, vue et filtre, recopiés dans le lien : c'est ce qui permet au
       « Retour à la liste » de la fiche complète de rendre l'écran d'où l'on
       vient, et pas la liste remise à zéro. */
   contexte: string;
 }) {
-  const [resultat, setResultat] = useState<ResultatAppel | null>(null);
+  const [activite, setActivite] = useState<string | null>(null);
+  /* Préremplie à maintenant, modifiable : on note souvent un appel après
+     coup, et dater la note de l'heure de saisie fausserait la chronologie. */
+  const [quandActivite, setQuandActivite] = useState(maintenantLocal());
   const [qualification, setQualification] = useState<string | null>(null);
   /* L'étape, absente du panneau jusqu'ici : il fallait ouvrir la fiche ou
      aller au pipeline pour la changer, c'est-à-dire quitter la file d'appels
@@ -116,14 +102,22 @@ export function PanneauTraitement({
   const [etape, setEtape] = useState<string | null>(null);
   const [motif, setMotif] = useState("");
   const [note, setNote] = useState("");
-  const [typeAction, setTypeAction] = useState<TypeAction>("aucune");
+  const [typeAction, setTypeAction] = useState<TypeProchaineAction>("aucune");
   const [quand, setQuand] = useState("");
+  const [titreAction, setTitreAction] = useState("");
+  /* Null = moi. Le cas courant, et laisser le choix vide évite d'affecter un
+     rappel à quelqu'un d'autre par inattention. */
+  const [responsable, setResponsable] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   /** Vrai quand on a demandé la fiche complète avec une saisie en cours. */
   const [arbitrage, setArbitrage] = useState(false);
   const envoiRef = useRef(false);
   const router = useRouter();
+
+  /* Le panneau suit la hauteur du viewport VISUEL : sans cela, « Enregistrer »
+     passe sous le clavier dès qu'on touche la note. */
+  useHauteurVisible();
 
   /*
    * La saisie n'est PAS remise à zéro par un effet : le panneau est remonté par
@@ -134,7 +128,11 @@ export function PanneauTraitement({
    */
 
   const sale =
-    resultat !== null || qualification !== null || note.trim() !== "" || quand !== "";
+    activite !== null ||
+    qualification !== null ||
+    etape !== null ||
+    note.trim() !== "" ||
+    quand !== "";
 
   useEffect(() => {
     saleRef.current = sale;
@@ -146,16 +144,21 @@ export function PanneauTraitement({
   }, [sale, saleRef]);
 
   /** Choisir un résultat sans réponse propose un rappel : on n'impose rien. */
-  function choisirResultat(v: ResultatAppel) {
-    const nouveau = resultat === v ? null : v;
-    setResultat(nouveau);
-    if (nouveau && proposeUnRappel(nouveau) && typeAction === "aucune") {
+  function choisirResultat(v: string | null) {
+    const nouveau = activite === v ? null : v;
+    setActivite(nouveau);
+    setQuandActivite(maintenantLocal());
+    /* Un appel sans réponse ou un message vocal appelle un rappel : la
+       conversation n'a pas eu lieu, elle reste à avoir. On le PROPOSE, le
+       commercial reste libre de l'enlever. Un message envoyé, lui, n'appelle
+       rien : on attend une réponse, on ne se rappelle pas soi-même. */
+    if (nouveau && appelleUnRappel(nouveau) && typeAction === "aucune") {
       setTypeAction("rappel");
       setQuand(dansNJours(1));
     }
   }
 
-  function choisirTypeAction(t: TypeAction) {
+  function choisirTypeAction(t: TypeProchaineAction) {
     setTypeAction(t);
     if (t === "aucune") setQuand("");
     else if (!quand) setQuand(dansNJours(t === "rappel" ? 1 : 2));
@@ -173,10 +176,11 @@ export function PanneauTraitement({
        l'écran. Sans elle, une coupure réseau en plein enregistrement efface la
        note qu'on vient de taper. */
     const resultatAction = await safeAction(() =>
-      recordBuyerTreatmentAction({
+      enregistrerTraitementAction({
         buyerProfileId: row.buyerProfileId,
         interestId: row.interestId,
-        callOutcome: resultat,
+        activite,
+        occurredAt: activite ? depuisChampLocal(quandActivite) : null,
         qualification,
         qualificationReason: qualification === "non_qualifie" ? motif || null : null,
         note: note.trim() || null,
@@ -187,7 +191,12 @@ export function PanneauTraitement({
         nextActionKind: typeAction === "aucune" ? null : typeAction,
         nextActionAt: depuisChampLocal(quand),
         nextActionTitle:
-          typeAction === "visite" ? "Visite" : typeAction === "rappel" ? "Rappeler" : null,
+          typeAction === "visite"
+            ? "Visite"
+            : typeAction === "rappel"
+              ? "Rappeler"
+              : titreAction.trim() || null,
+        nextActionAssignee: responsable,
         // Traiter un dossier solde le rappel qui l'avait amené dans la file.
         completeTaskId: row.nextActionId,
       }),
@@ -330,22 +339,21 @@ export function PanneauTraitement({
       ) : null}
 
       <div className="crm-panneau__corps">
-        {/* ---- 1. Ce qui vient de se passer ---------------------------------- */}
+        {/* ---- 1. Ce qui vient de se passer ----------------------------------
+            Le MÊME bloc que la fiche. Il remplace « Résultat de l'appel », qui
+            ne savait dire ni « WhatsApp envoyé » ni « e-mail », et qui portait
+            un vocabulaire différent de celui de la fiche pour le même fait. */}
         <section className="crm-bloc">
-          <h3 className="crm-bloc__titre">Résultat de l’appel</h3>
-          <div className="crm-grille crm-grille--2">
-            {RESULTATS_APPEL.map((r) => (
-              <button
-                key={r.valeur}
-                type="button"
-                className="crm-gros-choix"
-                aria-pressed={resultat === r.valeur}
-                onClick={() => choisirResultat(r.valeur)}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+          <h3 className="crm-bloc__titre">Ajouter une activité</h3>
+          <BlocActivite
+            activite={activite}
+            onActivite={choisirResultat}
+            quand={quandActivite}
+            onQuand={setQuandActivite}
+            note={note}
+            onNote={setNote}
+            disabled={enCours}
+          />
         </section>
 
         {/* ---- Où en est le traitement ---------------------------------------
@@ -389,80 +397,25 @@ export function PanneauTraitement({
           ) : null}
         </section>
 
-        {/* ---- 3. Ce qu'il faut retenir --------------------------------------- */}
-        <section className="crm-bloc">
-          <h3 className="crm-bloc__titre">Note de l’échange</h3>
-          <textarea
-            className="crm-panneau__zone"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Objection, contexte, ce qu’il attend…"
-          />
-        </section>
-
-        {/* ---- 4. Ce qu'on s'engage à faire ----------------------------------- */}
+        {/* ---- 3. Ce qu'on s'engage à faire -----------------------------------
+            Le MÊME bloc que la fiche. Il porte désormais un responsable : un
+            commercial qui prend l'appel d'un dossier qui n'est pas le sien doit
+            pouvoir rendre le rappel à son titulaire sans réattribuer le
+            dossier entier. */}
         <section className="crm-bloc">
           <h3 className="crm-bloc__titre">Prochaine action</h3>
-          <div className="crm-grille crm-grille--3">
-            <button
-              type="button"
-              className="crm-gros-choix"
-              aria-pressed={typeAction === "aucune"}
-              onClick={() => choisirTypeAction("aucune")}
-            >
-              Aucune
-            </button>
-            <button
-              type="button"
-              className="crm-gros-choix"
-              aria-pressed={typeAction === "rappel"}
-              onClick={() => choisirTypeAction("rappel")}
-            >
-              Rappeler
-            </button>
-            <button
-              type="button"
-              className="crm-gros-choix"
-              aria-pressed={typeAction === "visite"}
-              onClick={() => choisirTypeAction("visite")}
-            >
-              Visite
-            </button>
-          </div>
-
-          {/* La date n'apparaît QUE si une action est choisie. Un champ de date
-              toujours visible se remplit par réflexe, et l'agenda se couvre de
-              rappels que personne n'a voulus. */}
-          {typeAction !== "aucune" ? (
-            <div className="mt-2 flex flex-col gap-2">
-              {typeAction === "rappel" ? (
-                <div className="crm-grille crm-grille--3">
-                  <button type="button" className="crm-petit-choix" onClick={() => setQuand(dansNJours(1))}>
-                    Demain
-                  </button>
-                  <button type="button" className="crm-petit-choix" onClick={() => setQuand(dansNJours(3))}>
-                    3 jours
-                  </button>
-                  <button type="button" className="crm-petit-choix" onClick={() => setQuand(dansNJours(7))}>
-                    1 semaine
-                  </button>
-                </div>
-              ) : null}
-              <input
-                type="datetime-local"
-                className="crm-select w-full"
-                value={quand}
-                onChange={(e) => setQuand(e.target.value)}
-                aria-label={typeAction === "visite" ? "Date de la visite" : "Date du rappel"}
-              />
-              {typeAction === "visite" ? (
-                <p className="crm-panneau__aide">
-                  Planifier la visite fait passer ce dossier à l’étape « Visite ».
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+          <BlocProchaineAction
+            type={typeAction}
+            onType={choisirTypeAction}
+            quand={quand}
+            onQuand={setQuand}
+            titre={titreAction}
+            onTitre={setTitreAction}
+            responsable={responsable}
+            onResponsable={setResponsable}
+            membres={membres}
+            disabled={enCours}
+          />
         </section>
 
         {/* ---- 5. L'historique, replié, mais sa dernière note visible ---------- */}

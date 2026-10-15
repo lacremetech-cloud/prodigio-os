@@ -445,7 +445,14 @@ export default async function BuyerProfilePage({
             <SectionTitle eyebrow="Suivi" title="Activités et notes internes" />
             {canOperateBuyers ? (
               <div className="mb-3">
-                <BuyerActivityForm buyerProfileId={profile.id} />
+                <BuyerActivityForm
+                  buyerProfileId={profile.id}
+                  interests={interests.map(({ interest, propertyLabel }) => ({
+                    id: interest.id,
+                    label: propertyLabel ?? "Bien sans nom",
+                  }))}
+                  members={memberOptions}
+                />
               </div>
             ) : null}
             {activities.length === 0 ? (

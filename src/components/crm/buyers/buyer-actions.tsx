@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   assignBuyerAction,
   createBuyerTaskAction,
-  logBuyerActivityAction,
+  enregistrerTraitementAction,
   qualifyBuyerAction,
   recordBuyerOfferAction,
   recordBuyerOutcomeAction,
@@ -22,8 +22,15 @@ import {
   buyerStageLabels,
 } from "@/modules/buyers/crm/labels";
 import { movableBuyerStages } from "@/modules/buyers/crm/pipeline";
+import {
+  BlocActivite,
+  BlocProchaineAction,
+  dansNJours,
+  depuisChampLocal,
+  maintenantLocal,
+  type TypeProchaineAction,
+} from "./choix-vocabulaire";
 import { centsToEuros, parseList } from "@/modules/buyers/crm/criteria";
-import { activityOutcomeLabels, activityTypeLabels } from "@/modules/crm/labels";
 import { FieldError, Saved, parseNumber, useAction } from "@/components/crm/property/shared";
 import type {
   BuyerQualificationStatus,
@@ -619,77 +626,140 @@ export function BuyerReopenForm({ buyerProfileId }: { buyerProfileId: string }) 
 }
 
 // --------------------------------------------------- Activités, notes, tâches
-export function BuyerActivityForm({ buyerProfileId }: { buyerProfileId: string }) {
+/**
+ * « Ajouter une activité » — le MÊME bloc que le panneau de traitement.
+ *
+ * Il remplace « Type / Résultat de l'échange », qui décrivait le même fait avec
+ * d'autres mots que le panneau : deux écrans, deux vocabulaires, et un
+ * commercial qui ne savait plus lequel comptait. Les sept choix, la date réelle
+ * modifiable, la note facultative et la prochaine action viennent tous des
+ * composants partagés.
+ *
+ * Une seule sauvegarde porte l'activité, la note et l'engagement qui suit. En
+ * deux appels, une coupure entre les deux laissait l'activité écrite et le
+ * rappel perdu : un dossier qu'on croit suivi et que personne ne rappelle.
+ */
+export function BuyerActivityForm({
+  buyerProfileId,
+  interests,
+  members,
+}: {
+  buyerProfileId: string;
+  /** Les projets de la personne : une activité se rattache à l'un d'eux. */
+  interests: { id: string; label: string }[];
+  members: { userId: string; name: string }[];
+}) {
   const { pending, error, done, run } = useAction();
-  const [type, setType] = useState("appel");
-  const [outcome, setOutcome] = useState("");
-  const [body, setBody] = useState("");
+  const [interestId, setInterestId] = useState(interests[0]?.id ?? "");
+  const [activite, setActivite] = useState<string | null>(null);
+  const [quandActivite, setQuandActivite] = useState(maintenantLocal());
+  const [note, setNote] = useState("");
+  const [typeAction, setTypeAction] = useState<TypeProchaineAction>("aucune");
+  const [quand, setQuand] = useState("");
+  const [titre, setTitre] = useState("");
+  const [responsable, setResponsable] = useState<string | null>(null);
+
+  if (interests.length === 0) {
+    return (
+      <p className="text-xs text-[var(--crm-text-dim)]">
+        Aucune manifestation d’intérêt : il n’y a pas de projet auquel rattacher une activité.
+      </p>
+    );
+  }
+
+  function choisirType(t: TypeProchaineAction) {
+    setTypeAction(t);
+    if (t === "aucune") setQuand("");
+    else if (!quand) setQuand(dansNJours(t === "rappel" ? 1 : 2));
+  }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="crm-label">Type</span>
+    <div className="flex flex-col gap-3">
+      {/* Le projet n'est demandé que s'il y a un choix à faire. */}
+      {interests.length > 1 ? (
+        <label className="flex flex-col gap-1">
+          <span className="crm-label">Projet concerné</span>
           <select
             className="crm-select"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            aria-label="Type d’activité"
+            value={interestId}
+            disabled={pending}
+            onChange={(e) => setInterestId(e.target.value)}
           >
-            {Object.entries(activityTypeLabels).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
+            {interests.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.label}
               </option>
             ))}
           </select>
         </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="crm-label">Résultat de l’échange</span>
-          <select
-            className="crm-select"
-            value={outcome}
-            onChange={(e) => setOutcome(e.target.value)}
-            aria-label="Résultat de l’échange"
-          >
-            <option value="">Non précisé</option>
-            {Object.entries(activityOutcomeLabels).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <label className="flex flex-col gap-1">
-        <span className="crm-label">Note interne</span>
-        <textarea
-          className="crm-textarea"
-          rows={2}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Ce qui s’est dit, ce qu’il faut retenir…"
+      ) : null}
+
+      <BlocActivite
+        activite={activite}
+        onActivite={setActivite}
+        quand={quandActivite}
+        onQuand={setQuandActivite}
+        note={note}
+        onNote={setNote}
+        disabled={pending}
+      />
+
+      <div className="border-t border-[var(--crm-line-soft)] pt-3">
+        <p className="crm-label mb-1.5">Prochaine action</p>
+        <BlocProchaineAction
+          type={typeAction}
+          onType={choisirType}
+          quand={quand}
+          onQuand={setQuand}
+          titre={titre}
+          onTitre={setTitre}
+          responsable={responsable}
+          onResponsable={setResponsable}
+          membres={members}
+          disabled={pending}
         />
-      </label>
+      </div>
+
       <div className="flex items-center gap-2">
         <button
           type="button"
           className="crm-btn crm-btn--sm"
-          disabled={pending}
+          disabled={pending || (!activite && !note.trim() && typeAction === "aucune")}
           onClick={() =>
             run(
               () =>
-                logBuyerActivityAction({
+                enregistrerTraitementAction({
                   buyerProfileId,
-                  type,
-                  outcome: outcome || null,
-                  body: body.trim() || null,
+                  interestId,
+                  activite,
+                  occurredAt: activite ? depuisChampLocal(quandActivite) : null,
+                  note: note.trim() || null,
+                  stage: typeAction === "visite" && quand ? "visite_planifiee" : null,
+                  nextActionKind: typeAction === "aucune" ? null : typeAction,
+                  nextActionAt: depuisChampLocal(quand),
+                  nextActionTitle:
+                    typeAction === "visite"
+                      ? "Visite"
+                      : typeAction === "rappel"
+                        ? "Rappeler"
+                        : titre.trim() || null,
+                  nextActionAssignee: responsable,
                 }),
-              // Le champ est vidé seulement si l'enregistrement a réussi.
-              () => setBody(""),
+              /* Vidé SEULEMENT après un succès confirmé : une coupure réseau ne
+                 doit pas effacer la note qu'on vient de dicter au téléphone. */
+              () => {
+                setActivite(null);
+                setNote("");
+                setQuandActivite(maintenantLocal());
+                setTypeAction("aucune");
+                setQuand("");
+                setTitre("");
+                setResponsable(null);
+              },
             )
           }
         >
-          {pending ? "…" : "Enregistrer l’activité"}
+          {pending ? "…" : "Enregistrer"}
         </button>
         <Saved show={done} />
       </div>

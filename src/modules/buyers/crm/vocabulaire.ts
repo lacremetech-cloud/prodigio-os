@@ -255,3 +255,48 @@ export function estAppelable(qualificationValeur: string, etapeValeur: string): 
   if (qualificationValeur === "non_qualifie") return false;
   return etape(etapeValeur).appelable;
 }
+
+// --- Ce qui s'est passé ------------------------------------------------------
+
+/**
+ * Les sept activités qu'on enregistre, et rien d'autre.
+ *
+ * Elles remplacent deux blocs concurrents : « Résultat de l'appel » dans le
+ * panneau et « Type / Résultat de l'échange » dans la fiche. Les deux
+ * décrivaient le même fait avec des mots différents, et aucun ne savait dire
+ * qu'on avait envoyé un WhatsApp.
+ *
+ * UNE ACTIVITÉ EST UN FAIT, pas une intention. Ouvrir WhatsApp ne prouve pas
+ * qu'un message est parti, et cliquer sur « Appeler » ne prouve pas qu'un appel
+ * a eu lieu : c'est le commercial qui confirme, après coup, ce qui s'est
+ * réellement passé.
+ */
+export const ACTIVITES = [
+  { valeur: "appel_sans_reponse", label: "Appel — sans réponse", rappelle: true },
+  { valeur: "appel_echange", label: "Appel — échange effectué", rappelle: false },
+  { valeur: "message_vocal", label: "Message vocal laissé", rappelle: true },
+  { valeur: "whatsapp", label: "Message WhatsApp envoyé", rappelle: false },
+  { valeur: "sms", label: "SMS / iMessage envoyé", rappelle: false },
+  { valeur: "email", label: "E-mail envoyé", rappelle: false },
+  { valeur: "note", label: "Note libre", rappelle: false },
+] as const;
+
+export type Activite = (typeof ACTIVITES)[number]["valeur"];
+
+const ACTIVITE_PAR_VALEUR = new Map(ACTIVITES.map((a) => [a.valeur, a]));
+
+export function activiteLabel(v: string): string {
+  return ACTIVITE_PAR_VALEUR.get(v as Activite)?.label ?? v;
+}
+
+/**
+ * Cette activité appelle-t-elle un rappel ?
+ *
+ * Un appel sans réponse et un message vocal, oui : la conversation n'a pas eu
+ * lieu, elle reste à avoir. Un message envoyé, non — on attend une réponse,
+ * on ne se rappelle pas soi-même. Et surtout : un message envoyé ne vaut pas
+ * « en discussion », tant que personne n'a répondu.
+ */
+export function appelleUnRappel(v: string | null): boolean {
+  return v ? (ACTIVITE_PAR_VALEUR.get(v as Activite)?.rappelle ?? false) : false;
+}
