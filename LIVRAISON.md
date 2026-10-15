@@ -24,25 +24,35 @@ Ne jamais se fier à `git log` seul : il dit ce que contient une branche, pas ce
 que sert Vercel. Les deux ont divergé pendant des jours sans que rien ne le
 signale.
 
-## La barrière de déploiement : retirée, et pourquoi
+## La barrière de déploiement
 
-On a tenté de faire lancer les tests par Vercel avant publication
-(`vercel-build`). La commande passe en local, mais la production a cessé de se
-mettre à jour pendant plus de dix minutes et rien ne permettait de savoir
-pourquoi : les journaux Vercel ne sont pas accessibles depuis l'outillage
-actuel.
+`vercel-build` lance **types + tests + construction** avant toute publication.
+Vercel appelle ce script en priorité sur `build` : **un test rouge arrête le
+déploiement**, il ne le signale pas après coup.
 
-Une barrière qu'on ne peut pas observer et qui bloque les livraisons est pire
-que pas de barrière. Elle a donc été retirée.
+### Le piège, pour qui y touchera
 
-Ce qui reste : la vérification GitHub (`.github/workflows/verification.yml`)
-lance types, tests et construction à chaque poussée, sur toutes les branches.
-Elle SIGNALE au lieu de BLOQUER — un commit rouge part quand même en
-production, mais on le voit immédiatement sur GitHub.
+Vercel impose `NODE_ENV=production` pendant la construction. Or React **retire
+`act` de ses versions de production** : sous ce réglage, tous les tests de
+composants échouent avec `React.act is not a function`, alors qu'ils passent en
+local. Ça a fait croire, un moment, que la barrière était inutilisable et on
+l'avait retirée.
 
-Pour remettre une vraie barrière, il faut d'abord un accès aux journaux
-Vercel. Avec lui, `"vercel-build": "tsc --noEmit && vitest run && next build"`
-peut être rétabli en connaissance de cause.
+D'où le `NODE_ENV=test` devant `vitest run`, dans `package.json` comme dans
+l'intégration continue. **Ne l'enlevez pas.**
+
+Pour simuler exactement ce que fait Vercel, avant de pousser :
+
+```sh
+NODE_ENV=production npm run vercel-build
+```
+
+### Si un test rouge bloque une correction urgente
+
+C'est le prix d'une barrière qui tient. Deux options : corriger le test (le
+bon réflexe), ou, si l'urgence l'exige, retirer temporairement `vercel-build`
+de `package.json` — en sachant que plus rien n'est verifié, et en le remettant
+juste après.
 
 ## Avant de pousser
 

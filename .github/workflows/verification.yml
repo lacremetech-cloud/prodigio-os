@@ -28,7 +28,11 @@ jobs:
         run: npm run typecheck
 
       - name: Tests
-        run: npm run test:run
+        # NODE_ENV=test explicitement : sous `production`, React retire `act`
+        # de son paquet et TOUS les tests de composants echouent avec
+        # « React.act is not a function ». C'est ce qui a fait croire, un
+        # moment, que la barriere de deploiement etait inutilisable.
+        run: NODE_ENV=test npm run test:run
 
       - name: Construction
         run: npm run build
