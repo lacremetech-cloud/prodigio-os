@@ -576,6 +576,8 @@ export interface BuyerProfileDetail {
   nextTaskOverdue: boolean;
   activities: ActivityRow[];
   auditEvents: AuditEventRow[];
+  /** Vrai quand la base a REFUSÉ l'historique, et non quand il est vide. */
+  auditIndisponible: boolean;
   members: Map<string, MemberInfo>;
   offerPropertyLabel: string | null;
 }
@@ -602,7 +604,7 @@ export async function getBuyerProfileDetail(
     { data: assignmentRows },
     { data: taskRows },
     { data: activityRows },
-    { data: auditRows },
+    { data: auditRows, error: auditError },
     members,
   ] = await Promise.all([
     supabase.from("contacts").select("*").eq("id", profile.contact_id).maybeSingle(),
@@ -627,8 +629,11 @@ export async function getBuyerProfileDetail(
       .select("*")
       .eq("buyer_profile_id", buyerProfileId)
       .order("occurred_at", { ascending: false }),
-    // Le journal d'audit n'est lisible que par admin/manager (politique RLS) :
-    // pour les autres rôles la requête renvoie simplement une liste vide.
+    /* L'historique est lisible par l'administration, et par celui qui
+       travaille le dossier (politique `audit_events_crm_read`). Un refus de la
+       base n'est PAS une absence d'événement : il se journalise, sinon il
+       s'affiche en « Aucun événement » et on cherche le bug pendant une
+       journée — c'est exactement ce qui est arrivé. */
     supabase
       .from("audit_events")
       .select("*")
@@ -637,6 +642,17 @@ export async function getBuyerProfileDetail(
       .order("created_at", { ascending: false }),
     getMembersMap(),
   ]);
+
+  /* Un refus de la base n'est PAS une absence d'événement. Sans cette
+     trace, « permission denied for function » s'affichait en « Aucun
+     événement » et se cherchait une journée. */
+  if (auditError) {
+    console.warn("historique acquereur refuse par la base", {
+      buyerProfileId,
+      code: auditError.code,
+      message: auditError.message,
+    });
+  }
 
   const interests = (interestRows ?? []) as BuyerInterestRow[];
   const propertyIds = [
@@ -686,6 +702,7 @@ export async function getBuyerProfileDetail(
     ),
     activities: (activityRows ?? []) as ActivityRow[],
     auditEvents: (auditRows ?? []) as AuditEventRow[],
+    auditIndisponible: Boolean(auditError),
     members,
     offerPropertyLabel: profile.offer_property_id
       ? propertyLabelOf(propertyById.get(profile.offer_property_id))

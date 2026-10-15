@@ -142,7 +142,8 @@ export default async function BuyerProfilePage({
   const communications = await getMessagesForEntity("buyer_profile", id, {
     canViewDetails: canViewContacts,
   });
-  const { profile, interests, assignees, tasks, activities, auditEvents, members } = detail;
+  const { profile, interests, assignees, tasks, activities, auditEvents, auditIndisponible, members } =
+    detail;
 
   /*
    * Tentatives et dernier appel PAR MANIFESTATION, dérivés des activités déjà
@@ -495,7 +496,14 @@ export default async function BuyerProfilePage({
           {showAudit ? (
             <section className="crm-panel p-4">
               <SectionTitle eyebrow="Traçabilité" title="Ce qui a changé, et quand" />
-              {auditEvents.length === 0 ? (
+              {auditIndisponible ? (
+                /* Dire « Aucun événement » quand la base a REFUSÉ de répondre
+                   envoie chercher un bug qui n'existe pas. */
+                <p className="text-sm text-[var(--crm-text-dim)]">
+                  Historique momentanément indisponible. Signalez-le, il ne manque rien aux
+                  activités ci-dessus.
+                </p>
+              ) : auditEvents.length === 0 ? (
                 <p className="text-sm text-[var(--crm-text-dim)]">Aucun événement.</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
