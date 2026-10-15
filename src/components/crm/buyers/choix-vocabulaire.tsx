@@ -379,3 +379,64 @@ export function BlocProchaineAction({
     </div>
   );
 }
+
+/**
+ * « Sur quel bien ? » — une PRÉCISION, pas un préalable.
+ *
+ * Par défaut « Général / Tous les biens ». L'activité appartient d'abord à la
+ * personne : on parle à quelqu'un, et seulement parfois d'un bien en
+ * particulier. Exiger un bien obligeait à saisir deux activités pour un seul
+ * appel qui parlait de deux villas — ou, bien plus souvent, à n'en saisir
+ * qu'une et à perdre la moitié de ce qui s'était dit.
+ *
+ * Le menu ne s'affiche que s'il y a un choix à faire : sur une personne qui ne
+ * suit qu'un bien, « Général » et « Villa Verdun » désignent la même
+ * conversation, et le champ ne ferait que ralentir.
+ */
+export function ChoixProjet({
+  valeur,
+  onChoisir,
+  projets,
+  requis,
+  disabled,
+}: {
+  /** `null` = général, rattaché à la personne. */
+  valeur: string | null;
+  onChoisir: (v: string | null) => void;
+  projets: { interestId: string; label: string }[];
+  /** Vrai quand une visite est en cours de planification : là, il en faut un. */
+  requis?: boolean;
+  disabled?: boolean;
+}) {
+  if (projets.length < 2 && !requis) return null;
+
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="crm-label">Bien concerné</span>
+      <select
+        className="crm-select"
+        value={valeur ?? ""}
+        disabled={disabled}
+        onChange={(e) => onChoisir(e.target.value || null)}
+      >
+        {/* Absent quand un bien est exigé : proposer « Général » pour le voir
+            refusé à l'enregistrement serait une fausse promesse. */}
+        {requis ? (
+          <option value="">Choisir le bien…</option>
+        ) : (
+          <option value="">Général / Tous les biens</option>
+        )}
+        {projets.map((p) => (
+          <option key={p.interestId} value={p.interestId}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+      {requis && !valeur ? (
+        <span className="text-[11px] text-[var(--crm-text-faint)]">
+          Une visite se rattache à un bien précis.
+        </span>
+      ) : null}
+    </label>
+  );
+}

@@ -13,6 +13,7 @@ import {
   BlocActivite,
   BlocProchaineAction,
   ChoixEtape,
+  ChoixProjet,
   ChoixQualification,
   dansNJours,
   depuisChampLocal,
@@ -91,6 +92,9 @@ export function PanneauTraitement({
       vient, et pas la liste remise à zéro. */
   contexte: string;
 }) {
+  /* `null` = général. L'activité appartient d'abord à la personne ; le bien
+     est une précision qu'on apporte quand l'échange la mérite. */
+  const [projet, setProjet] = useState<string | null>(null);
   const [activite, setActivite] = useState<string | null>(null);
   /* Préremplie à maintenant, modifiable : on note souvent un appel après
      coup, et dater la note de l'heure de saisie fausserait la chronologie. */
@@ -178,7 +182,7 @@ export function PanneauTraitement({
     const resultatAction = await safeAction(() =>
       enregistrerTraitementAction({
         buyerProfileId: row.buyerProfileId,
-        interestId: row.interestId,
+        interestId: projet,
         activite,
         occurredAt: activite ? depuisChampLocal(quandActivite) : null,
         qualification,
@@ -345,6 +349,12 @@ export function PanneauTraitement({
             un vocabulaire différent de celui de la fiche pour le même fait. */}
         <section className="crm-bloc">
           <h3 className="crm-bloc__titre">Ajouter une activité</h3>
+          <ChoixProjet
+            valeur={projet}
+            onChoisir={setProjet}
+            projets={row.projets}
+            disabled={enCours}
+          />
           <BlocActivite
             activite={activite}
             onActivite={choisirResultat}
@@ -404,6 +414,19 @@ export function PanneauTraitement({
             dossier entier. */}
         <section className="crm-bloc">
           <h3 className="crm-bloc__titre">Prochaine action</h3>
+          {/* Une visite exige un bien : le menu réapparaît, même sur une
+              personne qui n'en suit qu'un, pour que le rattachement soit vu. */}
+          {typeAction === "visite" ? (
+            <div className="mb-2">
+              <ChoixProjet
+                valeur={projet}
+                onChoisir={setProjet}
+                projets={row.projets}
+                requis
+                disabled={enCours}
+              />
+            </div>
+          ) : null}
           <BlocProchaineAction
             type={typeAction}
             onType={choisirTypeAction}

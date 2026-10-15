@@ -1449,7 +1449,9 @@ export interface Database {
           traitement. Soit tout est écrit, soit rien ne l'est. */
       crm_buyer_enregistrer: {
         Args: {
-          p_interest_id: string;
+          p_buyer_profile_id: string;
+          /** Facultatif : nul = activité générale, rattachée à la personne. */
+          p_interest_id: string | null;
           p_activite: string | null;
           p_occurred_at: string | null;
           p_note: string | null;

@@ -588,7 +588,19 @@ export async function setBuyerTaskStatusAction(input: unknown): Promise<ActionRe
  */
 const enregistrementSchema = z.object({
   buyerProfileId: uuid,
-  interestId: uuid,
+  /**
+   * Le bien concerné, FACULTATIF.
+   *
+   * Nul = « Général / Tous les biens ». C'est le cas le plus fréquent : on
+   * parle à quelqu'un, et seulement parfois d'un bien en particulier. Exiger
+   * un bien obligeait à saisir DEUX activités pour un seul appel qui parlait
+   * de deux villas — ou, plus souvent, à n'en saisir qu'une et à perdre la
+   * moitié de ce qui s'était dit.
+   *
+   * Les visites et les offres, elles, en exigent un : la base refuse une
+   * visite sans bien plutôt que d'enregistrer un rendez-vous sans adresse.
+   */
+  interestId: uuid.nullable().optional(),
   activite: z
     .enum([
       "appel_sans_reponse",
@@ -640,9 +652,16 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
     return { ok: false, error: "Indiquez un motif pour écarter ce dossier." };
   }
 
+  /* Dit ici aussi, pour la même raison : « une visite se rattache à un bien
+     précis » se comprend, et on corrige sans perdre le reste de la saisie. */
+  if (d.nextActionKind === "visite" && !d.interestId) {
+    return { ok: false, error: "Choisissez le bien concerné pour planifier une visite." };
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("crm_buyer_enregistrer", {
-    p_interest_id: d.interestId,
+  const { data: ecrit, error } = await supabase.rpc("crm_buyer_enregistrer", {
+    p_buyer_profile_id: d.buyerProfileId,
+    p_interest_id: d.interestId ?? null,
     p_activite: d.activite ?? null,
     p_occurred_at: d.occurredAt ?? null,
     p_note: d.note ?? null,
@@ -656,6 +675,36 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
     p_complete_task_id: d.completeTaskId ?? null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+
+  /*
+   * ON RELIT CE QUI A ÉTÉ ÉCRIT, et pas ce qu'on a demandé.
+   *
+   * Un champ proposé à l'écran et silencieusement perdu en base est la pire
+   * des pannes : elle ne se voit pas. Un commercial affecte un rappel à son
+   * collègue, l'écran dit « enregistré », et personne ne rappelle. La base
+   * renvoie donc le responsable RÉELLEMENT posé ; s'il ne correspond pas à
+   * celui qu'on a choisi, on le dit au lieu de laisser croire.
+   *
+   * C'est ce qui protège aussi la fenêtre entre une migration et le
+   * déploiement : si la fonction en ligne ignorait ce paramètre, l'écart se
+   * verrait ici au lieu de passer inaperçu.
+   */
+  const retour = ecrit as {
+    task_id?: string | null;
+    next_action_assignee?: string | null;
+  } | null;
+  if (d.nextActionAssignee && retour?.task_id) {
+    if (retour.next_action_assignee !== d.nextActionAssignee) {
+      revalidateBuyer(d.buyerProfileId);
+      return {
+        ok: false,
+        error:
+          "Le reste est enregistré, mais le responsable du rappel n'a pas pu l'être. " +
+          "Vérifiez-le sur la fiche avant de passer au suivant.",
+      };
+    }
+  }
+
   revalidateBuyer(d.buyerProfileId);
   return { ok: true };
 }

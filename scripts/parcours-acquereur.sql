@@ -69,7 +69,9 @@ set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 \echo ''
 \echo '--- 1. Message vocal laissé + rappel demain + qualification, UNE sauvegarde'
 select public.crm_buyer_enregistrer(
-  p_interest_id          => '77777777-7777-7777-7777-777777777777',
+  p_buyer_profile_id     => '66666666-6666-6666-6666-666666666666',
+  -- Activité GÉNÉRALE : l'échange ne portait pas sur un bien en particulier.
+  p_interest_id          => null,
   p_activite             => 'message_vocal',
   -- Daté d'HIER : on note souvent un appel après coup. C'est précisément ce
   -- que la date modifiable doit préserver.
@@ -112,6 +114,8 @@ select t.title, t.kind, t.status, to_char(t.due_at, 'YYYY-MM-DD HH24:MI') as ech
 \echo ''
 \echo '--- 5. Deuxième traitement : le rappel est soldé, pas dupliqué'
 select public.crm_buyer_enregistrer(
+  p_buyer_profile_id     => '66666666-6666-6666-6666-666666666666',
+  -- Une visite se cale sur un bien PRÉCIS : ici on le donne.
   p_interest_id          => '77777777-7777-7777-7777-777777777777',
   p_activite             => 'appel_echange',
   p_occurred_at          => now(),
@@ -139,7 +143,7 @@ update public.buyer_profiles
    set qualification = 'non_qualifie', qualification_reason = 'Autre', pipeline_stage = 'a_contacter'
  where id = '66666666-6666-6666-6666-666666666666';
 select public.crm_buyer_enregistrer(
-  '77777777-7777-7777-7777-777777777777', 'appel_sans_reponse', now(), null,
+  '66666666-6666-6666-6666-666666666666', null, 'appel_sans_reponse', now(), null,
   null, null, null, null, null, null, null, null);
 select pipeline_stage, qualification from public.buyer_profiles
  where id = '66666666-6666-6666-6666-666666666666';
@@ -148,10 +152,10 @@ select pipeline_stage, qualification from public.buyer_profiles
 update public.buyer_profiles set qualification = 'qualifie', qualification_reason = null
  where id = '66666666-6666-6666-6666-666666666666';
 select public.crm_buyer_enregistrer(
-  '77777777-7777-7777-7777-777777777777', null, null, null, null, null, null,
+  '66666666-6666-6666-6666-666666666666', null, null, null, null, null, null, null,
   'rappel', now() + interval '2 days', 'Rappeler avant Nîmes', null, null);
 select public.crm_buyer_enregistrer(
-  '77777777-7777-7777-7777-777777777777', null, null, null, null, null, null,
+  '66666666-6666-6666-6666-666666666666', null, null, null, null, null, null, null,
   'rappel', now() + interval '10 days', 'Rappeler pour la visite', null, null);
 select count(*) as rappels_ouverts from public.tasks
  where buyer_profile_id = '66666666-6666-6666-6666-666666666666'
@@ -160,7 +164,7 @@ select count(*) as rappels_ouverts from public.tasks
 \echo ''
 \echo '--- 7. « Mauvais numéro » touche le NUMÉRO, pas la qualification'
 select public.crm_buyer_enregistrer(
-  '77777777-7777-7777-7777-777777777777', 'appel_sans_reponse', now(), null,
+  '66666666-6666-6666-6666-666666666666', null, 'appel_sans_reponse', now(), null,
   null, null, 'mauvais_numero', null, null, null, null, null);
 select p.pipeline_stage, p.qualification, c.phone_status
   from public.buyer_profiles p join public.contacts c on c.id = p.contact_id
@@ -171,7 +175,7 @@ select p.pipeline_stage, p.qualification, c.phone_status
 do $$
 begin
   perform public.crm_buyer_enregistrer(
-    '77777777-7777-7777-7777-777777777777', 'note', now() + interval '2 days',
+    '66666666-6666-6666-6666-666666666666', null, 'note', now() + interval '2 days',
     'Note du futur', null, null, null, null, null, null, null, null);
   raise exception 'ÉCHEC : la date future a été acceptée';
 exception when sqlstate '22023' then
@@ -183,7 +187,7 @@ end $$;
 do $$
 begin
   perform public.crm_buyer_enregistrer(
-    '77777777-7777-7777-7777-777777777777', null, null, null,
+    '66666666-6666-6666-6666-666666666666', null, null, null, null,
     'non_qualifie', null, null, null, null, null, null, null);
   raise exception 'ÉCHEC : un dossier a été écarté sans motif';
 exception when sqlstate '22023' then
@@ -195,3 +199,67 @@ end $$;
 select to_char(occurred_at, 'YYYY-MM-DD HH24:MI') as quand, type, outcome, left(coalesce(body,''), 40) as note
   from public.activities where buyer_profile_id = '66666666-6666-6666-6666-666666666666'
  order by occurred_at;
+
+\echo ''
+\echo '--- 11. Un seul appel qui parle de DEUX villas : UNE activité, générale'
+insert into public.properties (id, organization_id, project_name, commercial_title,
+                               commercialization_origin, holder_organization_id)
+values ('88888888-8888-8888-8888-888888888888', '33333333-3333-3333-3333-333333333333',
+        'Villa Jean Jaurès', 'Villa Jean Jaurès',
+        'partenaire_commercialisation', '33333333-3333-3333-3333-333333333333');
+insert into public.buyer_interests (id, organization_id, buyer_profile_id, contact_id, property_id,
+                                   funnel_version, idempotency_key, raw_answers, normalized_answers)
+values ('99999999-9999-9999-9999-999999999999', '33333333-3333-3333-3333-333333333333',
+        '66666666-6666-6666-6666-666666666666', '44444444-4444-4444-4444-444444444444',
+        '88888888-8888-8888-8888-888888888888', 'v1', 'parcours-2', '{}'::jsonb, '{}'::jsonb);
+
+select public.crm_buyer_enregistrer(
+  '66666666-6666-6666-6666-666666666666', null, 'appel_echange', now(),
+  'Un seul appel : il hésite entre Verdun et Jean Jaurès.',
+  null, null, null, null, null, null, null, null);
+
+select count(*) as activites_pour_cet_appel,
+       bool_and(interest_id is null) as rattachee_a_la_personne
+  from public.activities
+ where buyer_profile_id = '66666666-6666-6666-6666-666666666666'
+   and body like 'Un seul appel%';
+
+\echo ''
+\echo '--- 12. Une VISITE sans bien est refusée ; avec un bien elle passe'
+do $$
+begin
+  perform public.crm_buyer_enregistrer(
+    '66666666-6666-6666-6666-666666666666', null, null, null, null, null, null, null,
+    'visite', now() + interval '5 days', 'Visite', null, null);
+  raise exception 'ÉCHEC : une visite a été enregistrée sans bien';
+exception when sqlstate '22023' then
+  raise notice 'OK : refusée (%)', sqlerrm;
+end $$;
+
+select (public.crm_buyer_enregistrer(
+  '66666666-6666-6666-6666-666666666666', '99999999-9999-9999-9999-999999999999',
+  null, null, null, null, null, null,
+  'visite', now() + interval '5 days', 'Visite Jean Jaurès', null, null) ->> 'ok') as visite_avec_bien;
+
+\echo ''
+\echo '--- 13. Le responsable réellement ENREGISTRÉ est renvoyé, pas celui demandé'
+select (public.crm_buyer_enregistrer(
+  '66666666-6666-6666-6666-666666666666', null, null, null, null, null, null, null,
+  'tache', now() + interval '4 days', 'Envoyer le plan de masse',
+  '22222222-2222-2222-2222-222222222222', null) ->> 'next_action_assignee')
+  = '22222222-2222-2222-2222-222222222222' as responsable_confirme;
+
+\echo ''
+\echo '--- 14. Un projet qui n''appartient pas au dossier est refusé'
+do $$
+declare v_autre uuid;
+begin
+  insert into public.contacts (id, first_name, last_name)
+       values (gen_random_uuid(), 'Autre', 'Personne') returning id into v_autre;
+  perform public.crm_buyer_enregistrer(
+    '66666666-6666-6666-6666-666666666666', gen_random_uuid(), 'note', now(),
+    'Rattachement impossible', null, null, null, null, null, null, null, null);
+  raise exception 'ÉCHEC : un projet étranger a été accepté';
+exception when sqlstate '22023' then
+  raise notice 'OK : refusé (%)', sqlerrm;
+end $$;

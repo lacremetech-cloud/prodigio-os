@@ -25,6 +25,7 @@ import { movableBuyerStages } from "@/modules/buyers/crm/pipeline";
 import {
   BlocActivite,
   BlocProchaineAction,
+  ChoixProjet,
   dansNJours,
   depuisChampLocal,
   maintenantLocal,
@@ -650,7 +651,9 @@ export function BuyerActivityForm({
   members: { userId: string; name: string }[];
 }) {
   const { pending, error, done, run } = useAction();
-  const [interestId, setInterestId] = useState(interests[0]?.id ?? "");
+  /* `null` = « Général / Tous les biens ». L'activité appartient d'abord à la
+     personne ; le bien est une précision. */
+  const [interestId, setInterestId] = useState<string | null>(null);
   const [activite, setActivite] = useState<string | null>(null);
   const [quandActivite, setQuandActivite] = useState(maintenantLocal());
   const [note, setNote] = useState("");
@@ -675,24 +678,13 @@ export function BuyerActivityForm({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Le projet n'est demandé que s'il y a un choix à faire. */}
-      {interests.length > 1 ? (
-        <label className="flex flex-col gap-1">
-          <span className="crm-label">Projet concerné</span>
-          <select
-            className="crm-select"
-            value={interestId}
-            disabled={pending}
-            onChange={(e) => setInterestId(e.target.value)}
-          >
-            {interests.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
+      <ChoixProjet
+        valeur={interestId}
+        onChoisir={setInterestId}
+        projets={interests.map((i) => ({ interestId: i.id, label: i.label }))}
+        requis={typeAction === "visite"}
+        disabled={pending}
+      />
 
       <BlocActivite
         activite={activite}
@@ -730,7 +722,8 @@ export function BuyerActivityForm({
               () =>
                 enregistrerTraitementAction({
                   buyerProfileId,
-                  interestId,
+                  interestId,  // null = général
+
                   activite,
                   occurredAt: activite ? depuisChampLocal(quandActivite) : null,
                   note: note.trim() || null,
@@ -755,6 +748,7 @@ export function BuyerActivityForm({
                 setQuand("");
                 setTitre("");
                 setResponsable(null);
+                setInterestId(null);
               },
             )
           }

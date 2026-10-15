@@ -67,6 +67,8 @@ export interface BuyerListItem {
   phoneMasked: string | null;
   city: string | null;
   interestPropertyIds: string[];
+  /** Les projets de la personne, avec l'identifiant de manifestation. */
+  projets: { interestId: string; label: string }[];
   assignees: { userId: string; name: string; responsibility: string }[];
   nextTask: TaskRow | null;
   overdue: boolean;
@@ -351,6 +353,16 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
           label: propertyLabelOf(propertyById.get(i.property_id)) ?? "Bien sans nom",
         }))
         .filter((p, i, tous) => tous.findIndex((x) => x.id === p.id) === i),
+      /* Les projets avec leur MANIFESTATION, et non leur bien : c'est ce qu'il
+         faut pour rattacher une activité ou caler une visite. Le panneau
+         propose « Général » en premier et ceux-ci ensuite. */
+      projets: parDate
+        .slice()
+        .reverse()
+        .map((i) => ({
+          interestId: i.id,
+          label: propertyLabelOf(propertyById.get(i.property_id)) ?? "Bien sans nom",
+        })),
       /* L'etape et la qualification viennent de la PERSONNE. Les colonnes des
          manifestations sont figees depuis la reprise du 14/10/2026 : les lire
          reafficherait un etat mort. */
@@ -434,6 +446,14 @@ export interface BuyerInboxRow {
   lastPropertyLabel: string | null;
   /** Tous les biens qui l'intéressent — une carte, plusieurs repères. */
   properties: { id: string; label: string }[];
+  /**
+   * Les mêmes projets, avec l'identifiant de MANIFESTATION.
+   *
+   * Rattacher une activité à un bien est facultatif — « Général » est le cas
+   * courant — mais caler une visite exige un bien précis, et c'est ici qu'on
+   * trouve lequel.
+   */
+  projets: { interestId: string; label: string }[];
   assigneeNames: string[];
   assigneeIds: string[];
   nextActionAt: string | null;
@@ -479,6 +499,7 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     lastPropertyId: item.propertyId,
     lastPropertyLabel: item.propertyLabel,
     properties: item.propertyLabels,
+    projets: item.projets,
     assigneeNames: item.assignees.map((a) => a.name),
     assigneeIds: item.assignees.map((a) => a.userId),
     nextActionAt: item.nextTask?.due_at ?? null,

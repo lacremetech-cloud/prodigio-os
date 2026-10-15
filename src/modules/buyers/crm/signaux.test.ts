@@ -11,6 +11,7 @@ function ligne(over: Partial<BuyerInboxRow> = {}): BuyerInboxRow {
     phoneMasked: "+33612345678",
     city: "Cassis",
     properties: [{ id: "prop-1", label: "Villa Verdun" }],
+    projets: [{ interestId: "int-1", label: "Villa Verdun" }],
     stage: "a_contacter",
     qualificationStatus: "non_qualifie",
     recommendedPriority: null,
