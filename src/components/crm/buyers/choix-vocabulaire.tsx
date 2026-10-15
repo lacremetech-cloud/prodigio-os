@@ -20,6 +20,7 @@ function Choix({
   valeur,
   label,
   couleur,
+  encre,
   actif,
   onChoisir,
   disabled,
@@ -27,6 +28,9 @@ function Choix({
   valeur: string;
   label: string;
   couleur: string;
+  /** Encre posée sur cette couleur. « Mauvais numéro » est noir : il ne porte
+      que du blanc, et l'encre commune du thème clair est noire. */
+  encre?: string;
   actif: boolean;
   onChoisir: (v: string) => void;
   disabled?: boolean;
@@ -46,7 +50,7 @@ function Choix({
                  d'écran. */
               background: `var(${couleur})`,
               borderColor: `var(${couleur})`,
-              color: "var(--crm-acq-sur-etape)",
+              color: `var(${encre ?? "--crm-acq-sur-etape"})`,
             }
           : { borderColor: `var(${couleur})` }
       }
@@ -73,9 +77,8 @@ export function ChoixEtape({
           key={e.valeur}
           valeur={e.valeur}
           label={e.label}
-          couleur={
-            e.valeur === "mauvais_numero" ? "--crm-acq-mauvais_numero" : e.couleur
-          }
+          couleur={e.couleur}
+          encre={e.encre}
           actif={valeur === e.valeur}
           disabled={disabled}
           /* Recliquer sur l'étape courante l'annule : c'est la seule façon de

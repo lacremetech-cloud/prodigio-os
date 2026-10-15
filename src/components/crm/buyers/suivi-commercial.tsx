@@ -114,7 +114,7 @@ export function SuiviCommercial({
       <div className="crm-suivi__actuel">
         <span
           className="crm-suivi__pastille"
-          style={{ background: `var(${defEtape.couleur})`, color: "var(--crm-acq-sur-etape)" }}
+          style={{ background: `var(${defEtape.couleur})`, color: `var(${defEtape.encre})` }}
         >
           {defEtape.label}
         </span>

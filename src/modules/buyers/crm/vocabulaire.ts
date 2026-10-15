@@ -47,6 +47,16 @@ export interface DefinitionEtape {
   sens: string;
   /** Variable CSS de la pastille. Jamais une couleur en dur. */
   couleur: string;
+  /**
+   * Variable CSS de l'ENCRE posée sur cette couleur.
+   *
+   * « Mauvais numéro » est le seul repère noir — il doit se distinguer du
+   * rouge des refus — et le noir ne porte que du blanc. En thème clair,
+   * l'encre commune vaut #0b0e13 : du noir sur du #242830, illisible. Un test
+   * vérifiait déjà le bon contraste avec la variable dédiée, mais aucun
+   * composant ne la lisait. Elle est désormais portée par l'étape elle-même.
+   */
+  encre: string;
   /** Vrai quand la couleur est assez sombre pour porter du texte blanc. */
   texteClair: boolean;
   /**
@@ -69,6 +79,7 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "À contacter",
     sens: "Aucune tentative enregistrée",
     couleur: "--crm-acq-a_contacter",
+    encre: "--crm-acq-sur-etape",
     texteClair: true,
     active: true,
     appelable: true,
@@ -78,6 +89,7 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "À rappeler",
     sens: "Sans réponse ou rappel prévu",
     couleur: "--crm-acq-a_rappeler",
+    encre: "--crm-acq-sur-etape",
     texteClair: true,
     active: true,
     appelable: true,
@@ -87,6 +99,7 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "En discussion",
     sens: "Échange engagé",
     couleur: "--crm-acq-en_discussion",
+    encre: "--crm-acq-sur-etape",
     texteClair: true,
     active: true,
     appelable: true,
@@ -96,6 +109,7 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "Visite planifiée",
     sens: "Visite réellement programmée, avec date, heure et bien",
     couleur: "--crm-acq-visite_planifiee",
+    encre: "--crm-acq-sur-etape",
     texteClair: true,
     active: true,
     appelable: true,
@@ -105,6 +119,7 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "Vivier",
     sens: "Suivi mis en attente",
     couleur: "--crm-acq-vivier",
+    encre: "--crm-acq-sur-etape",
     texteClair: true,
     /* Hors file active, mais PAS un échec : un gros potentiel peut être mis en
        vivier sans rien perdre de sa qualification. C'est la case qui manquait,
@@ -117,6 +132,7 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "Pas intéressé",
     sens: "Refus exprimé par la personne",
     couleur: "--crm-acq-pas_interesse",
+    encre: "--crm-acq-sur-etape",
     texteClair: true,
     active: false,
     appelable: false,
@@ -126,6 +142,7 @@ export const ETAPES: readonly DefinitionEtape[] = [
     label: "Mauvais numéro",
     sens: "Numéro incorrect, appel impossible",
     couleur: "--crm-acq-mauvais_numero",
+    encre: "--crm-acq-sur-mauvais_numero",
     texteClair: true,
     active: false,
     appelable: false,

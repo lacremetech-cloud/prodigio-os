@@ -168,12 +168,29 @@ describe("les couleurs de la légende", () => {
          au sens WCAG : le seuil est 3:1. On le vérifie plutôt que de le
          supposer — une pastille illisible ne sert à rien. */
       const v = variables(theme);
-      const encre = v.get("--crm-acq-sur-etape")!;
       for (const e of ETAPES) {
         const fond = v.get(e.couleur)!;
-        const sur = e.valeur === "mauvais_numero" ? v.get("--crm-acq-sur-mauvais_numero")! : encre;
+        /* On lit l'encre DÉCLARÉE PAR L'ÉTAPE, et non plus une exception
+           écrite dans le test. C'est ce qui manquait : le test validait le
+           bon contraste pendant que les composants posaient tous la même
+           encre — noire sur noir en thème clair pour « Mauvais numéro ». */
+        const sur = v.get(e.encre)!;
         expect(contraste(fond, sur), `${e.label} (${fond} / ${sur})`).toBeGreaterThanOrEqual(3);
       }
     });
   }
+});
+
+describe("encre des étapes", () => {
+  it("chaque étape déclare l'encre posée sur sa couleur", () => {
+    for (const e of ETAPES) expect(e.encre, e.label).toMatch(/^--crm-acq-sur-/);
+  });
+
+  it("« Mauvais numéro » est le SEUL repère à encre dédiée", () => {
+    /* Il doit rester noir à texte blanc, distinct du rouge des refus : le
+       noir ne porte que du blanc, et l'encre commune est sombre en thème
+       clair. */
+    const dedie = ETAPES.filter((e) => e.encre === "--crm-acq-sur-mauvais_numero");
+    expect(dedie.map((e) => e.valeur)).toEqual(["mauvais_numero"]);
+  });
 });
