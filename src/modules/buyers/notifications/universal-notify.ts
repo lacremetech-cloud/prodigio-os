@@ -140,3 +140,52 @@ export async function alerterNouvelleDemande(
     return { status: "failed" };
   }
 }
+
+/**
+ * UN DEPOT QUI ECHOUE DOIT CRIER.
+ *
+ * Le 14 octobre au soir, une contrainte de base s'est mise a refuser la
+ * creation des dossiers acquereurs. Pendant vingt-deux heures, 65 depots ont
+ * ete rejetes : le visiteur lisait « Une erreur est survenue », et PERSONNE
+ * n'a rien su. Ni alerte, ni compteur a zero visible — les depots des
+ * personnes deja connues continuaient de passer. On ne l'a decouvert qu'en
+ * essayant soi-meme le formulaire, apres avoir depense la publicite.
+ *
+ * Le succes etait annonce dans Slack ; l'echec, non. C'etait l'asymetrie la
+ * plus couteuse du systeme.
+ *
+ * AUCUNE COORDONNEE N'EST ENVOYEE. On ne sait pas si la personne consentira a
+ * ce que son nom circule, et le message part vers un service tiers : il ne
+ * porte que le bien, l'etape qui a echoue et le code technique. Ce qu'il faut
+ * pour agir dans la minute, rien de plus.
+ */
+export async function alerterDepotEnEchec(input: {
+  slug: string;
+  etape: "enregistrement" | "exception";
+  code?: string | null;
+}): Promise<{ status: "sent" | "skipped" | "failed" }> {
+  try {
+    if (!isBuyerSlackConfigured()) return { status: "skipped" };
+    const webhook = env.SLACK_BUYER_LEADS_WEBHOOK_URL;
+    if (!webhook) return { status: "skipped" };
+    const quoi =
+      input.etape === "enregistrement"
+        ? "la base a refuse l'enregistrement"
+        : "une erreur inattendue a interrompu le depot";
+    const texte =
+      `:rotating_light: *DÉPÔT ACQUÉREUR PERDU* — ${input.slug}\n` +
+      `Un visiteur a rempli le formulaire et ${quoi}. ` +
+      `Sa demande n'a été enregistrée nulle part.` +
+      (input.code ? `\nCode technique : \`${input.code}\`` : "") +
+      `\nÀ regarder tout de suite : chaque minute qui passe est de la publicité perdue.`;
+    const res = await postSlackWebhook(webhook, {
+      text: texte,
+      blocks: [{ type: "section", text: { type: "mrkdwn", text: texte } }],
+    });
+    return { status: res.ok ? "sent" : "failed" };
+  } catch {
+    /* Muet sur le detail : il contiendrait le webhook. */
+    console.error("alerte depot en echec : echec d'envoi Slack");
+    return { status: "failed" };
+  }
+}

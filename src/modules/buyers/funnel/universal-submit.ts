@@ -9,7 +9,10 @@ import {
 } from "../notifications/accuse-depot";
 import { envoyerSms } from "../notifications/smsfactor";
 import { lienBrochure } from "../notifications/lien-brochure";
-import { alerterNouvelleDemande } from "../notifications/universal-notify";
+import {
+  alerterDepotEnEchec,
+  alerterNouvelleDemande,
+} from "../notifications/universal-notify";
 import {
   bienDeLaManifestation,
   conversionProspect,
@@ -120,11 +123,15 @@ export async function submitUniversalInterestAction(
 
     if (error) {
       console.error("submit_buyer_interest (universel) a échoué", { code: error.code });
+      /* On CRIE. Un journal que personne ne lit a laissé passer 65 dépôts
+         perdus en vingt-deux heures. */
+      prevenirDeLEchec(request.slug, "enregistrement", error.code);
       return { ok: false, reason: "error", message: buyerFunnel.errors.generic };
     }
 
     const result = data as unknown as SubmitResult | null;
     if (!result || result.accepted !== true) {
+      prevenirDeLEchec(request.slug, "enregistrement", "refus_sans_code");
       return { ok: false, reason: "error", message: buyerFunnel.errors.generic };
     }
 
@@ -320,6 +327,34 @@ export async function submitUniversalInterestAction(
     console.error("submit_buyer_interest (universel) exception", {
       name: cause instanceof Error ? cause.name : "unknown",
     });
+    prevenirDeLEchec(
+      request.slug,
+      "exception",
+      cause instanceof Error ? cause.name : null,
+    );
     return { ok: false, reason: "error", message: buyerFunnel.errors.generic };
+  }
+}
+
+/**
+ * L'alerte part APRÈS la réponse et avale ses erreurs : prévenir ne doit
+ * jamais retarder le visiteur, ni transformer un échec en deuxième échec.
+ */
+function prevenirDeLEchec(
+  slug: string,
+  etape: "enregistrement" | "exception",
+  code: string | null | undefined,
+): void {
+  const envoyer = async () => {
+    try {
+      await alerterDepotEnEchec({ slug, etape, code: code ?? null });
+    } catch {
+      /* Une alerte muette ne doit rien casser de plus. */
+    }
+  };
+  try {
+    after(() => envoyer());
+  } catch {
+    void envoyer();
   }
 }

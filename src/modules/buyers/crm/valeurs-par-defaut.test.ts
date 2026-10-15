@@ -39,7 +39,7 @@ function dernierDefaut(sql: string, table: string, colonne: string): string | nu
     "gi",
   );
   let dernier: string | null = null;
-  for (const m of sql.matchAll(motif)) dernier = m[1];
+  for (const m of sql.matchAll(motif)) dernier = m[1] ?? null;
   return dernier;
 }
 
@@ -50,9 +50,9 @@ function dernieresValeursAdmises(sql: string, table: string, colonne: string): s
     "gi",
   );
   let dernier: string | null = null;
-  for (const m of sql.matchAll(motif)) dernier = m[1];
+  for (const m of sql.matchAll(motif)) dernier = m[1] ?? null;
   if (!dernier) return null;
-  return [...dernier.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+  return [...dernier.matchAll(/'([a-z_]+)'/g)].map((m) => m[1] as string);
 }
 
 describe("valeurs par défaut et contraintes : elles doivent rester d'accord", () => {
@@ -75,11 +75,11 @@ describe("valeurs par défaut et contraintes : elles doivent rester d'accord", (
     /* La dernière définition de la fonction, les migrations étant ordonnées. */
     const defs = [...sql.matchAll(/create or replace function public\.buyer_attach_interest[\s\S]*?\n\$\$;/g)];
     expect(defs.length, "fonction buyer_attach_interest introuvable").toBeGreaterThan(0);
-    const derniere = defs[defs.length - 1][0];
+    const derniere = defs[defs.length - 1]![0];
 
     const insertion = /insert into public\.buyer_profiles \(([\s\S]*?)\)\s*values/.exec(derniere);
     expect(insertion, "insertion dans buyer_profiles introuvable").not.toBeNull();
-    const colonnes = (insertion as RegExpExecArray)[1];
+    const colonnes = (insertion as RegExpExecArray)[1] as string;
     expect(
       colonnes.replace(/--[^\n]*/g, ""),
       "l'étape doit être posée explicitement : une contrainte qui change ne doit pas " +
