@@ -33,6 +33,7 @@ export interface BuyerKanbanCard {
   name: string;
   /** Projet de CETTE carte. */
   propertyLabel: string | null;
+  properties: { id: string; label: string }[];
   city: string | null;
   /** Score automatique du meilleur intérêt (≠ qualification humaine). */
   bestScore: number | null;

@@ -17,6 +17,7 @@ const card = (over: Partial<BuyerKanbanCard> = {}): BuyerKanbanCard => ({
   stage: "nouveau",
   name: "Léa Bernard",
   propertyLabel: "Villa Belvédère",
+  properties: [{ id: "prop-1", label: "Villa Verdun" }],
   city: "Megève",
   bestScore: 70,
   recommendedPriority: "a_qualifier",

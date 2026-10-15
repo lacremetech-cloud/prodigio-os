@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
-import { loadBuyerList, toKanbanCard } from "@/modules/buyers/crm/queries";
-import { buyerQualificationLabels } from "@/modules/buyers/crm/labels";
+import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
 import {
@@ -11,20 +10,24 @@ import {
   lireProjets,
   lireVue,
 } from "@/modules/buyers/crm/navigation";
-import { lireSignal } from "@/modules/buyers/crm/signaux";
+import { lireSignal, porteLeSignal } from "@/modules/buyers/crm/signaux";
+import { qualification as definitionQualification } from "@/modules/buyers/crm/vocabulaire";
 import { comptesParProjet } from "@/modules/buyers/crm/comptes";
-import type { BuyerQualificationStatus } from "@/lib/supabase/types";
 
 export const metadata: Metadata = { title: "Pipeline Acquéreurs" };
 
 /**
  * Pipeline Acquéreurs — distinct du pipeline Mandats.
  *
- * Une carte est une personne SUR UN PROJET : son déplacement ne touche que ce
- * projet-là. Le déplacement passe par `crm_buyer_set_interest_stage`, qui
- * re-vérifie le rôle et écrit l'audit. Les étapes « offre », « gagné » et
- * « perdu » restent protégées : elles exigent une action métier dédiée depuis
- * la fiche (confirmation, motif).
+ * Une carte est une PERSONNE. La déplacer déplace son traitement, pas une de
+ * ses manifestations : on appelle quelqu'un une fois, même s'il regarde deux
+ * villas. Ce qui tient au bien — visites, offres, issue commerciale — vit sur
+ * sa fiche et n'est pas touché par un déplacement.
+ *
+ * Le pipeline et la liste montrent EXACTEMENT les mêmes personnes et les mêmes
+ * compteurs à filtres égaux. Ils divergeaient parce que chacun décidait dans
+ * son coin qui était « à contacter » : le pipeline ignorait la qualification,
+ * et laissait donc une personne non qualifiée dans la file.
  */
 export default async function BuyersPipelinePage({
   searchParams,
@@ -43,13 +46,19 @@ export default async function BuyersPipelinePage({
   const signal = lireSignal(params.signal);
   const comptes = comptesParProjet(items);
 
-  const visibles = items.filter((i) => dansLaSelection(i.propertyId, selection));
-  const cards = visibles.map((item) =>
-    toKanbanCard(
-      item,
-      buyerQualificationLabels[item.profile.qualification_status as BuyerQualificationStatus] ??
-        item.profile.qualification_status,
-    ),
+  /* Le filtre par projet regarde TOUS les biens de la personne : Éric apparaît
+     qu'on choisisse Jean Jaurès ou Verdun, et une seule fois si l'on prend les
+     deux. */
+  const visibles = items.filter((i) =>
+    i.interestPropertyIds.some((id) => dansLaSelection(id, selection)),
+  );
+
+  /* Le MÊME prédicat que la liste. Il décide notamment qu'une personne non
+     qualifiée sort de la file active — c'est ce qui manquait ici. */
+  const retenues = visibles.filter((i) => porteLeSignal(toInboxRow(i), signal));
+
+  const cards = retenues.map((item) =>
+    toKanbanCard(item, definitionQualification(item.qualification).label),
   );
 
   return (
@@ -60,9 +69,9 @@ export default async function BuyersPipelinePage({
           Pipeline Acquéreurs
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--crm-text-dim)]">
-          {cards.length} carte{cards.length > 1 ? "s" : ""} — une par personne et par projet.
-          Les colonnes « Offre en cours », « Acquéreur gagné » et « Perdu » sont pilotées par une
-          action métier dédiée (confirmation, motif, audit) — jamais par un simple déplacement.
+          {cards.length} carte{cards.length > 1 ? "s" : ""} — une par personne. Déplacer une
+          carte déplace son traitement, pas un de ses projets : l&rsquo;étape et la qualification
+          sont communes. Ce qui tient au bien — visites, offres, issue — reste sur sa fiche.
         </p>
       </header>
 

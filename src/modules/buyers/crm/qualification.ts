@@ -12,60 +12,48 @@
  * au téléphone.
  */
 
-import type { BuyerQualification } from "@/lib/supabase/types";
+import { MOTIFS_NON_QUALIFIE, QUALIFICATIONS } from "./vocabulaire";
 
-export const BUYER_QUALIFICATIONS: readonly BuyerQualification[] = [
-  "a_qualifier",
-  "gros_potentiel",
-  "qualifie",
-  "en_reflexion",
-  "non_qualifie",
-] as const;
+/* Les quatre valeurs, leurs libellés et leurs couleurs vivent dans
+   `vocabulaire.ts`, seul endroit où elles sont écrites. Ce module les
+   ré-expose sous les noms que les écrans utilisent déjà.
 
-export const QUALIFICATION_LABELS: Record<BuyerQualification, string> = {
-  a_qualifier: "À qualifier",
-  gros_potentiel: "Gros potentiel",
-  qualifie: "Qualifié",
-  en_reflexion: "En réflexion",
-  non_qualifie: "Non qualifié",
+   « En réflexion » a disparu : elle n'existait que dans cette liste-ci, et
+   c'est elle qui faisait afficher CINQ boutons dans le panneau de traitement
+   quand le pipeline n'en connaissait que quatre. Elle reste lisible dans
+   l'historique, où elle a été posée. */
+export const BUYER_QUALIFICATIONS: readonly string[] = QUALIFICATIONS.map((q) => q.valeur);
+
+export const QUALIFICATION_LABELS: Record<string, string> = {
+  ...Object.fromEntries(QUALIFICATIONS.map((q) => [q.valeur, q.label])),
+  /* Traduit, pas effacé : une activité de JC porte cette valeur. */
+  en_reflexion: "En réflexion (ancienne valeur)",
 };
 
 /**
  * Teinte de la ligne. `null` = ligne blanche : « à qualifier » et « qualifié »
  * ne méritent pas un fond coloré, l'un parce qu'il est l'état par défaut de
  * tout le monde, l'autre parce qu'il est la normalité d'un dossier qui avance.
- * Colorer les cinq ne distinguerait plus rien.
  */
-export const QUALIFICATION_TEINTE: Record<BuyerQualification, string | null> = {
+export const QUALIFICATION_TEINTE: Record<string, string | null> = {
   a_qualifier: null,
   gros_potentiel: "vert",
   qualifie: null,
-  en_reflexion: "orange",
   non_qualifie: "rouge",
 };
 
 /** Couleur du badge, lui toujours présent — le libellé l'accompagne toujours. */
-export const QUALIFICATION_BADGE: Record<BuyerQualification, "gris" | "vert" | "orange" | "rouge"> = {
+export const QUALIFICATION_BADGE: Record<string, "gris" | "vert" | "orange" | "rouge"> = {
   a_qualifier: "gris",
   gros_potentiel: "vert",
   qualifie: "vert",
-  en_reflexion: "orange",
   non_qualifie: "rouge",
 };
 
-/**
- * Motifs proposés pour écarter un dossier. Courts, et « Autre » reste ouvert :
- * une liste fermée pousse à choisir au hasard le motif le moins faux.
- */
-export const MOTIFS_NON_QUALIFIE = [
-  "Budget incompatible",
-  "Projet incompatible",
-  "Pas intéressé",
-  "Autre",
-] as const;
+export { MOTIFS_NON_QUALIFIE };
 
-export function estQualificationConnue(v: string): v is BuyerQualification {
-  return (BUYER_QUALIFICATIONS as readonly string[]).includes(v);
+export function estQualificationConnue(v: string): boolean {
+  return BUYER_QUALIFICATIONS.includes(v);
 }
 
 // --- Résultats d'appel --------------------------------------------------------

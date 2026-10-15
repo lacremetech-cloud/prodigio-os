@@ -514,6 +514,8 @@ export function toKanbanCard(item: BuyerListItem, qualificationLabel: string): B
     stage: item.stage,
     name: item.name,
     propertyLabel: item.propertyLabel,
+    /* Tous les biens : une carte unique doit dire sur quoi elle porte. */
+    properties: item.propertyLabels,
     city: item.city,
     bestScore: item.profile.best_overall_score,
     recommendedPriority: item.profile.recommended_priority,

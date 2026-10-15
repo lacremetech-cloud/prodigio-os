@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateCourte } from "@/modules/crm/format";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MutableRefObject } from "react";
@@ -15,6 +16,8 @@ import {
   proposeUnRappel,
   type ResultatAppel,
 } from "@/modules/buyers/crm/qualification";
+import { ChoixEtape, ChoixQualification } from "./choix-vocabulaire";
+import { etape as definitionEtape } from "@/modules/buyers/crm/vocabulaire";
 import { ContactRapide } from "./contact-rapide";
 import { BadgeProjet } from "./barre-projets";
 import { BUDGET_CHOICE_COURT, type BuyerBudgetChoice } from "@/modules/buyers/funnel/universal";
@@ -40,6 +43,11 @@ import { BUDGET_CHOICE_COURT, type BuyerBudgetChoice } from "@/modules/buyers/fu
 
 type TypeAction = "aucune" | "rappel" | "visite";
 
+/** Libellé de l'étape actuelle, traduit depuis l'historique au besoin. */
+function etapeLabel(valeur: string): string {
+  return definitionEtape(valeur).label;
+}
+
 function dansNJours(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() + n);
@@ -61,15 +69,10 @@ function depuisChampLocal(valeur: string): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-function dateCourte(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+/* Déléguée au formateur commun : celui du panneau s'en remettait au fuseau du
+   navigateur, celui de la fiche à celui du serveur, et le même appel
+   s'affichait avec deux heures d'écart selon l'écran. */
+const dateCourte = (iso: string | null): string => formatDateCourte(iso);
 
 export function PanneauTraitement({
   row,
@@ -107,6 +110,10 @@ export function PanneauTraitement({
 }) {
   const [resultat, setResultat] = useState<ResultatAppel | null>(null);
   const [qualification, setQualification] = useState<string | null>(null);
+  /* L'étape, absente du panneau jusqu'ici : il fallait ouvrir la fiche ou
+     aller au pipeline pour la changer, c'est-à-dire quitter la file d'appels
+     en plein milieu. */
+  const [etape, setEtape] = useState<string | null>(null);
   const [motif, setMotif] = useState("");
   const [note, setNote] = useState("");
   const [typeAction, setTypeAction] = useState<TypeAction>("aucune");
@@ -173,9 +180,10 @@ export function PanneauTraitement({
         qualification,
         qualificationReason: qualification === "non_qualifie" ? motif || null : null,
         note: note.trim() || null,
-        /* Planifier une visite fait avancer l'étape — c'est le fait métier qui
-           la porte, pas un menu séparé qu'il faudrait penser à toucher. */
-        stage: typeAction === "visite" && quand ? "visite" : null,
+        /* L'étape choisie à la main prime. À défaut, planifier une visite la
+           fait avancer toute seule — c'est le fait métier qui la porte, pas un
+           menu qu'il faudrait penser à toucher. */
+        stage: etape ?? (typeAction === "visite" && quand ? "visite_planifiee" : null),
         nextActionKind: typeAction === "aucune" ? null : typeAction,
         nextActionAt: depuisChampLocal(quand),
         nextActionTitle:
@@ -340,6 +348,18 @@ export function PanneauTraitement({
           </div>
         </section>
 
+        {/* ---- Où en est le traitement ---------------------------------------
+            Le MÊME composant que la fiche, et les mêmes sept étapes que le
+            pipeline. Changer l'étape ici la change partout : c'est une
+            propriété de la personne, pas de l'écran qui l'affiche. */}
+        <section className="crm-bloc">
+          <h3 className="crm-bloc__titre">
+            Étape
+            <span className="crm-bloc__actuel">actuelle : {etapeLabel(row.stage)}</span>
+          </h3>
+          <ChoixEtape valeur={etape} onChoisir={setEtape} />
+        </section>
+
         {/* ---- 2. Ce qu'on en pense ------------------------------------------ */}
         <section className="crm-bloc">
           <h3 className="crm-bloc__titre">
@@ -349,19 +369,7 @@ export function PanneauTraitement({
           {/* Trois colonnes : cinq options tiennent en DEUX rangees au lieu de
               trois, et le parcours critique repasse sous la ligne de
               flottaison d'un portable 768. */}
-          <div className="crm-grille crm-grille--3">
-            {BUYER_QUALIFICATIONS.map((q) => (
-              <button
-                key={q}
-                type="button"
-                className={`crm-gros-choix crm-gros-choix--${q}`}
-                aria-pressed={qualification === q}
-                onClick={() => setQualification(qualification === q ? null : q)}
-              >
-                {QUALIFICATION_LABELS[q]}
-              </button>
-            ))}
-          </div>
+          <ChoixQualification valeur={qualification} onChoisir={setQualification} />
           {/* Le motif n'apparaît que s'il est exigé : un champ qui attend sans
               servir occupe la place et fait croire qu'il manque une réponse. */}
           {qualification === "non_qualifie" ? (

@@ -160,8 +160,8 @@ export function BuyerStageForm({
         <Saved show={done} />
       </div>
       <p className="text-[11px] text-[var(--crm-text-faint)]">
-        Ne déplace que ce projet. « Offre en cours », « Acquéreur gagné » et « Perdu » passent
-        par leurs actions dédiées.
+        L&rsquo;étape est commune à la personne : elle change aussi dans la liste et le
+        pipeline. Visites, offres et issue commerciale restent attachées au bien concerné.
       </p>
       <FieldError error={error} />
     </div>

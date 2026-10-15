@@ -12,6 +12,20 @@ export function nowMs(): number {
   return Date.now();
 }
 
+/**
+ * Le fuseau de l'agence, écrit une fois.
+ *
+ * SANS LUI, la MÊME date s'affichait différemment selon l'écran : la fiche est
+ * rendue sur le serveur, dont l'horloge est en UTC, et le panneau dans le
+ * navigateur du commercial, à Paris. Un appel passé à 20 h 38 apparaissait
+ * donc « 18:38 » sur la fiche et « 20:38 » dans le panneau — deux heures
+ * d'écart sur le même événement, de quoi douter de tout l'historique.
+ *
+ * Prodigio vend à Cassis depuis Marseille : l'heure de référence est celle de
+ * l'agence, pas celle de la machine qui rend la page.
+ */
+export const FUSEAU_AGENCE = "Europe/Paris";
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -22,6 +36,7 @@ export function formatDateTime(iso: string | null | undefined): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: FUSEAU_AGENCE,
   }).format(d);
 }
 
@@ -33,6 +48,7 @@ export function formatDate(iso: string | null | undefined): string {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: FUSEAU_AGENCE,
   }).format(d);
 }
 
@@ -91,4 +107,22 @@ export function initials(name: string): string {
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   const last = parts[parts.length - 1] ?? first;
   return ((first[0] ?? "") + (last[0] ?? "")).toUpperCase() || "?";
+}
+
+/**
+ * Date courte avec l'heure — « 14 oct., 20:38 ». Même fuseau que tout le
+ * reste : c'est la fonction du panneau de traitement, qui affichait sa propre
+ * heure avant qu'elles ne soient réunies ici.
+ */
+export function formatDateCourte(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: FUSEAU_AGENCE,
+  }).format(d);
 }

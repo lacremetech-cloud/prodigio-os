@@ -93,7 +93,8 @@ export function BuyerKanbanBoard({
     const needle = search.trim().toLowerCase();
     return cards.filter((c) => {
       if (needle) {
-        const hay = `${c.name} ${c.city ?? ""} ${c.propertyLabel ?? ""}`.toLowerCase();
+        const hay = `${c.name} ${c.city ?? ""} ${c.properties.map((p) => p.label).join(" ")}`
+          .toLowerCase();
         if (!hay.includes(needle)) return false;
       }
       if (quick === "non_affecte") return c.unassigned;
@@ -425,13 +426,18 @@ function Card({
               </span>
               {card.recommendedPriority === "prioritaire" ? <Chip variant="gold">★</Chip> : null}
             </div>
-            {/* En vue « tous les projets », c'est ce badge qui dit DE QUEL
-                projet la carte parle : deux cartes de la meme personne y
-                voisinent, et seul le nom ne les distinguerait pas. */}
+            {/* TOUS les biens de la personne. Il n'y a plus qu'une carte par
+                personne : c'est elle qui doit dire sur quoi elle porte, sans
+                quoi Éric ressemblerait à un acquéreur d'un seul projet. */}
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
-              {montrerProjet ? (
-                <BadgeProjet propertyId={card.propertyId} label={card.propertyLabel} />
-              ) : null}
+              {montrerProjet
+                ? (card.properties.length > 0
+                    ? card.properties
+                    : card.propertyId && card.propertyLabel
+                      ? [{ id: card.propertyId, label: card.propertyLabel }]
+                      : []
+                  ).map((p) => <BadgeProjet key={p.id} propertyId={p.id} label={p.label} />)
+                : null}
               {card.city ? (
                 <span className="crm-ellipsis text-xs text-[var(--crm-text-faint)]">
                   {card.city}
