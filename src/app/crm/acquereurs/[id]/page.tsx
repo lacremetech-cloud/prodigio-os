@@ -54,6 +54,11 @@ import {
   BuyerStageForm,
   BuyerTaskForm,
 } from "@/components/crm/buyers/buyer-actions";
+import { SuiviCommercial } from "@/components/crm/buyers/suivi-commercial";
+import {
+  etape as definitionEtape,
+  qualification as definitionQualification,
+} from "@/modules/buyers/crm/vocabulaire";
 
 export const metadata: Metadata = { title: "Fiche acquéreur" };
 
@@ -70,6 +75,23 @@ function label(map: Record<string, string>, v: string | null | undefined): strin
  * Toutes les données proviennent de requêtes soumises à la RLS ; les
  * coordonnées sont masquées côté serveur selon le rôle.
  */
+/**
+ * L'état figé d'une manifestation, en texte.
+ *
+ * Ces colonnes sont gelées depuis la reprise du 14 octobre 2026 : elles ne
+ * décrivent plus rien d'actuel. Affichées en badges, elles contredisaient
+ * l'en-tête — Gilles « À rappeler » en haut, « À contacter » sur son bloc
+ * Jean Jaurès. On les garde parce qu'elles racontent d'où l'on vient, mais au
+ * passé et en petit : une date, une origine, aucune couleur de statut.
+ *
+ * Les libellés viennent du vocabulaire commun, qui traduit aussi les valeurs
+ * disparues : « en_reflexion » n'existe plus, et l'afficher brut livrerait un
+ * identifiant technique à un commercial.
+ */
+function etatFige(i: { pipeline_stage: string; qualification: string }): string {
+  return `${definitionEtape(i.pipeline_stage).label} · ${definitionQualification(i.qualification).label}`;
+}
+
 export default async function BuyerProfilePage({
   params,
   searchParams,
@@ -247,6 +269,32 @@ export default async function BuyerProfilePage({
         </dl>
       </header>
 
+      {/* ------------------------------------------------- Suivi commercial
+          Juste sous l'en-tête, avant tout le reste : c'est ce qu'on vient
+          changer après un appel. Il vivait dans « Ce que la personne a
+          déclaré », qui présente les RÉPONSES du prospect — un choix d'agence
+          s'y lisait comme une déclaration du client. */}
+      <SuiviCommercial
+        buyerProfileId={profile.id}
+        etape={profile.pipeline_stage}
+        qualification={profile.qualification}
+        qualificationReason={profile.qualification_reason}
+        responsables={assignees.map((a) => a.name)}
+        prochaine={
+          prochaine
+            ? {
+                titre: prochaine.title,
+                echeance: prochaine.due_at,
+                responsable: prochaine.assignee_user_id
+                  ? memberDisplayName(prochaine.assignee_user_id, members)
+                  : null,
+                enRetard: prochaineEnRetard,
+              }
+            : null
+        }
+        modifiable={canOperateBuyers && !isClosed}
+      />
+
       {profile.outcome ? (
         <div className="rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel-2)] p-3">
           <p className="text-sm text-[var(--crm-text)]">
@@ -313,22 +361,6 @@ export default async function BuyerProfilePage({
               <p className="text-sm text-[var(--crm-text-dim)]">Aucun intérêt enregistré.</p>
             ) : (
               <ul className="flex flex-col gap-3">
-                {/* L'ÉTAPE, UNE SEULE FOIS. Elle était rendue dans chaque bloc de
-                    bien : Éric, intéressé par deux villas, voyait deux
-                    sélecteurs pour une valeur unique, et rien ne disait lequel
-                    comptait. Ce qui suit, par bien, est ce qui appartient
-                    vraiment au bien : ce qu'il a déclaré, ses visites, ses
-                    offres. */}
-                {canOperateBuyers && !isClosed && interests[0] ? (
-                  <div className="mb-4 border-b border-[var(--crm-line-soft)] pb-4">
-                    <BuyerStageForm
-                      buyerProfileId={profile.id}
-                      interestId={interests[0].interest.id}
-                      stage={profile.pipeline_stage}
-                    />
-                  </div>
-                ) : null}
-
                 {interests.map(({ interest: i, propertyLabel, propertyCity }) => (
                   <li
                     key={i.id}
@@ -347,42 +379,13 @@ export default async function BuyerProfilePage({
                           {formatDateTime(i.created_at)}
                         </p>
                       </div>
-                      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                        {(() => {
-                          // Un dossier clos (gagné / perdu) ferme toutes ses
-                          // manifestations : on ne gagne pas un acquéreur sur un
-                          // projet en le laissant « nouveau » sur un autre.
-                          const etape = profile.outcome ?? i.pipeline_stage;
-                          const v = buyerStageVisual(etape);
-                          return (
-                            <span
-                              className="crm-chip crm-chip--accent"
-                              style={
-                                {
-                                  ["--chip-accent" as keyof CSSProperties]: cssVarRef(v.cssVar),
-                                } as CSSProperties
-                              }
-                            >
-                              <span aria-hidden>{v.icon}</span>
-                              {v.label}
-                            </span>
-                          );
-                        })()}
-                        {/* La QUALIFICATION de ce projet, a cote de son etape.
-                            Les deux disent des choses differentes — l'une est
-                            un jugement, l'autre l'etat de l'affaire — et c'est
-                            la fiche complete qui doit montrer les deux. */}
-                        <span className={`crm-qualif crm-qualif--${QUALIFICATION_BADGE[i.qualification]}`}>
-                          {QUALIFICATION_LABELS[i.qualification]}
-                        </span>
-                      </div>
                     </div>
 
-                    {i.qualification === "non_qualifie" && i.qualification_reason ? (
-                      <p className="mt-1.5 text-[12.5px] text-[var(--crm-text-dim)]">
-                        Motif : {i.qualification_reason}
-                      </p>
-                    ) : null}
+                    {/* L'état d'AVANT la reprise, au passé et en petit. */}
+                    <p className="mt-1 text-[11px] text-[var(--crm-text-faint)]">
+                      Avant la reprise du 14 octobre 2026, ce projet portait :{" "}
+                      {etatFige(i)}
+                    </p>
 
                     {/* Tentatives et dernier appel, PAR PROJET : c'est ce que le
                         panneau rapide affiche, et les deux lisent la meme

@@ -1974,6 +1974,82 @@
   font-size: 13px;
 }
 
+/* =====================================================================
+   SUIVI COMMERCIAL — ce que l'agence a décidé
+   =====================================================================
+   Bordure contrastée et titre visible : ce bloc n'est pas une section de
+   plus, c'est celui qu'on vient changer après un appel. Il se distingue des
+   panneaux voisins sans crier.
+
+   LE ROUGE EST RÉSERVÉ aux refus et aux retards. Tout mettre en rouge rend
+   le rouge muet — et c'est alors le vrai problème qu'on ne voit plus. */
+.crm-suivi {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  /* Deux pixels, et la teinte de l'univers : la bordure du panneau ordinaire
+     fait un pixel et se confond avec le fond. */
+  border: 2px solid color-mix(in srgb, var(--crm-univers) 38%, var(--crm-line));
+  background: var(--crm-panel);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--crm-univers) 12%, transparent);
+}
+.crm-suivi__tete { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.crm-suivi__titre {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--crm-univers);
+}
+.crm-suivi__etat { font-size: 11.5px; color: var(--crm-text-dim); }
+
+/* Les deux valeurs actuelles, lisibles d'un coup d'œil avant tout menu. */
+.crm-suivi__actuel { display: flex; flex-wrap: wrap; gap: 8px; }
+.crm-suivi__pastille {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 11px;
+  border-radius: 13px;
+  border: 1px solid transparent;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.crm-suivi__pastille--contour { background: transparent; }
+
+.crm-suivi__bloc { display: flex; flex-direction: column; gap: 6px; }
+.crm-suivi__motif { margin: 0; font-size: 12.5px; color: var(--crm-text-dim); }
+
+.crm-suivi__faits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--crm-line-soft);
+}
+.crm-suivi__faits dt {
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--crm-text-faint);
+}
+.crm-suivi__faits dd { margin: 2px 0 0; font-size: 13px; color: var(--crm-text); }
+.crm-suivi__vide { color: var(--crm-text-faint); }
+/* Le seul rouge du bloc. */
+.crm-suivi__retard { color: var(--crm-danger); font-weight: 650; }
+.crm-suivi__erreur { margin: 0; font-size: 12.5px; color: var(--crm-danger); }
+
+@media (max-width: 640px) {
+  /* Une colonne : côte à côte, « Prochaine action » tombait sur trois lignes
+     et le responsable passait sous la ligne de flottaison. */
+  .crm-suivi__faits { grid-template-columns: 1fr; }
+  .crm-suivi { padding: 12px 13px 14px; }
+}
+
 /* Le compte de la file : ce qu'il y a à travailler, avant les filtres.
    Discret par construction — c'est un repère, pas une alerte. */
 .crm-bandeau-file {
