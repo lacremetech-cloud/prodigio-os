@@ -53,9 +53,18 @@ export default async function BuyersPipelinePage({
     i.interestPropertyIds.some((id) => dansLaSelection(id, selection)),
   );
 
-  /* Le MÊME prédicat que la liste. Il décide notamment qu'une personne non
-     qualifiée sort de la file active — c'est ce qui manquait ici. */
-  const retenues = visibles.filter((i) => porteLeSignal(toInboxRow(i), signal));
+  /* Le MÊME prédicat que la liste, PLUS une règle propre au pipeline : il
+     montre le travail ACTIF. Une personne non qualifiée n'y figure pas, même
+     sous « Tous » — sinon la colonne « À contacter » annonçait dix cartes
+     quand la liste en comptait huit, et c'est la colonne qu'on croit.
+     Elle reste retrouvable dans la liste, sous « Tous » et sous le filtre
+     « Non qualifiés », avec ses notes. */
+  const retenues = visibles.filter((i) => {
+    const ligne = toInboxRow(i);
+    if (!porteLeSignal(ligne, signal)) return false;
+    if (signal === "non_qualifies") return true;
+    return ligne.qualification !== "non_qualifie";
+  });
 
   const cards = retenues.map((item) =>
     toKanbanCard(item, definitionQualification(item.qualification).label),
