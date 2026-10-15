@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "tsc --noEmit && NODE_ENV=test vitest run && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

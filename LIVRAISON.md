@@ -24,35 +24,37 @@ Ne jamais se fier à `git log` seul : il dit ce que contient une branche, pas ce
 que sert Vercel. Les deux ont divergé pendant des jours sans que rien ne le
 signale.
 
-## La barrière de déploiement
+## Pourquoi les tests ne tournent PAS dans la construction Vercel
 
-`vercel-build` lance **types + tests + construction** avant toute publication.
-Vercel appelle ce script en priorité sur `build` : **un test rouge arrête le
-déploiement**, il ne le signale pas après coup.
+On a essayé deux fois de faire lancer la suite de tests par Vercel avant
+publication (`vercel-build`). Deux fois la production a cessé de se mettre à
+jour. Les deux causes sont connues maintenant, et la seconde est rédhibitoire.
 
-### Le piège, pour qui y touchera
+**1. `NODE_ENV=production`.** Vercel l'impose pendant la construction, et React
+retire `act` de ses versions de production : les tests de composants échouent
+tous avec `React.act is not a function`. Corrigeable — il suffit d'un
+`NODE_ENV=test` devant `vitest run`.
 
-Vercel impose `NODE_ENV=production` pendant la construction. Or React **retire
-`act` de ses versions de production** : sous ce réglage, tous les tests de
-composants échouent avec `React.act is not a function`, alors qu'ils passent en
-local. Ça a fait croire, un moment, que la barrière était inutilisable et on
-l'avait retirée.
+**2. Les vraies variables d'environnement.** Celle-là ne se corrige pas
+simplement. La construction Vercel reçoit les variables de PRODUCTION. Les
+tests du formulaire acquéreur rendent alors un composant configuré comme en
+production — contrôle anti-robot actif, bouton en « Vérification… » — et ne
+retrouvent plus les éléments qu'ils cherchent. Les mêmes tests passent en local
+parce que ces variables y sont absentes.
 
-D'où le `NODE_ENV=test` devant `vitest run`, dans `package.json` comme dans
-l'intégration continue. **Ne l'enlevez pas.**
+Autrement dit : **la construction Vercel n'est pas un environnement de test.**
+Y faire tourner la suite donne des échecs qui ne disent rien sur le code.
 
-Pour simuler exactement ce que fait Vercel, avant de pousser :
+### Ce qui garde la maison à la place
 
-```sh
-NODE_ENV=production npm run vercel-build
-```
+`.github/workflows/verification.yml` lance types, tests et construction à
+chaque poussée, sur toutes les branches, dans un environnement propre. Elle
+**signale** au lieu de **bloquer** : un commit rouge part quand même en
+production, mais il est visible immédiatement sur GitHub.
 
-### Si un test rouge bloque une correction urgente
-
-C'est le prix d'une barrière qui tient. Deux options : corriger le test (le
-bon réflexe), ou, si l'urgence l'exige, retirer temporairement `vercel-build`
-de `package.json` — en sachant que plus rien n'est verifié, et en le remettant
-juste après.
+Pour obtenir une vraie barrière un jour, la voie est l'« Ignored Build Step »
+de Vercel, qui interroge le résultat GitHub avant de construire. À faire à
+tête reposée, pas dans l'urgence.
 
 ## Avant de pousser
 
