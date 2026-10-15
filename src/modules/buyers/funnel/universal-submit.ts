@@ -126,13 +126,17 @@ export async function submitUniversalInterestAction(
       /* On CRIE. Un journal que personne ne lit a laissé passer 65 dépôts
          perdus en vingt-deux heures. */
       prevenirDeLEchec(request.slug, "enregistrement", error.code);
-      return { ok: false, reason: "error", message: buyerFunnel.errors.generic };
+      return {
+        ok: false,
+        reason: "error",
+        message: avecReference("ENR", error.code ?? "sans-code"),
+      };
     }
 
     const result = data as unknown as SubmitResult | null;
     if (!result || result.accepted !== true) {
       prevenirDeLEchec(request.slug, "enregistrement", "refus_sans_code");
-      return { ok: false, reason: "error", message: buyerFunnel.errors.generic };
+      return { ok: false, reason: "error", message: avecReference("REFUS", "refus") };
     }
 
     // Brochure : délivrée UNIQUEMENT contre l'identifiant d'un dépôt réel. Un
@@ -327,13 +331,41 @@ export async function submitUniversalInterestAction(
     console.error("submit_buyer_interest (universel) exception", {
       name: cause instanceof Error ? cause.name : "unknown",
     });
-    prevenirDeLEchec(
-      request.slug,
-      "exception",
-      cause instanceof Error ? cause.name : null,
-    );
-    return { ok: false, reason: "error", message: buyerFunnel.errors.generic };
+    const nom = cause instanceof Error ? cause.name : "INCONNUE";
+    prevenirDeLEchec(request.slug, "exception", nom);
+    return { ok: false, reason: "error", message: avecReference("EXC", nom) };
   }
+}
+
+/**
+ * UN CODE COURT, AFFICHÉ À L'ÉCRAN.
+ *
+ * « Une erreur est survenue » ne dit rien, ni au visiteur, ni à celui qui doit
+ * réparer. Le détail n'existait que dans les journaux du serveur — invisible
+ * depuis une capture d'écran, et donc inexploitable quand c'est un commercial
+ * ou un client qui signale le problème. Une soirée entière a été passée à
+ * deviner, faute de ce code.
+ *
+ * Il ne divulgue RIEN : la phase qui a échoué, et une empreinte du code
+ * technique — illisible pour qui la reçoit, mais que l'on redéduit en rejouant
+ * la même fonction sur les codes candidats. Un test de ce module interdit
+ * d'afficher le code de Postgres en clair, et il a raison : la page est
+ * publique. Le détail exact part dans l'alerte Slack, qui, elle, est privée.
+ */
+function empreinte(valeur: string): string {
+  /* FNV-1a, tronqué. Stable d'une exécution à l'autre, donc décodable en
+     rejouant la même fonction sur les codes candidats — mais illisible pour
+     qui la reçoit. */
+  let h = 0x811c9dc5;
+  for (let i = 0; i < valeur.length; i++) {
+    h ^= valeur.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36).toUpperCase().slice(0, 4).padStart(4, "0");
+}
+
+function avecReference(phase: "ENR" | "REFUS" | "EXC", detail: string): string {
+  return `${buyerFunnel.errors.generic} (réf. ${phase}-${empreinte(detail)})`;
 }
 
 /**

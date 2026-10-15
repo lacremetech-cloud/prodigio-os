@@ -282,7 +282,13 @@ export function UniversalBuyerForm({
       }
     } catch {
       setStatus("error");
-      setErrorMessage("Le serveur n'a pas répondu. Réessayez dans un instant.");
+      /* Une référence ici aussi : elle distingue « le serveur n'a jamais
+         répondu » de « le serveur a répondu une erreur ». Sans elle, les deux
+         se ressemblent sur une capture d'écran, et on cherche du mauvais
+         côté. */
+      setErrorMessage(
+        "Le serveur n'a pas répondu. Réessayez dans un instant. (réf. RES-SERVEUR)",
+      );
     } finally {
       inFlightRef.current = false;
     }
