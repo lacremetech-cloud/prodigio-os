@@ -24,6 +24,26 @@ Ne jamais se fier à `git log` seul : il dit ce que contient une branche, pas ce
 que sert Vercel. Les deux ont divergé pendant des jours sans que rien ne le
 signale.
 
+## La barrière de déploiement : retirée, et pourquoi
+
+On a tenté de faire lancer les tests par Vercel avant publication
+(`vercel-build`). La commande passe en local, mais la production a cessé de se
+mettre à jour pendant plus de dix minutes et rien ne permettait de savoir
+pourquoi : les journaux Vercel ne sont pas accessibles depuis l'outillage
+actuel.
+
+Une barrière qu'on ne peut pas observer et qui bloque les livraisons est pire
+que pas de barrière. Elle a donc été retirée.
+
+Ce qui reste : la vérification GitHub (`.github/workflows/verification.yml`)
+lance types, tests et construction à chaque poussée, sur toutes les branches.
+Elle SIGNALE au lieu de BLOQUER — un commit rouge part quand même en
+production, mais on le voit immédiatement sur GitHub.
+
+Pour remettre une vraie barrière, il faut d'abord un accès aux journaux
+Vercel. Avec lui, `"vercel-build": "tsc --noEmit && vitest run && next build"`
+peut être rétabli en connaissance de cause.
+
 ## Avant de pousser
 
 1. `npm run typecheck && npm run test:run` — s'il y a un `package.json`.
