@@ -141,4 +141,9 @@ export const buyerAuditEventLabels: Record<string, string> = {
   acquereur_offre: "Offre en cours",
   acquereur_resultat: "Résultat commercial",
   acquereur_interet_statut: "Statut d’un intérêt",
+  /* L'événement le plus fréquent du journal, et le seul qui n'avait pas de
+     libellé : la fiche affichait « acquereur_traitement » en clair. */
+  acquereur_traitement: "Suivi enregistré",
+  acquereur_tache: "Tâche",
+  acquereur_reouverture: "Dossier rouvert",
 };

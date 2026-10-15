@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/modules/properties/factory/actions";
 import { safeAction } from "@/modules/crm/safe-action";
@@ -17,18 +17,33 @@ export function useAction() {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  /* UNE garde synchrone, en plus du `disabled={pending}` des boutons.
+     `pending` est un état React : il ne bascule qu'au rendu suivant, si bien
+     que deux clics dans le même tick — ou un clic suivi d'un « Entrée » —
+     partaient tous les deux. Vu en production sur un dossier : deux notes
+     identiques et deux lignes d'historique à la même minute. Un ref, lui,
+     est vrai immédiatement. */
+  const enVol = useRef(false);
 
   const run = (fn: () => Promise<ActionResult>, onOk?: (res: ActionResult) => void) => {
+    if (enVol.current) return;
+    enVol.current = true;
     setError(null);
     setDone(false);
     start(async () => {
-      const res = await safeAction(fn);
-      if (res.ok) {
-        setDone(true);
-        onOk?.(res);
-        router.refresh();
-      } else {
-        setError(res.error ?? "Une erreur est survenue.");
+      try {
+        const res = await safeAction(fn);
+        if (res.ok) {
+          setDone(true);
+          onOk?.(res);
+          router.refresh();
+        } else {
+          setError(res.error ?? "Une erreur est survenue.");
+        }
+      } finally {
+        /* Toujours relâché : sans ce `finally`, un échec réseau condamnait le
+           formulaire pour le reste de la session. */
+        enVol.current = false;
       }
     });
   };

@@ -79,7 +79,15 @@ export function changementsLisibles(
      Antoine » et rien d'autre, précisément ce qu'on voulait corriger. */
   if (sorties.length === 0) {
     const act = texte(b.activite) ?? texte(b.resultat_appel);
-    if (act) sorties.push(`${ACTIVITE_LISIBLE[act] ?? "activité"} consignée`);
+    if (act) {
+      sorties.push(`${ACTIVITE_LISIBLE[act] ?? "activité"} consignée`);
+    } else if (etapeApres || qApres) {
+      /* Une sauvegarde qui n'a bougé ni l'étape ni la qualification : une note
+         seule, le plus souvent. Le dire explicitement évite de chercher un
+         changement qui n'existe pas — la note, elle, est dans le fil des
+         activités avec son texte. */
+      sorties.push("saisie enregistrée, sans changement d'étape ni de qualification");
+    }
   }
 
   return sorties;

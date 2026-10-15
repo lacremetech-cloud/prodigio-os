@@ -18,13 +18,18 @@ describe("ce que raconte l'historique", () => {
     expect(r[0]).not.toMatch(/en_reflexion/);
   });
 
-  it("ne dit rien d'un champ qui n'a pas bougé", () => {
-    expect(
-      changementsLisibles(
-        { stage: "en_discussion", qualification: "qualifie" },
-        { stage: "en_discussion", qualification: "qualifie" },
-      ),
-    ).toEqual([]);
+  it("ne nomme pas un champ qui n'a pas bougé, mais ne reste pas muet", () => {
+    /* Vu en production sur la fiche de Lionel : trois lignes « Suivi
+       enregistré · 12:02 · Antoine » et rien d'autre, parce que la sauvegarde
+       n'avait bouge ni l'etape ni la qualification — une note seule. Une ligne
+       muette fait chercher un changement qui n'existe pas. On le dit, sans
+       nommer les champs inchanges. */
+    const r = changementsLisibles(
+      { stage: "en_discussion", qualification: "qualifie" },
+      { stage: "en_discussion", qualification: "qualifie" },
+    );
+    expect(r).toEqual(["saisie enregistrée, sans changement d'étape ni de qualification"]);
+    expect(r[0]).not.toMatch(/discussion|Qualifié/);
   });
 
   it("annonce les deux changements quand les deux ont bougé", () => {
