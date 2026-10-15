@@ -16,6 +16,27 @@ import { etape as definitionEtape, qualification as definitionQualification } fr
  * « nouveau », et afficher un identifiant technique à un commercial ne lui
  * apprend rien.
  */
+/**
+ * Les deux vocabulaires d'activité qui cohabitent dans le journal : les sept
+ * choix actuels, et les quatre résultats d'appel d'avant la reprise. Un
+ * commercial ne doit jamais lire « message_laisse » dans sa fiche.
+ */
+const ACTIVITE_LISIBLE: Record<string, string> = {
+  /* Les sept choix actuels. */
+  appel_sans_reponse: "appel sans réponse",
+  appel_echange: "échange téléphonique",
+  message_vocal: "message vocal",
+  whatsapp: "WhatsApp",
+  sms: "SMS",
+  email: "e-mail",
+  note: "note",
+  /* Les résultats d'appel d'avant la reprise, encore présents dans le journal. */
+  contact_etabli: "échange téléphonique",
+  sans_reponse: "appel sans réponse",
+  message_laisse: "message vocal",
+  mauvais_numero: "appel sur un mauvais numéro",
+};
+
 export function changementsLisibles(
   avant: unknown,
   apres: unknown,
@@ -50,10 +71,15 @@ export function changementsLisibles(
   /* L'activité est déjà racontée par le fil des activités, juste au-dessus :
      la répéter ici ferait lire deux fois le même fait. On ne la mentionne que
      lorsqu'elle est la SEULE chose qui s'est passée, pour que la ligne ne
-     reste pas muette. */
+     reste pas muette.
+
+     `resultat_appel` est la clé de l'ANCIENNE fonction d'enregistrement. Un
+     dossier travaillé avant la reprise n'a que celle-là : ne lire que
+     `activite` laissait ces lignes muettes — « Traitement enregistré, 14:29,
+     Antoine » et rien d'autre, précisément ce qu'on voulait corriger. */
   if (sorties.length === 0) {
-    const act = texte(b.activite);
-    if (act) sorties.push("activité consignée");
+    const act = texte(b.activite) ?? texte(b.resultat_appel);
+    if (act) sorties.push(`${ACTIVITE_LISIBLE[act] ?? "activité"} consignée`);
   }
 
   return sorties;

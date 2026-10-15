@@ -7,7 +7,7 @@ import {
   canDecideMandate,
   canOperate,
   canTreatBuyers,
-  canViewAudit,
+  canViewBuyerHistory,
   canViewContactDetails,
 } from "@/modules/crm/auth/roles";
 import { getBuyerProfileDetail } from "@/modules/buyers/crm/queries";
@@ -133,7 +133,7 @@ export default async function BuyerProfilePage({
      dossier en silence est une source de conflit. */
   const canReassignBuyers = canOperate(session.roles);
   const canDecide = canDecideMandate(session.roles);
-  const showAudit = canViewAudit(session.roles);
+  const showAudit = canViewBuyerHistory(session.roles);
 
   const detail = await getBuyerProfileDetail(id, canViewContacts);
   // Dossier inexistant OU non autorisé : dans les deux cas rien n'est révélé.
@@ -494,7 +494,7 @@ export default async function BuyerProfilePage({
           {/* Historique audité */}
           {showAudit ? (
             <section className="crm-panel p-4">
-              <SectionTitle eyebrow="Traçabilité" title="Historique audité" />
+              <SectionTitle eyebrow="Traçabilité" title="Ce qui a changé, et quand" />
               {auditEvents.length === 0 ? (
                 <p className="text-sm text-[var(--crm-text-dim)]">Aucun événement.</p>
               ) : (

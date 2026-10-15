@@ -151,6 +151,30 @@ export function canViewAudit(roles: readonly string[]): boolean {
   return hasAnyRole(roles, ["administrateur", "manager"]);
 }
 
+/**
+ * Peut consulter l'historique d'UN dossier acquéreur, sur sa fiche.
+ *
+ * POURQUOI séparé de `canViewAudit`. Le journal d'audit global reste réservé
+ * à l'administration : il traverse toute la base. L'historique d'un dossier
+ * qu'on travaille soi-même, c'est autre chose — c'est « qui a changé l'étape,
+ * et quand ». Sans lui, le commercial qui reprend un dossier le lendemain ne
+ * sait pas ce que son collègue a fait la veille, et rappelle une personne
+ * qu'on vient de classer « pas intéressé ».
+ *
+ * La base ne laisse voir que les dossiers sur lesquels il peut déjà agir
+ * (politique `audit_events_crm_read`) : ouvrir ici ne lui donne pas une ligne
+ * de plus que ce que le serveur lui accorde.
+ */
+export function canViewBuyerHistory(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, [
+    "administrateur",
+    "manager",
+    "setter",
+    "agent_immobilier",
+    "commercial",
+  ]);
+}
+
 /** Peut gérer les membres (inviter / changer les rôles). */
 export function canManageMembers(roles: readonly string[]): boolean {
   return hasAnyRole(roles, ["administrateur"]);
