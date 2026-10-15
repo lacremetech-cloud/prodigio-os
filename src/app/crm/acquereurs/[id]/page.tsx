@@ -313,6 +313,22 @@ export default async function BuyerProfilePage({
               <p className="text-sm text-[var(--crm-text-dim)]">Aucun intérêt enregistré.</p>
             ) : (
               <ul className="flex flex-col gap-3">
+                {/* L'ÉTAPE, UNE SEULE FOIS. Elle était rendue dans chaque bloc de
+                    bien : Éric, intéressé par deux villas, voyait deux
+                    sélecteurs pour une valeur unique, et rien ne disait lequel
+                    comptait. Ce qui suit, par bien, est ce qui appartient
+                    vraiment au bien : ce qu'il a déclaré, ses visites, ses
+                    offres. */}
+                {canOperateBuyers && !isClosed && interests[0] ? (
+                  <div className="mb-4 border-b border-[var(--crm-line-soft)] pb-4">
+                    <BuyerStageForm
+                      buyerProfileId={profile.id}
+                      interestId={interests[0].interest.id}
+                      stage={profile.pipeline_stage}
+                    />
+                  </div>
+                ) : null}
+
                 {interests.map(({ interest: i, propertyLabel, propertyCity }) => (
                   <li
                     key={i.id}
@@ -400,11 +416,6 @@ export default async function BuyerProfilePage({
                           <p className="crm-label mb-1.5">Planifier la visite de ce projet</p>
                           <PlanifierVisite buyerProfileId={profile.id} interestId={i.id} />
                         </div>
-                        <BuyerStageForm
-                          buyerProfileId={profile.id}
-                          interestId={i.id}
-                          stage={i.pipeline_stage}
-                        />
                       </div>
                     ) : null}
 
