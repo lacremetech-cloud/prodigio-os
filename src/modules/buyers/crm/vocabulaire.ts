@@ -156,8 +156,35 @@ export function estEtapeConnue(v: unknown): v is EtapeAcquereur {
 }
 
 /** La définition, ou celle de « À contacter » — jamais `undefined`. */
+/**
+ * Les valeurs RETIRÉES, traduites vers celles qui restent.
+ *
+ * Un historique de six mois contient « nouveau », « visite », « perdu » et
+ * « en_reflexion ». Sans cette table, elles retombaient toutes sur la
+ * première entrée de la liste : « en_reflexion » s'affichait « À qualifier »
+ * alors que l'agence l'a tranché en « Qualifié ». Un libellé faux dans un
+ * historique est pire qu'un identifiant technique — il se lit comme un fait.
+ *
+ * Ces correspondances sont celles de `crm_etape_v2` et `crm_qualification_v2`
+ * en base, au mot près : les deux côtés doivent raconter la même histoire.
+ */
+const ETAPES_RETIREES: Record<string, EtapeAcquereur> = {
+  nouveau: "a_contacter",
+  visite: "visite_planifiee",
+  perdu: "pas_interesse",
+  gagne: "en_discussion",
+  offre: "en_discussion",
+};
+
+const QUALIFICATIONS_RETIREES: Record<string, QualificationAcquereur> = {
+  en_reflexion: "qualifie",
+};
+
 export function etape(v: string): DefinitionEtape {
-  return ETAPE_PAR_VALEUR.get(v as EtapeAcquereur) ?? ETAPES[0]!;
+  const direct = ETAPE_PAR_VALEUR.get(v as EtapeAcquereur);
+  if (direct) return direct;
+  const traduite = ETAPES_RETIREES[v];
+  return (traduite ? ETAPE_PAR_VALEUR.get(traduite) : undefined) ?? ETAPES[0]!;
 }
 
 /** Les étapes où la personne attend encore quelque chose de nous. */
@@ -218,7 +245,10 @@ export function estQualificationConnue(v: unknown): v is QualificationAcquereur 
 }
 
 export function qualification(v: string): DefinitionQualification {
-  return QUALIF_PAR_VALEUR.get(v as QualificationAcquereur) ?? QUALIFICATIONS[0]!;
+  const direct = QUALIF_PAR_VALEUR.get(v as QualificationAcquereur);
+  if (direct) return direct;
+  const traduite = QUALIFICATIONS_RETIREES[v];
+  return (traduite ? QUALIF_PAR_VALEUR.get(traduite) : undefined) ?? QUALIFICATIONS[0]!;
 }
 
 /**

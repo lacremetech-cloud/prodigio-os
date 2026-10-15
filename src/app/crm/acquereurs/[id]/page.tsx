@@ -55,6 +55,7 @@ import {
   BuyerTaskForm,
 } from "@/components/crm/buyers/buyer-actions";
 import { SuiviCommercial } from "@/components/crm/buyers/suivi-commercial";
+import { changementsLisibles } from "@/modules/buyers/crm/journal";
 import {
   etape as definitionEtape,
   qualification as definitionQualification,
@@ -499,14 +500,26 @@ export default async function BuyerProfilePage({
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {auditEvents.map((e) => (
-                    <li key={e.id} className="flex flex-wrap items-baseline gap-2 text-xs">
-                      <span className="text-[var(--crm-text)]">
-                        {buyerAuditEventLabels[e.event_type] ?? e.event_type}
-                      </span>
-                      <span className="text-[11px] text-[var(--crm-text-faint)]">
-                        {formatDateTime(e.created_at)}
-                        {e.actor_user_id ? ` · ${memberDisplayName(e.actor_user_id, members)}` : ""}
-                      </span>
+                    <li key={e.id} className="flex flex-col gap-0.5 text-xs">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="text-[var(--crm-text)]">
+                          {buyerAuditEventLabels[e.event_type] ?? e.event_type}
+                        </span>
+                        <span className="text-[11px] text-[var(--crm-text-faint)]">
+                          {formatDateTime(e.created_at)}
+                          {e.actor_user_id ? ` · ${memberDisplayName(e.actor_user_id, members)}` : ""}
+                        </span>
+                      </div>
+                      {/* CE QUI A CHANGÉ, et pas seulement qu'il s'est passé
+                          quelque chose. « Traitement enregistré · 14:29 ·
+                          Antoine » n'apprenait rien : on rouvrait le dossier
+                          pour comparer de tête. Les anciennes et nouvelles
+                          valeurs étaient déjà dans le journal, jamais lues. */}
+                      {changementsLisibles(e.old_value, e.new_value).map((c) => (
+                        <span key={c} className="crm-wrap text-[11.5px] text-[var(--crm-text-dim)]">
+                          {c}
+                        </span>
+                      ))}
                     </li>
                   ))}
                 </ul>

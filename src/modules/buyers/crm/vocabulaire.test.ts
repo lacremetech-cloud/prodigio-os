@@ -194,3 +194,23 @@ describe("encre des étapes", () => {
     expect(dedie.map((e) => e.valeur)).toEqual(["mauvais_numero"]);
   });
 });
+
+describe("valeurs retirées du vocabulaire", () => {
+  /* Un historique de six mois les contient encore. Les traduire est la seule
+     façon d'afficher un libellé VRAI : sans table, elles retombaient sur la
+     première entrée de la liste. */
+  it("traduit les anciennes étapes comme le fait la base", () => {
+    expect(etape("nouveau").valeur).toBe("a_contacter");
+    expect(etape("visite").valeur).toBe("visite_planifiee");
+    expect(etape("perdu").valeur).toBe("pas_interesse");
+  });
+
+  it("traduit « en réflexion » en « Qualifié », comme l'agence l'a tranché", () => {
+    expect(qualification("en_reflexion").valeur).toBe("qualifie");
+  });
+
+  it("une valeur vraiment inconnue retombe sur la première, sans planter", () => {
+    expect(etape("zzz").valeur).toBe("a_contacter");
+    expect(qualification("zzz").valeur).toBe("a_qualifier");
+  });
+});
