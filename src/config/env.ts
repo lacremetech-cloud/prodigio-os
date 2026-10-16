@@ -185,6 +185,16 @@ const envSchema = z.object({
   // Volontairement distinct de la présence des clés : disposer d'une clé ne doit
   // jamais suffire à déclencher un envoi réel.
   COMMUNICATIONS_DISPATCH_ENABLED: z.string().optional(),
+
+  // --- Alerte E-MAIL a l'equipe pour chaque nouveau lead ----------------------
+  // Adresses internes separees par des virgules. Antoine et JC n'ouvrent ni
+  // Slack ni WhatsApp : l'e-mail est le seul canal qu'ils relevent, donc le
+  // seul qui alerte reellement. Volontairement une variable d'environnement et
+  // non une liste en dur : ajouter ou retirer quelqu'un ne doit demander ni
+  // modification de code, ni redeploiement, ni de faire figurer des adresses
+  // personnelles dans le depot.
+  // Absente ⇒ aucune alerte e-mail (le canal Slack continue seul).
+  ALERTES_LEADS_EMAILS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -496,6 +506,26 @@ export function isLumailConfigured(
     typeof source.LUMAIL_FROM_EMAIL === "string" &&
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(source.LUMAIL_FROM_EMAIL.trim())
   );
+}
+
+/**
+ * Indique si l'alerte e-mail « nouveau lead » peut partir : transport Lumail
+ * configure ET au moins un destinataire valide. Ne revele aucune adresse.
+ *
+ * Les deux conditions sont distinctes a dessein : une liste de destinataires
+ * sans transport, ou un transport sans destinataires, donnent le meme resultat
+ * visible — aucune alerte — pour deux causes opposees. Les separer permet de
+ * le dire.
+ */
+export function isAlerteLeadEmailConfigured(
+  source: Pick<Env, "LUMAIL_API_KEY" | "LUMAIL_FROM_EMAIL" | "ALERTES_LEADS_EMAILS"> = env,
+): boolean {
+  if (!isLumailConfigured(source)) return false;
+  const brut = source.ALERTES_LEADS_EMAILS;
+  if (typeof brut !== "string") return false;
+  return brut
+    .split(/[,;\s]+/)
+    .some((a) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.trim()));
 }
 
 /**

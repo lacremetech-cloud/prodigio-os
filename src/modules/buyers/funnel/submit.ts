@@ -11,6 +11,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 import { computeBuyerScore } from "../scoring";
 import { notifyNewBuyerInterest, type BuyerNotifyInput } from "../notifications";
+import { ficheLeadHistorique } from "../notifications/notify";
+import { alerterEquipeParEmail } from "../notifications/alerte-email";
 import { buyerFunnel } from "./content";
 import {
   buildBuyerPayload,
@@ -31,14 +33,24 @@ interface SubmitBuyerInterestResult {
 }
 
 /**
- * Programme l'alerte Slack acquéreur APRÈS la réponse (`after`) afin de ne jamais
- * bloquer ni ralentir la soumission. L'orchestrateur ne lève jamais.
+ * Programme les alertes acquéreur APRÈS la réponse (`after`) afin de ne jamais
+ * bloquer ni ralentir la soumission. Aucun des deux orchestrateurs ne lève.
+ *
+ * DEUX canaux, INDÉPENDANTS. Slack reste pour la trace ; l'e-mail est le seul
+ * canal qu'Antoine et JC relèvent réellement. Les lier ferait d'une panne
+ * Slack une panne d'alerte tout court, ce qui est exactement la situation
+ * qu'on cherche à ne plus revivre.
  */
-function scheduleBuyerSlackAlert(input: BuyerNotifyInput): void {
+function scheduleBuyerAlerts(input: BuyerNotifyInput): void {
+  const envoyer = () =>
+    Promise.allSettled([
+      notifyNewBuyerInterest(input),
+      alerterEquipeParEmail(ficheLeadHistorique(input)),
+    ]);
   try {
-    after(() => notifyNewBuyerInterest(input));
+    after(() => envoyer());
   } catch {
-    void notifyNewBuyerInterest(input);
+    void envoyer();
   }
 }
 
@@ -131,7 +143,7 @@ export async function submitBuyerInterestAction(
         typeof result.property_id === "string" &&
         result.property_id.length > 0
       ) {
-        scheduleBuyerSlackAlert({
+        scheduleBuyerAlerts({
           request,
           score,
           interestId: result.interest_id,

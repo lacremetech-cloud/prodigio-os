@@ -12,7 +12,9 @@ import { lienBrochure } from "../notifications/lien-brochure";
 import {
   alerterDepotEnEchec,
   alerterNouvelleDemande,
+  ficheLeadUniverselle,
 } from "../notifications/universal-notify";
+import { alerterEquipeParEmail } from "../notifications/alerte-email";
 import {
   bienDeLaManifestation,
   conversionProspect,
@@ -288,7 +290,7 @@ export async function submitUniversalInterestAction(
              etait parfaitement rattache — ce qui etait le cas de toutes. On
              reutilise la lecture deja ecrite pour les conversions. */
           const bienAlerte = await bienDeLaManifestation(lecteur, interetId);
-          await alerterNouvelleDemande({
+          const commun = {
             request,
             interestId: interetId,
             propertyId: ligne?.property_id ?? "",
@@ -301,7 +303,15 @@ export async function submitUniversalInterestAction(
                   budget: ligne.budget_score ?? null,
                 }
               : null,
-          });
+          };
+          /* Slack et e-mail sont INDEPENDANTS, pour la meme raison que l'accuse
+             et la conversion le sont : Antoine et JC n'ouvrent pas Slack, donc
+             un Slack en panne ne doit surtout pas emporter le seul canal qu'ils
+             relevent — ni l'inverse. */
+          await Promise.allSettled([
+            alerterNouvelleDemande(commun),
+            alerterEquipeParEmail(ficheLeadUniverselle(commun)),
+          ]);
         } catch (cause) {
           console.warn("alerte acquereur non envoyee", {
             name: cause instanceof Error ? cause.name : "unknown",

@@ -4,6 +4,8 @@ import { postSlackWebhook, type SlackFetch } from "@/modules/mandates/notificati
 import type { BuyerSubmissionRequest } from "../funnel/payload";
 import type { BuyerScoreResult } from "../scoring";
 import { buildBuyerSlackMessage } from "./message";
+import { budgetBandLabels } from "../funnel/content";
+import type { FicheLead } from "./alerte-email";
 
 /**
  * Orchestrateur d'alerte Slack pour une **nouvelle demande acquéreur réellement
@@ -39,6 +41,48 @@ export interface BuyerNotifyDeps {
 }
 
 const LOG_EVENT = "buyer_slack_notification";
+
+/** Libelles de priorite du tunnel historique, miroir de ceux de l'alerte Slack. */
+const PRIORITES_HISTORIQUE: Record<string, string> = {
+  prioritaire: "Prioritaire",
+  a_qualifier: "À qualifier",
+  a_suivre: "À suivre",
+};
+
+/**
+ * Traduit une demande du tunnel HISTORIQUE en fiche d'alerte e-mail.
+ *
+ * Les deux tunnels sont encore vivants : celui des landing pages
+ * (`universal-form`) et celui-ci (`buyer-funnel`). « Un e-mail a chaque
+ * nouveau lead » serait faux si un seul des deux alertait — d'ou ce second
+ * convertisseur, qui lit les champs la ou CE tunnel les range.
+ *
+ * Valeurs BRUTES : le module e-mail a son propre nettoyage.
+ */
+export function ficheLeadHistorique(
+  input: BuyerNotifyInput,
+  recuLe: Date = new Date(),
+): FicheLead {
+  const c = input.request.answers.contact;
+  const nom = `${c.firstName ?? ""} ${c.lastName ?? ""}`.trim();
+  const bande = input.request.answers.budgetBand;
+  return {
+    nom: nom || null,
+    telephone: c.phoneRaw ?? null,
+    email: c.emailRaw ?? null,
+    bien: input.propertyName,
+    budget: bande ? budgetBandLabels[bande] ?? null : null,
+    // Ce tunnel ne porte pas de parametres de campagne dans l'alerte.
+    provenance: null,
+    score: {
+      overall: input.score.overall,
+      priority: PRIORITES_HISTORIQUE[input.score.priority] ?? input.score.priority,
+    },
+    buyerProfileId: input.buyerProfileId,
+    interestId: input.interestId,
+    recuLe,
+  };
+}
 
 export async function notifyNewBuyerInterest(
   input: BuyerNotifyInput,

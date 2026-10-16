@@ -243,6 +243,23 @@ transactionnel/marketing, audit immuable sans contenu ni coordonnée.
 | `LUMAIL_REPLY_TO` | Adresse de réponse | Réponses vers l'expéditeur |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM` | Transport SMS | SMS désactivé |
 | `COMMUNICATIONS_DISPATCH_ENABLED` | Interrupteur d'**envoi réel** | **Simulation** |
+| `ALERTES_LEADS_EMAILS` | Adresses **internes** alertées à chaque nouveau lead (séparées par des virgules) | Aucune alerte e-mail ; Slack continue seul |
+
+
+### Alerte « nouveau lead » : hors du dispatcher, volontairement
+
+`ALERTES_LEADS_EMAILS` **ne passe pas** par le dispatcher et n'est donc pas
+soumise à `COMMUNICATIONS_DISPATCH_ENABLED`. Le dispatcher sert à écrire aux
+**prospects** : consentement, liste de désinscription, modèles, le tout gardé
+en attendant la validation juridique. Rien de cela ne s'applique à une alerte
+envoyée à deux collègues sur leur adresse professionnelle pour faire leur
+travail — et surtout, une alerte interne ne doit jamais pouvoir être avalée
+par une désinscription.
+
+Elle exige en revanche `LUMAIL_API_KEY` et `LUMAIL_FROM_EMAIL` : sans
+transport, rien ne part. `isAlerteLeadEmailConfigured()` distingue les deux
+causes, parce qu'« aucune alerte » peut vouloir dire « pas de destinataires »
+ou « pas de transport », et que les confondre coûte une soirée de diagnostic.
 
 L'interrupteur exige la valeur **exactement** `true`. `1`, `yes`, `TRUE` ne
 l'activent pas : un envoi réel ne doit jamais résulter d'une valeur ambiguë. Il

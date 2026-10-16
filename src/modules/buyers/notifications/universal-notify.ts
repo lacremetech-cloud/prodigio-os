@@ -3,6 +3,7 @@ import "server-only";
 import { env, isBuyerSlackConfigured, mandateCrmBaseUrl } from "@/config";
 import { postSlackWebhook } from "@/modules/mandates/notifications/slack";
 import type { UniversalSubmissionRequest } from "../funnel/universal-payload";
+import type { FicheLead } from "./alerte-email";
 
 /**
  * Alerte Slack pour une demande déposée par le **formulaire universel**, celui
@@ -122,6 +123,42 @@ export function construireAlerte(input: AlerteAcquereurInput) {
         elements: [{ type: "mrkdwn", text: `Prodigio OS · Intérêt \`${net(input.interestId)}\`` }],
       },
     ],
+  };
+}
+
+/**
+ * Traduit une demande du formulaire universel en fiche d'alerte e-mail.
+ *
+ * Vit ICI et non dans le module e-mail : c'est ici que sont tenus les libelles
+ * de budget et la lecture de provenance, et les dupliquer ailleurs garantirait
+ * qu'un jour les deux canaux n'annoncent plus la meme chose. Les valeurs
+ * partent BRUTES — le module e-mail a son propre nettoyage, celui de ce
+ * fichier echappe pour Slack et casserait le Markdown.
+ */
+export function ficheLeadUniverselle(
+  input: AlerteAcquereurInput,
+  recuLe: Date = new Date(),
+): FicheLead {
+  const a = input.request.answers;
+  const nom = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
+  return {
+    nom: nom || null,
+    telephone: a.phoneRaw ?? null,
+    email: a.emailRaw ?? null,
+    bien: input.propertyName,
+    budget: BUDGETS[a.budgetChoice ?? ""] ?? null,
+    provenance: origineDeLaDemande(input.request.context),
+    score: input.score
+      ? {
+          overall: input.score.overall,
+          priority: input.score.priority
+            ? PRIORITES[input.score.priority] ?? input.score.priority
+            : null,
+        }
+      : null,
+    buyerProfileId: input.buyerProfileId,
+    interestId: input.interestId,
+    recuLe,
   };
 }
 

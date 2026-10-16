@@ -21,6 +21,7 @@ export {
   googleOAuthRedirectUri,
   mandateCrmBaseUrl,
   isLumailConfigured,
+  isAlerteLeadEmailConfigured,
   isTwilioConfigured,
   isCommunicationDispatchEnabled,
   TURNSTILE_TEST_SITE_KEYS,
