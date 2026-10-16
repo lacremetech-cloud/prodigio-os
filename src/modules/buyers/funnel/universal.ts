@@ -20,11 +20,32 @@ export const UNIVERSAL_CONSENT_NOTICE_VERSION = "buyer-universal-v1-2026-09" as 
 export const BUYER_BUDGET_CHOICES = [
   "aucun_projet",
   "500k_1m",
+  "plus_1m",
+  /* Plus proposées, mais toujours lues : des dossiers les portent, et une
+     liste qui oublie l'historique affiche un identifiant technique à la place
+     d'un libellé. */
   "1m_2m",
   "2m_3m",
   "plus_3m",
 ] as const;
 export type BuyerBudgetChoice = (typeof BUYER_BUDGET_CHOICES)[number];
+
+/**
+ * LES TROIS RÉPONSES RÉELLEMENT PROPOSÉES.
+ *
+ * Cinq tranches, c'était cinq décisions à prendre debout dans la rue, sur un
+ * téléphone, avant même d'avoir vu le bien. Trois suffisent à trier : pas de
+ * projet, le bas de la fourchette, le reste. Le commercial affine ensuite, au
+ * téléphone, où la question se pose mieux.
+ *
+ * Distinct de `BUYER_BUDGET_CHOICES`, qui reste la liste de TOUT ce qui peut
+ * exister en base.
+ */
+export const BUDGET_CHOICES_PROPOSES = [
+  "aucun_projet",
+  "500k_1m",
+  "plus_1m",
+] as const satisfies readonly BuyerBudgetChoice[];
 
 /** Question de l'écran 1, au mot près. Elle porte le « si oui » : le budget
  *  n'est pas demandé seul, il est la suite d'une question sur l'existence même
@@ -34,6 +55,7 @@ export const BUDGET_QUESTION = "Avez-vous un projet ? Si oui, quel est votre bud
 export const BUDGET_CHOICE_LABELS: Record<BuyerBudgetChoice, string> = {
   aucun_projet: "Non, je n'ai pas de projet",
   "500k_1m": "Oui, entre 500 000 € et 1 million d'euros",
+  plus_1m: "Plus de 1 million d'euros",
   "1m_2m": "Oui, entre 1 et 2 millions d'euros",
   "2m_3m": "Oui, entre 2 et 3 millions d'euros",
   plus_3m: "Plus de 3 millions d'euros",
@@ -50,6 +72,7 @@ export const BUDGET_CHOICE_LABELS: Record<BuyerBudgetChoice, string> = {
 export const BUDGET_CHOICE_COURT: Record<BuyerBudgetChoice, string> = {
   aucun_projet: "Pas de projet",
   "500k_1m": "500 000 € – 1 M€",
+  plus_1m: "Plus d'1 M€",
   "1m_2m": "1 – 2 M€",
   "2m_3m": "2 – 3 M€",
   plus_3m: "Plus de 3 M€",
@@ -66,6 +89,8 @@ export function budgetChoiceBounds(
   switch (choice) {
     case "500k_1m":
       return { min: 50_000_000, max: 100_000_000 };
+    case "plus_1m":
+      return { min: 100_000_000, max: null };
     case "1m_2m":
       return { min: 100_000_000, max: 200_000_000 };
     case "2m_3m":

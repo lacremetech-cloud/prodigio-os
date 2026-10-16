@@ -36,6 +36,7 @@ export interface AlerteAcquereurInput {
 const BUDGETS: Record<string, string> = {
   aucun_projet: "Aucun projet déclaré",
   "500k_1m": "500 k€ à 1 M€",
+  plus_1m: "Plus d'1 M€",
   "1m_2m": "1 à 2 M€",
   "2m_3m": "2 à 3 M€",
   plus_3m: "Plus de 3 M€",

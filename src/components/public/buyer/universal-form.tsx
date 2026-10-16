@@ -19,7 +19,7 @@ import {
 import {
   BUDGET_CHOICE_LABELS,
   BUDGET_QUESTION,
-  BUYER_BUDGET_CHOICES,
+  BUDGET_CHOICES_PROPOSES,
   UNIVERSAL_STEPS,
   universalStepOneSchema,
   universalStepTwoSchema,
@@ -332,7 +332,11 @@ export function UniversalBuyerForm({
           <fieldset className="uf-fieldset">
             <legend className="uf-title">{BUDGET_QUESTION}</legend>
             <div className="uf-choices">
-              {BUYER_BUDGET_CHOICES.map((choice) => (
+              {/* Les TROIS réponses proposées, et non toutes celles qui
+                  peuvent exister en base : les anciennes tranches restent
+                  lisibles sur les dossiers qui les portent, mais on ne les
+                  propose plus. */}
+              {BUDGET_CHOICES_PROPOSES.map((choice) => (
                 <label
                   key={choice}
                   className={`uf-choice ${draft.budgetChoice === choice ? "uf-choice--on" : ""}`}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BUDGET_BANDS } from "./schema";
 import {
+  BUDGET_CHOICES_PROPOSES,
   BUYER_BUDGET_CHOICES,
   BUDGET_CHOICE_LABELS,
   UNIVERSAL_STEPS,
@@ -19,14 +20,28 @@ const CONTACT = {
 };
 
 describe("vocabulaire de budget", () => {
-  it("porte exactement les cinq réponses du formulaire universel", () => {
+  it("ne propose que TROIS réponses", () => {
+    /* Cinq tranches, c'était cinq décisions à prendre debout dans la rue, sur
+       un téléphone, avant même d'avoir vu le bien. Le commercial affine
+       ensuite, au téléphone, où la question se pose mieux. */
+    expect(BUDGET_CHOICES_PROPOSES).toEqual(["aucun_projet", "500k_1m", "plus_1m"]);
+  });
+
+  it("sait encore LIRE les tranches qu'il ne propose plus", () => {
+    /* Des dossiers portent « 1m_2m » : une liste qui les oublie afficherait un
+       identifiant technique à la place d'un libellé. */
     expect(BUYER_BUDGET_CHOICES).toEqual([
       "aucun_projet",
       "500k_1m",
+      "plus_1m",
       "1m_2m",
       "2m_3m",
       "plus_3m",
     ]);
+    for (const retiree of ["1m_2m", "2m_3m", "plus_3m"] as const) {
+      expect(BUDGET_CHOICE_LABELS[retiree]).toBeTruthy();
+      expect(BUDGET_CHOICES_PROPOSES as readonly string[]).not.toContain(retiree);
+    }
   });
 
   it("reste DISTINCT des tranches historiques — aucune conversion possible", () => {
@@ -34,7 +49,7 @@ describe("vocabulaire de budget", () => {
     // rapprocher ferait perdre ou transformer l'information.
     const anciennes = new Set<string>(BUDGET_BANDS);
     const inconnues = BUYER_BUDGET_CHOICES.filter((c) => !anciennes.has(c));
-    expect(inconnues).toEqual(["aucun_projet", "500k_1m", "1m_2m"]);
+    expect(inconnues).toEqual(["aucun_projet", "500k_1m", "plus_1m", "1m_2m"]);
   });
 
   it("étiquette chaque réponse", () => {

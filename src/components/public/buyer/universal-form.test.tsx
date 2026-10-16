@@ -37,7 +37,7 @@ function renderForm(props: Partial<Parameters<typeof UniversalBuyerForm>[0]> = {
 }
 
 async function fillAndSubmit() {
-  fireEvent.click(screen.getByLabelText("Oui, entre 1 et 2 millions d’euros".replace("’", "'")));
+  fireEvent.click(screen.getByLabelText("Plus de 1 million d’euros".replace("’", "'")));
   fireEvent.click(screen.getByRole("button", { name: /continuer/i }));
   await waitFor(() => screen.getByLabelText("Prénom"));
   fireEvent.change(screen.getByLabelText("Prénom"), { target: { value: "Camille" } });
@@ -54,11 +54,15 @@ describe("écran 1", () => {
     expect(BUDGET_QUESTION).toBe("Avez-vous un projet ? Si oui, quel est votre budget ?");
   });
 
-  it("propose les cinq réponses, et seulement elles", () => {
+  it("propose TROIS réponses, et seulement elles", () => {
     renderForm();
-    expect(screen.getAllByRole("radio")).toHaveLength(5);
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
     expect(screen.getByLabelText("Non, je n'ai pas de projet")).toBeTruthy();
-    expect(screen.getByLabelText("Plus de 3 millions d'euros")).toBeTruthy();
+    expect(screen.getByLabelText("Oui, entre 500 000 € et 1 million d'euros")).toBeTruthy();
+    expect(screen.getByLabelText("Plus de 1 million d'euros")).toBeTruthy();
+    /* Les tranches retirées ne doivent plus apparaître à l'écran. */
+    expect(screen.queryByLabelText("Oui, entre 2 et 3 millions d'euros")).toBeNull();
+    expect(screen.queryByLabelText("Plus de 3 millions d'euros")).toBeNull();
   });
 
   it("ne pose AUCUNE autre question de qualification", () => {
@@ -119,7 +123,7 @@ describe("envoi", () => {
     await fillAndSubmit();
     await waitFor(() => expect(submit).toHaveBeenCalled());
     const payload = submit.mock.calls[0]?.[0] as { answers: Record<string, unknown> };
-    expect(payload.answers.budgetChoice).toBe("1m_2m");
+    expect(payload.answers.budgetChoice).toBe("plus_1m");
     expect("marketingOptIn" in payload.answers).toBe(false);
     expect(JSON.stringify(payload)).not.toMatch(/marketing/i);
     await waitFor(() => screen.getByRole("link", { name: /accéder à la brochure/i }));
