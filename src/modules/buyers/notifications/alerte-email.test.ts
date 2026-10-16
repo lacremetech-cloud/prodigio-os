@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import {
+  alerterEquipe,
+  alerterEquipeParWebhook,
+  chargeAlerteEquipe,
   alerterEquipeParEmail,
   corpsAlerte,
   destinatairesValides,
@@ -164,5 +167,106 @@ describe("envoi", () => {
     }) as unknown as typeof fetch;
     const res = await alerterEquipeParEmail(LEAD, { env: envWith(), transport: { fetchImpl } });
     expect(res.status).toBe("failed");
+  });
+});
+
+describe("chemin webhook (Make)", () => {
+  const WH = "https://hook.eu2.make.com/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+
+  function faussetteWebhook(ok = true) {
+    const appels: Array<{ url: string; charge: Record<string, unknown> }> = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      appels.push({ url, charge: JSON.parse(String(init.body)) });
+      return { ok, status: ok ? 200 : 500 } as unknown as Response;
+    }) as unknown as typeof fetch;
+    return { appels, fetchImpl };
+  }
+
+  it("coupe le nom en prenom et nom, comme le scenario l'attend", () => {
+    const c = chargeAlerteEquipe(LEAD, envWith());
+    expect(c.first_name).toBe("Léa");
+    expect(c.last_name).toBe("Bernard");
+  });
+
+  it("dit « Non transmise » plutot que de laisser la provenance vide", () => {
+    // Un champ vide dans l'e-mail se lit comme un bug d'affichage.
+    expect(chargeAlerteEquipe({ ...LEAD, provenance: null }, envWith()).provenance).toBe(
+      "Non transmise",
+    );
+  });
+
+  it("porte le lien de la fiche", () => {
+    expect(chargeAlerteEquipe(LEAD, envWith()).fiche_url).toContain(
+      "/crm/acquereurs/11111111-2222-3333-4444-555555555555",
+    );
+  });
+
+  it("n'appelle rien sans adresse de webhook", async () => {
+    const { appels, fetchImpl } = faussetteWebhook();
+    const r = await alerterEquipeParWebhook(LEAD, { env: envWith(), fetchImpl });
+    expect(r.status).toBe("skipped");
+    expect(appels).toHaveLength(0);
+  });
+
+  it("poste la charge sur le webhook", async () => {
+    const { appels, fetchImpl } = faussetteWebhook();
+    const r = await alerterEquipeParWebhook(LEAD, {
+      env: envWith({ ALERTE_LEAD_WEBHOOK_URL: WH }),
+      fetchImpl,
+    });
+    expect(r.status).toBe("sent");
+    expect(appels[0]?.url).toBe(WH);
+    expect(appels[0]?.charge.phone).toBe("06 25 77 35 92");
+  });
+
+  it("ne leve jamais si le webhook est injoignable", async () => {
+    const fetchImpl = (() => {
+      throw new Error("reseau");
+    }) as unknown as typeof fetch;
+    const r = await alerterEquipeParWebhook(LEAD, {
+      env: envWith({ ALERTE_LEAD_WEBHOOK_URL: WH }),
+      fetchImpl,
+    });
+    expect(r.status).toBe("failed");
+  });
+});
+
+describe("aiguillage : JAMAIS les deux canaux", () => {
+  const WH = "https://hook.eu2.make.com/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+
+  it("le webhook prime, et Lumail n'est PAS appele", async () => {
+    // Deux canaux actifs = Antoine recoit deux fois la meme alerte.
+    const lumail = faussetteLumail();
+    const posts: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      posts.push(String(url));
+      return { ok: true, status: 200 } as unknown as Response;
+    }) as unknown as typeof fetch;
+
+    const r = await alerterEquipe(LEAD, {
+      env: envWith({ ALERTE_LEAD_WEBHOOK_URL: WH }),
+      fetchImpl,
+      transport: { fetchImpl: lumail.fetchImpl },
+    });
+    expect(r).toEqual({ canal: "webhook", status: "sent" });
+    expect(posts).toEqual([WH]);
+    expect(lumail.appels).toHaveLength(0);
+  });
+
+  it("sans webhook, retombe sur l'envoi e-mail", async () => {
+    const lumail = faussetteLumail();
+    const r = await alerterEquipe(LEAD, {
+      env: envWith(),
+      transport: { fetchImpl: lumail.fetchImpl },
+    });
+    expect(r.canal).toBe("email");
+    expect(lumail.appels).toHaveLength(2);
+  });
+
+  it("sans rien de configure, n'alerte pas et ne leve pas", async () => {
+    const r = await alerterEquipe(LEAD, {
+      env: envWith({ LUMAIL_API_KEY: undefined, ALERTE_LEAD_WEBHOOK_URL: undefined }),
+    });
+    expect(r.canal).toBe("aucun");
   });
 });

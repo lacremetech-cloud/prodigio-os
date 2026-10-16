@@ -189,3 +189,100 @@ export async function alerterEquipeParEmail(
     return { status: "failed", envoyes: 0, total: destinataires.length };
   }
 }
+
+/* ===========================================================================
+   SECOND CHEMIN : UN WEBHOOK, POUR QUE MAKE COMPOSE L'E-MAIL.
+   ===========================================================================
+
+   Pourquoi deux chemins pour une seule alerte : envoyer un e-mail exige un
+   fournisseur autorise a ecrire au nom du domaine, donc un compte a ouvrir.
+   Make, lui, est deja la et sait envoyer via le compte Google de l'agence.
+   Le webhook est donc la route courte ; Lumail reste la route propre, le jour
+   ou l'on voudra sortir de Make sans redevelopper.
+
+   ATTENTION — ce webhook n'a RIEN a voir avec `buyer_form_webhook_url`, qui
+   porte l'accuse de reception au prospect et n'est PLUS appele depuis que
+   SMSFactor est configure (voir `universal-submit.ts` : l'envoi direct prime
+   et sort de la fonction). Les confondre, c'est brancher une alerte sur une
+   branche morte. */
+
+export interface ChargeAlerteEquipe {
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  email: string | null;
+  property_name: string | null;
+  budget_libelle: string | null;
+  provenance: string | null;
+  recu_le: string;
+  fiche_url: string;
+  interest_id: string;
+}
+
+/** Ce que Make recoit. Les noms sont ceux cables dans le scenario. */
+export function chargeAlerteEquipe(lead: FicheLead, env: Env = globalEnv): ChargeAlerteEquipe {
+  const nom = (lead.nom ?? "").trim();
+  const sep = nom.indexOf(" ");
+  return {
+    first_name: sep > 0 ? nom.slice(0, sep) : nom || null,
+    last_name: sep > 0 ? nom.slice(sep + 1) : null,
+    phone: net(lead.telephone),
+    email: net(lead.email),
+    property_name: net(lead.bien),
+    budget_libelle: net(lead.budget),
+    provenance: net(lead.provenance) ?? "Non transmise",
+    recu_le: HORAIRE.format(lead.recuLe),
+    fiche_url: `${mandateCrmBaseUrl(env)}/crm/acquereurs${
+      lead.buyerProfileId ? `/${encodeURIComponent(lead.buyerProfileId)}` : ""
+    }`,
+    interest_id: lead.interestId,
+  };
+}
+
+export async function alerterEquipeParWebhook(
+  lead: FicheLead,
+  deps: { env?: Env; fetchImpl?: typeof fetch; timeoutMs?: number } = {},
+): Promise<{ status: "sent" | "skipped" | "failed" }> {
+  const env = deps.env ?? globalEnv;
+  const url = env.ALERTE_LEAD_WEBHOOK_URL;
+  if (!url || !/^https:\/\//.test(url)) return { status: "skipped" };
+
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), deps.timeoutMs ?? 8000);
+  try {
+    const res = await fetchImpl(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(chargeAlerteEquipe(lead, env)),
+      signal: controller.signal,
+    });
+    return { status: res.ok ? "sent" : "failed" };
+  } catch {
+    // Ni l'adresse appelee ni les coordonnees ne sont journalisees.
+    console.error("alerte lead : echec d'appel du webhook d'alerte");
+    return { status: "failed" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Point d'entree unique des deux tunnels.
+ *
+ * Le webhook PRIME : c'est le chemin actif aujourd'hui. Jamais les deux, sinon
+ * Antoine recevrait deux fois la meme alerte — la meme regle que pour l'accuse
+ * de reception, pour la meme raison.
+ */
+export async function alerterEquipe(
+  lead: FicheLead,
+  deps: AlerteEmailDeps & { fetchImpl?: typeof fetch } = {},
+): Promise<{ canal: "webhook" | "email" | "aucun"; status: string }> {
+  const env = deps.env ?? globalEnv;
+  if (env.ALERTE_LEAD_WEBHOOK_URL) {
+    const r = await alerterEquipeParWebhook(lead, { env, fetchImpl: deps.fetchImpl });
+    return { canal: "webhook", status: r.status };
+  }
+  const r = await alerterEquipeParEmail(lead, deps);
+  return { canal: r.status === "skipped" ? "aucun" : "email", status: r.status };
+}

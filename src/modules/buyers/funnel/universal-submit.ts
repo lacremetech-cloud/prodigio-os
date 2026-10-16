@@ -14,7 +14,7 @@ import {
   alerterNouvelleDemande,
   ficheLeadUniverselle,
 } from "../notifications/universal-notify";
-import { alerterEquipeParEmail } from "../notifications/alerte-email";
+import { alerterEquipe } from "../notifications/alerte-email";
 import {
   bienDeLaManifestation,
   conversionProspect,
@@ -310,7 +310,7 @@ export async function submitUniversalInterestAction(
              relevent — ni l'inverse. */
           await Promise.allSettled([
             alerterNouvelleDemande(commun),
-            alerterEquipeParEmail(ficheLeadUniverselle(commun)),
+            alerterEquipe(ficheLeadUniverselle(commun)),
           ]);
         } catch (cause) {
           console.warn("alerte acquereur non envoyee", {

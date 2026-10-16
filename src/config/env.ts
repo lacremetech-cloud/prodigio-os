@@ -195,6 +195,13 @@ const envSchema = z.object({
   // personnelles dans le depot.
   // Absente ⇒ aucune alerte e-mail (le canal Slack continue seul).
   ALERTES_LEADS_EMAILS: z.string().optional(),
+
+  // Webhook Make dedie a l'alerte equipe. Make compose et envoie l'e-mail via
+  // le compte Google de l'agence : pas de fournisseur d'envoi a contractualiser.
+  // RIEN A VOIR avec `buyer_form_webhook_url` en base, qui porte l'accuse au
+  // prospect et n'est plus appele depuis que SMSFactor est configure.
+  // Present ⇒ il PRIME sur l'envoi Lumail (jamais les deux : doublon d'alerte).
+  ALERTE_LEAD_WEBHOOK_URL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -12,7 +12,7 @@ import type { Json } from "@/lib/supabase/types";
 import { computeBuyerScore } from "../scoring";
 import { notifyNewBuyerInterest, type BuyerNotifyInput } from "../notifications";
 import { ficheLeadHistorique } from "../notifications/notify";
-import { alerterEquipeParEmail } from "../notifications/alerte-email";
+import { alerterEquipe } from "../notifications/alerte-email";
 import { buyerFunnel } from "./content";
 import {
   buildBuyerPayload,
@@ -45,7 +45,7 @@ function scheduleBuyerAlerts(input: BuyerNotifyInput): void {
   const envoyer = () =>
     Promise.allSettled([
       notifyNewBuyerInterest(input),
-      alerterEquipeParEmail(ficheLeadHistorique(input)),
+      alerterEquipe(ficheLeadHistorique(input)),
     ]);
   try {
     after(() => envoyer());
