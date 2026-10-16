@@ -1,86 +1,79 @@
-# Alerte e-mail « nouveau lead » — état et reprise
+# Alerte e-mail « nouveau lead » — EN PLACE depuis le 16/10/2026
 
-**Besoin.** Antoine et JC n'ouvrent ni Slack ni WhatsApp. Les alertes de
-nouveau lead n'allaient que dans Slack : elles partaient, personne ne les
-lisait. Il leur faut un e-mail à chaque dépôt.
+**Besoin.** Antoine et JC n'ouvrent ni Slack ni WhatsApp. Les alertes n'allaient
+que dans Slack : elles partaient, personne ne les lisait.
 
-**Décision du 16/10/2026 :** passer par **Make**, qui reçoit déjà chaque dépôt,
-plutôt que par un fournisseur d'envoi à contractualiser.
+**En place :** à chaque dépôt, Prodigio appelle un webhook Make dédié, et Make
+envoie l'e-mail via le compte Google de l'agence.
 
----
-
-## Ce qui est DÉJÀ fait, en code et livré
-
-| Élément | Où | État |
-|---|---|---|
-| Module d'alerte e-mail interne | `src/modules/buyers/notifications/alerte-email.ts` | Écrit, 16 tests |
-| Branchement tunnel landings | `src/modules/buyers/funnel/universal-submit.ts` | Fait |
-| Branchement tunnel historique | `src/modules/buyers/funnel/submit.ts` | Fait |
-| Variable destinataires | `ALERTES_LEADS_EMAILS` | Déclarée, **non renseignée** |
-| Budget en clair dans la charge Make | `accuse-depot.ts` → `budget_libelle` | Livré (`4080d91`) |
-
-Ce code **ne sert pas** au chemin Make. Il attend un transport e-mail
-(`LUMAIL_API_KEY` + `LUMAIL_FROM_EMAIL`, absents de la production). Il reste en
-place : le jour où l'on veut sortir de Make, trois variables suffisent.
-
-## Ce qui RESTE à faire, dans Make
-
-### Blocage actuel
-
-Le connecteur Make de la session pointe sur un **autre compte** :
-zone `eu1.make.com`, organisation unique, scénarios Stripe / Systeme.io /
-Calendly, créés par `eliovegancoach@gmail.com` (« VEG IN SHAPE »).
-
-Les webhooks Prodigio sont sur **`hook.eu2.make.com`** — autre zone, donc autre
-compte. Vérifié en base :
-
-```sql
-select slug, buyer_form_status,
-       split_part(replace(buyer_form_webhook_url,'https://',''), '/', 1) as hote
-  from public.property_public_config;
--- villa-verdun       | actif | hook.eu2.make.com
--- villa-jean-jaures  | actif | hook.eu2.make.com
+```
+dépôt → Prodigio OS → webhook Make → Gmail → agence@indescale.com
+                                              adelombares@kprojects.fr
+                                              casteljc69@gmail.com
 ```
 
-Tant que le connecteur n'est pas réautorisé sur le compte Prodigio, le scénario
-est hors d'atteinte.
+## Le piège à ne jamais réintroduire
 
-### Le scénario à construire, une fois l'accès obtenu
+`buyer_form_webhook_url` (en base, par bien) **n'est plus appelé**. Dans
+`universal-submit.ts`, l'accusé de réception prend le chemin SMSFactor dès que
+le jeton existe — et **sort de la fonction** :
 
-Dans le scénario déclenché par le webhook Prodigio, **après** le module
-Webhook, ajouter **Gmail › Send an email** :
+```ts
+if (isSmsFactorConfigured()) { …envoyerSms(…); return; }
+if (!config.webhookUrl) return;        // ← jamais atteint
+…envoyerAccuseDepot(…)                 // ← code mort en production
+```
 
-- **Connexion** : compte Google `agence@indescale.com`
-  (⚠️ étape personnelle — ne peut pas être faite à la place de l'utilisateur)
-- **To** : `agence@indescale.com, adelombares@kprojects.fr, casteljc69@gmail.com`
-  (⚠️ **jamais** `recette.claude@prodigio.fr` : compte de recette neutralisé)
-- **Subject** :
-  `Nouveau lead — {{first_name}} {{last_name}} · {{property_name}} · {{budget_libelle}}`
-- **Content** : nom, `{{phone}}`, `{{email}}`, `{{budget_libelle}}`,
-  `{{property_name}}`, `{{submitted_at}}`
+Y brancher une alerte produirait des e-mails qui ne partent jamais, et une
+attente silencieuse de plus. L'alerte équipe a donc son **webhook dédié**,
+appelé explicitement : `ALERTE_LEAD_WEBHOOK_URL`.
 
-L'objet doit porter à lui seul de quoi décider de rappeler : sur un téléphone,
-la notification n'affiche que l'expéditeur et l'objet.
+Les deux webhooks enregistrés en base pointent d'ailleurs vers un compte Make
+**introuvable** (ni Indescale, ni celui connecté) — vestige sans effet, puisque
+plus rien ne les appelle.
 
-### Champs disponibles dans la charge
+## Le montage
 
-`interest_id`, `property_slug`, `property_name`, `brochure_url`, `first_name`,
-`last_name`, `phone` (format `+33…`), `email`, `budget_choice` (code technique),
-`budget_libelle` (en clair, ex. « Plus d'1 M€ »), `submitted_at` (ISO 8601).
+| Pièce | Référence |
+|---|---|
+| Compte Make | Indescale Agency, `agence@indescale.com`, zone `eu2`, team `2752388` |
+| Webhook | « Prodigio — alerte nouveau lead », id `4443795` |
+| Scénario | « Prodigio — Nouveau lead → e-mail Antoine & JC », id `9990198`, **actif** |
+| Connexion Gmail | id `14675983`, `agence@indescale.com`, expire le **16/04/2027** |
+| Variable Vercel | `ALERTE_LEAD_WEBHOOK_URL` (production + preview) |
+| Expéditeur affiché | « Prodigio OS » |
 
-Source : `ChargeAccuse` dans `src/modules/buyers/notifications/accuse-depot.ts`.
+⚠️ **La connexion Google expire le 16 avril 2027.** Passé cette date, les
+alertes s'arrêtent — en silence, comme toujours. À réautoriser avant.
 
-## Canal écarté, et pourquoi le garder en tête
+## Côté code
 
-Le **SMS est déjà branché en production** (`SMSFACTOR_API_TOKEN` et
-`SMSFACTOR_SENDER` présents, transport `smsfactor.ts` écrit). C'est le seul
-canal activable sans aucune action de l'utilisateur. Écarté le 16/10 au profit
-de l'e-mail, mais c'est le repli immédiat si Make traîne : il ne demande que
-les numéros d'Antoine et JC.
+| Élément | Où |
+|---|---|
+| Point d'entrée unique des deux tunnels | `alerterEquipe()` dans `notifications/alerte-email.ts` |
+| Chemin actif | `alerterEquipeParWebhook()` — prime quand la variable existe |
+| Chemin de repli | `alerterEquipeParEmail()` — Lumail, prêt mais sans transport |
+| Convertisseurs | `ficheLeadUniverselle()` et `ficheLeadHistorique()` |
+| Branchements | `universal-submit.ts` (landings) et `submit.ts` (historique) |
 
-## Vérifier que ça marche
+**Jamais les deux canaux** : deux canaux actifs, c'est Antoine qui reçoit deux
+fois la même alerte. Le webhook prime, sinon l'e-mail Lumail, sinon rien.
 
-Déposer une demande de test sur `go.prodigio.fr/bien/villa-verdun/interet`,
-puis **supprimer le contact** (voir le bloc `do $$` atomique de
-`docs/28-ROTATION-DES-SECRETS.md` ou le script de suppression par identifiant :
-jamais par nom, un `LIKE` emporterait un vrai client).
+Le chemin Lumail reste en place pour le jour où l'on voudra sortir de Make :
+trois variables (`LUMAIL_API_KEY`, `LUMAIL_FROM_EMAIL`, `ALERTES_LEADS_EMAILS`)
+et on bascule sans redévelopper.
+
+## Vérifié / pas vérifié au 16/10/2026
+
+- ✅ webhook → Make → Gmail : exécution `SUCCESS`, 2 opérations, 1,2 s
+- ⏳ **Prodigio → webhook** : non prouvé. Le code est déployé (`04e46e2`) et la
+  variable est en production, mais ce maillon ne se vérifie qu'avec un vrai
+  dépôt. Décision de l'utilisateur : laisser venir le premier lead réel.
+  **Si le premier vrai lead n'engendre pas d'e-mail, commencer par là.**
+
+## Canal de repli, si Make lâche
+
+Le **SMS est déjà branché** (`SMSFACTOR_API_TOKEN` et `SMSFACTOR_SENDER` en
+production, transport `smsfactor.ts` écrit et utilisé tous les jours pour
+l'accusé au prospect). C'est le seul canal activable sans aucune action de
+l'utilisateur : il ne manque que les numéros d'Antoine et JC.
