@@ -1,5 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BUDGET_CHOICE_COURT } from "../funnel/universal";
+import type { BuyerBudgetChoice } from "../funnel/universal";
 
 /**
  * Accusé de réception d'un dépôt — appel d'une automatisation externe.
@@ -36,6 +38,19 @@ export interface ChargeAccuse {
   phone: string | null;
   email: string | null;
   budget_choice: string | null;
+  /**
+   * Le MEME budget, en clair : « Plus d'1 M€ ».
+   *
+   * `budget_choice` est un code technique. Une automatisation qui s'en sert
+   * pour ecrire un e-mail affiche « plus_1m » a un humain, ou doit recopier
+   * une table de correspondance qui divergera le jour ou l'on ajoute une
+   * tranche — c'est deja arrive une fois cette semaine. Le libelle part donc
+   * avec le code, depuis la source unique qui les tient tous les deux.
+   *
+   * Champ ADDITIF : les consommateurs existants ne lisent que `budget_choice`
+   * et ne voient pas la difference.
+   */
+  budget_libelle: string | null;
   submitted_at: string;
 }
 
@@ -120,6 +135,8 @@ export function construireCharge(input: {
     phone: net(input.phone),
     email: net(input.email),
     budget_choice: net(input.budgetChoice),
+    budget_libelle:
+      BUDGET_CHOICE_COURT[net(input.budgetChoice) as BuyerBudgetChoice] ?? null,
     submitted_at: (input.submittedAt ?? new Date()).toISOString(),
   };
 }

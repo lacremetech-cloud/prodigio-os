@@ -34,6 +34,25 @@ describe("charge de l'accusé de dépôt", () => {
     expect(c.submitted_at).toBe("2026-10-14T00:49:00.000Z");
   });
 
+  it("porte le budget EN CLAIR a cote du code technique", () => {
+    // Une automatisation qui compose un e-mail doit pouvoir ecrire le budget
+    // sans recopier une table de correspondance qui divergera.
+    const c = construireCharge(BASE);
+    expect(c.budget_choice).toBe("500k_1m");
+    expect(c.budget_libelle).toBe("500 000 € – 1 M€");
+  });
+
+  it("connait la tranche « plus d'1 M€ », la plus recente", () => {
+    expect(construireCharge({ ...BASE, budgetChoice: "plus_1m" }).budget_libelle).toBe(
+      "Plus d'1 M€",
+    );
+  });
+
+  it("rend null, jamais le code brut, pour un budget inconnu", () => {
+    expect(construireCharge({ ...BASE, budgetChoice: "inexistant" }).budget_libelle).toBeNull();
+    expect(construireCharge({ ...BASE, budgetChoice: null }).budget_libelle).toBeNull();
+  });
+
   it("prefere le nom public, celui que la personne a vu sur la page", () => {
     const c = construireCharge({
       ...BASE,
