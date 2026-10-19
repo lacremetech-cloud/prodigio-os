@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { MutableRefObject } from "react";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import {
+  assignBuyerAction,
   enregistrerTraitementAction,
   selfAssignBuyerAction,
 } from "@/modules/buyers/crm/actions";
@@ -72,6 +73,8 @@ export function PanneauTraitement({
   resteUnSuivant,
   saleRef,
   membres,
+  moiUserId = null,
+  peutAffecterAutrui = false,
   contexte,
 }: {
   row: BuyerInboxRow;
@@ -94,6 +97,18 @@ export function PanneauTraitement({
   saleRef: MutableRefObject<boolean>;
   /** L'équipe, pour choisir le responsable du rappel. */
   membres: { userId: string; name: string }[];
+  /** Mon identifiant : me prendre un dossier libre passe par « claim ». */
+  moiUserId?: string | null;
+  /**
+   * Vrai si je peux affecter le dossier a QUELQU'UN D'AUTRE.
+   *
+   * La base le reserve a l'encadrement (`crm_buyer_assign` exige
+   * administrateur, manager ou setter) : prendre un dossier libre et
+   * reaffecter celui d'un collegue sont deux actes differents, sans quoi deux
+   * associes se reprendraient leurs dossiers sans que l'autre le sache. Un
+   * commercial ne voit donc qu'un nom possible : le sien.
+   */
+  peutAffecterAutrui?: boolean;
   /** Projet, vue et filtre, recopiés dans le lien : c'est ce qui permet au
       « Retour à la liste » de la fiche complète de rendre l'écran d'où l'on
       vient, et pas la liste remise à zéro. */
@@ -208,13 +223,34 @@ export function PanneauTraitement({
     return null;
   }
 
-  /** Prendre un dossier libre. Distinct d'une réaffectation, qui reste à
-      l'encadrement : voir `selfAssignBuyerAction`. */
-  async function mAttribuer() {
+  /**
+   * Les noms que la base ACCEPTERA, et eux seuls.
+   *
+   * Proposer un nom pour se voir refuser ensuite est pire que ne pas le
+   * proposer : on croit avoir confié le dossier. Un commercial ne voit donc
+   * que le sien.
+   */
+  const affectables = peutAffecterAutrui
+    ? membres
+    : membres.filter((m) => m.userId === moiUserId);
+
+  /**
+   * Confier le dossier.
+   *
+   * DEUX CHEMINS, et leur asymétrie est voulue : prendre un dossier libre
+   * passe par « claim », réaffecter celui d'un collègue par « assign », que la
+   * base réserve à l'encadrement. Sans cette distinction, deux associés se
+   * reprendraient leurs dossiers sans que l'autre le sache.
+   */
+  async function confierA(userId: string) {
     if (attribution) return;
     setAttribution(true);
     setErreur(null);
-    const r = await safeAction(() => selfAssignBuyerAction({ buyerProfileId: row.buyerProfileId }));
+    const r = await safeAction(() =>
+      userId === moiUserId
+        ? selfAssignBuyerAction({ buyerProfileId: row.buyerProfileId })
+        : assignBuyerAction({ buyerProfileId: row.buyerProfileId, userId }),
+    );
     setAttribution(false);
     if (!r.ok) {
       setErreur(r.error ?? "L’attribution a échoué.");
@@ -407,14 +443,28 @@ export function PanneauTraitement({
               Suivi par {responsableNom}
             </span>
           ) : (
-            <button
-              type="button"
-              className="crm-panneau__attribuer"
-              onClick={() => void mAttribuer()}
+            /* LES NOMS POSSIBLES, pas un bouton unique. « M'attribuer » ne
+               disait pas qu'on pouvait confier le dossier a quelqu'un d'autre,
+               et obligeait a ouvrir la fiche pour le faire. La liste est
+               limitee a ce que la base acceptera : moi seul si je suis
+               commercial, toute l'equipe si j'encadre. */
+            <select
+              className="crm-panneau__attribuer-choix"
+              value=""
               disabled={attribution || enCours}
+              aria-label="Confier ce dossier"
+              onChange={(e) => {
+                const id = e.target.value;
+                if (id) void confierA(id);
+              }}
             >
-              {attribution ? "…" : "M’attribuer"}
-            </button>
+              <option value="">{attribution ? "…" : "Confier à…"}</option>
+              {affectables.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.userId === moiUserId ? `${m.name} (moi)` : m.name}
+                </option>
+              ))}
+            </select>
           )}
         </div>
 

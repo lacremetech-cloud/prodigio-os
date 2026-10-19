@@ -119,6 +119,8 @@ export function BuyerInbox({
   montrerProjet = true,
   contexte = "",
   budgetInitial,
+  moiUserId = null,
+  peutAffecterAutrui = false,
   chargeA,
 }: {
   rows: BuyerInboxRow[];
@@ -142,6 +144,9 @@ export function BuyerInbox({
    * tranches reste ici, et une seule fois, pour qu'elle ne puisse pas deriver.
    */
   budgetInitial?: string;
+  /** Mon identifiant, et mon droit de confier un dossier a autrui. */
+  moiUserId?: string | null;
+  peutAffecterAutrui?: boolean;
   /** Instant de chargement, fourni par le serveur : voir `maintenant`. */
   chargeA: string;
 }) {
@@ -485,6 +490,8 @@ export function BuyerInbox({
           resteUnSuivant={suivantDansLaFile(ordreFile, ouvert) !== null}
           saleRef={saleRef}
           membres={members}
+          moiUserId={moiUserId}
+          peutAffecterAutrui={peutAffecterAutrui}
           contexte={contexte}
           onFermer={() => {
             if (peutQuitter()) setOuvert(null);

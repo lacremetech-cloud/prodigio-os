@@ -495,32 +495,20 @@ export default async function BuyerProfilePage({
             </section>
           ) : null}
 
-          {/* ---- 5. Visites et offres ---------------------------------------- */}
-          {/* Actions métier dédiées (jamais un simple changement d'étape) */}
-          {canOperateBuyers && !isClosed ? (
-            <section className="crm-panel p-4">
-              <SectionTitle eyebrow="Action dédiée" title="Offre en cours" />
-              {profile.offer_recorded_at ? (
-                <p className="mb-2 text-xs text-[var(--crm-text-dim)]">
-                  Offre enregistrée le {formatDateTime(profile.offer_recorded_at)}
-                  {detail.offerPropertyLabel ? ` sur ${detail.offerPropertyLabel}` : ""}
-                  {profile.offer_amount_cents != null
-                    ? ` · ${formatCents(profile.offer_amount_cents)}`
-                    : ""}
-                </p>
-              ) : null}
-              <BuyerOfferForm buyerProfileId={profile.id} properties={interestProperties} />
-            </section>
-          ) : null}
-
-          {/* ---- 6. Ce que la personne a répondu, et d'où elle vient : repliés.
-              On les consulte une fois, au premier appel ; les garder dépliés
-              coûtait un défilement à chaque ouverture de fiche. */}
-          {/* Intérêts par bien */}
-          <details className="crm-panel crm-repli p-4">
-            <summary className="crm-repli__titre">Ce que la personne a déclaré</summary>
+          {/* ---- 5a. PLANIFIER UNE VISITE -----------------------------------
+              C'etait un accordeon nomme « Ce que la personne a declare », qu'il
+              fallait deplier pour atteindre le seul geste qu'il contenait
+              vraiment : caler une visite. Le budget en est parti (l'en-tete le
+              porte), et il ne restait qu'un couvercle sur une commande.
+              C'est une section, elle porte le nom de ce qu'on y fait, et elle
+              precede l'offre : on visite avant d'offrir. */}
+          <section className="crm-panel p-4">
+            <SectionTitle eyebrow="Action dédiée" title="Planifier une visite" />
             {interests.length === 0 ? (
-              <p className="text-sm text-[var(--crm-text-dim)]">Aucun intérêt enregistré.</p>
+              <p className="text-sm text-[var(--crm-text-dim)]">
+                Aucun projet : il n&rsquo;y a rien à visiter tant qu&rsquo;aucun bien n&rsquo;est
+                rattaché.
+              </p>
             ) : (
               <ul className="flex flex-col gap-3">
                 {interests.map(({ interest: i, propertyLabel, propertyCity }) => (
@@ -593,7 +581,6 @@ export default async function BuyerProfilePage({
                     {canOperateBuyers && !isClosed ? (
                       <div className="mt-3 flex flex-col gap-3 border-t border-[var(--crm-line-soft)] pt-3">
                         <div>
-                          <p className="crm-label mb-1.5">Planifier la visite de ce projet</p>
                           <PlanifierVisite buyerProfileId={profile.id} interestId={i.id} />
                         </div>
                       </div>
@@ -618,7 +605,29 @@ export default async function BuyerProfilePage({
                 ))}
               </ul>
             )}
-          </details>
+          </section>
+
+          {/* ---- 5. Visites et offres ---------------------------------------- */}
+          {/* Actions métier dédiées (jamais un simple changement d'étape) */}
+          {canOperateBuyers && !isClosed ? (
+            <section className="crm-panel p-4">
+              <SectionTitle eyebrow="Action dédiée" title="Offre en cours" />
+              {profile.offer_recorded_at ? (
+                <p className="mb-2 text-xs text-[var(--crm-text-dim)]">
+                  Offre enregistrée le {formatDateTime(profile.offer_recorded_at)}
+                  {detail.offerPropertyLabel ? ` sur ${detail.offerPropertyLabel}` : ""}
+                  {profile.offer_amount_cents != null
+                    ? ` · ${formatCents(profile.offer_amount_cents)}`
+                    : ""}
+                </p>
+              ) : null}
+              <BuyerOfferForm buyerProfileId={profile.id} properties={interestProperties} />
+            </section>
+          ) : null}
+
+          {/* ---- 6. D'où elle vient : replié.
+              On le consulte une fois, au premier appel ; le garder déplié
+              coûtait un défilement à chaque ouverture de fiche. */}
 
           {/* Attribution marketing consolidée du dossier */}
           <details className="crm-panel crm-repli p-4">

@@ -650,7 +650,11 @@ export function BuyerActivityForm({
   interests: { id: string; label: string }[];
   members: { userId: string; name: string }[];
 }) {
-  const { pending, error, done, run } = useAction();
+  /* DEUX ENREGISTREMENTS DISTINCTS, DONC DEUX ETATS DISTINCTS.
+     Un seul `useAction` ferait clignoter « Enregistré » sous les deux blocs
+     quand on n'en a sauvegardé qu'un. */
+  const suivi = useAction();
+  const suite = useAction();
   /* `null` = « Général / Tous les biens ». L'activité appartient d'abord à la
      personne ; le bien est une précision. */
   const [interestId, setInterestId] = useState<string | null>(null);
@@ -661,6 +665,7 @@ export function BuyerActivityForm({
   const [quand, setQuand] = useState("");
   const [titre, setTitre] = useState("");
   const [responsable, setResponsable] = useState<string | null>(null);
+  const enCours = suivi.pending || suite.pending;
 
   if (interests.length === 0) {
     return (
@@ -678,26 +683,81 @@ export function BuyerActivityForm({
 
   return (
     <div className="flex flex-col gap-3">
-      <ChoixProjet
-        valeur={interestId}
-        onChoisir={setInterestId}
-        projets={interests.map((i) => ({ interestId: i.id, label: i.label }))}
-        requis={typeAction === "visite"}
-        disabled={pending}
-      />
+      {/* ---- CE QUI S'EST PASSE ------------------------------------------
+          Deux gestes, deux blocs, deux enregistrements. Ils partageaient un
+          bouton : noter un message vocal obligeait a repondre aussi a « et
+          ensuite ? », et planifier un rappel trois jours plus tard renvoyait
+          dans un formulaire d'activite vide. Ce sont deux moments differents
+          du meme dossier. */}
+      <div className="crm-sous-bloc">
+        <p className="crm-sous-bloc__titre">Suivi</p>
+        <ChoixProjet
+          valeur={interestId}
+          onChoisir={setInterestId}
+          projets={interests.map((i) => ({ interestId: i.id, label: i.label }))}
+          disabled={enCours}
+        />
 
-      <BlocActivite
-        activite={activite}
-        onActivite={setActivite}
-        quand={quandActivite}
-        onQuand={setQuandActivite}
-        note={note}
-        onNote={setNote}
-        disabled={pending}
-      />
+        <BlocActivite
+          activite={activite}
+          onActivite={setActivite}
+          quand={quandActivite}
+          onQuand={setQuandActivite}
+          note={note}
+          onNote={setNote}
+          disabled={enCours}
+        />
 
-      <div className="border-t border-[var(--crm-line-soft)] pt-3">
-        <p className="crm-label mb-1.5">Prochaine action</p>
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            className="crm-btn crm-btn--sm"
+            disabled={enCours || (!activite && !note.trim())}
+            onClick={() =>
+              suivi.run(
+                () =>
+                  enregistrerTraitementAction({
+                    buyerProfileId,
+                    interestId, // null = général
+                    activite,
+                    occurredAt: activite ? depuisChampLocal(quandActivite) : null,
+                    note: note.trim() || null,
+                  }),
+                /* Vidé SEULEMENT après un succès confirmé : une coupure réseau
+                   ne doit pas effacer la note qu'on vient de dicter au
+                   téléphone. La prochaine action, elle, n'est pas touchée —
+                   on ne vient pas de l'enregistrer. */
+                () => {
+                  setActivite(null);
+                  setNote("");
+                  setQuandActivite(maintenantLocal());
+                },
+              )
+            }
+          >
+            {suivi.pending ? "…" : "Enregistrer le suivi"}
+          </button>
+          <Saved show={suivi.done} />
+        </div>
+        <FieldError error={suivi.error} />
+      </div>
+
+      {/* ---- CE QU'ON FAIT ENSUITE ---------------------------------------- */}
+      <div className="crm-sous-bloc">
+        <p className="crm-sous-bloc__titre">Prochaine action</p>
+        {/* Une visite exige un bien : le menu réapparaît ici, car c'est cet
+            enregistrement-là qui le rattachera. */}
+        {typeAction === "visite" ? (
+          <div className="mb-2">
+            <ChoixProjet
+              valeur={interestId}
+              onChoisir={setInterestId}
+              projets={interests.map((i) => ({ interestId: i.id, label: i.label }))}
+              requis
+              disabled={enCours}
+            />
+          </div>
+        ) : null}
         <BlocProchaineAction
           type={typeAction}
           onType={choisirType}
@@ -708,56 +768,48 @@ export function BuyerActivityForm({
           responsable={responsable}
           onResponsable={setResponsable}
           membres={members}
-          disabled={pending}
+          disabled={enCours}
         />
-      </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="crm-btn crm-btn--sm"
-          disabled={pending || (!activite && !note.trim() && typeAction === "aucune")}
-          onClick={() =>
-            run(
-              () =>
-                enregistrerTraitementAction({
-                  buyerProfileId,
-                  interestId,  // null = général
-
-                  activite,
-                  occurredAt: activite ? depuisChampLocal(quandActivite) : null,
-                  note: note.trim() || null,
-                  stage: typeAction === "visite" && quand ? "visite_planifiee" : null,
-                  nextActionKind: typeAction === "aucune" ? null : typeAction,
-                  nextActionAt: depuisChampLocal(quand),
-                  nextActionTitle:
-                    typeAction === "visite"
-                      ? "Visite"
-                      : typeAction === "rappel"
-                        ? "Rappeler"
-                        : titre.trim() || null,
-                  nextActionAssignee: responsable,
-                }),
-              /* Vidé SEULEMENT après un succès confirmé : une coupure réseau ne
-                 doit pas effacer la note qu'on vient de dicter au téléphone. */
-              () => {
-                setActivite(null);
-                setNote("");
-                setQuandActivite(maintenantLocal());
-                setTypeAction("aucune");
-                setQuand("");
-                setTitre("");
-                setResponsable(null);
-                setInterestId(null);
-              },
-            )
-          }
-        >
-          {pending ? "…" : "Enregistrer"}
-        </button>
-        <Saved show={done} />
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            className="crm-btn crm-btn--sm"
+            /* « Rien à planifier » n'est pas une chose à enregistrer : c'est
+               l'absence d'action. Et cela n'efface JAMAIS un rappel existant. */
+            disabled={enCours || typeAction === "aucune"}
+            onClick={() =>
+              suite.run(
+                () =>
+                  enregistrerTraitementAction({
+                    buyerProfileId,
+                    interestId,
+                    stage: typeAction === "visite" && quand ? "visite_planifiee" : null,
+                    nextActionKind: typeAction,
+                    nextActionAt: depuisChampLocal(quand),
+                    nextActionTitle:
+                      typeAction === "visite"
+                        ? "Visite"
+                        : typeAction === "rappel"
+                          ? "Rappeler"
+                          : titre.trim() || null,
+                    nextActionAssignee: responsable,
+                  }),
+                () => {
+                  setTypeAction("aucune");
+                  setQuand("");
+                  setTitre("");
+                  setResponsable(null);
+                },
+              )
+            }
+          >
+            {suite.pending ? "…" : "Enregistrer la prochaine action"}
+          </button>
+          <Saved show={suite.done} />
+        </div>
+        <FieldError error={suite.error} />
       </div>
-      <FieldError error={error} />
     </div>
   );
 }

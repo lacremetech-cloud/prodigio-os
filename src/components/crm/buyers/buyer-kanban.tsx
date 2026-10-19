@@ -59,6 +59,8 @@ export function BuyerKanbanBoard({
   contexte = "",
   rows = [],
   membres = [],
+  moiUserId = null,
+  peutAffecterAutrui = false,
 }: {
   cards: BuyerKanbanCard[];
   canMove: boolean;
@@ -72,6 +74,9 @@ export function BuyerKanbanBoard({
   rows?: BuyerInboxRow[];
   /** Pour « M'attribuer » et le choix du responsable dans le panneau. */
   membres?: { userId: string; name: string }[];
+  /** Mon identifiant, et mon droit de confier un dossier a autrui. */
+  moiUserId?: string | null;
+  peutAffecterAutrui?: boolean;
   /** Afficher le badge de projet sur chaque carte. */
   montrerProjet?: boolean;
   /** Selection courante, recopiee dans chaque lien de fiche. */
@@ -445,6 +450,8 @@ export function BuyerKanbanBoard({
           resteUnSuivant={suivantDansLaFile(ordreFile, ouvert) !== null}
           saleRef={saleRef}
           membres={membres}
+          moiUserId={moiUserId}
+          peutAffecterAutrui={peutAffecterAutrui}
           contexte={contexte}
           onFermer={() => {
             if (peutQuitter()) setOuvert(null);

@@ -2426,6 +2426,23 @@
 .crm-panneau__attribuer:hover:not(:disabled) { background: var(--crm-univers); color: #fff; }
 .crm-panneau__attribuer:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Le meme habillage, mais c'est une LISTE DE NOMS : « M'attribuer » ne disait
+   pas qu'on pouvait confier le dossier a quelqu'un d'autre, et obligeait a
+   ouvrir la fiche pour le faire. */
+.crm-panneau__attribuer-choix {
+  font-size: 11.5px; font-weight: 700; padding: 5px 26px 5px 11px;
+  border-radius: 100px; border: 1.5px solid var(--crm-univers);
+  background: transparent; color: var(--crm-univers); cursor: pointer;
+  max-width: 180px; appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 12px center, right 7px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.crm-panneau__attribuer-choix:disabled { opacity: .5; cursor: not-allowed; }
+.crm-panneau__attribuer-choix option { color: var(--crm-text); background: var(--crm-panel); }
+
 /* --- Panneau : le contexte, AVANT le formulaire --------------------------
    Ce qu'on doit SAVOIR passe avant ce qu'on doit SAISIR. La dernière note
    vivait tout en bas, après onze boutons et trois formulaires. */
@@ -2463,9 +2480,6 @@
 }
 
 /* --- Panneau : la suite à donner, dans le même bloc que l'échange -------- */
-.crm-bloc__suite {
-  margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--crm-line-soft);
-}
 /* Dire ce que la sauvegarde va faire SEULE, avant qu'elle le fasse : une
    étape qui bouge sans annonce se lit comme un bug. */
 .crm-bloc__deduit {
@@ -2580,4 +2594,41 @@
   .crm-kanban-faits dt {
     margin-top: 4px;
   }
+}
+
+/* --- Suivi / Prochaine action : deux blocs, pas un ------------------------
+   Ils partageaient un bouton. Noter un message vocal obligeait a repondre
+   aussi a « et ensuite ? », et planifier un rappel trois jours plus tard
+   renvoyait dans un formulaire d'activite vide. Ce sont deux moments
+   differents du meme dossier, chacun avec son enregistrement.
+
+   La separation est un CADRE, pas un filet : un simple trait se lisait comme
+   une suite, et c'est precisement ce qu'on veut defaire. */
+.crm-sous-bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--crm-line-soft);
+  background: var(--crm-panel-2);
+}
+.crm-sous-bloc__titre {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--crm-text-faint);
+}
+
+/* Le meme cadre dans le panneau lateral, ou les deux blocs partagent encore
+   un enregistrement — c'est tout l'interet d'« Enregistrer et suivant » :
+   un appel, une saisie, au suivant. La separation y est donc VISUELLE. */
+.crm-bloc__suite {
+  margin-top: 11px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--crm-line-soft);
+  background: var(--crm-panel-2);
 }

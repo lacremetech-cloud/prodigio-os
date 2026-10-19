@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
+import { canOperate, canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
 import { memberDisplayName } from "@/modules/crm/data/queries";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
@@ -128,6 +128,10 @@ export default async function BuyersPipelinePage({
         contexte={ecrireNavigation({ projets: selection, vue, signal })}
         rows={lignes}
         membres={memberOptions}
+        /* Les noms REELLEMENT possibles : la base reserve la reaffectation a
+           l'encadrement, un commercial ne peut prendre que pour lui-meme. */
+        moiUserId={session.userId}
+        peutAffecterAutrui={canOperate(session.roles)}
       />
     </div>
   );

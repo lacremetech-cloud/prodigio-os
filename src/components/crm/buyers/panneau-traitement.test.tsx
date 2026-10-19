@@ -14,9 +14,11 @@ vi.mock("next/link", () => ({
 type Charge = Record<string, unknown>;
 const enregistre = vi.fn(async (_p: Charge) => ({ ok: true as const }));
 const attribue = vi.fn(async (_p: Charge) => ({ ok: true as const }));
+const confie = vi.fn(async (_p: Charge) => ({ ok: true as const }));
 vi.mock("@/modules/buyers/crm/actions", () => ({
   enregistrerTraitementAction: (p: unknown) => enregistre(p as Charge),
   selfAssignBuyerAction: (p: unknown) => attribue(p as Charge),
+  assignBuyerAction: (p: unknown) => confie(p as Charge),
 }));
 
 import { PanneauTraitement } from "./panneau-traitement";
@@ -25,6 +27,7 @@ afterEach(() => {
   cleanup();
   enregistre.mockClear();
   attribue.mockClear();
+  confie.mockClear();
 });
 
 const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow =>
@@ -64,12 +67,20 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow =>
     ...over,
   }) as unknown as BuyerInboxRow;
 
-const membres = [{ userId: "u-1", name: "Jean-Charles C." }];
+const membres = [
+  { userId: "u-1", name: "Jean-Charles C." },
+  { userId: "u-2", name: "Antoine D." },
+];
 
-function monter(row: BuyerInboxRow) {
+function monter(
+  row: BuyerInboxRow,
+  droits: { moiUserId?: string | null; peutAffecterAutrui?: boolean } = {},
+) {
   return render(
     <PanneauTraitement
       row={row}
+      moiUserId={droits.moiUserId ?? "u-1"}
+      peutAffecterAutrui={droits.peutAffecterAutrui ?? false}
       position={1}
       total={3}
       onFermer={() => {}}
@@ -90,21 +101,51 @@ describe("en-tête : comprendre et contacter", () => {
     expect(getByRole("button", { name: /Qualification/ }).textContent).toContain("Qualifié");
   });
 
-  it("propose « M’attribuer » sur un dossier libre", () => {
-    const { getByRole } = monter(dossier({ assigneeIds: [] }));
-    expect(getByRole("button", { name: /M’attribuer/ })).toBeTruthy();
+  /* « M'attribuer » ne disait pas qu'on pouvait confier le dossier a
+     quelqu'un d'autre, et obligeait a ouvrir la fiche pour le faire. C'est
+     desormais une liste de NOMS — mais limitee a ce que la base acceptera :
+     `crm_buyer_assign` exige administrateur, manager ou setter. Proposer un
+     nom pour se voir refuser ensuite est pire que ne pas le proposer : on
+     croit avoir confie le dossier. */
+  it("propose les noms sur un dossier libre, pas un bouton unique", () => {
+    const { getByLabelText } = monter(dossier({ assigneeIds: [] }), {
+      peutAffecterAutrui: true,
+    });
+    const choix = getByLabelText("Confier ce dossier") as HTMLSelectElement;
+    expect([...choix.options].map((o) => o.textContent)).toContain("Jean-Charles C. (moi)");
+    expect([...choix.options].map((o) => o.textContent)).toContain("Antoine D.");
+  });
+
+  it("un commercial ne voit QUE son propre nom : la base refuserait les autres", () => {
+    const { getByLabelText } = monter(dossier({ assigneeIds: [] }), {
+      peutAffecterAutrui: false,
+    });
+    const choix = getByLabelText("Confier ce dossier") as HTMLSelectElement;
+    const noms = [...choix.options].map((o) => o.textContent);
+    expect(noms).toContain("Jean-Charles C. (moi)");
+    expect(noms).not.toContain("Antoine D.");
   });
 
   it("nomme le responsable au lieu de le proposer, quand il y en a un", () => {
-    const { queryByRole, getByText } = monter(dossier({ assigneeIds: ["u-1"] }));
+    const { queryByLabelText, getByText } = monter(dossier({ assigneeIds: ["u-1"] }));
     expect(getByText(/Jean-Charles C\./)).toBeTruthy();
-    expect(queryByRole("button", { name: /M’attribuer/ })).toBeNull();
+    expect(queryByLabelText("Confier ce dossier")).toBeNull();
   });
 
-  it("prend le dossier sans quitter l'écran", async () => {
-    const { getByRole } = monter(dossier());
-    fireEvent.click(getByRole("button", { name: /M’attribuer/ }));
+  it("me prendre le dossier passe par « claim », pas par une reaffectation", async () => {
+    const { getByLabelText } = monter(dossier());
+    fireEvent.change(getByLabelText("Confier ce dossier"), { target: { value: "u-1" } });
     await vi.waitFor(() => expect(attribue).toHaveBeenCalledWith({ buyerProfileId: "bp-1" }));
+    expect(confie).not.toHaveBeenCalled();
+  });
+
+  it("confier a un collegue passe par la reaffectation, reservee a l'encadrement", async () => {
+    const { getByLabelText } = monter(dossier(), { peutAffecterAutrui: true });
+    fireEvent.change(getByLabelText("Confier ce dossier"), { target: { value: "u-2" } });
+    await vi.waitFor(() =>
+      expect(confie).toHaveBeenCalledWith({ buyerProfileId: "bp-1", userId: "u-2" }),
+    );
+    expect(attribue).not.toHaveBeenCalled();
   });
 });
 
