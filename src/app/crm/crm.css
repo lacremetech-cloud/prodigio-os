@@ -486,11 +486,13 @@
 /* Une etiquette de champ dit a quoi sert le champ : elle se lit. Elle etait
    posee dans le gris le plus pale de la palette, a la limite du decoratif. */
 .crm-label {
-  font-size: 11.5px;
-  font-weight: 700;
+  /* Elle pesait 11,5 px en gras : plus lourde que le titre de la section qui
+     la contient. Une etiquette NOMME un champ, elle ne l'annonce pas. */
+  font-size: 10.5px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--crm-text-dim);
+  color: var(--crm-text-faint);
 }
 
 /* -------------------------------------------------------------- Score meter */
@@ -1847,9 +1849,14 @@
 }
 .crm-choix__item:hover { background: var(--crm-hover); }
 .crm-choix__item[aria-pressed="true"] {
-  background: var(--crm-univers);
+  /* UNE SELECTION N'EST PAS UNE VALIDATION. Elle etait en aplat vert, comme
+     « Enregistrer et suivant » : deux sens pour une seule apparence, cote a
+     cote dans le meme panneau. L'aplat vert est desormais reserve a l'action
+     qui ECRIT ; ce qui est choisi se teinte et s'encadre. */
+  background: var(--crm-univers-pale, color-mix(in srgb, var(--crm-univers) 12%, transparent));
   border-color: var(--crm-univers);
-  color: #fff;
+  color: var(--crm-univers);
+  font-weight: 700;
 }
 
 .crm-btn {
@@ -2152,18 +2159,33 @@
 }
 
 /* Blocs du corps : un titre court, puis la grille. Rien d'autre. */
-.crm-bloc { display: flex; flex-direction: column; gap: 7px; }
+/* LA SECTION DOIT SE VOIR COMME UNE SECTION.
+   Elle n'avait ni cadre, ni fond, ni filet — alors que le bloc de contexte
+   au-dessus et « La suite a donner » en dessous en ont un. Trois zones
+   voisines, trois traitements, et le titre flottait entre les deux sans rien
+   delimiter. Un filet et de l'air : la section s'ouvre, sans ajouter un
+   troisieme cadre dans un panneau qui en a deja deux. */
+.crm-bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 13px;
+  border-top: 1px solid var(--crm-line-soft);
+}
 .crm-bloc__titre {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
   margin: 0;
-  font-size: 10.5px;
+  /* 13px et casse normale. Il faisait 10,5 px EN MAJUSCULES pendant que
+     l'etiquette de champ juste en dessous en faisait 11,5 : le contenant
+     etait plus petit que son contenu. Un titre se lit comme un titre. */
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--crm-text-faint);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--crm-text);
 }
 .crm-bloc__actuel {
   text-transform: none;
@@ -2199,10 +2221,14 @@
 }
 .crm-gros-choix:hover { background: var(--crm-hover); border-color: var(--crm-line-hover); }
 .crm-gros-choix[aria-pressed="true"] {
-  background: var(--crm-univers);
+  /* UNE SELECTION N'EST PAS UNE VALIDATION. Elle etait en aplat vert, comme
+     « Enregistrer et suivant » : deux sens pour une seule apparence, cote a
+     cote dans le meme panneau. L'aplat vert est desormais reserve a l'action
+     qui ECRIT ; ce qui est choisi se teinte et s'encadre. */
+  background: var(--crm-univers-pale, color-mix(in srgb, var(--crm-univers) 12%, transparent));
   border-color: var(--crm-univers);
-  color: #fff;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--crm-univers) 22%, transparent);
+  color: var(--crm-univers);
+  font-weight: 700;
 }
 /* La qualification garde sa couleur propre quand elle est retenue : c'est la
    meme teinte que la ligne prendra dans la liste, donc on la reconnait. */
@@ -2430,9 +2456,12 @@
    pas qu'on pouvait confier le dossier a quelqu'un d'autre, et obligeait a
    ouvrir la fiche pour le faire. */
 .crm-panneau__attribuer-choix {
-  font-size: 11.5px; font-weight: 700; padding: 5px 26px 5px 11px;
-  border-radius: 100px; border: 1.5px solid var(--crm-univers);
-  background: transparent; color: var(--crm-univers); cursor: pointer;
+  /* Un contour vert epais la faisait lire comme l'action principale du
+     panneau. C'est une commande SECONDAIRE : elle prend l'habillage neutre
+     des deux axes qui l'encadrent. */
+  font-size: 11.5px; font-weight: 600; padding: 5px 26px 5px 11px;
+  border-radius: 100px; border: 1px solid var(--crm-line);
+  background: var(--crm-panel-2); color: var(--crm-text-dim); cursor: pointer;
   max-width: 180px; appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
                     linear-gradient(135deg, currentColor 50%, transparent 50%);
@@ -2614,12 +2643,15 @@
   background: var(--crm-panel-2);
 }
 .crm-sous-bloc__titre {
+  /* Entre le titre de section (13 px, casse normale) et l'etiquette de champ
+     (10,5 px, pale) : trois rangs qui se distinguent par la TAILLE, la CASSE
+     et la COULEUR a la fois — pas par un demi-pixel. */
   margin: 0;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--crm-text-faint);
+  color: var(--crm-text-dim);
 }
 
 /* Le meme cadre dans le panneau lateral, ou les deux blocs partagent encore
