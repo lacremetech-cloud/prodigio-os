@@ -103,33 +103,47 @@ describe("en-tête : comprendre et contacter", () => {
 
   /* « M'attribuer » ne disait pas qu'on pouvait confier le dossier a
      quelqu'un d'autre, et obligeait a ouvrir la fiche pour le faire. C'est
-     desormais une liste de NOMS — mais limitee a ce que la base acceptera :
-     `crm_buyer_assign` exige administrateur, manager ou setter. Proposer un
-     nom pour se voir refuser ensuite est pire que ne pas le proposer : on
-     croit avoir confie le dossier. */
-  it("propose les noms sur un dossier libre, pas un bouton unique", () => {
+     une liste de NOMS.
+
+     La base reservait la reaffectation a l'encadrement. La regle a saute :
+     les commerciaux travaillent ensemble et se repassent les dossiers.
+     `crm_buyer_assign` passe desormais par `crm_buyer_can_operate`, la meme
+     porte que le changement d'etape — qui peut traiter un dossier peut le
+     confier. */
+  it("propose TOUTE l'équipe, pas un bouton unique", () => {
     const { getByLabelText } = monter(dossier({ assigneeIds: [] }), {
       peutAffecterAutrui: true,
     });
+    const noms = [...(getByLabelText("Confier ce dossier") as HTMLSelectElement).options]
+      .map((o) => o.textContent);
+    expect(noms).toContain("Jean-Charles C. (moi)");
+    expect(noms).toContain("Antoine D.");
+  });
+
+  it("on peut confier un dossier DÉJÀ suivi, sans ouvrir la fiche", () => {
+    const { container, getByLabelText } = monter(dossier({ assigneeIds: ["u-1"] }), {
+      peutAffecterAutrui: true,
+    });
+    /* Le responsable actuel reste lisible — on vise la mention elle-meme, et
+       non le texte : le nom figure AUSSI dans la liste, c'est tout l'objet du
+       test. */
+    expect(container.querySelector(".crm-panneau__suivi")?.textContent).toContain(
+      "Jean-Charles C.",
+    );
+    // ...et la liste reste ouverte, pour le repasser a un collegue.
     const choix = getByLabelText("Confier ce dossier") as HTMLSelectElement;
-    expect([...choix.options].map((o) => o.textContent)).toContain("Jean-Charles C. (moi)");
+    expect(choix.options[0]!.textContent).toBe("Confier aussi à…");
     expect([...choix.options].map((o) => o.textContent)).toContain("Antoine D.");
   });
 
-  it("un commercial ne voit QUE son propre nom : la base refuserait les autres", () => {
+  it("un rôle qui ne traite rien ne se voit proposer que son propre nom", () => {
     const { getByLabelText } = monter(dossier({ assigneeIds: [] }), {
       peutAffecterAutrui: false,
     });
-    const choix = getByLabelText("Confier ce dossier") as HTMLSelectElement;
-    const noms = [...choix.options].map((o) => o.textContent);
+    const noms = [...(getByLabelText("Confier ce dossier") as HTMLSelectElement).options]
+      .map((o) => o.textContent);
     expect(noms).toContain("Jean-Charles C. (moi)");
     expect(noms).not.toContain("Antoine D.");
-  });
-
-  it("nomme le responsable au lieu de le proposer, quand il y en a un", () => {
-    const { queryByLabelText, getByText } = monter(dossier({ assigneeIds: ["u-1"] }));
-    expect(getByText(/Jean-Charles C\./)).toBeTruthy();
-    expect(queryByLabelText("Confier ce dossier")).toBeNull();
   });
 
   it("me prendre le dossier passe par « claim », pas par une reaffectation", async () => {

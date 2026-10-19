@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { memberDisplayName } from "@/modules/crm/data/queries";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canOperate, canViewContactDetails } from "@/modules/crm/auth/roles";
+import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
 import { BuyerInbox } from "@/components/crm/buyers/buyer-inbox";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
@@ -106,10 +106,11 @@ export default async function BuyersInboxPage({
       <BuyerInbox
         rows={rows}
         members={memberOptions}
-        /* Les noms REELLEMENT possibles : la base reserve la reaffectation a
-           l'encadrement, un commercial ne peut prendre que pour lui-meme. */
+        /* Qui peut TRAITER un dossier peut le confier : les commerciaux
+           travaillent ensemble et se repassent les leads. La base applique la
+           meme regle (`crm_buyer_assign` passe par `crm_buyer_can_operate`). */
         moiUserId={session.userId}
-        peutAffecterAutrui={canOperate(session.roles)}
+        peutAffecterAutrui={canTreatBuyers(session.roles)}
         /* `?budget=plus_1m` : la destination du commercial apres connexion. La
            valeur est validee par la liste des tranches, dans le composant. */
         budgetInitial={typeof params.budget === "string" ? params.budget : undefined}

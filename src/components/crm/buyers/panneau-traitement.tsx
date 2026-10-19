@@ -435,37 +435,39 @@ export function PanneauTraitement({
             onChoisir={setQualification}
             disabled={enCours}
           />
-          {/* Le responsable se lit ici, et se prend ici. Un dossier libre qu'on
-              s'apprête à appeler doit pouvoir être pris sans quitter l'écran —
-              sinon deux commerciaux appellent la même personne. */}
+          {/* LE RESPONSABLE SE LIT ET SE CHANGE ICI, dossier libre ou non.
+              Les commerciaux travaillent ensemble : ils se repassent les
+              dossiers. Ne proposer la liste que sur un dossier libre les
+              obligeait a ouvrir la fiche pour confier ce qu'ils suivaient
+              deja — un detour pour un geste quotidien. */}
           {responsableNom ? (
             <span className="crm-panneau__suivi" title="Responsable du dossier">
               Suivi par {responsableNom}
             </span>
-          ) : (
-            /* LES NOMS POSSIBLES, pas un bouton unique. « M'attribuer » ne
-               disait pas qu'on pouvait confier le dossier a quelqu'un d'autre,
-               et obligeait a ouvrir la fiche pour le faire. La liste est
-               limitee a ce que la base acceptera : moi seul si je suis
-               commercial, toute l'equipe si j'encadre. */
-            <select
-              className="crm-panneau__attribuer-choix"
-              value=""
-              disabled={attribution || enCours}
-              aria-label="Confier ce dossier"
-              onChange={(e) => {
-                const id = e.target.value;
-                if (id) void confierA(id);
-              }}
-            >
-              <option value="">{attribution ? "…" : "Confier à…"}</option>
-              {affectables.map((m) => (
-                <option key={m.userId} value={m.userId}>
-                  {m.userId === moiUserId ? `${m.name} (moi)` : m.name}
-                </option>
-              ))}
-            </select>
-          )}
+          ) : null}
+          {/* LES NOMS, pas un bouton unique. « M'attribuer » ne disait pas
+              qu'on pouvait confier le dossier a quelqu'un d'autre. La base
+              accepte desormais le meme monde que le changement d'etape : qui
+              peut traiter un dossier peut le confier. */}
+          <select
+            className="crm-panneau__attribuer-choix"
+            value=""
+            disabled={attribution || enCours}
+            aria-label="Confier ce dossier"
+            onChange={(e) => {
+              const id = e.target.value;
+              if (id) void confierA(id);
+            }}
+          >
+            <option value="">
+              {attribution ? "…" : responsableNom ? "Confier aussi à…" : "Confier à…"}
+            </option>
+            {affectables.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.userId === moiUserId ? `${m.name} (moi)` : m.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Le motif n'apparaît que s'il est exigé : un champ qui attend sans

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canOperate, canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
+import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
 import { memberDisplayName } from "@/modules/crm/data/queries";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
@@ -128,10 +128,11 @@ export default async function BuyersPipelinePage({
         contexte={ecrireNavigation({ projets: selection, vue, signal })}
         rows={lignes}
         membres={memberOptions}
-        /* Les noms REELLEMENT possibles : la base reserve la reaffectation a
-           l'encadrement, un commercial ne peut prendre que pour lui-meme. */
+        /* Qui peut TRAITER un dossier peut le confier : les commerciaux
+           travaillent ensemble et se repassent les leads. La base applique la
+           meme regle (`crm_buyer_assign` passe par `crm_buyer_can_operate`). */
         moiUserId={session.userId}
-        peutAffecterAutrui={canOperate(session.roles)}
+        peutAffecterAutrui={canTreatBuyers(session.roles)}
       />
     </div>
   );
