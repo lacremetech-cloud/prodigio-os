@@ -2368,9 +2368,16 @@
 }
 .crm-selecteur__coche { margin-left: auto; opacity: .8; }
 
-/* Sur un portable, le menu ne doit pas sortir de l'écran par la droite. */
+/* Sur un portable, le menu s'ancre sur la RANGÉE, pas sur la pastille.
+   Ancré sur la pastille, il sortait d'un côté ou de l'autre selon la position
+   de celle-ci : mesuré en navigateur, le menu « Étape » commençait à −6 px,
+   donc hors écran à gauche, précisément à cause d'une première correction qui
+   ne regardait que le bord droit. Ancré sur la rangée, il tient des deux
+   côtés quelle que soit la pastille ouverte. */
 @media (max-width: 480px) {
-  .crm-selecteur__liste { left: auto; right: 0; }
+  .crm-panneau__axes { position: relative; }
+  .crm-selecteur { position: static; }
+  .crm-selecteur__liste { left: 0; right: 0; min-width: 0; }
 }
 
 /* --- Pastilles de choix : les activités ----------------------------------
@@ -2485,3 +2492,46 @@
   outline: 2px solid var(--crm-univers); outline-offset: 3px; border-radius: 4px;
 }
 .crm-repli[open] > summary.crm-repli__titre { margin-bottom: 11px; }
+
+/* --- Cibles tactiles -----------------------------------------------------
+   Mesuré en navigateur : les pastilles d'activité faisaient 29 px de haut,
+   « M'attribuer » 27, « Tout l'historique » 17. Ce sont les commandes les
+   PLUS utilisées du panneau, et au doigt elles se manquent.
+
+   Sous `pointer: coarse` uniquement : l'écran tactile y gagne sans que la
+   version souris s'alourdisse. */
+@media (pointer: coarse) {
+  .crm-puce-choix { min-height: 40px; padding: 9px 13px; }
+  .crm-selecteur__pastille { min-height: 40px; }
+  .crm-selecteur__option { min-height: 44px; }
+  .crm-panneau__attribuer { min-height: 40px; padding: 9px 14px; }
+  .crm-panneau__suivi { min-height: 40px; display: inline-flex; align-items: center; }
+  .crm-contexte__tout {
+    min-height: 40px; display: inline-flex; align-items: center;
+  }
+  .crm-panneau__fermer { min-width: 40px; min-height: 40px; }
+  .crm-gros-choix { min-height: 46px; }
+}
+
+/* --- Écran court : le panneau défile EN ENTIER ---------------------------
+   Mesuré en navigateur, clavier ouvert à 375 px : l'en-tête et le pied étant
+   tous deux fixes, seul le corps se comprimait — et il tombait à 25 pixels de
+   haut pour 974 px de contenu. Le champ de note se trouvait à y=1132 : le
+   formulaire était simplement inatteignable.
+
+   Sous 620 px de hauteur visible, l'en-tête cesse d'être figé et défile avec
+   le reste. « Enregistrer » reste atteignable parce que le pied devient
+   collant, pas parce qu'on lui réserve de la place qu'il n'y a plus. */
+@media (max-height: 620px) {
+  .crm-panneau {
+    display: block;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .crm-panneau__corps { overflow-y: visible; }
+  .crm-panneau__pied {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+  }
+}
