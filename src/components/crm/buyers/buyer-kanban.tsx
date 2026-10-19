@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
@@ -20,6 +20,9 @@ import {
 } from "@/modules/buyers/crm/pipeline";
 import { moveBuyerCardAction } from "@/modules/buyers/crm/actions";
 import { safeAction } from "@/modules/crm/safe-action";
+import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
+import { positionDansLaFile, suivantDansLaFile } from "@/modules/buyers/crm/file-appels";
+import { PanneauTraitement } from "./panneau-traitement";
 
 /**
  * Kanban Acquéreurs — mêmes standards que le Kanban Mandats :
@@ -44,9 +47,21 @@ export function BuyerKanbanBoard({
   canMove,
   montrerProjet = true,
   contexte = "",
+  rows = [],
+  membres = [],
 }: {
   cards: BuyerKanbanCard[];
   canMove: boolean;
+  /**
+   * Les MEMES dossiers que `cards`, en entier.
+   *
+   * Une carte ne porte que de quoi se dessiner : ni e-mail, ni qualification,
+   * ni derniere note, ni prochaine tache. Le panneau a besoin de tout cela, et
+   * la page le charge deja pour le bandeau — aucune requete de plus.
+   */
+  rows?: BuyerInboxRow[];
+  /** Pour « M'attribuer » et le choix du responsable dans le panneau. */
+  membres?: { userId: string; name: string }[];
   /** Afficher le badge de projet sur chaque carte. */
   montrerProjet?: boolean;
   /** Selection courante, recopiee dans chaque lien de fiche. */
@@ -105,6 +120,30 @@ export function BuyerKanbanBoard({
     });
   }, [cards, search, quick]);
 
+  /* ---------------------------------------------------------------------
+     LE PANNEAU DE TRAITEMENT, SUR LE PIPELINE
+
+     Exactement le meme composant que la liste, avec la meme garde : une note
+     dictee au telephone et perdue en changeant de carte, et l'outil est
+     abandonne le jour meme.
+     --------------------------------------------------------------------- */
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  const [ordreFile, setOrdreFile] = useState<string[]>([]);
+  const saleRef = useRef(false);
+
+  const rowsById = useMemo(
+    () => new Map(rows.map((r) => [r.interestId ?? r.buyerProfileId, r])),
+    [rows],
+  );
+
+  /** Vrai si l'on peut quitter le dossier ouvert : sinon on demande. */
+  function peutQuitter(): boolean {
+    if (!saleRef.current) return true;
+    return window.confirm(
+      "Vous avez une saisie non enregistrée sur ce dossier. La perdre ?",
+    );
+  }
+
   const columns = useMemo(() => {
     const map = new Map<string, BuyerKanbanCard[]>();
     for (const col of BUYER_KANBAN_COLUMNS) map.set(col, []);
@@ -117,6 +156,29 @@ export function BuyerKanbanBoard({
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, stageOverride]);
+
+  /* « Suivant » suit l'ordre DU TABLEAU — colonne par colonne, de haut en bas
+     — et non l'ordre d'urgence de la liste : ici on voit les colonnes, et un
+     « suivant » qui sauterait ailleurs serait incomprehensible. */
+  const ordreTableau = useMemo(() => {
+    const ordre: string[] = [];
+    for (const col of BUYER_KANBAN_COLUMNS) {
+      for (const c of columns.get(col) ?? []) ordre.push(cleCarte(c));
+    }
+    return ordre;
+  }, [columns]);
+
+  const rowOuverte = ouvert ? rowsById.get(ouvert) ?? null : null;
+  const { position, total: totalFile } = positionDansLaFile(ordreFile, ouvert);
+
+  /** Ouvrir une carte demarre une file : celle du tableau affiche. */
+  function ouvrirDossier(c: BuyerKanbanCard) {
+    const cle = cleCarte(c);
+    if (cle === ouvert) return;
+    if (!peutQuitter()) return;
+    if (ordreFile.length === 0) setOrdreFile(ordreTableau);
+    setOuvert(cle);
+  }
 
   const commitMove = (cle: string, fromStage: string, toStage: string) => {
     const evaluation = evaluateBuyerMove(fromStage, toStage);
@@ -351,6 +413,7 @@ export function BuyerKanbanBoard({
                       }}
                       onKeyDown={(e) => onCardKeyDown(e, c)}
                       onMenuMove={(toStage) => commitMove(cleCarte(c), stageOf(c), toStage)}
+                      onOuvrir={rowsById.has(cleCarte(c)) ? () => ouvrirDossier(c) : undefined}
                     />
                   ))
                 )}
@@ -359,6 +422,28 @@ export function BuyerKanbanBoard({
           );
         })}
       </div>
+
+      {rowOuverte ? (
+        <PanneauTraitement
+          /* La CLE porte la remise a zero : changer de dossier remonte le
+             panneau, donc aucune saisie du precedent ne peut survivre. */
+          key={ouvert}
+          row={rowOuverte}
+          position={position}
+          total={totalFile}
+          resteUnSuivant={suivantDansLaFile(ordreFile, ouvert) !== null}
+          saleRef={saleRef}
+          membres={membres}
+          contexte={contexte}
+          onFermer={() => {
+            if (peutQuitter()) setOuvert(null);
+          }}
+          /* `router.refresh()` recharge les DONNEES sans rien demonter : le
+             tableau reste a l'ecran, les filtres et le defilement sont gardes. */
+          onEnregistre={() => router.refresh()}
+          onSuivant={() => setOuvert(suivantDansLaFile(ordreFile, ouvert))}
+        />
+      ) : null}
     </div>
   );
 }
@@ -377,6 +462,7 @@ function Card({
   onDragEnd,
   onKeyDown,
   onMenuMove,
+  onOuvrir,
 }: {
   card: BuyerKanbanCard;
   canMove: boolean;
@@ -391,6 +477,8 @@ function Card({
   onDragEnd: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   onMenuMove: (toStage: string) => void;
+  /** Ouvre le panneau de traitement, SANS quitter le pipeline. */
+  onOuvrir?: () => void;
 }) {
   const targets = movableBuyerStages(currentStage);
   return (
@@ -416,7 +504,19 @@ function Card({
           </button>
         ) : null}
         <div className="min-w-0 flex-1">
-          <Link prefetch={false} href={`/crm/acquereurs/${card.buyerProfileId}${contexte}`} className="min-w-0">
+          {/* LE MEME PANNEAU QUE LA LISTE. Le nom menait a la fiche complete :
+              pour noter un message vocal depuis le pipeline, il fallait quitter
+              le pipeline — « les actions directes en mode pipeline, ca ne
+              marche pas, il faut aller dans la vraie fiche ». Le panneau
+              s'ouvre ici, le pipeline reste a l'ecran, et la fiche s'atteint
+              depuis le bouton du panneau. */}
+          <button
+            type="button"
+            className="min-w-0 w-full text-left"
+            onClick={() => onOuvrir?.()}
+            disabled={!onOuvrir}
+            title={onOuvrir ? `Traiter ${card.name}` : undefined}
+          >
             <div className="flex items-center gap-2">
               <span
                 className="crm-ellipsis text-[15px] font-bold text-[var(--crm-text)]"
@@ -449,7 +549,7 @@ function Card({
                 </span>
               ) : null}
             </div>
-          </Link>
+          </button>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--crm-text-dim)]">
             {card.interestCount > 1 ? <span>{card.interestCount} intérêts</span> : null}
             {card.unassigned ? <Chip variant="danger">Non affecté</Chip> : null}

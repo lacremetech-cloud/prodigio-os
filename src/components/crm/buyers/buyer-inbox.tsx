@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Chip, EmptyState } from "@/components/crm/ui";
 import { cssVarRef } from "@/modules/crm/status-visuals";
@@ -111,6 +110,7 @@ export function BuyerInbox({
   signalInitial = "tous",
   montrerProjet = true,
   contexte = "",
+  budgetInitial,
   chargeA,
 }: {
   rows: BuyerInboxRow[];
@@ -125,6 +125,15 @@ export function BuyerInbox({
    * memoire aurait ete efface par l'aller-retour.
    */
   contexte?: string;
+  /**
+   * Tranche de budget preselectionnee, telle qu'elle arrive dans l'URL.
+   *
+   * C'est ce qui permet au commercial d'atterrir directement sur les dossiers
+   * au-dessus d'un million : la destination apres connexion porte
+   * `?budget=plus_1m`. Une valeur inconnue ne filtre rien — la liste des
+   * tranches reste ici, et une seule fois, pour qu'elle ne puisse pas deriver.
+   */
+  budgetInitial?: string;
   /** Instant de chargement, fourni par le serveur : voir `maintenant`. */
   chargeA: string;
 }) {
@@ -160,7 +169,9 @@ export function BuyerInbox({
     );
   }
   const [stage, setStage] = useState<string>("tous");
-  const [budget, setBudget] = useState<string>("tous");
+  const [budget, setBudget] = useState<string>(() =>
+    BUDGET_FILTERS.some((b) => b.value === budgetInitial) ? budgetInitial! : "tous",
+  );
   const [owner, setOwner] = useState<string>("tous");
 
   const [sort, setSort] = useState<SortKey>("urgence");
@@ -442,7 +453,6 @@ export function BuyerInbox({
               key={row.interestId ?? row.buyerProfileId}
               row={row}
               montrerProjet={montrerProjet}
-              contexte={contexte}
               onOuvrir={ouvrir}
               actif={ouvert === (row.interestId ?? row.buyerProfileId)}
             />
@@ -596,13 +606,11 @@ function Manque({ children }: { children: React.ReactNode }) {
 function BuyerRow({
   row,
   montrerProjet,
-  contexte,
   onOuvrir,
   actif,
 }: {
   row: BuyerInboxRow;
   montrerProjet: boolean;
-  contexte: string;
   /** Ouvre le panneau de traitement, SANS quitter la liste. */
   onOuvrir: (row: BuyerInboxRow) => void;
   actif: boolean;
@@ -629,17 +637,17 @@ function BuyerRow({
           avoir a ouvrir une fiche pour retrouver un numero, c'est un clic et
           un retour a chaque appel. */}
       <div className="min-w-0">
-        {/* Le NOM mene a la fiche complete ; le reste de la ligne ouvre le
-            panneau. Sans ce `stopPropagation`, un clic sur le nom ferait les
-            deux a la fois. */}
-        <Link
-          href={`/crm/acquereurs/${row.buyerProfileId}${contexte}`}
-          prefetch={false}
-          onClick={(e) => e.stopPropagation()}
-          className="crm-wrap relative z-10 text-[15px] font-bold text-[var(--crm-text)] outline-none hover:text-[var(--crm-azur)]"
-        >
+        {/* UN GESTE, UNE DESTINATION. Le nom menait a la fiche complete et le
+            reste de la ligne au panneau : deux ecrans differents sur la meme
+            ligne, et rien pour le dire. On tombait sur l'un ou sur l'autre
+            selon le pixel touche — « pas tres fluide de savoir s'il faut aller
+            sur la fiche complete ou sur la fiche resumee ».
+            Toute la ligne ouvre maintenant le panneau ; la fiche s'atteint
+            depuis son bouton « Ouvrir la fiche complete », qui sait en plus
+            proteger une saisie en cours. */}
+        <span className="crm-wrap text-[15px] font-bold text-[var(--crm-text)]">
           {row.name}
-        </Link>
+        </span>
 
         <div className="crm-coord mt-1">
           {row.phoneMasked ? (

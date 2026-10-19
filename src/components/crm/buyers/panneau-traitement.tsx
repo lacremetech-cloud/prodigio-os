@@ -4,7 +4,6 @@ import { formatDateCourte } from "@/modules/crm/format";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MutableRefObject } from "react";
-import Link from "next/link";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import {
   enregistrerTraitementAction,
@@ -359,9 +358,7 @@ export function PanneauTraitement({
             {position > 0 && total > 0 ? `Dossier ${position} sur ${total}` : "Dossier"}
           </p>
           <h2 className="crm-panneau__nom">
-            <Link href={`/crm/acquereurs/${row.buyerProfileId}`} prefetch={false}>
               {row.name}
-            </Link>
           </h2>
           <div className="crm-panneau__meta">
             {row.lastPropertyId && row.lastPropertyLabel ? (

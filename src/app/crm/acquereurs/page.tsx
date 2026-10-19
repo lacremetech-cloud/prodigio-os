@@ -106,6 +106,9 @@ export default async function BuyersInboxPage({
       <BuyerInbox
         rows={rows}
         members={memberOptions}
+        /* `?budget=plus_1m` : la destination du commercial apres connexion. La
+           valeur est validee par la liste des tranches, dans le composant. */
+        budgetInitial={typeof params.budget === "string" ? params.budget : undefined}
         signalInitial={signal}
         /* Le badge de projet n'a de sens que si plusieurs projets sont à
            l'écran : sous un onglet de projet, le répéter sur chaque ligne

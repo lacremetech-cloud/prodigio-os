@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
+import { memberDisplayName } from "@/modules/crm/data/queries";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
 import { BandeauFile } from "@/components/crm/buyers/bandeau-file";
@@ -40,7 +41,7 @@ export default async function BuyersPipelinePage({
   const canViewContacts = canViewContactDetails(session.roles);
   const canMove = canTreatBuyers(session.roles);
 
-  const { items, projets } = await loadBuyerList(canViewContacts);
+  const { items, members, projets } = await loadBuyerList(canViewContacts);
 
   const selection = lireProjets(params.projets, projets);
   const vue = lireVue(params.vue);
@@ -70,6 +71,16 @@ export default async function BuyersPipelinePage({
   const cards = retenues.map((item) =>
     toKanbanCard(item, definitionQualification(item.qualification).label),
   );
+
+  /* Les MEMES dossiers, en entier, pour le panneau de traitement : la carte ne
+     porte pas l'e-mail, la qualification, la derniere note ni la prochaine
+     tache. Ils sont deja charges — le bandeau les utilise juste au-dessus. */
+  const lignes = retenues.map(toInboxRow);
+
+  const memberOptions = [...members.entries()].map(([userId]) => ({
+    userId,
+    name: memberDisplayName(userId, members),
+  }));
 
   return (
     <div className="flex flex-col gap-5">
@@ -115,6 +126,8 @@ export default async function BuyersPipelinePage({
            n'apprend rien ; en vue « tous les projets », c'est indispensable. */
         montrerProjet={selection.length !== 1}
         contexte={ecrireNavigation({ projets: selection, vue, signal })}
+        rows={lignes}
+        membres={memberOptions}
       />
     </div>
   );

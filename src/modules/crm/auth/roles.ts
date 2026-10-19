@@ -63,12 +63,23 @@ export const ROLE_PERMISSIONS: Record<CrmRole, string> = {
 
 /**
  * Destination après connexion / acceptation, selon le rôle le plus fort détenu.
- * En V1 tous les rôles autorisés atterrissent sur le tableau de bord `/crm`
- * (l'espace s'adapte ensuite au rôle via la RLS et l'affichage). Le point
- * d'extension existe pour, plus tard, router un agent vers sa vue dédiée.
+ *
+ * Le commercial n'atterrit plus sur le tableau de bord. Il le disait lui-même :
+ * « le tableau de bord, je le trouve sans utilité de gestion des leads au
+ * quotidien, surtout quand on a besoin d'en traiter et d'aller vite » — et ce
+ * qu'il faisait ensuite à la main, c'était ouvrir ses leads et filtrer par
+ * budget. Il arrive donc directement là, sur les dossiers au-dessus d'un
+ * million, ceux sur lesquels l'agence a décidé de se concentrer.
+ *
+ * Le tableau de bord n'est pas supprimé : il reste à `/crm`, et dans son menu
+ * sous « Mon tableau de bord ». Ne pas y atterrir n'est pas ne plus y aller.
+ *
+ * Les autres rôles gardent `/crm` : l'administrateur y choisit son espace, et
+ * le manager y lit des chiffres qui sont, pour lui, le travail.
  */
 export function roleHome(roles: readonly string[]): string {
   if (!hasCrmAccess(roles)) return "/acces";
+  if (isCommercialOnly(roles)) return "/crm/acquereurs?budget=plus_1m";
   return "/crm";
 }
 
