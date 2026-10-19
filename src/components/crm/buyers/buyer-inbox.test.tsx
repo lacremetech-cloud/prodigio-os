@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
-import { BuyerInbox } from "./buyer-inbox";
+import { BUDGET_FILTERS, BuyerInbox, budgetCorrespond } from "./buyer-inbox";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 
 /**
@@ -155,5 +155,80 @@ describe("BuyerInbox", () => {
     const ligne = container.querySelector(".crm-ligne");
     expect(ligne?.className).toContain("crm-ligne--vert");
     expect(ligne?.className).not.toContain("crm-ligne--rouge");
+  });
+});
+
+/**
+ * LE FILTRE BUDGET NE RENVOYAIT RIEN, ET PERSONNE NE POUVAIT LE VOIR.
+ *
+ * Il recoupait `budget_min_cents` / `budget_max_cents`, qui ne sont remplis que
+ * si un commercial saisit les criteres a la main. Aucun ne l'avait fait : les
+ * 76 depots avaient ces bornes a NULL, et le recoupement ecartait d'office
+ * toute ligne sans fourchette. Choisir une tranche vidait la liste.
+ *
+ * Ces tests tiennent la correction : le filtre porte sur la REPONSE DONNEE.
+ */
+describe("filtre budget", () => {
+  const avec = (choix: string | null) => dossier({ budgetChoice: choix } as never);
+
+  it("ne propose QUE les trois reponses du formulaire", () => {
+    expect(BUDGET_FILTERS.map((b) => b.value)).toEqual([
+      "tous",
+      "aucun_projet",
+      "500k_1m",
+      "plus_1m",
+      "sans_reponse",
+    ]);
+  });
+
+  it("ne propose plus les tranches de l'ancien tunnel", () => {
+    const libelles = BUDGET_FILTERS.map((b) => b.label).join(" ");
+    expect(libelles).not.toContain("800");
+    expect(libelles).not.toContain("1,2");
+    expect(libelles).not.toContain("3 M€");
+  });
+
+  it("retient la reponse exacte", () => {
+    expect(budgetCorrespond(avec("500k_1m"), "500k_1m")).toBe(true);
+    expect(budgetCorrespond(avec("aucun_projet"), "500k_1m")).toBe(false);
+  });
+
+  it("trouve « pas de projet », que l'ancien filtre rendait INTROUVABLE", () => {
+    // Sans fourchette, le recoupement renvoyait false pour toutes les tranches.
+    expect(budgetCorrespond(avec("aucun_projet"), "aucun_projet")).toBe(true);
+  });
+
+  it("replie les tranches retirees sur « Plus d'1 M€ »", () => {
+    // Cinq dossiers portent encore « 1m_2m » : ils doivent rester atteignables.
+    for (const ancien of ["1m_2m", "2m_3m", "plus_3m"]) {
+      expect(budgetCorrespond(avec(ancien), "plus_1m")).toBe(true);
+    }
+    expect(budgetCorrespond(avec("plus_1m"), "plus_1m")).toBe(true);
+  });
+
+  it("n'ecarte jamais un dossier de « Tous budgets »", () => {
+    for (const c of ["aucun_projet", "500k_1m", "plus_1m", "1m_2m", null]) {
+      expect(budgetCorrespond(avec(c), "tous")).toBe(true);
+    }
+  });
+
+  it("COUVRE toute ligne : une fiche sans reponse reste atteignable", () => {
+    // Une fiche qu'aucun filtre n'atteint est une fiche perdue — le defaut
+    // exact qu'on corrige ici.
+    expect(budgetCorrespond(avec(null), "sans_reponse")).toBe(true);
+    expect(budgetCorrespond(avec("500k_1m"), "sans_reponse")).toBe(false);
+  });
+
+  it("filtre reellement la liste affichee", () => {
+    const rows = [
+      dossier({ name: "Sans projet", budgetChoice: "aucun_projet" } as never),
+      dossier({ buyerProfileId: "bp-2", name: "Au million", budgetChoice: "plus_1m" } as never),
+    ];
+    const { getByText, queryByText, getByLabelText } = render(
+      <BuyerInbox rows={rows} members={membres} chargeA="2026-10-13T12:00:00.000Z" />,
+    );
+    fireEvent.change(getByLabelText("Budget"), { target: { value: "plus_1m" } });
+    expect(getByText("Au million")).toBeTruthy();
+    expect(queryByText("Sans projet")).toBeNull();
   });
 });
