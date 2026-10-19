@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useId, useRef, useState } from "react";
+
 import { ACTIVITES, ETAPES, QUALIFICATIONS } from "@/modules/buyers/crm/vocabulaire";
 
 /**
@@ -16,105 +18,198 @@ import { ACTIVITES, ETAPES, QUALIFICATIONS } from "@/modules/buyers/crm/vocabula
  * côtés, avec la même couleur et le même libellé.
  */
 
-function Choix({
-  valeur,
-  label,
-  couleur,
-  encre,
-  actif,
-  onChoisir,
-  disabled,
-}: {
+interface OptionVocabulaire {
   valeur: string;
   label: string;
   couleur: string;
-  /** Encre posée sur cette couleur. « Mauvais numéro » est noir : il ne porte
-      que du blanc, et l'encre commune du thème clair est noire. */
   encre?: string;
-  actif: boolean;
-  onChoisir: (v: string) => void;
+}
+
+/**
+ * UN SÉLECTEUR COMPACT, PAS UNE GRILLE PERMANENTE.
+ *
+ * Les sept étapes et les quatre qualifications occupaient deux grilles
+ * toujours dépliées, soit onze boutons affichés en permanence au-dessus du
+ * formulaire. Sur un portable, la dernière note et la prochaine tâche
+ * passaient sous la ligne de flottaison : le commercial faisait défiler
+ * onze boutons pour atteindre ce qu'il devait LIRE avant d'appeler.
+ *
+ * Ici, une pastille montre la valeur en cours ; les choix n'apparaissent qu'au
+ * clic, avec leurs couleurs. Les deux axes restent SÉPARÉS et toujours
+ * visibles : ils ne sont ni fusionnés, ni relégués dans un menu secondaire.
+ *
+ * DEUX VALEURS, ET C'EST VOULU.
+ *   • `actuelle` est ce qui est ENREGISTRÉ. La pastille l'affiche tant que
+ *     rien n'est en attente.
+ *   • `valeur` est la modification PAS ENCORE SAUVEGARDÉE, ou `null`.
+ * Les confondre ferait mentir la pastille : elle annoncerait comme acquis un
+ * choix que personne n'a encore enregistré. Quand les deux diffèrent, la
+ * pastille le dit — « modifié » — au lieu de laisser croire que c'est fait.
+ *
+ * Rechoisir la valeur enregistrée annule la modification plutôt que de
+ * l'écraser avec elle-même : c'est la seule façon de revenir en arrière sans
+ * sauvegarder un choix qu'on ne voulait pas.
+ */
+export function SelecteurCompact({
+  libelle,
+  options,
+  actuelle,
+  valeur,
+  onChoisir,
+  disabled,
+}: {
+  libelle: string;
+  options: readonly OptionVocabulaire[];
+  actuelle: string;
+  valeur: string | null;
+  onChoisir: (v: string | null) => void;
   disabled?: boolean;
 }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-pressed={actif}
-      onClick={() => onChoisir(valeur)}
-      className="crm-gros-choix"
-      style={
-        actif
-          ? {
-              /* La couleur ne porte jamais seule : le libellé est écrit à
-                 côté, et c'est l'état pressé qui fait foi pour un lecteur
-                 d'écran. */
-              background: `var(${couleur})`,
-              borderColor: `var(${couleur})`,
-              color: `var(${encre ?? "--crm-acq-sur-etape"})`,
-            }
-          : { borderColor: `var(${couleur})` }
+  const [ouvert, setOuvert] = useState(false);
+  const boite = useRef<HTMLDivElement>(null);
+  const bouton = useRef<HTMLButtonElement>(null);
+  const idListe = useId();
+
+  const effective = valeur ?? actuelle;
+  const modifie = valeur !== null && valeur !== actuelle;
+  const choisie = options.find((o) => o.valeur === effective);
+
+  /* Fermer au clic extérieur ET à Échap. Sans la seconde, un sélecteur ouvert
+     par erreur piège le clavier : la seule sortie serait la souris. */
+  useEffect(() => {
+    if (!ouvert) return;
+    const dehors = (e: MouseEvent) => {
+      if (boite.current && !boite.current.contains(e.target as Node)) setOuvert(false);
+    };
+    const touche = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOuvert(false);
+        bouton.current?.focus();
       }
-    >
-      {label}
-    </button>
+    };
+    document.addEventListener("mousedown", dehors);
+    document.addEventListener("keydown", touche);
+    return () => {
+      document.removeEventListener("mousedown", dehors);
+      document.removeEventListener("keydown", touche);
+    };
+  }, [ouvert]);
+
+  return (
+    <div className="crm-selecteur" ref={boite}>
+      <button
+        ref={bouton}
+        type="button"
+        disabled={disabled}
+        className="crm-selecteur__pastille"
+        aria-label={`${libelle} : ${choisie?.label ?? effective}`}
+        aria-haspopup="listbox"
+        aria-expanded={ouvert}
+        aria-controls={ouvert ? idListe : undefined}
+        onClick={() => setOuvert((v) => !v)}
+        style={
+          choisie
+            ? {
+                background: `var(${choisie.couleur})`,
+                borderColor: `var(${choisie.couleur})`,
+                color: `var(${choisie.encre ?? "--crm-acq-sur-etape"})`,
+              }
+            : undefined
+        }
+      >
+        <span className="crm-selecteur__libelle">{libelle}</span>
+        <span className="crm-selecteur__valeur">{choisie?.label ?? effective}</span>
+        {modifie ? <span className="crm-selecteur__modifie">modifié</span> : null}
+        <span aria-hidden className="crm-selecteur__fleche">
+          ▾
+        </span>
+      </button>
+
+      {ouvert ? (
+        <ul className="crm-selecteur__liste" id={idListe} role="listbox" aria-label={libelle}>
+          {options.map((o) => {
+            const retenue = o.valeur === effective;
+            return (
+              <li key={o.valeur} role="none">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={retenue}
+                  className="crm-selecteur__option"
+                  onClick={() => {
+                    /* Rechoisir la valeur enregistrée = annuler la
+                       modification, pas la réécrire. */
+                    onChoisir(o.valeur === actuelle ? null : o.valeur);
+                    setOuvert(false);
+                    bouton.current?.focus();
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    className="crm-selecteur__puce"
+                    style={{ background: `var(${o.couleur})` }}
+                  />
+                  {o.label}
+                  {retenue ? (
+                    <span aria-hidden className="crm-selecteur__coche">
+                      ✓
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
 /** Les sept étapes de traitement, dans l'ordre du pipeline. */
 export function ChoixEtape({
   valeur,
+  actuelle,
   onChoisir,
   disabled,
 }: {
   valeur: string | null;
+  actuelle: string;
   onChoisir: (v: string | null) => void;
   disabled?: boolean;
 }) {
   return (
-    <div className="crm-grille crm-grille--3">
-      {ETAPES.map((e) => (
-        <Choix
-          key={e.valeur}
-          valeur={e.valeur}
-          label={e.label}
-          couleur={e.couleur}
-          encre={e.encre}
-          actif={valeur === e.valeur}
-          disabled={disabled}
-          /* Recliquer sur l'étape courante l'annule : c'est la seule façon de
-             revenir sur un choix sans sauvegarder une valeur qu'on ne voulait
-             pas. */
-          onChoisir={(v) => onChoisir(valeur === v ? null : v)}
-        />
-      ))}
-    </div>
+    <SelecteurCompact
+      libelle="Étape"
+      options={ETAPES}
+      actuelle={actuelle}
+      valeur={valeur}
+      onChoisir={onChoisir}
+      disabled={disabled}
+    />
   );
 }
 
 /** Les quatre qualifications. */
 export function ChoixQualification({
   valeur,
+  actuelle,
   onChoisir,
   disabled,
 }: {
   valeur: string | null;
+  actuelle: string;
   onChoisir: (v: string | null) => void;
   disabled?: boolean;
 }) {
   return (
-    <div className="crm-grille crm-grille--3">
-      {QUALIFICATIONS.map((q) => (
-        <Choix
-          key={q.valeur}
-          valeur={q.valeur}
-          label={q.label}
-          couleur={q.couleur}
-          actif={valeur === q.valeur}
-          disabled={disabled}
-          onChoisir={(v) => onChoisir(valeur === v ? null : v)}
-        />
-      ))}
-    </div>
+    <SelecteurCompact
+      libelle="Qualification"
+      options={QUALIFICATIONS}
+      actuelle={actuelle}
+      valeur={valeur}
+      onChoisir={onChoisir}
+      disabled={disabled}
+    />
   );
 }
 
@@ -148,7 +243,11 @@ export function BlocActivite({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="crm-grille crm-grille--2">
+      {/* Sept activités en grille de boutons de 42 px, c'étaient quatre
+          rangées — et la note, puis la suite à donner, repoussées hors de
+          l'écran sur un portable. En pastilles qui s'enroulent, le même choix
+          tient en deux rangées, sans rien retirer ni rien cacher. */}
+      <div className="crm-puces" role="group" aria-label="Ce qui s'est passé">
         {ACTIVITES.map((a) => (
           <button
             key={a.valeur}
@@ -156,16 +255,7 @@ export function BlocActivite({
             disabled={disabled}
             aria-pressed={activite === a.valeur}
             onClick={() => onActivite(activite === a.valeur ? null : a.valeur)}
-            className="crm-gros-choix"
-            style={
-              activite === a.valeur
-                ? {
-                    background: "var(--crm-acq-en_discussion)",
-                    borderColor: "var(--crm-acq-en_discussion)",
-                    color: "var(--crm-acq-sur-etape)",
-                  }
-                : undefined
-            }
+            className="crm-puce-choix"
           >
             {a.label}
           </button>

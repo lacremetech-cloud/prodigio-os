@@ -133,8 +133,12 @@ export function SuiviCommercial({
             {/* Les sélecteurs partagés annulent au second clic sur la valeur
                 courante (`null`). Ici, choisir enregistre : « annuler » revient
                 donc à ne rien faire, et surtout pas à effacer l'étape. */}
+            {/* Ici, choisir ENREGISTRE aussitot : il n'y a donc jamais de
+                modification en attente, et la pastille montre toujours la
+                valeur reelle. D'ou `valeur={null}`. */}
             <ChoixEtape
-              valeur={etape}
+              valeur={null}
+              actuelle={etape}
               onChoisir={(v) => {
                 if (v && v !== etape) void enregistrer({ stage: v });
               }}
@@ -144,7 +148,12 @@ export function SuiviCommercial({
 
           <div className="crm-suivi__bloc">
             <p className="crm-label">Qualification</p>
-            <ChoixQualification valeur={qualification} onChoisir={choisirQualification} disabled={enCours} />
+            <ChoixQualification
+              valeur={null}
+              actuelle={qualification}
+              onChoisir={choisirQualification}
+              disabled={enCours}
+            />
             {motifDemande ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <select

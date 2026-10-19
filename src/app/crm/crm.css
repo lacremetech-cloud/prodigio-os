@@ -2316,3 +2316,81 @@
   gap: 6px;
 }
 .crm-arbitrage__choix .crm-btn { font-size: 12.5px; padding: 0 12px; }
+
+/* --- Sélecteur compact : étape et qualification --------------------------
+   Remplace deux grilles permanentes de onze boutons. La pastille porte la
+   valeur en cours ; les choix n'apparaissent qu'au clic. Les deux axes
+   restent séparés et toujours visibles. */
+.crm-selecteur { position: relative; display: inline-block; }
+.crm-selecteur__pastille {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 34px; padding: 5px 10px;
+  border-radius: 100px; border: 1.5px solid var(--crm-line);
+  background: var(--crm-panel-2); color: var(--crm-text);
+  font-size: 12.5px; font-weight: 600; line-height: 1.2; cursor: pointer;
+  transition: filter 110ms ease, border-color 110ms ease;
+}
+.crm-selecteur__pastille:hover:not(:disabled) { filter: brightness(1.06); }
+.crm-selecteur__pastille:disabled { opacity: .55; cursor: not-allowed; }
+.crm-selecteur__pastille:focus-visible {
+  outline: 2px solid var(--crm-univers); outline-offset: 2px;
+}
+/* Le libellé de l'axe reste lisible : sans lui, deux pastilles colorées côte
+   à côte ne disent plus laquelle est l'étape et laquelle la qualification. */
+.crm-selecteur__libelle {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; opacity: .72;
+}
+.crm-selecteur__valeur { white-space: nowrap; }
+.crm-selecteur__modifie {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; padding: 1px 5px; border-radius: 4px;
+  background: rgba(255, 255, 255, .26);
+}
+.crm-selecteur__fleche { font-size: 10px; opacity: .75; }
+
+.crm-selecteur__liste {
+  position: absolute; z-index: 40; top: calc(100% + 5px); left: 0;
+  min-width: 190px; margin: 0; padding: 5px; list-style: none;
+  border-radius: 11px; border: 1px solid var(--crm-line);
+  background: var(--crm-panel); box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
+}
+.crm-selecteur__option {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 9px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--crm-text); font-size: 13px; font-weight: 500;
+  text-align: left; cursor: pointer;
+}
+.crm-selecteur__option:hover { background: var(--crm-hover); }
+.crm-selecteur__option[aria-selected="true"] { font-weight: 700; }
+.crm-selecteur__puce {
+  flex: 0 0 auto; width: 11px; height: 11px; border-radius: 50%;
+}
+.crm-selecteur__coche { margin-left: auto; opacity: .8; }
+
+/* Sur un portable, le menu ne doit pas sortir de l'écran par la droite. */
+@media (max-width: 480px) {
+  .crm-selecteur__liste { left: auto; right: 0; }
+}
+
+/* --- Pastilles de choix : les activités ----------------------------------
+   Sept boutons de 42 px en grille, c'étaient quatre rangées, et la note puis
+   la suite à donner repoussées hors écran sur un portable. */
+.crm-puces { display: flex; flex-wrap: wrap; gap: 6px; }
+.crm-puce-choix {
+  padding: 6px 11px; border-radius: 100px;
+  border: 1.5px solid var(--crm-line); background: var(--crm-panel-2);
+  color: var(--crm-text); font-size: 12.5px; font-weight: 600;
+  line-height: 1.2; cursor: pointer; white-space: nowrap;
+  transition: background 110ms ease, border-color 110ms ease, color 110ms ease;
+}
+.crm-puce-choix:hover:not(:disabled) {
+  background: var(--crm-hover); border-color: var(--crm-line-hover);
+}
+.crm-puce-choix:disabled { opacity: .55; cursor: not-allowed; }
+.crm-puce-choix:focus-visible { outline: 2px solid var(--crm-univers); outline-offset: 2px; }
+.crm-puce-choix[aria-pressed="true"] {
+  background: var(--crm-acq-en_discussion);
+  border-color: var(--crm-acq-en_discussion);
+  color: var(--crm-acq-sur-etape);
+}

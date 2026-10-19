@@ -375,7 +375,7 @@ export function PanneauTraitement({
             Étape
             <span className="crm-bloc__actuel">actuelle : {etapeLabel(row.stage)}</span>
           </h3>
-          <ChoixEtape valeur={etape} onChoisir={setEtape} />
+          <ChoixEtape valeur={etape} actuelle={row.stage} onChoisir={setEtape} />
         </section>
 
         {/* ---- 2. Ce qu'on en pense ------------------------------------------ */}
@@ -387,7 +387,11 @@ export function PanneauTraitement({
           {/* Trois colonnes : cinq options tiennent en DEUX rangees au lieu de
               trois, et le parcours critique repasse sous la ligne de
               flottaison d'un portable 768. */}
-          <ChoixQualification valeur={qualification} onChoisir={setQualification} />
+          <ChoixQualification
+            valeur={qualification}
+            actuelle={row.qualification}
+            onChoisir={setQualification}
+          />
           {/* Le motif n'apparaît que s'il est exigé : un champ qui attend sans
               servir occupe la place et fait croire qu'il manque une réponse. */}
           {qualification === "non_qualifie" ? (
