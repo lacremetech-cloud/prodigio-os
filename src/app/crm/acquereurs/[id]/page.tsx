@@ -56,10 +56,7 @@ import {
 } from "@/components/crm/buyers/buyer-actions";
 import { SuiviCommercial } from "@/components/crm/buyers/suivi-commercial";
 import { changementsLisibles } from "@/modules/buyers/crm/journal";
-import {
-  etape as definitionEtape,
-  qualification as definitionQualification,
-} from "@/modules/buyers/crm/vocabulaire";
+import { etatFigePertinent } from "@/modules/buyers/crm/reprise";
 
 export const metadata: Metadata = { title: "Fiche acquéreur" };
 
@@ -89,9 +86,7 @@ function label(map: Record<string, string>, v: string | null | undefined): strin
  * disparues : « en_reflexion » n'existe plus, et l'afficher brut livrerait un
  * identifiant technique à un commercial.
  */
-function etatFige(i: { pipeline_stage: string; qualification: string }): string {
-  return `${definitionEtape(i.pipeline_stage).label} · ${definitionQualification(i.qualification).label}`;
-}
+
 
 export default async function BuyerProfilePage({
   params,
@@ -383,11 +378,17 @@ export default async function BuyerProfilePage({
                       </div>
                     </div>
 
-                    {/* L'état d'AVANT la reprise, au passé et en petit. */}
-                    <p className="mt-1 text-[11px] text-[var(--crm-text-faint)]">
-                      Avant la reprise du 14 octobre 2026, ce projet portait :{" "}
-                      {etatFige(i)}
-                    </p>
+                    {/* L'état d'AVANT la reprise, au passé et en petit — et
+                        seulement pour les demandes qui l'ont réellement
+                        traversée. Voir `etatFigePertinent`. */}
+                    {(() => {
+                      const fige = etatFigePertinent(i, profile);
+                      return fige ? (
+                        <p className="mt-1 text-[11px] text-[var(--crm-text-faint)]">
+                          Avant la reprise du 14 octobre 2026, ce projet portait : {fige}
+                        </p>
+                      ) : null;
+                    })()}
 
                     {/* Tentatives et dernier appel, PAR PROJET : c'est ce que le
                         panneau rapide affiche, et les deux lisent la meme
