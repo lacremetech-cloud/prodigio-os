@@ -30,10 +30,18 @@ sont configurées, sans jamais révéler une valeur.
 | 6 | Identifiants SMSFactor (compte) | SMSFactor → mot de passe du compte | Rien tant que le jeton d'API reste valide | Moyenne |
 | 7 | Les deux webhooks Make | Make → chaque scénario → régénérer l'URL du déclencheur, mettre à jour l'appelant | Le scénario concerné ne se déclenche plus | Moyenne |
 | 8 | Identifiants Académie Florale | Le service concerné | Hors Prodigio OS | Moyenne |
+| 9 | Mots de passe du compte de recette `recette.claude@prodigio.fr` (deux valeurs, gardées dans mon bac à sable) | Prodigio OS → profil du compte, ou réinitialisation par e-mail | Rien : le compte est déjà neutralisé et ne se connecte plus | Basse |
 
 **Non concerné :** le jeton d'API SMSFactor n'a jamais transité par la
 conversation — il a été posé directement dans Vercel. Rien à faire, sauf
 rotation de principe.
+
+Les deux valeurs de la ligne 9 ont été affichées en clair dans une
+conversation de travail le 19 octobre 2026, par moi, en inspectant mes propres
+fichiers de recette : la règle du dernier paragraphe vaut aussi pour les
+secrets qu'on croit sans importance. Le compte étant déjà neutralisé, rien
+n'est exposé qui puisse servir — la ligne est là pour que le renouvellement ne
+soit pas oublié le jour où ce compte serait réactivé.
 
 ## Ordre conseillé
 
