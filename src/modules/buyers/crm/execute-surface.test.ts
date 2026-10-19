@@ -78,13 +78,20 @@ function lastPrivilege(fn: string, role: "anon" | "authenticated"): boolean {
 
 describe("surface EXECUTE — classification", () => {
   it("couvre toute la surface du module, chaque fonction dans une catégorie unique", () => {
-    // 18 = les 17 fonctions créées par `buyers_crm_v1`
+    // 19 = les 17 fonctions créées par `buyers_crm_v1`
     //    + `crm_buyer_interest_set_status`, héritée de
     //      `20260802120000_public_property_experience_v1` (réception des
-    //      intérêts depuis la Fabrique de biens).
-    expect(BUYER_EXECUTE_SURFACE).toHaveLength(18);
+    //      intérêts depuis la Fabrique de biens) ;
+    //    + `crm_buyer_update_task` (`20261019103305`), qui permet de corriger
+    //      une tâche encore à faire. Le CRM savait la créer et la terminer,
+    //      jamais la corriger : on contournait en créant une tâche de
+    //      remplacement depuis un second formulaire, lequel disparaît.
+    //
+    // Ce compte est une ALARME, pas une formalité : une fonction qui gagne
+    // `EXECUTE` sans qu'on l'ait voulu fait échouer ce test.
+    expect(BUYER_EXECUTE_SURFACE).toHaveLength(19);
     const names = BUYER_EXECUTE_SURFACE.map((e) => functionName(e.signature));
-    expect(new Set(names).size).toBe(18);
+    expect(new Set(names).size).toBe(19);
   });
 
   it("ne déclare aucun helper interne avec un droit anon ou authenticated", () => {

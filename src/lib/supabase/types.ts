@@ -53,6 +53,12 @@ export type ContactRow = {
    * lui, reste ouvert : on a perdu un numéro, pas une personne.
    */
   phone_status: "ok" | "invalide";
+  /**
+   * Renseigné quand le MOBILE correspond à un contact existant mais que le nom
+   * ne concorde pas. Signalement, jamais une fusion : conjoint, collègue ou
+   * chiffre mal saisi sont indiscernables automatiquement.
+   */
+  doublon_probable_de: string | null;
 }
 
 export type OpportunityRow = {
@@ -2147,6 +2153,21 @@ export interface Database {
       };
       crm_buyer_set_task_status: {
         Args: { p_task_id: string; p_status: string };
+        Returns: Json;
+      };
+      /**
+       * Corrige une tâche ENCORE À FAIRE. Un paramètre nul laisse le champ
+       * inchangé ; `p_effacer_echeance` distingue « enlever la date » de
+       * « ne pas y toucher », que `null` seul confondrait.
+       */
+      crm_buyer_update_task: {
+        Args: {
+          p_task_id: string;
+          p_title?: string | null;
+          p_due_at?: string | null;
+          p_assignee_user_id?: string | null;
+          p_effacer_echeance?: boolean;
+        };
         Returns: Json;
       };
       crm_buyer_property_matches: {

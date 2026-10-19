@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   assignBuyerAction,
-  createBuyerTaskAction,
   enregistrerTraitementAction,
   qualifyBuyerAction,
   recordBuyerOfferAction,
@@ -13,6 +12,7 @@ import {
   selfAssignBuyerAction,
   setBuyerStageAction,
   setBuyerTaskStatusAction,
+  updateBuyerTaskAction,
   unassignBuyerAction,
   upsertBuyerCriteriaAction,
 } from "@/modules/buyers/crm/actions";
@@ -762,7 +762,23 @@ export function BuyerActivityForm({
   );
 }
 
-export function BuyerTaskForm({
+/**
+ * LES TÂCHES OUVERTES, ET RIEN DE PLUS.
+ *
+ * Ce bloc portait un SECOND formulaire de planification, concurrent de « la
+ * suite à donner » du bloc d'échange. Deux endroits pour programmer un
+ * rappel, c'est une décision saisie deux fois — et deux rappels quand on
+ * oublie qu'on l'a déjà posé ailleurs.
+ *
+ * Il ne reste que ce qu'on vient y chercher : ce qui est dû, avec de quoi le
+ * solder ou le corriger. Créer se fait là où l'on consigne l'échange, en même
+ * temps que le reste.
+ *
+ * « Modifier » n'existait pas : on créait une tâche de remplacement et on
+ * soldait l'ancienne. Retirer ce contournement sans offrir la correction
+ * aurait enlevé une capacité au lieu d'en simplifier une.
+ */
+export function BuyerTaskList({
   buyerProfileId,
   tasks,
 }: {
@@ -770,103 +786,148 @@ export function BuyerTaskForm({
   tasks: TaskRow[];
 }) {
   const { pending, error, done, run } = useAction();
-  const [title, setTitle] = useState("");
-  const [kind, setKind] = useState("rappel");
-  const [dueAt, setDueAt] = useState("");
+  /** Identifiant de la tâche en cours de correction. */
+  const [edite, setEdite] = useState<string | null>(null);
+  const [titre, setTitre] = useState("");
+  const [echeance, setEcheance] = useState("");
+
+  const ouvertes = tasks.filter((t) => t.status === "a_faire");
+  const closes = tasks.filter((t) => t.status !== "a_faire");
+
+  function commencer(t: TaskRow) {
+    setEdite(t.id);
+    setTitre(t.title);
+    /* `datetime-local` n'accepte ni fuseau ni secondes : on coupe l'ISO à la
+       minute, dans l'heure locale, sinon le champ s'affiche vide. */
+    setEcheance(
+      t.due_at
+        ? new Date(new Date(t.due_at).getTime() - new Date().getTimezoneOffset() * 60000)
+            .toISOString()
+            .slice(0, 16)
+        : "",
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      {tasks.length > 0 ? (
+      {ouvertes.length === 0 && closes.length === 0 ? (
+        <p className="text-xs text-[var(--crm-text-dim)]">
+          Aucune tâche. La prochaine se programme en enregistrant un échange.
+        </p>
+      ) : null}
+
+      {ouvertes.length > 0 ? (
         <ul className="flex flex-col gap-1.5">
-          {tasks.map((t) => (
+          {ouvertes.map((t) => (
             <li
               key={t.id}
-              className="flex items-center justify-between gap-2 rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-2.5 py-2"
+              className="rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-2.5 py-2"
             >
-              <span className="crm-wrap text-xs text-[var(--crm-text)]">
-                {t.title}
-                {t.due_at ? (
-                  <span className="text-[var(--crm-text-faint)]">
-                    {" "}
-                    · {new Date(t.due_at).toLocaleString("fr-FR")}
+              {edite === t.id ? (
+                <div className="flex flex-col gap-2">
+                  <input
+                    className="crm-input"
+                    value={titre}
+                    aria-label="Intitulé de la tâche"
+                    onChange={(e) => setTitre(e.target.value)}
+                  />
+                  <input
+                    className="crm-input"
+                    type="datetime-local"
+                    value={echeance}
+                    aria-label="Échéance"
+                    onChange={(e) => setEcheance(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="crm-btn crm-btn--sm"
+                      disabled={pending || !titre.trim()}
+                      onClick={() =>
+                        run(
+                          () =>
+                            updateBuyerTaskAction({
+                              buyerProfileId,
+                              taskId: t.id,
+                              title: titre.trim(),
+                              dueAt: echeance ? new Date(echeance).toISOString() : null,
+                              /* Vider le champ EFFACE l'échéance. Sans ce
+                                 drapeau, « enlever la date » et « ne pas y
+                                 toucher » s'écriraient pareil. */
+                              effacerEcheance: echeance === "",
+                            }),
+                          /* On ne referme QU'APRÈS un succès confirmé : fermer
+                             avant, c'est faire croire que c'est enregistré. */
+                          () => setEdite(null),
+                        )
+                      }
+                    >
+                      Enregistrer
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-btn crm-btn--sm crm-btn--ghost"
+                      disabled={pending}
+                      onClick={() => setEdite(null)}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="crm-wrap text-xs text-[var(--crm-text)]">
+                    {t.title}
+                    {t.due_at ? (
+                      <span className="text-[var(--crm-text-faint)]">
+                        {" "}
+                        · {new Date(t.due_at).toLocaleString("fr-FR")}
+                      </span>
+                    ) : null}
                   </span>
-                ) : null}
-                {t.status !== "a_faire" ? (
-                  <span className="text-[var(--crm-text-faint)]"> · {t.status}</span>
-                ) : null}
-              </span>
-              {t.status === "a_faire" ? (
-                <button
-                  type="button"
-                  className="crm-btn crm-btn--sm crm-btn--ghost shrink-0"
-                  disabled={pending}
-                  onClick={() =>
-                    run(() =>
-                      setBuyerTaskStatusAction({ buyerProfileId, taskId: t.id, status: "fait" }),
-                    )
-                  }
-                >
-                  Terminer
-                </button>
-              ) : null}
+                  <span className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      className="crm-btn crm-btn--sm crm-btn--ghost"
+                      disabled={pending}
+                      onClick={() => commencer(t)}
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      type="button"
+                      className="crm-btn crm-btn--sm crm-btn--ghost"
+                      disabled={pending}
+                      onClick={() =>
+                        run(() =>
+                          setBuyerTaskStatusAction({ buyerProfileId, taskId: t.id, status: "fait" }),
+                        )
+                      }
+                    >
+                      Terminer
+                    </button>
+                  </span>
+                </div>
+              )}
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="text-xs text-[var(--crm-text-dim)]">Aucune tâche. Programmez la prochaine action.</p>
-      )}
+      ) : null}
 
-      {/* Trois champs sur une rangee elastique : dans la colonne laterale, le
-          premier libelle se repliait sous le deuxieme, « PROCHAINE ACTION » et
-          « TYPE » finissant imprimes l'un sur l'autre. Une grille donne a
-          chacun une case a lui, et l'intitule garde toute la largeur. */}
-      <div className="flex flex-col gap-2">
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="crm-label">Prochaine action</span>
-          <input
-            className="crm-input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Rappeler pour organiser la visite"
-          />
-        </label>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="crm-label">Type</span>
-            <select className="crm-select" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Type de tâche">
-              <option value="rappel">Rappel</option>
-              <option value="tache">Tâche</option>
-            </select>
-          </label>
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="crm-label">Échéance</span>
-            <input
-              className="crm-input"
-              type="datetime-local"
-              value={dueAt}
-              onChange={(e) => setDueAt(e.target.value)}
-            />
-          </label>
-        </div>
-        <button
-          type="button"
-          className="crm-btn crm-btn--sm w-fit"
-          disabled={pending || !title.trim()}
-          onClick={() =>
-            run(() =>
-              createBuyerTaskAction({
-                buyerProfileId,
-                title: title.trim(),
-                kind,
-                dueAt: dueAt ? new Date(dueAt).toISOString() : null,
-              }),
-            )
-          }
-        >
-          Ajouter
-        </button>
-        <Saved show={done} />
-      </div>
+      {/* Les tâches soldées restent lisibles, au passé et en retrait : elles
+          disent ce qui a été fait, et ne se modifient plus. */}
+      {closes.length > 0 ? (
+        <ul className="flex flex-col gap-1">
+          {closes.map((t) => (
+            <li key={t.id} className="text-[11px] text-[var(--crm-text-faint)]">
+              {t.title}
+              {t.due_at ? ` · ${new Date(t.due_at).toLocaleString("fr-FR")}` : ""} · {t.status}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <Saved show={done} />
       <FieldError error={error} />
     </div>
   );

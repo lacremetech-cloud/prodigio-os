@@ -543,6 +543,45 @@ export async function createBuyerTaskAction(input: unknown): Promise<ActionResul
   return { ok: true };
 }
 
+/**
+ * Corriger une tâche ENCORE À FAIRE : intitulé, échéance, responsable.
+ *
+ * Le CRM savait créer une tâche et la terminer, jamais la corriger. On
+ * contournait en créant une tâche de remplacement depuis un second formulaire
+ * de planification — celui-là même qui faisait saisir deux fois la même
+ * décision, et qui disparaît. Retirer le contournement sans offrir la
+ * correction aurait enlevé une capacité au lieu d'en simplifier une.
+ *
+ * `effacerEcheance` est explicite parce que `null` est ambigu : sans lui,
+ * « enlever la date » et « ne pas toucher à la date » s'écriraient pareil.
+ */
+export async function updateBuyerTaskAction(input: unknown): Promise<ActionResult> {
+  await requireCrmSession();
+  const parsed = z
+    .object({
+      buyerProfileId: uuid,
+      taskId: uuid,
+      title: z.string().trim().min(1).max(300).nullable().optional(),
+      dueAt: z.string().datetime().nullable().optional(),
+      assigneeUserId: uuid.nullable().optional(),
+      effacerEcheance: z.boolean().optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Saisie invalide." };
+  const d = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("crm_buyer_update_task", {
+    p_task_id: d.taskId,
+    p_title: d.title ?? null,
+    p_due_at: d.dueAt ?? null,
+    p_assignee_user_id: d.assigneeUserId ?? null,
+    p_effacer_echeance: d.effacerEcheance ?? false,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+  revalidateBuyer(d.buyerProfileId);
+  return { ok: true };
+}
+
 export async function setBuyerTaskStatusAction(input: unknown): Promise<ActionResult> {
   await requireCrmSession();
   const parsed = z

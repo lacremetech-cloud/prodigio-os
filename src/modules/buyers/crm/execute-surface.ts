@@ -70,6 +70,10 @@ export const BUYER_EXECUTE_SURFACE: readonly ExecuteSurfaceEntry[] = [
     ["crm_buyer_log_activity(uuid, text, text, text, timestamp with time zone)", "Fiche acquéreur — activités"],
     ["crm_buyer_create_task(uuid, text, text, timestamp with time zone, uuid)", "Fiche acquéreur — tâches"],
     ["crm_buyer_set_task_status(uuid, text)", "Fiche acquéreur et écran Tâches"],
+    [
+      "crm_buyer_update_task(uuid, text, timestamp with time zone, uuid, boolean)",
+      "Fiche acquéreur — correction d'une tâche ouverte",
+    ],
     ["crm_buyer_property_matches(uuid, integer)", "Fiche acquéreur — biens suggérés"],
     ["crm_buyer_interest_set_status(uuid, text)", "Fabrique de biens — réception des intérêts"],
   ] as const).map(
@@ -99,7 +103,7 @@ export const BUYER_EXECUTE_SURFACE: readonly ExecuteSurfaceEntry[] = [
     category: "helper_interne",
     grants: [],
     callers:
-      "crm_buyer_create_task, crm_buyer_log_activity, crm_buyer_qualify, crm_buyer_record_offer, crm_buyer_set_stage, crm_buyer_set_task_status, crm_buyer_upsert_criteria (toutes SECURITY DEFINER).",
+      "crm_buyer_create_task, crm_buyer_log_activity, crm_buyer_qualify, crm_buyer_record_offer, crm_buyer_set_stage, crm_buyer_set_task_status, crm_buyer_update_task, crm_buyer_upsert_criteria (toutes SECURITY DEFINER).",
   },
 
   // --- 4. Helper requis par les politiques RLS ------------------------------

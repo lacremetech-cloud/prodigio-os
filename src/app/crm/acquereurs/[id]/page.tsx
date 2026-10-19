@@ -34,8 +34,6 @@ import { formatDateTime, timeSince } from "@/modules/crm/format";
 import { cssVarRef } from "@/modules/crm/status-visuals";
 import { SectionTitle } from "@/components/crm/ui";
 import {
-  QUALIFICATION_BADGE,
-  QUALIFICATION_LABELS,
 } from "@/modules/buyers/crm/qualification";
 import { getMessagesForEntity } from "@/modules/communications/queries";
 import { EntityCommunications } from "@/components/crm/communications/entity-communications";
@@ -51,8 +49,7 @@ import {
   BuyerOfferForm,
   BuyerOutcomeForm,
   BuyerReopenForm,
-  BuyerStageForm,
-  BuyerTaskForm,
+  BuyerTaskList,
 } from "@/components/crm/buyers/buyer-actions";
 import { SuiviCommercial } from "@/components/crm/buyers/suivi-commercial";
 import { changementsLisibles } from "@/modules/buyers/crm/journal";
@@ -351,9 +348,176 @@ export default async function BuyerProfilePage({
             <ContactRapide numero={appelable} email={detail.email} className="mt-3" />
           </section>
 
-          {/* Intérêts par bien */}
+          {/* ---- 2. LE CONTEXTE : ce qu'on doit savoir avant de parler ------
+              La prochaine tâche se lit déjà dans le bloc commercial, juste
+              au-dessus. Il manquait l'autre moitié : de quoi on a parlé la
+              dernière fois. Elle vivait au milieu de l'historique complet,
+              sous le formulaire de saisie — donc après tout ce qui sert à
+              écrire, alors que c'est ce qu'on lit en premier. */}
           <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Demande" title="Ce que la personne a déclaré" />
+            <SectionTitle eyebrow="Contexte" title="Dernier échange" />
+            {(() => {
+              /* La plus récente, calculée et non supposée : l'ordre de la
+                 requête n'est pas un contrat. */
+              const dernier = [...activities].sort((a, b) =>
+                (b.occurred_at ?? "").localeCompare(a.occurred_at ?? ""),
+              )[0];
+              if (!dernier) {
+                return (
+                  <p className="text-sm text-[var(--crm-text-dim)]">Aucun échange enregistré.</p>
+                );
+              }
+              return (
+                <>
+                  <p className="text-sm text-[var(--crm-text)]">
+                    {activityTypeLabels[dernier.type] ?? dernier.type}
+                    {dernier.outcome
+                      ? ` · ${activityOutcomeLabels[dernier.outcome] ?? dernier.outcome}`
+                      : ""}
+                    <span className="text-[var(--crm-text-faint)]">
+                      {" "}
+                      · {formatDateTime(dernier.occurred_at)}
+                      {dernier.author_user_id
+                        ? ` · ${memberDisplayName(dernier.author_user_id, members)}`
+                        : ""}
+                    </span>
+                  </p>
+                  {/* La note EN ENTIER : c'est elle qu'on relit avant de
+                      décrocher, et une note coupée ne sert à rien. */}
+                  {dernier.body ? (
+                    <p className="crm-wrap mt-1.5 text-sm text-[var(--crm-text)]">{dernier.body}</p>
+                  ) : null}
+                </>
+              );
+            })()}
+          </section>
+
+          {/* ---- 3. ENREGISTRER UN ÉCHANGE ----------------------------------
+              Le formulaire vivait DANS l'historique, au-dessus de la liste :
+              écrire et relire au même endroit, sans que rien ne sépare les
+              deux. Il a désormais son bloc, juste après ce qu'on vient de
+              lire. */}
+          <section className="crm-panel p-4">
+            <SectionTitle eyebrow="Suivi" title="Enregistrer un échange" />
+            {canOperateBuyers ? (
+              <div className="mb-3">
+                <BuyerActivityForm
+                  buyerProfileId={profile.id}
+                  interests={interests.map(({ interest, propertyLabel }) => ({
+                    id: interest.id,
+                    label: propertyLabel ?? "Bien sans nom",
+                  }))}
+                  members={memberOptions}
+                />
+              </div>
+            ) : null}
+          </section>
+
+          {/* ---- 4. L'HISTORIQUE, après la saisie ---------------------------- */}
+          <section className="crm-panel p-4">
+            <SectionTitle eyebrow="Historique" title="Tous les échanges" />
+            {activities.length === 0 ? (
+              <p className="text-sm text-[var(--crm-text-dim)]">Aucune activité enregistrée.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {activities.map((a) => (
+                  <li key={a.id} className="border-l-2 border-[var(--crm-line)] pl-3">
+                    <p className="text-xs text-[var(--crm-text)]">
+                      {activityTypeLabels[a.type] ?? a.type}
+                      {a.outcome ? ` · ${activityOutcomeLabels[a.outcome] ?? a.outcome}` : ""}
+                    </p>
+                    {a.body ? (
+                      <p className="crm-wrap mt-0.5 text-xs text-[var(--crm-text-dim)]">{a.body}</p>
+                    ) : null}
+                    <p className="mt-0.5 text-[11px] text-[var(--crm-text-faint)]">
+                      {formatDateTime(a.occurred_at)}
+                      {a.author_user_id ? ` · ${memberDisplayName(a.author_user_id, members)}` : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Communications adressées à cette personne */}
+          <section className="crm-panel p-4">
+            <SectionTitle eyebrow="Communications" title="Messages envoyés à cette personne" />
+            <EntityCommunications
+              items={communications}
+              emptyHint="Aucun message n'a encore été préparé pour ce dossier acquéreur."
+            />
+          </section>
+
+          {/* Historique audité */}
+          {showAudit ? (
+            <section className="crm-panel p-4">
+              <SectionTitle eyebrow="Traçabilité" title="Ce qui a changé, et quand" />
+              {auditIndisponible ? (
+                /* Dire « Aucun événement » quand la base a REFUSÉ de répondre
+                   envoie chercher un bug qui n'existe pas. */
+                <p className="text-sm text-[var(--crm-text-dim)]">
+                  Historique momentanément indisponible. Signalez-le, il ne manque rien aux
+                  activités ci-dessus.
+                </p>
+              ) : auditEvents.length === 0 ? (
+                <p className="text-sm text-[var(--crm-text-dim)]">Aucun événement.</p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {auditEvents.map((e) => (
+                    <li key={e.id} className="flex flex-col gap-0.5 text-xs">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="text-[var(--crm-text)]">
+                          {buyerAuditEventLabels[e.event_type] ?? e.event_type}
+                        </span>
+                        <span className="text-[11px] text-[var(--crm-text-faint)]">
+                          {formatDateTime(e.created_at)}
+                          {e.actor_user_id ? ` · ${memberDisplayName(e.actor_user_id, members)}` : ""}
+                        </span>
+                      </div>
+                      {/* CE QUI A CHANGÉ, et pas seulement qu'il s'est passé
+                          quelque chose. « Traitement enregistré · 14:29 ·
+                          Antoine » n'apprenait rien : on rouvrait le dossier
+                          pour comparer de tête. Les anciennes et nouvelles
+                          valeurs étaient déjà dans le journal, jamais lues. */}
+                      {changementsLisibles(e.old_value, e.new_value).map((c) => (
+                        <span key={c} className="crm-wrap text-[11.5px] text-[var(--crm-text-dim)]">
+                          {c}
+                        </span>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
+                Journal technique non modifiable, distinct des activités métier.
+              </p>
+            </section>
+          ) : null}
+
+          {/* ---- 5. Visites et offres ---------------------------------------- */}
+          {/* Actions métier dédiées (jamais un simple changement d'étape) */}
+          {canOperateBuyers && !isClosed ? (
+            <section className="crm-panel p-4">
+              <SectionTitle eyebrow="Action dédiée" title="Offre en cours" />
+              {profile.offer_recorded_at ? (
+                <p className="mb-2 text-xs text-[var(--crm-text-dim)]">
+                  Offre enregistrée le {formatDateTime(profile.offer_recorded_at)}
+                  {detail.offerPropertyLabel ? ` sur ${detail.offerPropertyLabel}` : ""}
+                  {profile.offer_amount_cents != null
+                    ? ` · ${formatCents(profile.offer_amount_cents)}`
+                    : ""}
+                </p>
+              ) : null}
+              <BuyerOfferForm buyerProfileId={profile.id} properties={interestProperties} />
+            </section>
+          ) : null}
+
+          {/* ---- 6. Ce que la personne a répondu, et d'où elle vient : repliés.
+              On les consulte une fois, au premier appel ; les garder dépliés
+              coûtait un défilement à chaque ouverture de fiche. */}
+          {/* Intérêts par bien */}
+          <details className="crm-panel crm-repli p-4">
+            <summary className="crm-repli__titre">Ce que la personne a déclaré</summary>
             {interests.length === 0 ? (
               <p className="text-sm text-[var(--crm-text-dim)]">Aucun intérêt enregistré.</p>
             ) : (
@@ -444,108 +608,35 @@ export default async function BuyerProfilePage({
                 ))}
               </ul>
             )}
-          </section>
+          </details>
 
-          {/* Activités & notes */}
-          <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Suivi" title="Activités et notes internes" />
-            {canOperateBuyers ? (
-              <div className="mb-3">
-                <BuyerActivityForm
-                  buyerProfileId={profile.id}
-                  interests={interests.map(({ interest, propertyLabel }) => ({
-                    id: interest.id,
-                    label: propertyLabel ?? "Bien sans nom",
-                  }))}
-                  members={memberOptions}
-                />
-              </div>
-            ) : null}
-            {activities.length === 0 ? (
-              <p className="text-sm text-[var(--crm-text-dim)]">Aucune activité enregistrée.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {activities.map((a) => (
-                  <li key={a.id} className="border-l-2 border-[var(--crm-line)] pl-3">
-                    <p className="text-xs text-[var(--crm-text)]">
-                      {activityTypeLabels[a.type] ?? a.type}
-                      {a.outcome ? ` · ${activityOutcomeLabels[a.outcome] ?? a.outcome}` : ""}
-                    </p>
-                    {a.body ? (
-                      <p className="crm-wrap mt-0.5 text-xs text-[var(--crm-text-dim)]">{a.body}</p>
-                    ) : null}
-                    <p className="mt-0.5 text-[11px] text-[var(--crm-text-faint)]">
-                      {formatDateTime(a.occurred_at)}
-                      {a.author_user_id ? ` · ${memberDisplayName(a.author_user_id, members)}` : ""}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {/* Communications adressées à cette personne */}
-          <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Communications" title="Messages envoyés à cette personne" />
-            <EntityCommunications
-              items={communications}
-              emptyHint="Aucun message n'a encore été préparé pour ce dossier acquéreur."
-            />
-          </section>
-
-          {/* Historique audité */}
-          {showAudit ? (
-            <section className="crm-panel p-4">
-              <SectionTitle eyebrow="Traçabilité" title="Ce qui a changé, et quand" />
-              {auditIndisponible ? (
-                /* Dire « Aucun événement » quand la base a REFUSÉ de répondre
-                   envoie chercher un bug qui n'existe pas. */
-                <p className="text-sm text-[var(--crm-text-dim)]">
-                  Historique momentanément indisponible. Signalez-le, il ne manque rien aux
-                  activités ci-dessus.
-                </p>
-              ) : auditEvents.length === 0 ? (
-                <p className="text-sm text-[var(--crm-text-dim)]">Aucun événement.</p>
-              ) : (
-                <ul className="flex flex-col gap-1.5">
-                  {auditEvents.map((e) => (
-                    <li key={e.id} className="flex flex-col gap-0.5 text-xs">
-                      <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="text-[var(--crm-text)]">
-                          {buyerAuditEventLabels[e.event_type] ?? e.event_type}
-                        </span>
-                        <span className="text-[11px] text-[var(--crm-text-faint)]">
-                          {formatDateTime(e.created_at)}
-                          {e.actor_user_id ? ` · ${memberDisplayName(e.actor_user_id, members)}` : ""}
-                        </span>
-                      </div>
-                      {/* CE QUI A CHANGÉ, et pas seulement qu'il s'est passé
-                          quelque chose. « Traitement enregistré · 14:29 ·
-                          Antoine » n'apprenait rien : on rouvrait le dossier
-                          pour comparer de tête. Les anciennes et nouvelles
-                          valeurs étaient déjà dans le journal, jamais lues. */}
-                      {changementsLisibles(e.old_value, e.new_value).map((c) => (
-                        <span key={c} className="crm-wrap text-[11.5px] text-[var(--crm-text-dim)]">
-                          {c}
-                        </span>
-                      ))}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
-                Journal technique non modifiable, distinct des activités métier.
-              </p>
-            </section>
-          ) : null}
+          {/* Attribution marketing consolidée du dossier */}
+          <details className="crm-panel crm-repli p-4">
+            <summary className="crm-repli__titre">Attribution marketing</summary>
+            <dl className="grid grid-cols-1 gap-1.5 text-xs">
+              <Field label="Source" small>{profile.utm_source ?? "Non renseignée"}</Field>
+              <Field label="Campagne" small>{profile.utm_campaign ?? "Non renseignée"}</Field>
+              <Field label="Ensemble de pubs" small>{profile.utm_term ?? "Non renseigné"}</Field>
+              <Field label="Publicité" small>{profile.utm_content ?? "Non renseignée"}</Field>
+              <Field label="Funnel d’origine" small>{profile.origin_funnel_key ?? "—"}</Field>
+            </dl>
+            <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
+              Attribution du premier contact. L’historique complet, point de contact par point de
+              contact, reste conservé sur chaque intérêt : il n’est jamais écrasé.
+            </p>
+          </details>
         </div>
 
         {/* ------------------------------------------------- Colonne latérale */}
         <div className="flex flex-col gap-5">
+          {/* Un RÉSUMÉ, plus un formulaire. Programmer la suite se fait là où
+              l'on consigne l'échange : deux endroits pour poser un rappel,
+              c'était une décision saisie deux fois — et deux rappels quand on
+              oubliait l'avoir déjà posé ailleurs. */}
           <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Suivi" title="Prochaine action et tâches" />
+            <SectionTitle eyebrow="Suivi" title="Tâches ouvertes" />
             {canOperateBuyers ? (
-              <BuyerTaskForm buyerProfileId={profile.id} tasks={tasks} />
+              <BuyerTaskList buyerProfileId={profile.id} tasks={tasks} />
             ) : (
               <p className="text-sm text-[var(--crm-text-dim)]">
                 {tasks.length} tâche{tasks.length > 1 ? "s" : ""}.
@@ -565,24 +656,6 @@ export default async function BuyerProfilePage({
             />
           </section>
 
-
-          {/* Actions métier dédiées (jamais un simple changement d'étape) */}
-          {canOperateBuyers && !isClosed ? (
-            <section className="crm-panel p-4">
-              <SectionTitle eyebrow="Action dédiée" title="Offre en cours" />
-              {profile.offer_recorded_at ? (
-                <p className="mb-2 text-xs text-[var(--crm-text-dim)]">
-                  Offre enregistrée le {formatDateTime(profile.offer_recorded_at)}
-                  {detail.offerPropertyLabel ? ` sur ${detail.offerPropertyLabel}` : ""}
-                  {profile.offer_amount_cents != null
-                    ? ` · ${formatCents(profile.offer_amount_cents)}`
-                    : ""}
-                </p>
-              ) : null}
-              <BuyerOfferForm buyerProfileId={profile.id} properties={interestProperties} />
-            </section>
-          ) : null}
-
           {canDecide && !isClosed ? (
             <section className="crm-panel p-4">
               <SectionTitle eyebrow="Action dédiée" title="Résultat commercial" />
@@ -596,22 +669,6 @@ export default async function BuyerProfilePage({
               <BuyerReopenForm buyerProfileId={profile.id} />
             </section>
           ) : null}
-
-          {/* Attribution marketing consolidée du dossier */}
-          <section className="crm-panel p-4">
-            <SectionTitle eyebrow="Origine" title="Attribution marketing" />
-            <dl className="grid grid-cols-1 gap-1.5 text-xs">
-              <Field label="Source" small>{profile.utm_source ?? "Non renseignée"}</Field>
-              <Field label="Campagne" small>{profile.utm_campaign ?? "Non renseignée"}</Field>
-              <Field label="Ensemble de pubs" small>{profile.utm_term ?? "Non renseigné"}</Field>
-              <Field label="Publicité" small>{profile.utm_content ?? "Non renseignée"}</Field>
-              <Field label="Funnel d’origine" small>{profile.origin_funnel_key ?? "—"}</Field>
-            </dl>
-            <p className="mt-2 text-[11px] text-[var(--crm-text-faint)]">
-              Attribution du premier contact. L’historique complet, point de contact par point de
-              contact, reste conservé sur chaque intérêt : il n’est jamais écrasé.
-            </p>
-          </section>
 
         </div>
       </div>

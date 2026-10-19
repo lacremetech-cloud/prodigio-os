@@ -11,11 +11,12 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const enregistre = vi.fn(async () => ({ ok: true as const }));
-const attribue = vi.fn(async () => ({ ok: true as const }));
+type Charge = Record<string, unknown>;
+const enregistre = vi.fn(async (_p: Charge) => ({ ok: true as const }));
+const attribue = vi.fn(async (_p: Charge) => ({ ok: true as const }));
 vi.mock("@/modules/buyers/crm/actions", () => ({
-  enregistrerTraitementAction: (p: unknown) => enregistre(p as never),
-  selfAssignBuyerAction: (p: unknown) => attribue(p as never),
+  enregistrerTraitementAction: (p: unknown) => enregistre(p as Charge),
+  selfAssignBuyerAction: (p: unknown) => attribue(p as Charge),
 }));
 
 import { PanneauTraitement } from "./panneau-traitement";
@@ -186,7 +187,7 @@ describe("la suite à donner porte l'étape, sans la redemander", () => {
     fireEvent.click(getByRole("button", { name: "Appel — sans réponse" }));
     fireEvent.click(getByRole("button", { name: "Enregistrer" }));
     await vi.waitFor(() => expect(enregistre).toHaveBeenCalled());
-    const envoye = enregistre.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    const envoye = enregistre.mock.calls[0]?.[0] as Charge;
     expect(envoye.stage).toBe("a_rappeler");
     expect(envoye.activite).toBe("appel_sans_reponse");
     expect(envoye.nextActionKind).toBe("rappel");
@@ -198,7 +199,7 @@ describe("la suite à donner porte l'étape, sans la redemander", () => {
     fireEvent.click(within(getByRole("listbox")).getByRole("option", { name: /Qualifié/ }));
     fireEvent.click(getByRole("button", { name: "Enregistrer" }));
     await vi.waitFor(() => expect(enregistre).toHaveBeenCalled());
-    const envoye = enregistre.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    const envoye = enregistre.mock.calls[0]?.[0] as Charge;
     expect(envoye.qualification).toBe("qualifie");
     expect(envoye.activite).toBeNull();
   });
