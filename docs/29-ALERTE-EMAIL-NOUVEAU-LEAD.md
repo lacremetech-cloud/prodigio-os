@@ -1,4 +1,4 @@
-# Alerte e-mail « nouveau lead » — EN PLACE depuis le 16/10/2026
+# Alerte e-mail « nouveau lead » — EN PLACE et VÉRIFIÉE
 
 **Besoin.** Antoine et JC n'ouvrent ni Slack ni WhatsApp. Les alertes n'allaient
 que dans Slack : elles partaient, personne ne les lisait.
@@ -65,11 +65,14 @@ et on bascule sans redévelopper.
 
 ## Vérifié / pas vérifié au 16/10/2026
 
-- ✅ webhook → Make → Gmail : exécution `SUCCESS`, 2 opérations, 1,2 s
-- ⏳ **Prodigio → webhook** : non prouvé. Le code est déployé (`04e46e2`) et la
-  variable est en production, mais ce maillon ne se vérifie qu'avec un vrai
-  dépôt. Décision de l'utilisateur : laisser venir le premier lead réel.
-  **Si le premier vrai lead n'engendre pas d'e-mail, commencer par là.**
+- ✅ webhook → Make → Gmail : vérifié le 16/10 par un envoi de test.
+- ✅ **Prodigio → webhook** : vérifié le 19/10 sur la production. **48 exécutions
+  du scénario, toutes en `SUCCESS`**, du 17/10 05 h 15 au 19/10 09 h 36, aucun
+  échec. La chaîne complète fonctionne sur de vrais dépôts.
+
+Si les alertes s'arrêtent un jour, regarder dans cet ordre : la connexion
+Google (elle **expire le 16/04/2027**), puis le scénario `9990198` (actif ?),
+puis la variable `ALERTE_LEAD_WEBHOOK_URL` en production.
 
 ## Canal de repli, si Make lâche
 
