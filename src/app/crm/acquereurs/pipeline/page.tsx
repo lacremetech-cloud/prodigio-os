@@ -16,6 +16,7 @@ import {
 import { FILTRES_RAPIDES, lireSignal, porteLeSignal } from "@/modules/buyers/crm/signaux";
 import { qualification as definitionQualification } from "@/modules/buyers/crm/vocabulaire";
 import { comptesParProjet } from "@/modules/buyers/crm/comptes";
+import { BUDGET_FILTERS, budgetCorrespond } from "@/modules/buyers/crm/budget";
 
 export const metadata: Metadata = { title: "Pipeline Acquéreurs" };
 
@@ -47,6 +48,13 @@ export default async function BuyersPipelinePage({
   const selection = lireProjets(params.projets, projets);
   const vue = lireVue(params.vue);
   const signal = lireSignal(params.signal);
+  /* La tranche de budget est un AXE A PART : on croise « en retard » et
+     « plus d'1 M€ » au lieu de choisir entre les deux. Une valeur inconnue ne
+     filtre rien. */
+  const budget =
+    typeof params.budget === "string" && BUDGET_FILTERS.some((b) => b.value === params.budget)
+      ? params.budget
+      : "tous";
   /* LES COMPTEURS DISENT CE QUE LA VUE MONTRE.
      Ils comptaient TOUS les dossiers, y compris les non qualifies que le
      pipeline ecarte : la barre annonçait 75 quand le tableau en posait 72, et
@@ -54,9 +62,20 @@ export default async function BuyersPipelinePage({
      ne survit pas au clic est un filtre qui ment.
      On compte donc sur le meme predicat que le tableau — sans la selection de
      projet, sinon choisir Verdun mettrait Jean Jaures a zero. */
-  /** Ce que le pipeline montre : le signal courant, moins les non qualifies. */
+  /** Le pipeline, SANS la tranche de budget : chaque tranche doit pouvoir
+      annoncer son propre nombre, et non zero des qu'une autre est choisie. */
+  function dansLeSignal(i: (typeof items)[number]): boolean {
+    const ligne = toInboxRow(i);
+    if (!porteLeSignal(ligne, signal)) return false;
+    if (signal === "non_qualifies") return true;
+    return ligne.qualification !== "non_qualifie";
+  }
+
+  /** Ce que le pipeline montre : le signal courant, la tranche, moins les non
+      qualifies. */
   function dansLePipeline(i: (typeof items)[number]): boolean {
     const ligne = toInboxRow(i);
+    if (!budgetCorrespond(ligne, budget)) return false;
     if (!porteLeSignal(ligne, signal)) return false;
     if (signal === "non_qualifies") return true;
     return ligne.qualification !== "non_qualifie";
@@ -135,11 +154,16 @@ export default async function BuyersPipelinePage({
           pastille annonce exactement ce qu'elle ouvrira. */}
       <div className="crm-rapides">
         {FILTRES_RAPIDES.map((f) => {
-          const n =
-            f.signal === "tous"
-              ? visibles.filter(dansLePipeline).length
-              : visibles.filter((i) => dansLePipeline(i) && porteLeSignal(toInboxRow(i), f.signal))
-                  .length;
+          /* Chaque pastille annonce ce QU'ELLE ouvrira : son propre signal,
+             croise avec la tranche de budget courante — pas avec le signal
+             courant, sinon toutes les autres afficheraient zero. */
+          const n = visibles.filter((i) => {
+            const ligne = toInboxRow(i);
+            if (!budgetCorrespond(ligne, budget)) return false;
+            if (!porteLeSignal(ligne, f.signal)) return false;
+            if (f.signal === "non_qualifies") return true;
+            return ligne.qualification !== "non_qualifie";
+          }).length;
           return (
             <Link
               key={f.signal}
@@ -147,6 +171,7 @@ export default async function BuyersPipelinePage({
                 projets: selection,
                 vue,
                 signal: f.signal,
+                budget,
               })}`}
               /* Les MEMES classes que la liste : deux vues, une seule
                  apparence. Elles portaient deux habillages differents pour la
@@ -155,6 +180,36 @@ export default async function BuyersPipelinePage({
               aria-pressed={signal === f.signal}
             >
               {f.label}
+              <span className="crm-rapide__n">{n}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* LE BUDGET, SUR SA PROPRE RANGEE. « Ils ont besoin de trier les
+          500 k – 1 M€ et les plus d'1 M€ assez rapidement » : c'etait un menu
+          deroulant replie dans la liste, et rien du tout sur le pipeline.
+          Deux axes separes, donc deux rangees : on croise une tranche avec
+          « en retard » au lieu de choisir entre les deux. */}
+      <div className="crm-rapides">
+        {BUDGET_FILTERS.map((b) => {
+          const n = visibles.filter(
+            (i) =>
+              dansLeSignal(i) && budgetCorrespond(toInboxRow(i), b.value),
+          ).length;
+          return (
+            <Link
+              key={b.value}
+              href={`/crm/acquereurs/pipeline${ecrireNavigation({
+                projets: selection,
+                vue,
+                signal,
+                budget: b.value,
+              })}`}
+              className="crm-rapide"
+              aria-pressed={budget === b.value}
+            >
+              {b.label}
               <span className="crm-rapide__n">{n}</span>
             </Link>
           );

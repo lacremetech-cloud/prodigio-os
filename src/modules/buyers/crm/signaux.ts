@@ -60,14 +60,17 @@ const SIGNAUX: Signal[] = [
  *
  * Une seule liste, un seul prédicat (`porteLeSignal`), une seule adresse
  * (`?signal=`) : les deux vues ne peuvent plus diverger.
- */
+ *
+ * « Non affectés » n'y figure PLUS. Il renvoyait 67 dossiers sur 75 — 89 % —
+ * parce que presque rien n'est affecté : un filtre qui garde neuf lignes sur
+ * dix ne sépare rien. Le signal reste défini et joignable par l'URL, pour le
+ * jour où l'affectation deviendra une habitude. */
 export const FILTRES_RAPIDES: { signal: Signal; label: string }[] = [
   { signal: "tous", label: "Tous" },
   { signal: "a_contacter", label: "À contacter" },
   { signal: "a_rappeler", label: "À rappeler" },
   { signal: "en_retard", label: "En retard" },
   { signal: "sans_action", label: "Sans action" },
-  { signal: "non_affectes", label: "Non affectés" },
   { signal: "fort_potentiel", label: "Fort potentiel" },
 ];
 

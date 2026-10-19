@@ -46,11 +46,15 @@ export function ecrireNavigation(params: {
   projets: readonly string[];
   vue: VueAcquereurs;
   signal?: string;
+  /** Tranche de budget. DEUX AXES : on croise « en retard » et « plus d'1 M€ »,
+      au lieu de choisir entre les deux. */
+  budget?: string;
 }): string {
   const q = new URLSearchParams();
   if (params.projets.length > 0) q.set("projets", params.projets.join(","));
   if (params.vue !== "liste") q.set("vue", params.vue);
   if (params.signal && params.signal !== "tous") q.set("signal", params.signal);
+  if (params.budget && params.budget !== "tous") q.set("budget", params.budget);
   const s = q.toString();
   return s ? `?${s}` : "";
 }

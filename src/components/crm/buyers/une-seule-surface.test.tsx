@@ -158,8 +158,14 @@ describe("3. Le commercial n'atterrit plus sur le tableau de bord", () => {
      `src/modules/crm/auth/destination-apres-connexion.test.ts` : la premiere
      version de ce correctif modifiait une fonction que personne n'appelait. */
 
+  /** La pastille de budget active, s'il y en a une. */
+  const tranche = (c: HTMLElement) =>
+    [...c.querySelectorAll('.crm-rapide[aria-pressed="true"]')]
+      .map((b) => b.textContent ?? "")
+      .find((t) => /M€|projet|réponse|budgets/.test(t));
+
   it("`?budget=plus_1m` présélectionne bien la tranche dans la liste", () => {
-    const { getByLabelText } = render(
+    const { container } = render(
       <BuyerInbox
         rows={[dossier()]}
         members={membres}
@@ -167,11 +173,11 @@ describe("3. Le commercial n'atterrit plus sur le tableau de bord", () => {
         budgetInitial="plus_1m"
       />,
     );
-    expect((getByLabelText("Budget") as HTMLSelectElement).value).toBe("plus_1m");
+    expect(tranche(container)).toContain("Plus d'1 M€");
   });
 
   it("une valeur de budget inconnue ne filtre rien", () => {
-    const { getByLabelText } = render(
+    const { container } = render(
       <BuyerInbox
         rows={[dossier()]}
         members={membres}
@@ -179,6 +185,6 @@ describe("3. Le commercial n'atterrit plus sur le tableau de bord", () => {
         budgetInitial="n_importe_quoi"
       />,
     );
-    expect((getByLabelText("Budget") as HTMLSelectElement).value).toBe("tous");
+    expect(tranche(container)).toContain("Tous budgets");
   });
 });

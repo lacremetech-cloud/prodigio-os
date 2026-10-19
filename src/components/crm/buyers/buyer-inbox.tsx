@@ -27,6 +27,11 @@ import {
 } from "@/modules/buyers/funnel/universal";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
+/* Re-exportes pour les appelants historiques (dont les tests) : le vocabulaire
+   lui-meme vit desormais dans un module, pour que la page pipeline — un
+   composant SERVEUR — puisse filtrer avec exactement les memes tranches. */
+export { BUDGET_FILTERS, budgetCorrespond } from "@/modules/buyers/crm/budget";
+import { BUDGET_FILTERS, budgetCorrespond } from "@/modules/buyers/crm/budget";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -49,57 +54,6 @@ import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/cr
  */
 type SortKey = "urgence" | "arrivee" | "arrivee_ancienne" | "activite";
 
-/**
- * LE FILTRE PORTE SUR LA RÉPONSE DONNÉE, PAS SUR UNE FOURCHETTE SAISIE.
- *
- * Il recoupait auparavant `budget_min_cents` / `budget_max_cents`, qui ne sont
- * renseignés QUE si un commercial saisit les critères de recherche à la main
- * dans la fiche. Personne ne l'a jamais fait : les 76 dépôts ont ces deux
- * bornes à NULL, et la fonction de recoupement écartait d'office toute ligne
- * sans fourchette. Le filtre ne renvoyait donc RIEN, quelle que soit la
- * tranche choisie — sans que rien à l'écran ne le dise.
- *
- * Les tranches proposées étaient en plus celles de l'ancien tunnel
- * (« < 800 k€ », « 800 k€ – 1,2 M€ »), alors que le formulaire ne pose plus
- * que trois réponses. Filtrer sur ce qui n'est plus demandé.
- *
- * Désormais on filtre sur `budgetChoice` : exactement ce que la personne a
- * répondu, et exactement ce que la colonne « Budget déclaré » affiche.
- *
- * Les libellés viennent de `BUDGET_CHOICE_COURT`, source unique : le filtre ne
- * peut donc plus annoncer autre chose que la colonne.
- *
- * Les tranches qui ne sont PLUS proposées (1–2 M€, 2–3 M€, plus de 3 M€) sont
- * repliées sur « Plus d'1 M€ » : cinq dossiers les portent encore, et ils
- * doivent rester atteignables.
- *
- * « Sans réponse » existe pour que les options COUVRENT toutes les lignes :
- * une fiche qu'aucun filtre ne peut atteindre est une fiche perdue, et c'est
- * précisément le défaut qu'on corrige ici.
- */
-export const BUDGET_FILTERS: ReadonlyArray<{
-  value: string;
-  label: string;
-  /** Valeurs retenues. `null` = toutes ; tableau vide = budget non renseigné. */
-  choix: readonly string[] | null;
-}> = [
-  { value: "tous", label: "Tous budgets", choix: null },
-  { value: "aucun_projet", label: BUDGET_CHOICE_COURT.aucun_projet, choix: ["aucun_projet"] },
-  { value: "500k_1m", label: BUDGET_CHOICE_COURT["500k_1m"], choix: ["500k_1m"] },
-  {
-    value: "plus_1m",
-    label: BUDGET_CHOICE_COURT.plus_1m,
-    choix: ["plus_1m", "1m_2m", "2m_3m", "plus_3m"],
-  },
-  { value: "sans_reponse", label: "Sans réponse", choix: [] },
-];
-
-export function budgetCorrespond(row: BuyerInboxRow, filtre: string): boolean {
-  const f = BUDGET_FILTERS.find((b) => b.value === filtre);
-  if (!f || f.choix === null) return true;
-  if (f.choix.length === 0) return !row.budgetChoice;
-  return !!row.budgetChoice && f.choix.includes(row.budgetChoice);
-}
 
 function urgency(row: BuyerInboxRow): number {
   let w = 0;
@@ -305,8 +259,6 @@ export function BuyerInbox({
                  signal="en_retard" actif={signal} onChoisir={setSignal} />
         <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter"
                  signal="sans_action" actif={signal} onChoisir={setSignal} />
-        <Counter label="Non affectés" value={counters.nonAffectes} accent="--crm-st-perdu"
-                 signal="non_affectes" actif={signal} onChoisir={setSignal} />
       </div>
 
       {/* Recherche + filtres
@@ -367,8 +319,6 @@ export function BuyerInbox({
               label: buyerStageLabels[s] ?? s,
             })),
           ]} />
-          <Select label="Budget" value={budget} onChange={setBudget}
-            options={BUDGET_FILTERS.map((b) => ({ value: b.value, label: b.label }))} />
           <Select label="Responsable" value={owner} onChange={setOwner} options={[
             { value: "tous", label: "Tous" },
             { value: "aucun", label: "Non affectés" },
@@ -393,6 +343,34 @@ export function BuyerInbox({
               onClick={() => setSignal(f.signal)}
             >
               {f.label}
+              <span className="crm-rapide__n">{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* LE BUDGET, SUR SA PROPRE RANGEE. C'etait un menu deroulant replie
+          sous « Filtrer et trier » : trois clics pour une question qu'on se
+          pose a chaque session. Deux axes separes, donc deux rangees — on
+          croise une tranche avec « en retard » au lieu de choisir entre les
+          deux. */}
+      <div className="crm-rapides">
+        {BUDGET_FILTERS.map((b) => {
+          /* Le nombre que CETTE tranche ouvrira : croise avec le signal
+             courant, mais pas avec la tranche courante — sinon toutes les
+             autres afficheraient zero. */
+          const n = rows.filter(
+            (r) => porteLeSignal(r, signal) && budgetCorrespond(r, b.value),
+          ).length;
+          return (
+            <button
+              key={b.value}
+              type="button"
+              className="crm-rapide"
+              aria-pressed={budget === b.value}
+              onClick={() => setBudget(b.value)}
+            >
+              {b.label}
               <span className="crm-rapide__n">{n}</span>
             </button>
           );

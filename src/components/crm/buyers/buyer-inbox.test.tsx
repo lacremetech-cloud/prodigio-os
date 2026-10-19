@@ -224,10 +224,17 @@ describe("filtre budget", () => {
       dossier({ name: "Sans projet", budgetChoice: "aucun_projet" } as never),
       dossier({ buyerProfileId: "bp-2", name: "Au million", budgetChoice: "plus_1m" } as never),
     ];
-    const { getByText, queryByText, getByLabelText } = render(
+    const { getByText, queryByText, getAllByRole } = render(
       <BuyerInbox rows={rows} members={membres} chargeA="2026-10-13T12:00:00.000Z" />,
     );
-    fireEvent.change(getByLabelText("Budget"), { target: { value: "plus_1m" } });
+    /* Le menu deroulant replie est devenu une rangee de pastilles : « ils ont
+       besoin de trier les 500 k – 1 M€ et les plus d'1 M€ assez vite », et
+       trois clics pour y arriver, ce n'est pas vite. */
+    const pastille = getAllByRole("button").find((b) =>
+      (b.textContent ?? "").startsWith("Plus d'1 M€"),
+    );
+    expect(pastille, "pastille « Plus d'1 M€ » introuvable").toBeTruthy();
+    fireEvent.click(pastille!);
     expect(getByText("Au million")).toBeTruthy();
     expect(queryByText("Sans projet")).toBeNull();
   });
