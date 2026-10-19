@@ -178,6 +178,9 @@ export async function submitUniversalInterestAction(
           const bien = await bienDeLaManifestation(lecteur, interetId);
           await conversionProspect({
             interestId: interetId,
+            // Pour la trace : sans client, l'envoi partirait sans laisser
+            // de trace, et c'est precisement ce qu'on vient de corriger.
+            supabase: lecteur,
             propertyName: bien?.nom ?? null,
             propertyId: bien?.id ?? null,
             sourceUrl: request.context.originUrl ?? touche?.url ?? null,

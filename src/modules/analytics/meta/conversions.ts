@@ -129,21 +129,62 @@ export function donneesDuBien(
   return Object.keys(data).length > 0 ? data : undefined;
 }
 
+/**
+ * ENREGISTRE LE RESULTAT. C'est tout l'objet de ce journal.
+ *
+ * Le resultat d'un envoi etait deja connu et type — envoye, ou non envoye
+ * avec son motif — et il etait simplement JETE par `enArrierePlan`. C'est
+ * pour cela que la conversion « rendez-vous programme » est restee cassee du
+ * 14 au 19 octobre sans que personne le voie : cinq jours pendant lesquels
+ * l'optimisation des campagnes travaillait sans ses meilleurs signaux.
+ *
+ * Le journal ne doit JAMAIS faire echouer ce qu'il observe : une visite
+ * planifiee reste planifiee, meme si sa trace ne s'ecrit pas. D'ou le
+ * `catch` muet ici, et le `exception when others` cote base.
+ */
+async function tracer(
+  supabase: SupabaseClient | null | undefined,
+  eventName: string,
+  eventId: string | null,
+  interestId: string | null,
+  resultat: MetaSendOutcome,
+): Promise<MetaSendOutcome> {
+  if (!supabase) return resultat;
+  try {
+    await supabase.rpc("crm_meta_conversion_log", {
+      p_event_name: eventName,
+      p_resultat: resultat.sent ? "envoyee" : resultat.reason,
+      p_interest_id: interestId,
+      p_event_id: eventId,
+      p_detail: null,
+    });
+  } catch {
+    /* Volontairement muet : voir ci-dessus. */
+  }
+  return resultat;
+}
+
 /** `Lead` — une demande vient d'être déposée depuis un tunnel. */
-export function conversionProspect(input: {
+export async function conversionProspect(input: {
   interestId: string;
   identity: MetaIdentity;
   sourceUrl?: string | null;
   propertyName?: string | null;
   propertyId?: string | null;
+  /** Pour la trace. Facultatif : un appelant sans client reste fonctionnel. */
+  supabase?: SupabaseClient | null;
 }): Promise<MetaSendOutcome> {
-  return envoyerConversionMeta({
+  const eventId = `lead-${input.interestId}`;
+  const envoi = await envoyerConversionMeta({
     eventName: "Lead",
-    eventId: `lead-${input.interestId}`,
+    eventId,
     eventSourceUrl: input.sourceUrl ?? null,
     identity: input.identity,
     customData: donneesDuBien(input.propertyName ?? null, input.propertyId ?? null),
   });
+  /* C'est la conversion la plus FREQUENTE : celle dont la panne couterait le
+     plus cher, et donc celle qu'il faut le plus surveiller. */
+  return tracer(input.supabase, "Lead", eventId, input.interestId, envoi);
 }
 
 /**
@@ -154,19 +195,26 @@ export async function conversionInscriptionTerminee(
   supabase: SupabaseClient,
   interestId: string,
 ): Promise<MetaSendOutcome> {
+  const eventId = `qualifie-${interestId}`;
   const contexte = await contexteDeLaManifestation(supabase, interestId);
-  if (!contexte) return { sent: false, reason: "sans_correspondance" };
-  return envoyerConversionMeta({
+  if (!contexte) {
+    return tracer(supabase, "CompleteRegistration", eventId, interestId, {
+      sent: false,
+      reason: "sans_correspondance",
+    });
+  }
+  const envoi = await envoyerConversionMeta({
     eventName: "CompleteRegistration",
     // Une manifestation n'entre en discussion qu'une fois. L'identifiant porte
     // la MANIFESTATION et non la personne : quelqu'un qui entre en discussion
     // sur deux biens produit deux conversions, une par campagne, ce qui est
     // bien ce qui s'est passé.
-    eventId: `qualifie-${interestId}`,
+    eventId,
     eventSourceUrl: contexte.sourceUrl,
     identity: contexte.identity,
     customData: contexte.customData,
   });
+  return tracer(supabase, "CompleteRegistration", eventId, interestId, envoi);
 }
 
 /** `Schedule` — une visite est programmée pour ce dossier. */
@@ -175,19 +223,26 @@ export async function conversionRendezVous(
   interestId: string,
   at: Date = new Date(),
 ): Promise<MetaSendOutcome> {
+  const eventId = `visite-${interestId}-${jour(at)}`;
   const contexte = await contexteDeLaManifestation(supabase, interestId);
-  if (!contexte) return { sent: false, reason: "sans_correspondance" };
-  return envoyerConversionMeta({
+  if (!contexte) {
+    return tracer(supabase, "Schedule", eventId, interestId, {
+      sent: false,
+      reason: "sans_correspondance",
+    });
+  }
+  const envoi = await envoyerConversionMeta({
     eventName: "Schedule",
     // Une manifestation peut revenir en visite plus tard — c'est alors une
     // vraie seconde conversion. Mais glisser la carte deux fois le même jour
     // n'en est pas une : la date entre dans l'identifiant, l'heure non.
-    eventId: `visite-${interestId}-${jour(at)}`,
+    eventId,
     eventTime: at,
     eventSourceUrl: contexte.sourceUrl,
     identity: contexte.identity,
     customData: contexte.customData,
   });
+  return tracer(supabase, "Schedule", eventId, interestId, envoi);
 }
 
 /**
