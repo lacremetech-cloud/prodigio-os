@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
+import {
+  ETAPES_ACCEPTEES_EN_ECRITURE,
+  etape as definitionEtape,
+} from "./vocabulaire";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canDecideMandate } from "@/modules/crm/auth/roles";
@@ -85,9 +89,15 @@ const stageSchema = z.object({
    * la manifestation, et c'est elle qu'on déplace.
    */
   interestId: uuid,
-  // Les étapes sensibles sont volontairement ABSENTES : elles passent par les
-  // actions métier dédiées (offre / résultat), en base comme ici.
-  stage: z.enum(["nouveau", "a_rappeler", "en_discussion", "visite", "vivier"]),
+  /* TOUTES les étapes du pipeline, lues depuis le vocabulaire commun.
+     Cette ligne portait sa propre liste, figée au vocabulaire d'avant la
+     reprise du 14 octobre : « a_contacter », « visite_planifiee »,
+     « pas_interesse » et « mauvais_numero » n'y figuraient pas. Quatre
+     colonnes sur sept refusaient donc le dépôt, en renvoyant vers une
+     « action dédiée » supprimée depuis. Le commercial lisait un refus qui
+     n'avait plus aucune raison d'être, et croyait l'outil ainsi conçu.
+     Dériver la liste du vocabulaire rend cette dérive impossible. */
+  stage: z.enum(ETAPES_ACCEPTEES_EN_ECRITURE),
 });
 
 export async function setBuyerStageAction(input: unknown): Promise<ActionResult> {
@@ -96,8 +106,9 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
   if (!parsed.success) {
     return {
       ok: false,
-      error:
-        "Cette étape ne se change pas par déplacement : utilisez l’action dédiée (offre ou résultat).",
+      /* Plus aucune étape n'est « réservée » : si l'on arrive ici, c'est que
+         la valeur est réellement inconnue, pas qu'elle est protégée. */
+      error: "Étape inconnue.",
     };
   }
   const supabase = await createSupabaseServerClient();
@@ -106,7 +117,15 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
     p_stage: parsed.data.stage,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
-  if (parsed.data.stage === "en_discussion") {
+  /* Normalisée AVANT comparaison. Les deux tests ci-dessous portaient le nom
+     brut : « visite » n'existe plus depuis la reprise — l'étape s'appelle
+     « visite_planifiee » — et la conversion « rendez-vous programmé » n'est
+     donc plus partie une seule fois depuis le 14 octobre. Une comparaison de
+     chaîne qui échoue ne lève pas : elle se tait, et c'est pour ça que
+     personne ne l'a vue. */
+  const etapeReelle = definitionEtape(parsed.data.stage).valeur;
+
+  if (etapeReelle === "en_discussion") {
     /* Conversion « inscription terminee ». Elle etait accrochee a la
        qualification, retiree de la fiche : un dossier etait qualifie deux fois,
        une fois par son etape et une fois par un statut separe. L'equivalent
@@ -114,7 +133,7 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
        conversation, et c'est une decision humaine, jamais un score. */
     enArrierePlan(() => conversionInscriptionTerminee(supabase, parsed.data.interestId));
   }
-  if (parsed.data.stage === "visite") {
+  if (etapeReelle === "visite_planifiee") {
     // Conversion « rendez-vous programme » : le fait metier, c'est l'entree en
     // visite. L'identifiant d'evenement porte la date, si bien qu'un aller-
     // retour de carte dans la meme journee ne compte pas deux fois.

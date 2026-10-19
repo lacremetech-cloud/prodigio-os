@@ -168,13 +168,35 @@ export function estEtapeConnue(v: unknown): v is EtapeAcquereur {
  * Ces correspondances sont celles de `crm_etape_v2` et `crm_qualification_v2`
  * en base, au mot près : les deux côtés doivent raconter la même histoire.
  */
-const ETAPES_RETIREES: Record<string, EtapeAcquereur> = {
+export const ETAPES_RETIREES: Record<string, EtapeAcquereur> = {
   nouveau: "a_contacter",
   visite: "visite_planifiee",
   perdu: "pas_interesse",
   gagne: "en_discussion",
   offre: "en_discussion",
 };
+
+/**
+ * Les étapes qu'une ÉCRITURE accepte : les sept actuelles, plus les anciennes,
+ * que la base traduit elle-même (`crm_etape_v2`).
+ *
+ * Cette liste existe parce que son absence a coûté cher. Le serveur gardait sa
+ * propre énumération, figée au vocabulaire d'avant la reprise du 14 octobre :
+ * quatre colonnes du pipeline sur sept refusaient le dépôt, en répondant
+ * « utilisez l'action dédiée » — une action qui n'existait plus. Deux listes
+ * pour une seule vérité, et c'est la copie oubliée qui parle à l'utilisateur.
+ *
+ * Les anciens noms restent acceptés tant que des onglets ouverts peuvent les
+ * envoyer : la base les normalise, personne ne perd sa saisie.
+ */
+export const ETAPES_ACCEPTEES_EN_ECRITURE = [
+  ...ETAPES_ACQUEREUR,
+  "nouveau",
+  "visite",
+  "perdu",
+  "gagne",
+  "offre",
+] as const;
 
 const QUALIFICATIONS_RETIREES: Record<string, QualificationAcquereur> = {
   en_reflexion: "qualifie",
