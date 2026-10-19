@@ -15,7 +15,7 @@ import {
 } from "@/modules/buyers/crm/qualification";
 import { BadgeProjet } from "./barre-projets";
 import { numeroAppelable } from "@/modules/buyers/crm/telephone";
-import { formatDateTime } from "@/modules/crm/format";
+import { formatDateTime, formatJour } from "@/modules/crm/format";
 import {
   buyerStageLabels,
   buyerStageVisual,
@@ -39,7 +39,15 @@ import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/cr
  * porte une icône et un libellé.
  */
 
-type SortKey = "urgence" | "arrivee" | "activite";
+/**
+ * `arrivee` va du plus RECENT au plus ancien, `arrivee_ancienne` l'inverse.
+ *
+ * Les deux servent, et pas aux memes moments : le plus recent d'abord pour
+ * traiter ce qui vient de tomber, le plus ancien d'abord pour retrouver ceux
+ * qui attendent depuis trois semaines. Un seul sens obligeait a lire la liste
+ * a l'envers de tete.
+ */
+type SortKey = "urgence" | "arrivee" | "arrivee_ancienne" | "activite";
 
 /**
  * LE FILTRE PORTE SUR LA RÉPONSE DONNÉE, PAS SUR UNE FOURCHETTE SAISIE.
@@ -216,6 +224,8 @@ export function BuyerInbox({
       sorted.sort((a, b) => urgency(b) - urgency(a) || (b.bestScore ?? 0) - (a.bestScore ?? 0));
     } else if (sort === "arrivee") {
       sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    } else if (sort === "arrivee_ancienne") {
+      sorted.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     } else {
       sorted.sort((a, b) => (b.lastInterestAt ?? "").localeCompare(a.lastInterestAt ?? ""));
     }
@@ -333,7 +343,10 @@ export function BuyerInbox({
               onChange={(e) => setSort(e.target.value as SortKey)}
             >
               <option value="urgence">Urgence</option>
-              <option value="arrivee">Date d’arrivée</option>
+              {/* Le SENS est ecrit. « Date d'arrivee » seul n'indiquait pas
+                  lequel des deux bouts arrivait en premier. */}
+              <option value="arrivee">Arrivée — plus récente d’abord</option>
+              <option value="arrivee_ancienne">Arrivée — plus ancienne d’abord</option>
               <option value="activite">Dernière activité</option>
             </select>
           </label>
@@ -703,6 +716,16 @@ function BuyerRow({
             </span>
           ) : null}
           {row.overdue ? <Chip variant="danger">En retard</Chip> : null}
+          {/* QUAND LE LEAD EST ARRIVE. Posee sur la ligne des reperes de
+              projet, qui a de la place libre, plutot que dans une huitieme
+              colonne : la grille en compte deja sept a partir de 1024 px, et
+              « Prochaine action » y affiche « 24 oct. 2026, 10:00 » — la plus
+              serree des sept. Ici, aucune colonne ne retrecit, la hauteur de
+              ligne ne bouge pas, et la date reste visible en pile sur
+              telephone, ou la grille n'existe plus. */}
+          <span className="text-[12.5px] text-[var(--crm-text-faint)]">
+            Arrivé le {formatJour(row.createdAt)}
+          </span>
         </div>
       </div>
 

@@ -126,3 +126,23 @@ export function formatDateCourte(iso: string | null | undefined): string {
     timeZone: FUSEAU_AGENCE,
   }).format(d);
 }
+
+/**
+ * Un JOUR, sans l'heure : « 17 oct. 2026 ».
+ *
+ * `formatDateCourte` porte l'heure et tait l'année — bon pour un rappel de la
+ * semaine, mauvais pour la date d'arrivée d'un lead, qu'on lit en balayant une
+ * liste et qu'on compare à des semaines de distance. L'heure y est du bruit,
+ * l'année devient vite nécessaire.
+ */
+export function formatJour(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: FUSEAU_AGENCE,
+  }).format(d);
+}
