@@ -204,3 +204,104 @@ describe("la suite à donner porte l'étape, sans la redemander", () => {
     expect(envoye.activite).toBeNull();
   });
 });
+
+/**
+ * LES TROIS PARCOURS RÉELS D'ANTOINE.
+ *
+ * Le critère de réussite tient en une phrase : voir immédiatement qui
+ * appeler, ce qui s'est dit et ce qu'il faut faire, puis enregistrer le
+ * résultat SANS renseigner deux fois la même décision. Ces trois tests
+ * l'exigent, et comptent les sauvegardes.
+ */
+describe("parcours 1 — premier appel, sans réponse", () => {
+  it("un geste, une sauvegarde : l'activité, le rappel et l'étape partent ensemble", async () => {
+    const { getByRole } = monter(dossier({ stage: "a_contacter" }));
+
+    fireEvent.click(getByRole("button", { name: "Appel — sans réponse" }));
+    fireEvent.click(getByRole("button", { name: "Enregistrer" }));
+
+    await vi.waitFor(() => expect(enregistre).toHaveBeenCalledTimes(1));
+    const e = enregistre.mock.calls[0]?.[0] as Charge;
+    expect(e.activite).toBe("appel_sans_reponse");
+    expect(e.nextActionKind).toBe("rappel"); // proposé, pas imposé
+    expect(e.nextActionAt).toBeTruthy();
+    expect(e.stage).toBe("a_rappeler"); // jamais choisi à la main
+  });
+});
+
+describe("parcours 2 — rappel honoré, échange, puis visite", () => {
+  it("solde la tâche qui a amené le dossier ET programme la visite, en une fois", async () => {
+    const { getByRole, getByLabelText } = monter(
+      dossier({
+        stage: "a_rappeler",
+        nextActionId: "t-9",
+        nextActionTitle: "Rappeler",
+        nextActionAt: "2026-10-19T08:00:00.000Z",
+      }),
+    );
+
+    fireEvent.click(getByRole("button", { name: "Appel — échange effectué" }));
+    fireEvent.click(getByRole("button", { name: "Planifier une visite" }));
+    fireEvent.change(getByLabelText(/Bien concerné/), { target: { value: "int-1" } });
+    fireEvent.click(getByRole("button", { name: "Enregistrer" }));
+
+    await vi.waitFor(() => expect(enregistre).toHaveBeenCalledTimes(1));
+    const e = enregistre.mock.calls[0]?.[0] as Charge;
+    expect(e.activite).toBe("appel_echange");
+    expect(e.nextActionKind).toBe("visite");
+    expect(e.interestId).toBe("int-1"); // une visite se rattache à un bien
+    expect(e.stage).toBe("visite_planifiee");
+    expect(e.completeTaskId).toBe("t-9"); // la tâche honorée est soldée
+  });
+
+  it("annonce la tâche qu'il va solder, avant de la solder", () => {
+    const { getByRole, getByText } = monter(
+      dossier({ nextActionId: "t-9", nextActionTitle: "Rappeler", nextActionAt: "2026-10-19T08:00:00.000Z" }),
+    );
+    fireEvent.click(getByRole("button", { name: "Appel — échange effectué" }));
+    expect(getByText(/« Rappeler » sera marquée faite/)).toBeTruthy();
+  });
+});
+
+describe("parcours 3 — refus après échange", () => {
+  it("écarte le dossier avec son motif, sans rien programmer", async () => {
+    const { getByRole, getByLabelText } = monter(dossier({ stage: "a_rappeler" }));
+
+    fireEvent.click(getByRole("button", { name: "Appel — échange effectué" }));
+
+    fireEvent.click(getByRole("button", { name: /Qualification/ }));
+    fireEvent.click(within(getByRole("listbox")).getByRole("option", { name: /Non qualifié/ }));
+    const motif = getByLabelText("Motif") as HTMLSelectElement;
+    fireEvent.change(motif, { target: { value: motif.options[1]?.value } });
+
+    fireEvent.click(getByRole("button", { name: /Étape/ }));
+    fireEvent.click(within(getByRole("listbox")).getByRole("option", { name: /Pas intéressé/ }));
+
+    fireEvent.click(getByRole("button", { name: "Enregistrer" }));
+
+    await vi.waitFor(() => expect(enregistre).toHaveBeenCalledTimes(1));
+    const e = enregistre.mock.calls[0]?.[0] as Charge;
+    expect(e.qualification).toBe("non_qualifie");
+    expect(e.qualificationReason).toBeTruthy(); // un refus se motive
+    expect(e.stage).toBe("pas_interesse");
+    expect(e.nextActionKind).toBeNull(); // rien à planifier
+  });
+});
+
+describe("« Rien à planifier » n'efface rien", () => {
+  it("ne solde PAS un rappel existant quand on corrige seulement la qualification", async () => {
+    // Le rappel était soldé à CHAQUE sauvegarde. Corriger une étiquette
+    // faisait disparaître un rappel qu'on n'avait pas honoré.
+    const { getByRole } = monter(
+      dossier({ nextActionId: "t-9", nextActionTitle: "Rappeler", nextActionAt: "2026-10-19T08:00:00.000Z" }),
+    );
+    fireEvent.click(getByRole("button", { name: /Qualification/ }));
+    fireEvent.click(within(getByRole("listbox")).getByRole("option", { name: /Gros potentiel/ }));
+    fireEvent.click(getByRole("button", { name: "Enregistrer" }));
+
+    await vi.waitFor(() => expect(enregistre).toHaveBeenCalled());
+    const e = enregistre.mock.calls[0]?.[0] as Charge;
+    expect(e.completeTaskId).toBeNull();
+    expect(e.nextActionKind).toBeNull();
+  });
+});

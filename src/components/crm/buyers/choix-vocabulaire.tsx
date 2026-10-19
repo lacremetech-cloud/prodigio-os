@@ -333,11 +333,17 @@ export function dansNJours(n: number): string {
 
 export type TypeProchaineAction = "aucune" | "rappel" | "visite" | "tache";
 
+/**
+ * « Aucune » ne disait pas ce qu'elle faisait. Elle peut se lire « aucune
+ * action n'a eu lieu » aussi bien que « je ne programme rien » — et devant un
+ * dossier qui porte déjà un rappel, l'ambiguïté fait craindre qu'on l'efface.
+ * « Rien à planifier » ne dit qu'une chose : on n'AJOUTE pas de tâche.
+ */
 export const LABELS_PROCHAINE_ACTION: Record<TypeProchaineAction, string> = {
-  aucune: "Aucune",
+  aucune: "Rien à planifier",
   rappel: "Rappeler",
-  visite: "Visite",
-  tache: "Tâche",
+  visite: "Planifier une visite",
+  tache: "Autre tâche",
 };
 
 /**

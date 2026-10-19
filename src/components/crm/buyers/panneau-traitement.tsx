@@ -259,8 +259,13 @@ export function PanneauTraitement({
               ? "Rappeler"
               : titreAction.trim() || null,
         nextActionAssignee: responsable,
-        // Traiter un dossier solde le rappel qui l'avait amené dans la file.
-        completeTaskId: row.nextActionId,
+        /* Solder le rappel qui a amené ce dossier dans la file — MAIS
+           seulement si un échange a réellement eu lieu.
+           Il était soldé à CHAQUE sauvegarde : corriger une qualification,
+           ou rattraper une étape, faisait disparaître le rappel sans que rien
+           ne le dise. Un rappel qu'on n'a pas honoré ne doit pas s'effacer
+           parce qu'on a touché au dossier pour autre chose. */
+        completeTaskId: activite ? row.nextActionId : null,
       }),
     );
 
@@ -597,6 +602,13 @@ export function PanneauTraitement({
             {etape === null && etapeAutomatique() ? (
               <p className="crm-bloc__deduit">
                 L’étape passera à « {etapeLabel(etapeAutomatique()!)} ».
+              </p>
+            ) : null}
+            {/* Ce qui va être soldé, annoncé avant de l'être : une tâche qui
+                disparaît en silence se lit comme une tâche perdue. */}
+            {activite && row.nextActionId ? (
+              <p className="crm-bloc__deduit">
+                « {row.nextActionTitle ?? "La tâche en cours"} » sera marquée faite.
               </p>
             ) : null}
           </div>
