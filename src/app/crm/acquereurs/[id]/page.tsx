@@ -54,6 +54,7 @@ import {
 import { SuiviCommercial } from "@/components/crm/buyers/suivi-commercial";
 import { changementsLisibles } from "@/modules/buyers/crm/journal";
 import { etatFigePertinent } from "@/modules/buyers/crm/reprise";
+import { budgetARepeter } from "@/modules/buyers/crm/budget-affichage";
 
 export const metadata: Metadata = { title: "Fiche acquéreur" };
 
@@ -565,10 +566,19 @@ export default async function BuyerProfilePage({
                         : ""}
                     </p>
 
-                    {/* La reponse au questionnaire. Le budget est mis en avant :
-                        c'est la seule question posee par le formulaire, et la
-                        premiere chose qu'on veut savoir avant d'appeler. */}
-                    <ReponseBudget choix={i.budget_choice} />
+                    {/* Le budget n'est PLUS repete ici. L'en-tete de la fiche
+                        le porte deja, et le voir deux fois — trois, pour qui a
+                        trois projets — n'apprenait rien.
+
+                        Sauf quand il DIFFERE de celui de l'en-tete. Ca arrive :
+                        Christiane DORAT a rempli trois formulaires le meme
+                        jour, « 500 000 € – 1 M€ » puis « Plus d'1 M€ » deux
+                        fois. L'en-tete montre sa reponse la plus recente ; le
+                        fait qu'elle ait d'abord annonce moins se lit ici, et
+                        nulle part ailleurs. */}
+                    {budgetARepeter(i.budget_choice, choixBudget) ? (
+                      <ReponseBudget choix={i.budget_choice} surCeBien />
+                    ) : null}
 
                     {/* Les autres champs ne sont renseignes que par l'ancien
                         formulaire. Les afficher vides alignait huit tirets qui
@@ -685,7 +695,14 @@ export default async function BuyerProfilePage({
  * bien en base, dans `budget_choice`. On rappelle aussi la question posee :
  * « pas de projet » est une reponse pleine, pas une absence de reponse.
  */
-function ReponseBudget({ choix }: { choix: string | null }) {
+function ReponseBudget({
+  choix,
+  surCeBien = false,
+}: {
+  choix: string | null;
+  /** Vrai quand la reponse de ce bien DIFFERE de celle portee par l'en-tete. */
+  surCeBien?: boolean;
+}) {
   if (!choix) return null;
   const libelle = BUDGET_CHOICE_LABELS[choix as BuyerBudgetChoice] ?? choix;
   const sansProjet = choix === "aucun_projet";
@@ -698,7 +715,9 @@ function ReponseBudget({ choix }: { choix: string | null }) {
           : "var(--crm-st-signe)",
       } as CSSProperties}
     >
-      <p className="crm-label">{BUDGET_QUESTION}</p>
+      <p className="crm-label">
+        {surCeBien ? `Sur ce bien — ${BUDGET_QUESTION}` : BUDGET_QUESTION}
+      </p>
       <p
         className="crm-wrap mt-1 text-[17px] font-bold leading-snug"
         style={{
