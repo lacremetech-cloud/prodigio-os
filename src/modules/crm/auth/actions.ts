@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/config";
+import { safeRedirect } from "./destination";
 
 /**
  * Actions serveur d'authentification interne (Supabase Auth, e-mail + mot de
@@ -20,12 +21,6 @@ const signInSchema = z.object({
 export interface SignInState {
   ok: boolean;
   error?: string;
-}
-
-/** Chemin de redirection sûr : uniquement interne au CRM. */
-function safeRedirect(target: string | undefined): string {
-  if (target && target.startsWith("/crm")) return target;
-  return "/crm";
 }
 
 export async function signInAction(
@@ -60,7 +55,19 @@ export async function signInAction(
     return { ok: false, error: "Identifiants incorrects ou accès non autorisé." };
   }
 
-  redirect(safeRedirect(parsed.data.redirectTo));
+  /* Les rôles, lus APRÈS la connexion : le client porte désormais la session,
+     donc `crm_active_roles` répond pour la bonne personne. Une lecture qui
+     échoue ne doit pas empêcher d'entrer — on retombe sur le tableau de bord,
+     qui est ouvert à tous les rôles. */
+  let roles: string[] = [];
+  try {
+    const { data } = await supabase.rpc("crm_active_roles");
+    if (Array.isArray(data)) roles = data as string[];
+  } catch {
+    roles = [];
+  }
+
+  redirect(safeRedirect(parsed.data.redirectTo, roles));
 }
 
 export async function signOutAction(): Promise<void> {

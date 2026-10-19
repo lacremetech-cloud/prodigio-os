@@ -5,7 +5,6 @@ import { BuyerInbox } from "./buyer-inbox";
 import { BuyerKanbanBoard } from "./buyer-kanban";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import type { BuyerKanbanCard } from "@/modules/buyers/crm/pipeline";
-import { roleHome } from "@/modules/crm/auth/roles";
 
 /**
  * TROIS POINTS D'UN RETOUR CLIENT FILME, TENUS PAR DES TESTS.
@@ -155,23 +154,9 @@ describe("2. Le même panneau sur le pipeline", () => {
 
 // ===========================================================================
 describe("3. Le commercial n'atterrit plus sur le tableau de bord", () => {
-  it("il arrive sur ses leads, filtrés au-dessus d'un million", () => {
-    expect(roleHome(["commercial"])).toBe("/crm/acquereurs?budget=plus_1m");
-  });
-
-  it("les autres rôles gardent le tableau de bord", () => {
-    expect(roleHome(["administrateur"])).toBe("/crm");
-    expect(roleHome(["manager"])).toBe("/crm");
-    expect(roleHome(["setter"])).toBe("/crm");
-    expect(roleHome(["agent_immobilier"])).toBe("/crm");
-    // Un commercial qui est AUSSI setter opère : il garde le tableau de bord.
-    expect(roleHome(["commercial", "setter"])).toBe("/crm");
-  });
-
-  it("le tableau de bord reste atteignable : ce n'est pas une suppression", () => {
-    // `/crm` n'est redirigé par personne — seule la DESTINATION change.
-    expect(roleHome(["commercial"])).not.toBe("/acces");
-  });
+  /* La destination elle-même, et surtout son CÂBLAGE, sont tenus par
+     `src/modules/crm/auth/destination-apres-connexion.test.ts` : la premiere
+     version de ce correctif modifiait une fonction que personne n'appelait. */
 
   it("`?budget=plus_1m` présélectionne bien la tranche dans la liste", () => {
     const { getByLabelText } = render(

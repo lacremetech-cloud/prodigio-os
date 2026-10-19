@@ -27,10 +27,14 @@ export default async function ConnexionPage({
   searchParams: Promise<{ redirect?: string; error?: string }>;
 }) {
   const params = await searchParams;
+  /* `undefined` et non « /crm » : SANS destination explicite, c'est le role
+     qui decide ou l'on atterrit (voir `signInAction`). Forcer « /crm » ici
+     revenait a envoyer tout le monde sur le tableau de bord, y compris le
+     commercial pour qui il n'a pas d'utilite quotidienne. */
   const redirectTo =
     typeof params.redirect === "string" && params.redirect.startsWith("/crm")
       ? params.redirect
-      : "/crm";
+      : undefined;
   const accessError = params.error === "acces";
 
   return (

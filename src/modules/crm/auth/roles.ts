@@ -62,7 +62,12 @@ export const ROLE_PERMISSIONS: Record<CrmRole, string> = {
 };
 
 /**
- * Destination après connexion / acceptation, selon le rôle le plus fort détenu.
+ * Destination après connexion, selon le rôle le plus fort détenu.
+ *
+ * Elle l'annonçait déjà, mais sans que personne ne l'appelle : la page de
+ * connexion et `signInAction` renvoyaient tous deux « /crm » en dur. Une
+ * fonction morte dont le commentaire décrivait une intention jamais tenue.
+ * `signInAction` s'en sert désormais vraiment.
  *
  * Le commercial n'atterrit plus sur le tableau de bord. Il le disait lui-même :
  * « le tableau de bord, je le trouve sans utilité de gestion des leads au
