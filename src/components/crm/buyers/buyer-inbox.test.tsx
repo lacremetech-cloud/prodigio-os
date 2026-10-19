@@ -101,16 +101,22 @@ describe("BuyerInbox", () => {
   // Sans acquéreur du tout, inviter à « ajuster les filtres » envoie le
   // commercial chercher une panne qui n'existe pas.
   it("distingue « rien à afficher » de « les filtres cachent tout »", () => {
-    const { getByText, getByLabelText } = render(
+    const { getByText, getAllByText, getByLabelText } = render(
       <BuyerInbox
         rows={[dossier({ stage: "nouveau" })]}
         members={membres}
         chargeA="2026-10-13T12:00:00.000Z"
       />,
     );
-    fireEvent.change(getByLabelText("Étape"), { target: { value: "signe" } });
+    /* « vivier » : une etape REELLE, qui existe dans le menu. « signe »
+       n'en est pas une, et le `<select>` retombait alors a "" — ce qui
+       faisait annoncer un filtre sans nom. */
+    fireEvent.change(getByLabelText("Étape"), { target: { value: "vivier" } });
     expect(getByText("Aucun dossier acquéreur ne correspond.")).toBeTruthy();
-    expect(getByText("Ajustez la recherche ou les filtres.")).toBeTruthy();
+    /* L'indication NOMME ce qui filtre, aux DEUX endroits : la ligne de
+       compte et l'ecran vide. « Ajustez la recherche ou les filtres »
+       laissait chercher lequel des cinq etait en cause. */
+    expect(getAllByText(/Filtré par étape « Vivier »/).length).toBe(2);
   });
 
   /**

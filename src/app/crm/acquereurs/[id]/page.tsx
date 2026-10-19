@@ -55,6 +55,7 @@ import { SuiviCommercial } from "@/components/crm/buyers/suivi-commercial";
 import { changementsLisibles } from "@/modules/buyers/crm/journal";
 import { etatFigePertinent } from "@/modules/buyers/crm/reprise";
 import { budgetARepeter } from "@/modules/buyers/crm/budget-affichage";
+import { libelleBudget } from "@/modules/buyers/crm/budget";
 
 export const metadata: Metadata = { title: "Fiche acquéreur" };
 
@@ -182,10 +183,16 @@ export default async function BuyerProfilePage({
      rien n'est invente pour remplir la ligne. */
   const premierInteret = interests[0];
   const resumeBien = premierInteret?.propertyLabel ?? null;
-  const choixBudget = premierInteret?.interest.budget_choice ?? null;
-  const resumeBudget = choixBudget
-    ? BUDGET_CHOICE_COURT[choixBudget as BuyerBudgetChoice] ?? choixBudget
-    : null;
+  /* LE PLUS RECENT QUI EXISTE, pas celui du dernier depot : un depot peut ne
+     porter aucun budget, et l'en-tete affichait alors « Non renseigne » alors
+     que la personne avait repondu douze minutes plus tot. */
+  const choixBudget = interests.find((i) => i.interest.budget_choice)?.interest.budget_choice ?? null;
+  const resumeBudget = libelleBudget({
+    budgetChoice: choixBudget,
+    budgetBand: choixBudget
+      ? null
+      : (interests.find((i) => i.interest.budget_band)?.interest.budget_band ?? null),
+  });
   // Prochaine action et retard : calcules par la requete (l'heure courante
   // n'a rien a faire dans le rendu).
   const prochaine = detail.nextTask;

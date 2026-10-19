@@ -78,8 +78,23 @@ export interface BuyerListItem {
   /** Fourchette de budget recherchée (centimes). `null` = borne non renseignée. */
   budgetMinCents: number | null;
   budgetMaxCents: number | null;
-  /** Réponse au questionnaire du dernier intérêt (`budget_choice`). */
+  /**
+   * Le budget declare le plus RECENT QUI EXISTE, et non celui du dernier
+   * depot. Elyette GUILLOT a depose deux fois en douze minutes : le second
+   * depot n'avait pas de budget, et la liste affichait « Non renseigne »
+   * alors qu'elle avait repondu « 500 000 € – 1 M€ » douze minutes plus tot.
+   */
   budgetChoice: string | null;
+  /**
+   * L'ancienne colonne, en dernier recours.
+   *
+   * Un seul interet sur 84 la porte — celui d'Elyette, avec « 800k_1_2m ».
+   * On ne la CONVERTIT pas vers les trois reponses actuelles : « 800 k€ –
+   * 1,2 M€ » chevauche le million, et rapprocher les deux transformerait la
+   * reponse. On l'affiche telle qu'elle a ete donnee, plutot que de pretendre
+   * qu'il n'y a rien.
+   */
+  budgetBand: string | null;
   /**
    * Jugement commercial sur CE projet. Il ne se déduit de rien : ni du budget
    * déclaré, ni d'un appel sans réponse. C'est lui — et lui seul — qui colore
@@ -374,7 +389,12 @@ export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerList
       overdue: Boolean(nextTask?.due_at && new Date(nextTask.due_at).getTime() < now),
       noNextAction: nextTask == null,
       newInterest: profileInterests.some((i) => i.review_status === "nouveau"),
-      budgetChoice: principale?.budget_choice ?? null,
+      /* Le plus recent QUI EXISTE : `principale` est le dernier depot, et un
+         depot peut ne pas porter de budget. */
+      budgetChoice: parDate.find((i) => i.budget_choice)?.budget_choice ?? null,
+      budgetBand: parDate.find((i) => i.budget_choice)
+        ? null
+        : (parDate.find((i) => i.budget_band)?.budget_band ?? null),
       callAttempts: activites.reduce((n, a) => n + (a.call_attempts ?? 0), 0),
       lastCallAt: plusRecent((a) => a.last_call_at, (a) => a.last_call_at),
       lastCallOutcome: plusRecent((a) => a.last_call_at, (a) => a.last_call_outcome),

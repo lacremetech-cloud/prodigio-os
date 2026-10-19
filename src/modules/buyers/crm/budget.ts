@@ -1,5 +1,6 @@
 import type { BuyerInboxRow } from "./queries";
-import { BUDGET_CHOICE_COURT } from "@/modules/buyers/funnel/universal";
+import { BUDGET_CHOICE_COURT, type BuyerBudgetChoice } from "@/modules/buyers/funnel/universal";
+import { budgetBandLabels } from "@/modules/buyers/funnel/content";
 
 /**
  * LES TRANCHES DE BUDGET, ET LE PREDICAT QUI LES APPLIQUE.
@@ -60,4 +61,29 @@ export function budgetCorrespond(row: BuyerInboxRow, filtre: string): boolean {
   if (!f || f.choix === null) return true;
   if (f.choix.length === 0) return !row.budgetChoice;
   return !!row.budgetChoice && f.choix.includes(row.budgetChoice);
+}
+
+/**
+ * CE QU'ON AFFICHE DANS LA COLONNE « BUDGET DECLARE ».
+ *
+ * Trois cas, dans cet ordre :
+ *   1. la reponse au formulaire actuel, forme courte ;
+ *   2. a defaut, l'ancienne tranche, avec SON libelle — pas converti ;
+ *   3. a defaut, rien.
+ *
+ * La conversion est refusee a dessein : « 800 k€ – 1,2 M€ » chevauche le
+ * million, le ranger d'un cote ou de l'autre inventerait une reponse que
+ * personne n'a donnee. Mieux vaut afficher ce qui a ete dit.
+ */
+export function libelleBudget(row: {
+  budgetChoice: string | null;
+  budgetBand?: string | null;
+}): string | null {
+  if (row.budgetChoice) {
+    return BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice;
+  }
+  if (row.budgetBand) {
+    return budgetBandLabels[row.budgetBand as keyof typeof budgetBandLabels] ?? row.budgetBand;
+  }
+  return null;
 }

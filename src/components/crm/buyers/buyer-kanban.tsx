@@ -29,10 +29,7 @@ import {
   QUALIFICATION_BADGE,
   QUALIFICATION_LABELS,
 } from "@/modules/buyers/crm/qualification";
-import {
-  BUDGET_CHOICE_COURT,
-  type BuyerBudgetChoice,
-} from "@/modules/buyers/funnel/universal";
+import { libelleBudget } from "@/modules/buyers/crm/budget";
 
 /**
  * Kanban Acquéreurs — mêmes standards que le Kanban Mandats :
@@ -482,9 +479,7 @@ function Card({
   const targets = movableBuyerStages(currentStage);
   // Forme COURTE, comme en liste : le libelle long est la question telle
   // qu'elle a ete posee, et il tient sur deux lignes dans une carte.
-  const budget = row?.budgetChoice
-    ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
-    : null;
+  const budget = row ? libelleBudget(row) : null;
   return (
     <div
       className={`crm-kanban-card flex flex-col gap-2 p-3 ${

@@ -32,7 +32,7 @@ import {
 import { ContactRapide } from "./contact-rapide";
 import { useHauteurVisible } from "./hauteur-visible";
 import { BadgeProjet } from "./barre-projets";
-import { BUDGET_CHOICE_COURT, type BuyerBudgetChoice } from "@/modules/buyers/funnel/universal";
+import { libelleBudget } from "@/modules/buyers/crm/budget";
 
 /**
  * Le panneau de traitement : un appel, une saisie, au suivant.
@@ -377,9 +377,7 @@ export function PanneauTraitement({
           .map((id) => membres.find((m) => m.userId === id)?.name)
           .filter(Boolean)
           .join(", ") || "un collègue");
-  const budget = row.budgetChoice
-    ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
-    : null;
+  const budget = libelleBudget(row);
 
   return (
     <aside className="crm-panneau" aria-label={`Traitement de ${row.name}`}>

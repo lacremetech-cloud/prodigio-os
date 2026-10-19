@@ -31,7 +31,7 @@ import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/cr
    lui-meme vit desormais dans un module, pour que la page pipeline — un
    composant SERVEUR — puisse filtrer avec exactement les memes tranches. */
 export { BUDGET_FILTERS, budgetCorrespond } from "@/modules/buyers/crm/budget";
-import { BUDGET_FILTERS, budgetCorrespond } from "@/modules/buyers/crm/budget";
+import { BUDGET_FILTERS, budgetCorrespond, libelleBudget } from "@/modules/buyers/crm/budget";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -146,7 +146,7 @@ export function BuyerInbox({
   /* Un filtre replie qui filtre encore est un piege : on cherche un nom, il
      n'apparait pas, et rien a l'ecran ne dit pourquoi. La pastille porte donc
      le nombre de filtres actifs meme quand le bloc est ferme. */
-  const filtresActifs =
+  const filtresReplies =
     (stage !== "tous" ? 1 : 0) + (budget !== "tous" ? 1 : 0) + (owner !== "tous" ? 1 : 0);
 
 
@@ -170,7 +170,7 @@ export function BuyerInbox({
         if (!hay.includes(needle)) return false;
       }
       if (stage !== "tous" && r.stage !== stage) return false;
-      if (owner !== "tous") {
+      if (owner && owner !== "tous") {
         if (owner === "aucun" ? !r.unassigned : !r.assigneeIds.includes(owner)) return false;
       }
       if (budget !== "tous" && !budgetCorrespond(r, budget)) return false;
@@ -201,6 +201,50 @@ export function BuyerInbox({
      — et un rendu non reproductible, que React refuse à juste titre. */
   const maintenant = Date.parse(chargeA);
   const file = useMemo(() => fileDAppels(visible, maintenant), [visible, maintenant]);
+
+  /**
+   * LES CINQ FILTRES, NOMMES, ET LEUR BOUTON DE SORTIE.
+   *
+   * L'ecran pouvait se vider sans qu'aucun des cinq ne se designe : on lisait
+   * « Aucun dossier acquereur ne correspond » et « Ajustez la recherche ou les
+   * filtres », ce qui se lit comme une panne plutot que comme un filtre.
+   */
+  const filtresActifs = useMemo(() => {
+    /* Une valeur VIDE n'est pas un filtre. Un `<select>` retombe a "" quand
+       aucune de ses options ne correspond, et on annonçait « etape «  » » —
+       un filtre sans nom, encore moins utile que pas de filtre du tout. */
+    const actifs: { libelle: string; retirer: () => void }[] = [];
+    if (signal && signal !== "tous") {
+      const f = FILTRES_RAPIDES.find((x) => x.signal === signal);
+      actifs.push({ libelle: `« ${f?.label ?? signal} »`, retirer: () => setSignal("tous") });
+    }
+    if (budget && budget !== "tous") {
+      const b = BUDGET_FILTERS.find((x) => x.value === budget);
+      actifs.push({ libelle: `budget « ${b?.label ?? budget} »`, retirer: () => setBudget("tous") });
+    }
+    if (stage && stage !== "tous") {
+      actifs.push({
+        /* `?? stage` et non `|| stage` : un libelle absent se remplace par la
+           valeur brute, qui dit au moins quelque chose. */
+        libelle: `étape « ${buyerStageLabels[stage] ?? stage} »`,
+        retirer: () => setStage("tous"),
+      });
+    }
+    if (owner !== "tous") {
+      const nom =
+        owner === "aucun" ? "Non affecté" : (members.find((m) => m.userId === owner)?.name ?? owner);
+      actifs.push({ libelle: `responsable « ${nom} »`, retirer: () => setOwner("tous") });
+    }
+    if (search.trim()) {
+      actifs.push({ libelle: `recherche « ${search.trim()} »`, retirer: () => setSearch("") });
+    }
+    return actifs;
+  }, [signal, budget, stage, owner, search, members]);
+
+  /** Revenir a la liste entiere d'un seul geste. */
+  function toutRetirer() {
+    for (const f of filtresActifs) f.retirer();
+  }
 
   const rowOuverte = useMemo(
     () => visible.find((r) => (r.interestId ?? r.buyerProfileId) === ouvert) ?? null,
@@ -288,7 +332,9 @@ export function BuyerInbox({
             onClick={() => setFiltresDeplies((v) => !v)}
           >
             {filtresDeplies ? "Masquer les filtres" : "Filtrer et trier"}
-            {filtresActifs > 0 ? <span className="crm-replier__pastille">{filtresActifs}</span> : null}
+            {filtresReplies > 0 ? (
+              <span className="crm-replier__pastille">{filtresReplies}</span>
+            ) : null}
           </button>
           <label
             className={`${filtresDeplies ? "flex" : "hidden sm:flex"} w-full min-w-0 items-center gap-1.5 sm:w-auto`}
@@ -396,18 +442,25 @@ export function BuyerInbox({
         </div>
       ) : null}
 
+      {/* CE QUI FILTRE EST NOMME, ET SE RETIRE.
+          La ligne ne proposait « Retirer le filtre » que pour le signal : si
+          c'etait le budget, l'etape, le responsable ou la recherche qui vidait
+          l'ecran, il n'y avait aucune porte de sortie — et rien ne disait
+          lequel des cinq etait en cause. Un ecran vide sans raison visible se
+          lit comme une panne. */}
       <p className="text-xs text-[var(--crm-text-dim)]" role="status" aria-live="polite">
         {visible.length} dossier{visible.length > 1 ? "s" : ""} affiché
         {visible.length > 1 ? "s" : ""} sur {rows.length}.
-        {signal !== "tous" ? (
+        {filtresActifs.length > 0 ? (
           <>
             {" "}
+            Filtré par {filtresActifs.map((f) => f.libelle).join(" · ")}.{" "}
             <button
               type="button"
-              onClick={() => setSignal("tous")}
+              onClick={toutRetirer}
               className="font-semibold text-[var(--crm-univers)] underline underline-offset-2"
             >
-              Retirer le filtre
+              {filtresActifs.length > 1 ? "Tout retirer" : "Retirer le filtre"}
             </button>
           </>
         ) : null}
@@ -425,7 +478,9 @@ export function BuyerInbox({
           hint={
             rows.length === 0
               ? "Les acquéreurs apparaissent ici dès leur première manifestation d’intérêt sur une page publique."
-              : "Ajustez la recherche ou les filtres."
+              : filtresActifs.length > 0
+                ? `Filtré par ${filtresActifs.map((f) => f.libelle).join(" · ")}. Retirez le filtre pour revoir les ${rows.length} dossiers.`
+                : "Ajustez la recherche ou les filtres."
           }
           icon="◉"
         />
@@ -617,9 +672,7 @@ function BuyerRow({
   const appelable = numeroAppelable(row.phoneMasked);
   // Forme COURTE en liste : le libelle long est la question telle qu'elle a ete
   // posee, il passait sur deux lignes et poussait tout le reste.
-  const budget = row.budgetChoice
-    ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
-    : null;
+  const budget = libelleBudget(row);
 
   /* La TEINTE de la ligne dit la qualification, et rien d'autre. Elle disait
      auparavant « en retard » : un gros potentiel qui n'avait pas decroche

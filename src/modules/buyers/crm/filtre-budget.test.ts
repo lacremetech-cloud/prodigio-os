@@ -100,3 +100,57 @@ describe("les deux vues proposent les mêmes tranches", () => {
     expect(BUDGET_FILTERS.length).toBeGreaterThanOrEqual(4);
   });
 });
+
+describe("le budget affiché est le plus récent QUI EXISTE", () => {
+  /**
+   * « Pourquoi il n'y a aucune information pour elle ? »
+   *
+   * Elyette GUILLOT a déposé deux fois en douze minutes. Le dépôt de 13 h 28
+   * portait « 500 000 € – 1 M€ » ; celui de 13 h 40 n'avait pas de budget du
+   * tout — sa réponse vivait dans l'ancienne colonne `budget_band`. La liste
+   * lisait le DERNIER dépôt, trouvait vide, et affichait « Non renseigné »
+   * pour quelqu'un qui avait répondu douze minutes plus tôt.
+   */
+  it("un dépôt sans budget ne masque pas celui d'avant", async () => {
+    const { libelleBudget } = await import("./budget");
+    expect(libelleBudget({ budgetChoice: "500k_1m", budgetBand: null })).toBe("500 000 € – 1 M€");
+  });
+
+  it("l'ancienne tranche s'affiche TELLE QUELLE, jamais convertie", async () => {
+    const { libelleBudget } = await import("./budget");
+    /* « 800 k€ – 1,2 M€ » chevauche le million : le ranger d'un côté ou de
+       l'autre inventerait une réponse que personne n'a donnée. */
+    const libelle = libelleBudget({ budgetChoice: null, budgetBand: "800k_1_2m" });
+    expect(libelle).toBeTruthy();
+    expect(libelle).not.toBe("Plus d'1 M€");
+    expect(libelle).not.toBe("500 000 € – 1 M€");
+  });
+
+  it("la réponse actuelle prime sur l'ancienne colonne", async () => {
+    const { libelleBudget } = await import("./budget");
+    expect(libelleBudget({ budgetChoice: "plus_1m", budgetBand: "800k_1_2m" })).toBe("Plus d'1 M€");
+  });
+
+  it("rien partout, c'est rien — et la colonne dira « Non renseigné »", async () => {
+    const { libelleBudget } = await import("./budget");
+    expect(libelleBudget({ budgetChoice: null, budgetBand: null })).toBeNull();
+  });
+
+  it("la requête prend le plus récent qui existe, pas le dernier dépôt", () => {
+    const q = readFileSync("src/modules/buyers/crm/queries.ts", "utf8");
+    expect(q).toContain("parDate.find((i) => i.budget_choice)?.budget_choice");
+    // `principale` est le dernier depot : il ne doit plus decider du budget.
+    expect(q).not.toContain("budgetChoice: principale?.budget_choice");
+  });
+
+  it("les quatre surfaces lisent le même libellé", () => {
+    for (const f of [
+      "src/components/crm/buyers/buyer-inbox.tsx",
+      "src/components/crm/buyers/buyer-kanban.tsx",
+      "src/components/crm/buyers/panneau-traitement.tsx",
+      "src/app/crm/acquereurs/[id]/page.tsx",
+    ]) {
+      expect(readFileSync(f, "utf8"), f).toContain("libelleBudget");
+    }
+  });
+});
