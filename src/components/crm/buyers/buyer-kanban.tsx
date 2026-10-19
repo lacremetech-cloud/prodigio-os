@@ -99,9 +99,6 @@ export function BuyerKanbanBoard({
 
   // Filtres : stables au déplacement (ils ne dépendent pas de la position).
   const [search, setSearch] = useState("");
-  const [quick, setQuick] = useState<
-    "tous" | "non_affecte" | "en_retard" | "fort_potentiel" | "sans_action"
-  >("tous");
 
   /*
    * Tout ce tableau etait indexe sur la PERSONNE. Depuis qu'une carte
@@ -127,13 +124,14 @@ export function BuyerKanbanBoard({
           .toLowerCase();
         if (!hay.includes(needle)) return false;
       }
-      if (quick === "non_affecte") return c.unassigned;
-      if (quick === "en_retard") return c.overdue;
-      if (quick === "fort_potentiel") return c.recommendedPriority === "prioritaire";
-      if (quick === "sans_action") return c.noNextAction;
       return true;
     });
-  }, [cards, search, quick]);
+    /* PLUS DE FILTRE LOCAL ICI. Le tableau en appliquait un, avec son propre
+       vocabulaire, PAR-DESSUS celui que la page applique deja depuis l'URL
+       (`?signal=`). Deux mecanismes pour une seule intention : les pastilles
+       annonçaient un etat que les colonnes ne reflétaient pas, et aucun des
+       deux ne portait de compteur. La page filtre, le tableau dessine. */
+  }, [cards, search]);
 
   /* ---------------------------------------------------------------------
      LE PANNEAU DE TRAITEMENT, SUR LE PIPELINE
@@ -316,27 +314,6 @@ export function BuyerKanbanBoard({
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Rechercher un dossier acquéreur"
         />
-        <div className="crm-tabs flex-wrap">
-          {(
-            [
-              ["tous", "Tous"],
-              ["non_affecte", "Non affectés"],
-              ["en_retard", "En retard"],
-              ["sans_action", "Sans action"],
-              ["fort_potentiel", "Fort potentiel"],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              className={`crm-tab ${quick === v ? "crm-tab--active" : ""}`}
-              aria-pressed={quick === v}
-              onClick={() => setQuick(v)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
       </div>
 
       <p className="sr-only" role="status" aria-live="polite">

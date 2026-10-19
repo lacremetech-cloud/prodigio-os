@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
@@ -12,7 +13,7 @@ import {
   lireProjets,
   lireVue,
 } from "@/modules/buyers/crm/navigation";
-import { lireSignal, porteLeSignal } from "@/modules/buyers/crm/signaux";
+import { FILTRES_RAPIDES, lireSignal, porteLeSignal } from "@/modules/buyers/crm/signaux";
 import { qualification as definitionQualification } from "@/modules/buyers/crm/vocabulaire";
 import { comptesParProjet } from "@/modules/buyers/crm/comptes";
 
@@ -46,7 +47,22 @@ export default async function BuyersPipelinePage({
   const selection = lireProjets(params.projets, projets);
   const vue = lireVue(params.vue);
   const signal = lireSignal(params.signal);
-  const comptes = comptesParProjet(items);
+  /* LES COMPTEURS DISENT CE QUE LA VUE MONTRE.
+     Ils comptaient TOUS les dossiers, y compris les non qualifies que le
+     pipeline ecarte : la barre annonçait 75 quand le tableau en posait 72, et
+     cliquer « Villa Verdun 52 » en affichait moins. Un filtre dont le nombre
+     ne survit pas au clic est un filtre qui ment.
+     On compte donc sur le meme predicat que le tableau — sans la selection de
+     projet, sinon choisir Verdun mettrait Jean Jaures a zero. */
+  /** Ce que le pipeline montre : le signal courant, moins les non qualifies. */
+  function dansLePipeline(i: (typeof items)[number]): boolean {
+    const ligne = toInboxRow(i);
+    if (!porteLeSignal(ligne, signal)) return false;
+    if (signal === "non_qualifies") return true;
+    return ligne.qualification !== "non_qualifie";
+  }
+
+  const comptes = comptesParProjet(items.filter(dansLePipeline));
 
   /* Le filtre par projet regarde TOUS les biens de la personne : Éric apparaît
      qu'on choisisse Jean Jaurès ou Verdun, et une seule fois si l'on prend les
@@ -61,12 +77,7 @@ export default async function BuyersPipelinePage({
      quand la liste en comptait huit, et c'est la colonne qu'on croit.
      Elle reste retrouvable dans la liste, sous « Tous » et sous le filtre
      « Non qualifiés », avec ses notes. */
-  const retenues = visibles.filter((i) => {
-    const ligne = toInboxRow(i);
-    if (!porteLeSignal(ligne, signal)) return false;
-    if (signal === "non_qualifies") return true;
-    return ligne.qualification !== "non_qualifie";
-  });
+  const retenues = visibles.filter(dansLePipeline);
 
   const cards = retenues.map((item) =>
     toKanbanCard(item, definitionQualification(item.qualification).label),
@@ -89,11 +100,6 @@ export default async function BuyersPipelinePage({
         <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">
           Pipeline Acquéreurs
         </h1>
-        <p className="mt-1 hidden max-w-2xl text-sm text-[var(--crm-text-dim)] sm:block">
-          {cards.length} carte{cards.length > 1 ? "s" : ""} — une par personne. Déplacer une
-          carte déplace son traitement, pas un de ses projets : l&rsquo;étape et la qualification
-          sont communes. Ce qui tient au bien — visites, offres, issue — reste sur sa fiche.
-        </p>
       </header>
 
       <BarreProjets
@@ -118,6 +124,42 @@ export default async function BuyersPipelinePage({
            liste, sinon il renvoie sur un écran où elles sont invisibles. */
         contexte={ecrireNavigation({ projets: selection, vue: "liste" })}
       />
+
+      {/* LES MEMES PASTILLES QUE LA LISTE, avec leurs nombres.
+          Le tableau en affichait d'autres — un vocabulaire different, sans
+          compteur, et un filtrage LOCAL qui s'empilait sur celui-ci. Ce sont
+          des LIENS : le filtre vit dans l'adresse, donc il survit a un
+          rechargement, se partage, et reste le meme en passant de la liste au
+          pipeline.
+          Les nombres portent sur la selection de projet courante : une
+          pastille annonce exactement ce qu'elle ouvrira. */}
+      <div className="crm-rapides">
+        {FILTRES_RAPIDES.map((f) => {
+          const n =
+            f.signal === "tous"
+              ? visibles.filter(dansLePipeline).length
+              : visibles.filter((i) => dansLePipeline(i) && porteLeSignal(toInboxRow(i), f.signal))
+                  .length;
+          return (
+            <Link
+              key={f.signal}
+              href={`/crm/acquereurs/pipeline${ecrireNavigation({
+                projets: selection,
+                vue,
+                signal: f.signal,
+              })}`}
+              /* Les MEMES classes que la liste : deux vues, une seule
+                 apparence. Elles portaient deux habillages differents pour la
+                 meme fonction. */
+              className="crm-rapide"
+              aria-pressed={signal === f.signal}
+            >
+              {f.label}
+              <span className="crm-rapide__n">{n}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       <BuyerKanbanBoard
         cards={cards}

@@ -48,14 +48,27 @@ const SIGNAUX: Signal[] = [
 ];
 
 /**
- * Les filtres RAPIDES, ceux qui méritent une pastille au-dessus de la liste.
- * Les autres restent accessibles par l'URL et par les compteurs, mais une
- * rangée de treize pastilles ne se lit plus.
+ * Les filtres RAPIDES, ceux qui méritent une pastille. Les autres restent
+ * accessibles par l'URL et par les compteurs : une rangée de treize pastilles
+ * ne se lit plus.
+ *
+ * LA MÊME LISTE DANS LES DEUX VUES. La liste proposait « Tous / À contacter /
+ * À rappeler » ; le pipeline proposait « Tous / Non affectés / En retard /
+ * Sans action / Fort potentiel » — un vocabulaire different, sans compteurs,
+ * et surtout un filtrage LOCAL qui s'empilait sur celui que la page appliquait
+ * déjà depuis l'URL. Deux mécanismes pour une seule intention.
+ *
+ * Une seule liste, un seul prédicat (`porteLeSignal`), une seule adresse
+ * (`?signal=`) : les deux vues ne peuvent plus diverger.
  */
 export const FILTRES_RAPIDES: { signal: Signal; label: string }[] = [
   { signal: "tous", label: "Tous" },
   { signal: "a_contacter", label: "À contacter" },
   { signal: "a_rappeler", label: "À rappeler" },
+  { signal: "en_retard", label: "En retard" },
+  { signal: "sans_action", label: "Sans action" },
+  { signal: "non_affectes", label: "Non affectés" },
+  { signal: "fort_potentiel", label: "Fort potentiel" },
 ];
 
 /** Normalise un paramètre d'URL : une valeur inconnue ne filtre rien. */
