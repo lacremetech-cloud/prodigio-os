@@ -2535,3 +2535,49 @@
     z-index: 2;
   }
 }
+
+/* --- Carte de pipeline : les memes faits que la ligne de liste ------------
+   La carte empilait des pastilles — « Non affecte », « Sans action »,
+   « Nouvel interet » — la ou la liste ecrit ses valeurs sous un intitule de
+   colonne. Trois d'entre elles etaient allumees presque partout, ce qui en
+   faisait du decor rouge plutot qu'une alerte.
+
+   Deux colonnes : l'intitule, puis la valeur. L'intitule est petit et pale,
+   la valeur lisible — exactement le rapport qu'ont `.crm-ligne__ent` et sa
+   valeur quand la liste passe en pile sur telephone. */
+.crm-kanban-faits {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 10px;
+  align-items: baseline;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.crm-kanban-faits dt {
+  color: var(--crm-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 9.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.crm-kanban-faits dd {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  margin: 0;
+  color: var(--crm-text-dim);
+}
+/* Une carte est etroite : sous 1280 px les deux colonnes se marchent dessus,
+   l'intitule passe donc au-dessus de sa valeur. */
+@media (max-width: 1280px) {
+  .crm-kanban-faits {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0 0;
+  }
+  .crm-kanban-faits dt {
+    margin-top: 4px;
+  }
+}

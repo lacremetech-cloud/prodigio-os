@@ -23,6 +23,16 @@ import { safeAction } from "@/modules/crm/safe-action";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import { positionDansLaFile, suivantDansLaFile } from "@/modules/buyers/crm/file-appels";
 import { PanneauTraitement } from "./panneau-traitement";
+import { ContactRapide } from "./contact-rapide";
+import { formatDateTime, formatJour } from "@/modules/crm/format";
+import {
+  QUALIFICATION_BADGE,
+  QUALIFICATION_LABELS,
+} from "@/modules/buyers/crm/qualification";
+import {
+  BUDGET_CHOICE_COURT,
+  type BuyerBudgetChoice,
+} from "@/modules/buyers/funnel/universal";
 
 /**
  * Kanban Acquéreurs — mêmes standards que le Kanban Mandats :
@@ -414,6 +424,7 @@ export function BuyerKanbanBoard({
                       onKeyDown={(e) => onCardKeyDown(e, c)}
                       onMenuMove={(toStage) => commitMove(cleCarte(c), stageOf(c), toStage)}
                       onOuvrir={rowsById.has(cleCarte(c)) ? () => ouvrirDossier(c) : undefined}
+                      row={rowsById.get(cleCarte(c))}
                     />
                   ))
                 )}
@@ -463,6 +474,7 @@ function Card({
   onKeyDown,
   onMenuMove,
   onOuvrir,
+  row,
 }: {
   card: BuyerKanbanCard;
   canMove: boolean;
@@ -479,8 +491,16 @@ function Card({
   onMenuMove: (toStage: string) => void;
   /** Ouvre le panneau de traitement, SANS quitter le pipeline. */
   onOuvrir?: () => void;
+  /** Le dossier COMPLET, quand la page le fournit : la carte affiche alors
+      les memes informations que la liste. */
+  row?: BuyerInboxRow;
 }) {
   const targets = movableBuyerStages(currentStage);
+  // Forme COURTE, comme en liste : le libelle long est la question telle
+  // qu'elle a ete posee, et il tient sur deux lignes dans une carte.
+  const budget = row?.budgetChoice
+    ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
+    : null;
   return (
     <div
       className={`crm-kanban-card flex flex-col gap-2 p-3 ${
@@ -548,16 +568,88 @@ function Card({
                   Aucun projet rattaché
                 </span>
               ) : null}
+              {row ? (
+                <span className="text-xs text-[var(--crm-text-faint)]">
+                  Arrivé le {formatJour(row.createdAt)}
+                </span>
+              ) : null}
             </div>
+
+            {/* LES MEMES INFORMATIONS QUE LA LISTE, DANS LE MEME ORDRE.
+                La carte alignait quatre pastilles rouges et dorees — « Non
+                affecte », « Sans action », « Nouvel interet » — la ou la liste
+                ecrit calmement « Non affecte » dans sa colonne Responsable et
+                « A programmer » dans Prochaine action. Trois d'entre elles
+                etaient allumees sur presque toutes les cartes : « Nouvel
+                interet » l'etait sur les 82 manifestations, puisque rien ne
+                remet jamais ce statut a zero. Une alerte toujours vraie
+                n'alerte de rien, elle masque celles qui comptent. */}
+            {row ? (
+              <dl className="crm-kanban-faits mt-2">
+                <dt>Budget</dt>
+                <dd>
+                  {budget ? (
+                    <span className="font-semibold text-[var(--crm-text)]">{budget}</span>
+                  ) : (
+                    <span className="text-[var(--crm-text-faint)]">Non renseigné</span>
+                  )}
+                </dd>
+
+                <dt>Responsable</dt>
+                <dd>
+                  {row.assigneeNames.length > 0 ? (
+                    <span className="crm-ellipsis">{row.assigneeNames.join(", ")}</span>
+                  ) : (
+                    <span className="text-[var(--crm-text-faint)]">Non affecté</span>
+                  )}
+                </dd>
+
+                <dt>Prochaine action</dt>
+                <dd>
+                  {row.nextActionTitle ? (
+                    <>
+                      <span className="crm-ellipsis">{row.nextActionTitle}</span>
+                      {row.nextActionAt ? (
+                        <span
+                          className={
+                            row.overdue
+                              ? "font-semibold text-[var(--crm-danger)]"
+                              : "text-[var(--crm-text-faint)]"
+                          }
+                        >
+                          {formatDateTime(row.nextActionAt)}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="text-[var(--crm-text-faint)]">À programmer</span>
+                  )}
+                </dd>
+              </dl>
+            ) : null}
           </button>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--crm-text-dim)]">
-            {card.interestCount > 1 ? <span>{card.interestCount} intérêts</span> : null}
-            {card.unassigned ? <Chip variant="danger">Non affecté</Chip> : null}
+
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {/* La qualification est ECRITE, comme en liste : jamais une
+                couleur seule. */}
+            {row ? (
+              <span className={`crm-qualif crm-qualif--${QUALIFICATION_BADGE[row.qualification]}`}>
+                {QUALIFICATION_LABELS[row.qualification]}
+              </span>
+            ) : null}
+            {/* La SEULE pastille d'alerte qui reste, celle que la liste garde
+                aussi : un rappel en retard est un fait, pas un etat permanent. */}
             {card.overdue ? <Chip variant="danger">En retard</Chip> : null}
-            {card.noNextAction ? <Chip variant="danger">Sans action</Chip> : null}
-            {card.newInterest ? <Chip variant="gold">Nouvel intérêt</Chip> : null}
           </div>
-          {card.phoneMasked ? (
+
+          {row ? (
+            <ContactRapide
+              numero={row.phoneMasked}
+              email={row.emailMasked}
+              className="mt-2"
+              compact
+            />
+          ) : card.phoneMasked ? (
             <p className="mt-1 text-[11px] text-[var(--crm-text-faint)]">{card.phoneMasked}</p>
           ) : null}
         </div>
