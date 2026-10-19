@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import type { MutableRefObject } from "react";
 import Link from "next/link";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
-import { enregistrerTraitementAction } from "@/modules/buyers/crm/actions";
+import {
+  enregistrerTraitementAction,
+  selfAssignBuyerAction,
+} from "@/modules/buyers/crm/actions";
 import { safeAction } from "@/modules/crm/safe-action";
-import { MOTIFS_NON_QUALIFIE, QUALIFICATION_LABELS } from "@/modules/buyers/crm/qualification";
+import { MOTIFS_NON_QUALIFIE } from "@/modules/buyers/crm/qualification";
 import {
   BlocActivite,
   BlocProchaineAction,
@@ -20,7 +23,12 @@ import {
   maintenantLocal,
   type TypeProchaineAction,
 } from "./choix-vocabulaire";
-import { appelleUnRappel, etape as definitionEtape } from "@/modules/buyers/crm/vocabulaire";
+import {
+  activiteLabel,
+  appelleUnRappel,
+  etape as definitionEtape,
+  ETAPES_ACTIVES,
+} from "@/modules/buyers/crm/vocabulaire";
 import { ContactRapide } from "./contact-rapide";
 import { useHauteurVisible } from "./hauteur-visible";
 import { BadgeProjet } from "./barre-projets";
@@ -116,6 +124,9 @@ export function PanneauTraitement({
   const [erreur, setErreur] = useState<string | null>(null);
   /** Vrai quand on a demandé la fiche complète avec une saisie en cours. */
   const [arbitrage, setArbitrage] = useState(false);
+  /** Vrai le temps de la prise du dossier : « M'attribuer » ne doit pas
+      partir deux fois sur un double clic. */
+  const [attribution, setAttribution] = useState(false);
   const envoiRef = useRef(false);
   const router = useRouter();
 
@@ -168,6 +179,51 @@ export function PanneauTraitement({
     else if (!quand) setQuand(dansNJours(t === "rappel" ? 1 : 2));
   }
 
+  /**
+   * L'ÉTAPE QUE LE FAIT MÉTIER PORTE DÉJÀ.
+   *
+   * Programmer un rappel ET devoir choisir « À rappeler » dans un second
+   * sélecteur, c'est saisir deux fois la même décision — et c'est la moitié
+   * des dossiers qui restent « À contacter » alors qu'un rappel est posé,
+   * parce que personne ne pense à toucher le menu après avoir fait le geste
+   * qui compte.
+   *
+   * Le choix manuel PRIME toujours : ce calcul ne s'applique qu'à défaut.
+   *
+   * DEUX RÈGLES, ET LEUR ASYMÉTRIE EST VOULUE.
+   *
+   *  • Une VISITE pose l'étape sans condition. Planifier une visite à
+   *    quelqu'un de classé « pas intéressé », c'est précisément dire qu'il
+   *    l'est redevenu : le fait est trop fort pour être ignoré.
+   *  • Un RAPPEL ne déplace QUE les dossiers encore actifs. Rappeler quelqu'un
+   *    rangé en vivier ou marqué mauvais numéro ne doit pas le repêcher en
+   *    silence dans la file d'appels ; sortir un dossier du traitement reste
+   *    une décision humaine, et seule une autre décision humaine l'annule.
+   */
+  function etapeAutomatique(): string | null {
+    if (!quand) return null;
+    if (typeAction === "visite") return "visite_planifiee";
+    if (typeAction === "rappel" && ETAPES_ACTIVES.includes(row.stage as never)) {
+      return "a_rappeler";
+    }
+    return null;
+  }
+
+  /** Prendre un dossier libre. Distinct d'une réaffectation, qui reste à
+      l'encadrement : voir `selfAssignBuyerAction`. */
+  async function mAttribuer() {
+    if (attribution) return;
+    setAttribution(true);
+    setErreur(null);
+    const r = await safeAction(() => selfAssignBuyerAction({ buyerProfileId: row.buyerProfileId }));
+    setAttribution(false);
+    if (!r.ok) {
+      setErreur(r.error ?? "L’attribution a échoué.");
+      return;
+    }
+    onEnregistre();
+  }
+
   async function enregistrer(puisSuivant: boolean) {
     // Deux clics rapides ne doivent pas écrire deux fois : la garde est une
     // ref, lue et posée dans le même tour, là où un état arriverait trop tard.
@@ -179,6 +235,8 @@ export function PanneauTraitement({
     /* `safeAction` : une action serveur qui lève ne doit JAMAIS faire tomber
        l'écran. Sans elle, une coupure réseau en plein enregistrement efface la
        note qu'on vient de taper. */
+    const etapeDeduite = etapeAutomatique();
+
     const resultatAction = await safeAction(() =>
       enregistrerTraitementAction({
         buyerProfileId: row.buyerProfileId,
@@ -191,7 +249,7 @@ export function PanneauTraitement({
         /* L'étape choisie à la main prime. À défaut, planifier une visite la
            fait avancer toute seule — c'est le fait métier qui la porte, pas un
            menu qu'il faudrait penser à toucher. */
-        stage: etape ?? (typeAction === "visite" && quand ? "visite_planifiee" : null),
+        stage: etape ?? etapeDeduite,
         nextActionKind: typeAction === "aucune" ? null : typeAction,
         nextActionAt: depuisChampLocal(quand),
         nextActionTitle:
@@ -244,14 +302,53 @@ export function PanneauTraitement({
   }
 
   const peutEnregistrer = sale;
+  /* Le titulaire du dossier, s'il y en a un. La ligne ne porte que des
+     identifiants ; les noms sont déjà là, dans l'équipe passée en props —
+     aucune requête de plus pour afficher qui suit. */
+  /**
+   * LE DERNIER ÉCHANGE, QUEL QU'IL SOIT.
+   *
+   * La ligne porte deux traces distinctes : le dernier APPEL (avec son
+   * résultat) et la dernière NOTE. Afficher le seul appel ferait disparaître
+   * un e-mail ou un WhatsApp consigné depuis ; n'afficher que la note ferait
+   * disparaître un appel sans réponse, qui n'en laisse aucune. On prend donc
+   * la plus récente des deux, et on la nomme.
+   */
+  const dernierEchange: { quoi: string; quand: string | null } | null = (() => {
+    const appel = row.lastCallAt ? Date.parse(row.lastCallAt) : null;
+    const note = row.lastNoteAt ? Date.parse(row.lastNoteAt) : null;
+    if (appel === null && note === null) return null;
+    if (appel !== null && (note === null || appel >= note)) {
+      return {
+        quoi: row.lastCallOutcome ? activiteLabel(row.lastCallOutcome) : "Appel",
+        quand: row.lastCallAt,
+      };
+    }
+    return {
+      quoi: row.lastNoteBy ? `Note de ${row.lastNoteBy}` : "Note",
+      quand: row.lastNoteAt,
+    };
+  })();
+
+  const responsableNom =
+    row.assigneeIds.length === 0
+      ? null
+      : (row.assigneeIds
+          .map((id) => membres.find((m) => m.userId === id)?.name)
+          .filter(Boolean)
+          .join(", ") || "un collègue");
   const budget = row.budgetChoice
     ? BUDGET_CHOICE_COURT[row.budgetChoice as BuyerBudgetChoice] ?? row.budgetChoice
     : null;
 
   return (
     <aside className="crm-panneau" aria-label={`Traitement de ${row.name}`}>
-      {/* ---- En-tête compact : qui, quel projet, quel budget, comment le joindre */}
+      {/* ---- En-tête : COMPRENDRE ET CONTACTER, sans rien dérouler ----------
+          Qui, quels biens, quel budget, comment l'appeler, qui le suit, et où
+          en est le dossier sur ses deux axes. Tout ce qu'il faut pour décrocher
+          le téléphone tient ici, au-dessus de tout formulaire. */}
       <header className="crm-panneau__tete">
+        <div className="crm-panneau__tete-haut">
         <div className="min-w-0 flex-1">
           <p className="crm-panneau__rang">
             {position > 0 && total > 0 ? `Dossier ${position} sur ${total}` : "Dossier"}
@@ -278,6 +375,65 @@ export function PanneauTraitement({
         <button type="button" className="crm-panneau__fermer" onClick={onFermer} aria-label="Fermer">
           ✕
         </button>
+        </div>
+
+        {/* Les boutons d'appel AVANT le formulaire : le geste le plus fréquent
+            ne doit jamais se mériter par un défilement. */}
+        <ContactRapide numero={row.phoneMasked} email={row.emailMasked} />
+
+        {/* Les DEUX axes, côte à côte et toujours visibles. Ils répondent à deux
+            questions distinctes — où en est le dossier, ce qu'on en pense — et
+            ne se déduisent jamais l'un de l'autre. */}
+        <div className="crm-panneau__axes">
+          <ChoixEtape
+            valeur={etape}
+            actuelle={row.stage}
+            onChoisir={setEtape}
+            disabled={enCours}
+          />
+          <ChoixQualification
+            valeur={qualification}
+            actuelle={row.qualification}
+            onChoisir={setQualification}
+            disabled={enCours}
+          />
+          {/* Le responsable se lit ici, et se prend ici. Un dossier libre qu'on
+              s'apprête à appeler doit pouvoir être pris sans quitter l'écran —
+              sinon deux commerciaux appellent la même personne. */}
+          {responsableNom ? (
+            <span className="crm-panneau__suivi" title="Responsable du dossier">
+              Suivi par {responsableNom}
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="crm-panneau__attribuer"
+              onClick={() => void mAttribuer()}
+              disabled={attribution || enCours}
+            >
+              {attribution ? "…" : "M’attribuer"}
+            </button>
+          )}
+        </div>
+
+        {/* Le motif n'apparaît que s'il est exigé : un champ qui attend sans
+            servir fait croire qu'il manque une réponse. */}
+        {qualification === "non_qualifie" ? (
+          <select
+            className="crm-select w-full"
+            value={motif}
+            onChange={(e) => setMotif(e.target.value)}
+            disabled={enCours}
+            aria-label="Motif"
+          >
+            <option value="">Motif…</option>
+            {MOTIFS_NON_QUALIFIE.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        ) : null}
       </header>
 
       {/*
@@ -331,10 +487,6 @@ export function PanneauTraitement({
         </div>
       ) : null}
 
-      <div className="crm-panneau__actions-contact">
-        <ContactRapide numero={row.phoneMasked} email={row.emailMasked} />
-      </div>
-
       {row.phoneInvalid ? (
         <p className="crm-panneau__alerte" role="status">
           Numéro signalé invalide : ce dossier est sorti de la file d’appels. Passez par e-mail,
@@ -343,12 +495,60 @@ export function PanneauTraitement({
       ) : null}
 
       <div className="crm-panneau__corps">
-        {/* ---- 1. Ce qui vient de se passer ----------------------------------
-            Le MÊME bloc que la fiche. Il remplace « Résultat de l'appel », qui
-            ne savait dire ni « WhatsApp envoyé » ni « e-mail », et qui portait
-            un vocabulaire différent de celui de la fiche pour le même fait. */}
+        {/* ---- LE CONTEXTE, AVANT LE FORMULAIRE -------------------------------
+            Ce qu'on doit SAVOIR passe avant ce qu'on doit SAISIR. La dernière
+            note vivait tout en bas, après les onze boutons et les trois
+            formulaires : la seule phrase qui dit de quoi on a parlé la
+            dernière fois arrivait après tout ce qui sert à parler. */}
+        <section className="crm-contexte" aria-label="Où en est ce dossier">
+          <div className="crm-contexte__ligne">
+            <span className="crm-contexte__etiquette">À faire</span>
+            {row.nextActionAt ? (
+              <span className={row.overdue ? "crm-contexte__retard" : undefined}>
+                {row.nextActionTitle ?? "Tâche"} · {dateCourte(row.nextActionAt)}
+                {row.overdue ? " — en retard" : ""}
+              </span>
+            ) : (
+              <span className="crm-contexte__vide">Rien de programmé</span>
+            )}
+          </div>
+
+          <div className="crm-contexte__ligne">
+            <span className="crm-contexte__etiquette">Dernier échange</span>
+            {dernierEchange ? (
+              <span>
+                {dernierEchange.quoi}
+                {dernierEchange.quand ? ` · ${dateCourte(dernierEchange.quand)}` : ""}
+                {row.callAttempts > 0
+                  ? ` · ${row.callAttempts} tentative${row.callAttempts > 1 ? "s" : ""}`
+                  : ""}
+              </span>
+            ) : (
+              <span className="crm-contexte__vide">Aucun échange enregistré</span>
+            )}
+          </div>
+
+          {/* La note en entier, pas tronquée : c'est elle qu'on relit avant de
+              décrocher, et une note coupée au milieu ne sert à rien. */}
+          {row.lastNote ? (
+            <p className="crm-contexte__note">
+              <span className="crm-contexte__note-date">{dateCourte(row.lastNoteAt)}</span>
+              {row.lastNote}
+            </p>
+          ) : null}
+
+          <button type="button" className="crm-contexte__tout" onClick={ouvrirLaFiche}>
+            Tout l’historique
+          </button>
+        </section>
+
+        {/* ---- UN SEUL BLOC : ENREGISTRER UN ÉCHANGE ---------------------------
+            Quatre sections demandaient quatre décisions là où il n'y en a
+            qu'une : ce qui s'est passé, et ce qu'on fait ensuite. L'étape et la
+            qualification vivent désormais dans l'en-tête, toujours visibles et
+            modifiables — mais jamais exigées pour enregistrer un appel. */}
         <section className="crm-bloc">
-          <h3 className="crm-bloc__titre">Ajouter une activité</h3>
+          <h3 className="crm-bloc__titre">Enregistrer un échange</h3>
           <ChoixProjet
             valeur={projet}
             onChoisir={setProjet}
@@ -364,103 +564,43 @@ export function PanneauTraitement({
             onNote={setNote}
             disabled={enCours}
           />
-        </section>
 
-        {/* ---- Où en est le traitement ---------------------------------------
-            Le MÊME composant que la fiche, et les mêmes sept étapes que le
-            pipeline. Changer l'étape ici la change partout : c'est une
-            propriété de la personne, pas de l'écran qui l'affiche. */}
-        <section className="crm-bloc">
-          <h3 className="crm-bloc__titre">
-            Étape
-            <span className="crm-bloc__actuel">actuelle : {etapeLabel(row.stage)}</span>
-          </h3>
-          <ChoixEtape valeur={etape} actuelle={row.stage} onChoisir={setEtape} />
+          <div className="crm-bloc__suite">
+            <p className="crm-label">La suite à donner</p>
+            {/* Une visite exige un bien : le menu réapparaît, même sur une
+                personne qui n'en suit qu'un, pour que le rattachement soit vu. */}
+            {typeAction === "visite" ? (
+              <div className="mb-2">
+                <ChoixProjet
+                  valeur={projet}
+                  onChoisir={setProjet}
+                  projets={row.projets}
+                  requis
+                  disabled={enCours}
+                />
+              </div>
+            ) : null}
+            <BlocProchaineAction
+              type={typeAction}
+              onType={choisirTypeAction}
+              quand={quand}
+              onQuand={setQuand}
+              titre={titreAction}
+              onTitre={setTitreAction}
+              responsable={responsable}
+              onResponsable={setResponsable}
+              membres={membres}
+              disabled={enCours}
+            />
+            {/* Dire ce que la sauvegarde va faire SEULE, avant qu'elle le
+                fasse. Une étape qui bouge sans annonce se lit comme un bug. */}
+            {etape === null && etapeAutomatique() ? (
+              <p className="crm-bloc__deduit">
+                L’étape passera à « {etapeLabel(etapeAutomatique()!)} ».
+              </p>
+            ) : null}
+          </div>
         </section>
-
-        {/* ---- 2. Ce qu'on en pense ------------------------------------------ */}
-        <section className="crm-bloc">
-          <h3 className="crm-bloc__titre">
-            Qualification
-            <span className="crm-bloc__actuel">actuelle : {QUALIFICATION_LABELS[row.qualification]}</span>
-          </h3>
-          {/* Trois colonnes : cinq options tiennent en DEUX rangees au lieu de
-              trois, et le parcours critique repasse sous la ligne de
-              flottaison d'un portable 768. */}
-          <ChoixQualification
-            valeur={qualification}
-            actuelle={row.qualification}
-            onChoisir={setQualification}
-          />
-          {/* Le motif n'apparaît que s'il est exigé : un champ qui attend sans
-              servir occupe la place et fait croire qu'il manque une réponse. */}
-          {qualification === "non_qualifie" ? (
-            <select
-              className="crm-select mt-2 w-full"
-              value={motif}
-              onChange={(e) => setMotif(e.target.value)}
-              aria-label="Motif"
-            >
-              <option value="">Motif…</option>
-              {MOTIFS_NON_QUALIFIE.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          ) : null}
-        </section>
-
-        {/* ---- 3. Ce qu'on s'engage à faire -----------------------------------
-            Le MÊME bloc que la fiche. Il porte désormais un responsable : un
-            commercial qui prend l'appel d'un dossier qui n'est pas le sien doit
-            pouvoir rendre le rappel à son titulaire sans réattribuer le
-            dossier entier. */}
-        <section className="crm-bloc">
-          <h3 className="crm-bloc__titre">Prochaine action</h3>
-          {/* Une visite exige un bien : le menu réapparaît, même sur une
-              personne qui n'en suit qu'un, pour que le rattachement soit vu. */}
-          {typeAction === "visite" ? (
-            <div className="mb-2">
-              <ChoixProjet
-                valeur={projet}
-                onChoisir={setProjet}
-                projets={row.projets}
-                requis
-                disabled={enCours}
-              />
-            </div>
-          ) : null}
-          <BlocProchaineAction
-            type={typeAction}
-            onType={choisirTypeAction}
-            quand={quand}
-            onQuand={setQuand}
-            titre={titreAction}
-            onTitre={setTitreAction}
-            responsable={responsable}
-            onResponsable={setResponsable}
-            membres={membres}
-            disabled={enCours}
-          />
-        </section>
-
-        {/* ---- 5. L'historique, replié, mais sa dernière note visible ---------- */}
-        <details className="crm-historique">
-          <summary>
-            Historique · {row.callAttempts} tentative{row.callAttempts > 1 ? "s" : ""}
-            {row.lastCallAt ? ` · dernier appel ${dateCourte(row.lastCallAt)}` : ""}
-          </summary>
-          <p className="crm-historique__corps">
-            Le détail complet des échanges se lit dans le dossier.
-          </p>
-        </details>
-        {row.lastNote ? (
-          <p className="crm-derniere-note">
-            <span className="crm-derniere-note__date">{dateCourte(row.lastNoteAt)}</span>
-            {row.lastNote}
-          </p>
-        ) : null}
       </div>
 
       {/* ---- Toujours atteignable, quelle que soit la longueur du corps ------- */}

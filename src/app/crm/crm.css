@@ -2394,3 +2394,73 @@
   border-color: var(--crm-acq-en_discussion);
   color: var(--crm-acq-sur-etape);
 }
+
+/* --- Panneau : en-tête « comprendre et contacter » -----------------------
+   Qui, quels biens, quel budget, comment l'appeler, qui le suit, et où en est
+   le dossier sur ses DEUX axes. Tout ce qu'il faut pour décrocher tient ici,
+   au-dessus de tout formulaire. */
+.crm-panneau__tete { display: flex; flex-direction: column; gap: 9px; }
+.crm-panneau__tete-haut {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.crm-panneau__axes { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.crm-panneau__suivi {
+  font-size: 11.5px; color: var(--crm-text-dim); padding: 4px 9px;
+  border-radius: 100px; background: var(--crm-panel-2);
+  border: 1px solid var(--crm-line-soft); white-space: nowrap;
+}
+/* Un dossier libre qu'on s'apprête à appeler doit pouvoir être pris sans
+   quitter l'écran — sinon deux commerciaux appellent la même personne. */
+.crm-panneau__attribuer {
+  font-size: 11.5px; font-weight: 700; padding: 5px 11px; border-radius: 100px;
+  border: 1.5px solid var(--crm-univers); background: transparent;
+  color: var(--crm-univers); cursor: pointer; white-space: nowrap;
+}
+.crm-panneau__attribuer:hover:not(:disabled) { background: var(--crm-univers); color: #fff; }
+.crm-panneau__attribuer:disabled { opacity: .5; cursor: not-allowed; }
+
+/* --- Panneau : le contexte, AVANT le formulaire --------------------------
+   Ce qu'on doit SAVOIR passe avant ce qu'on doit SAISIR. La dernière note
+   vivait tout en bas, après onze boutons et trois formulaires. */
+.crm-contexte {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; margin-bottom: 11px;
+  border-radius: 10px; border: 1px solid var(--crm-line-soft);
+  background: var(--crm-panel-2);
+}
+.crm-contexte__ligne {
+  display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline;
+  font-size: 12.5px; color: var(--crm-text);
+}
+.crm-contexte__etiquette {
+  flex: 0 0 auto; min-width: 96px;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--crm-text-faint);
+}
+.crm-contexte__vide { color: var(--crm-text-faint); font-style: italic; }
+.crm-contexte__retard { color: var(--crm-danger, #c0392b); font-weight: 700; }
+/* La note en ENTIER : c'est elle qu'on relit avant de décrocher, et une note
+   coupée au milieu ne sert à rien. */
+.crm-contexte__note {
+  margin: 3px 0 0; padding-top: 7px; border-top: 1px solid var(--crm-line-soft);
+  font-size: 12.5px; line-height: 1.45; color: var(--crm-text);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.crm-contexte__note-date {
+  display: block; font-size: 10.5px; color: var(--crm-text-faint); margin-bottom: 2px;
+}
+.crm-contexte__tout {
+  align-self: flex-start; padding: 0; border: 0; background: none;
+  color: var(--crm-univers); font-size: 11.5px; font-weight: 600;
+  cursor: pointer; text-decoration: underline;
+}
+
+/* --- Panneau : la suite à donner, dans le même bloc que l'échange -------- */
+.crm-bloc__suite {
+  margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--crm-line-soft);
+}
+/* Dire ce que la sauvegarde va faire SEULE, avant qu'elle le fasse : une
+   étape qui bouge sans annonce se lit comme un bug. */
+.crm-bloc__deduit {
+  margin-top: 7px; font-size: 11.5px; color: var(--crm-text-dim); font-style: italic;
+}
