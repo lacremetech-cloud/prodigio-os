@@ -40,7 +40,7 @@ export function ChoiceCardGrid({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onSelect(value)}
-              className={`group relative aspect-[4/3] overflow-hidden text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
+              className={`group relative aspect-[4/3] overflow-hidden text-left transition-[transform,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] active:translate-y-0 active:scale-[0.99] active:duration-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus)] ${
                 isSelected
                   ? "-translate-y-1 border-2 border-[color:var(--color-gold)] shadow-[0_22px_50px_-20px_rgba(154,123,69,0.8)]"
                   : "border border-[color:var(--color-border-strong-dark)] hover:-translate-y-1 hover:border-text-on-dark hover:shadow-[var(--shadow-lg)]"

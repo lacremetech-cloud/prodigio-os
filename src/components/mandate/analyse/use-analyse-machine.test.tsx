@@ -75,3 +75,82 @@ describe("useAnalyseMachine — exactement un envoi", () => {
     expect(submitSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("useAnalyseMachine — contrat de données du CRM", () => {
+  /**
+   * Verrou de non-régression. Les réponses transmises au CRM sont un CONTRAT :
+   * clés, valeurs et types ne doivent pas bouger au gré des retouches d'UI. Ce
+   * test échoue si une amélioration visuelle déforme la charge utile.
+   */
+  it("transmet exactement les mêmes clés, valeurs et types qu'avant", async () => {
+    const { result } = renderHook(() => useAnalyseMachine());
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    await act(async () => {
+      result.current.goNext();
+    });
+    await waitFor(() => expect(submitSpy).toHaveBeenCalledTimes(1));
+
+    const sent = submitSpy.mock.calls[0]![0] as {
+      answers: Record<string, unknown>;
+      context: Record<string, unknown>;
+      turnstileToken: string | null;
+    };
+
+    expect(Object.keys(sent).sort()).toEqual(["answers", "context", "turnstileToken"]);
+    expect(Object.keys(sent.answers).sort()).toEqual([
+      "company",
+      "contact",
+      "location",
+      "mandateSituation",
+      "propertyType",
+      "saleHorizon",
+      "valueBand",
+    ]);
+    expect(sent.answers.propertyType).toBe("appartement_exception");
+    expect(sent.answers.valueBand).toBe("plus_2m");
+    expect(sent.answers.saleHorizon).toBe("des_que_possible");
+    expect(sent.answers.mandateSituation).toBe("aucun_mandat");
+    expect(sent.answers.location).toMatchObject({
+      city: "Paris",
+      postalCode: "75008",
+      country: "France",
+    });
+    expect(sent.answers.contact).toMatchObject({
+      firstName: "Rayyân",
+      lastName: "Djeridi",
+      preference: "telephone",
+      recallPreference: "des_que_possible",
+      consent: true,
+    });
+    // La clé d'idempotence reste celle reprise du brouillon : rouvrir la page
+    // ne doit pas créer un second dossier.
+    expect(sent.context.idempotencyKey).toBe("test-idem-key-000001");
+  });
+
+  it("ne fait transiter aucune réponse ni donnée personnelle dans la mesure", async () => {
+    window.dataLayer = [];
+    const { result } = renderHook(() => useAnalyseMachine());
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    await act(async () => {
+      result.current.goNext();
+    });
+    await waitFor(() => expect(submitSpy).toHaveBeenCalledTimes(1));
+
+    const mesure = JSON.stringify(window.dataLayer ?? []);
+    expect(mesure).toContain("eligibility_step_completed");
+    expect(mesure).toContain("eligibility_submitted");
+    for (const secret of [
+      "Rayyân",
+      "Djeridi",
+      "rayyan@indescale.com",
+      "06 25 77 35 92",
+      "75008",
+      "appartement_exception",
+      "plus_2m",
+    ]) {
+      expect(mesure, `donnée transmise à la mesure : ${secret}`).not.toContain(secret);
+    }
+  });
+});

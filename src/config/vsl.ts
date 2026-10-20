@@ -22,6 +22,10 @@ export interface VslEmbedOptions {
   mute?: boolean;
   controls?: boolean;
   loop?: boolean;
+  /** Bouton plein écran de YouTube — le seul disponible sur iOS. */
+  fullscreen?: boolean;
+  /** Reprise en secondes (le visiteur ne revoit pas ce qu'il a déjà vu). */
+  start?: number;
   /** Origine pour l'API IFrame (sécurité). */
   origin?: string;
 }
@@ -41,6 +45,8 @@ export function buildVslEmbedUrl(
     mute = true,
     controls = false,
     loop = true,
+    fullscreen = false,
+    start,
     origin,
   } = opts;
 
@@ -53,12 +59,13 @@ export function buildVslEmbedUrl(
     modestbranding: "1",
     iv_load_policy: "3",
     disablekb: "1",
-    fs: "0",
+    fs: fullscreen ? "1" : "0",
     enablejsapi: "1",
     loop: loop ? "1" : "0",
     // `loop` sur une vidéo unique nécessite `playlist` = même identifiant.
     playlist: id,
   });
+  if (start && start > 0) params.set("start", String(Math.floor(start)));
   if (origin) params.set("origin", origin);
 
   return `${VSL_EMBED_HOST}/embed/${id}?${params.toString()}`;
