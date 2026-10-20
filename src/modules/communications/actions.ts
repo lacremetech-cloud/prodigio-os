@@ -14,6 +14,11 @@ import { dispatchPending } from "./dispatcher";
 import { createLumailProvider } from "./providers/lumail";
 import { createTwilioProvider } from "./providers/twilio";
 import { CATEGORIES, CHANNELS, SUPPRESSION_REASONS, COMMUNICATION_EVENTS } from "./types";
+import {
+  CONDITION_KEYS,
+  DRAFT_AUTOMATION_STATUSES,
+  validateDraftAutomation,
+} from "./studio/automation";
 
 /**
  * Actions serveur du centre de communications.
@@ -171,14 +176,28 @@ export async function releaseSuppressionAction(input: unknown): Promise<ActionRe
   return { ok: true };
 }
 
-// --- Automatisations ------------------------------------------------------------
+// --- Automatisations personnalisées (BROUILLON uniquement) ---------------------
+/**
+ * ⚠️ Aucune automatisation personnalisée ne peut être activée en V1. Le schéma
+ * Zod ne connaît pas la valeur `actif`, la fonction SQL la refuse explicitement
+ * (42501), et la contrainte de table l'interdit. Trois barrières indépendantes.
+ */
 const automationSchema = z.object({
   automationKey: z.string().trim().regex(/^[a-z0-9_]{3,64}$/, "Clé invalide."),
   name: z.string().trim().min(3).max(160),
   triggerEvent: z.enum(COMMUNICATION_EVENTS),
   templateKey: z.string().trim().regex(/^[a-z0-9_]{3,64}$/, "Clé de modèle invalide."),
+  templateVersion: z.number().int().min(1).nullable().optional(),
   channel: z.enum(CHANNELS),
   delayMinutes: z.number().int().min(0).max(525_600).default(0),
+  // `partialRecord` : chaque condition du catalogue est facultative, et aucune
+  // clé hors catalogue n'est acceptée.
+  conditions: z
+    .partialRecord(
+      z.enum(CONDITION_KEYS),
+      z.union([z.string().trim().max(120), z.number(), z.boolean()]),
+    )
+    .optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
 });
 
@@ -186,6 +205,21 @@ export async function upsertAutomationAction(input: unknown): Promise<ActionResu
   const parsed = automationSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Données invalides." };
   const v = parsed.data;
+
+  // Miroir explicatif de la validation en base : on refuse tôt, avec un message
+  // lisible, plutôt que de laisser remonter une erreur de contrainte.
+  const issues = validateDraftAutomation({
+    automationKey: v.automationKey,
+    name: v.name,
+    triggerEvent: v.triggerEvent,
+    channel: v.channel,
+    templateKey: v.templateKey,
+    templateVersion: v.templateVersion ?? null,
+    delayMinutes: v.delayMinutes,
+    conditions: v.conditions ?? {},
+    status: "brouillon",
+  });
+  if (issues.length > 0) return { ok: false, error: issues[0]?.message ?? "Données invalides." };
 
   await requireCrmSession();
   const supabase = await createSupabaseServerClient();
@@ -196,22 +230,34 @@ export async function upsertAutomationAction(input: unknown): Promise<ActionResu
     p_template_key: v.templateKey,
     p_channel: v.channel,
     p_delay_minutes: v.delayMinutes,
+    p_conditions: v.conditions ?? {},
     p_notes: v.notes ?? null,
+    p_template_version: v.templateVersion ?? null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
 
   revalidate();
-  return { ok: true, info: "Automatisation créée en brouillon — elle ne produit rien tant qu'elle n'est pas activée." };
+  return {
+    ok: true,
+    info: "Nouvelle version enregistrée en brouillon. Elle ne s'exécute pas et ne peut pas être activée en V1.",
+  };
 }
 
 const automationStatusSchema = z.object({
   automationId: uuid,
-  status: z.enum(["brouillon", "actif", "en_pause", "archive"]),
+  // `actif` est absent du domaine : une tentative est rejetée à la frontière.
+  status: z.enum(DRAFT_AUTOMATION_STATUSES),
 });
 
 export async function setAutomationStatusAction(input: unknown): Promise<ActionResult> {
   const parsed = automationStatusSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Données invalides." };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error:
+        "Statut refusé. Une automatisation personnalisée reste un brouillon : elle ne peut pas être activée en V1.",
+    };
+  }
 
   await requireCrmSession();
   const supabase = await createSupabaseServerClient();

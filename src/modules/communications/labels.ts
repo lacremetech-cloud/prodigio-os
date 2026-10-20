@@ -85,13 +85,6 @@ export const templateStatusLabels: Record<string, string> = {
   archive: "Archivé",
 };
 
-export const automationStatusLabels: Record<string, string> = {
-  brouillon: "Brouillon",
-  actif: "Actif",
-  en_pause: "En pause",
-  archive: "Archivé",
-};
-
 /**
  * Correspondance statut → visuel. Réutilise les variables de thème DÉJÀ
  * définies dans `crm.css` : aucune couleur brute, cohérence clair/sombre

@@ -1327,7 +1327,16 @@ export type CommunicationSuppressionRow = {
   released_reason: string | null;
 };
 
-export type CommunicationAutomationStatus = "brouillon" | "actif" | "en_pause" | "archive";
+/**
+ * Statuts d'une automatisation PERSONNALISÉE. `actif` est volontairement absent :
+ * la contrainte SQL (20260819120000) l'interdit — aucune automatisation
+ * personnalisée ne peut être activée ni exécutée en V1.
+ */
+export type CommunicationAutomationStatus =
+  | "brouillon"
+  | "pret_pour_revue"
+  | "en_pause"
+  | "archive";
 
 export type CommunicationAutomationRow = {
   id: string;
@@ -1342,6 +1351,8 @@ export type CommunicationAutomationRow = {
   delay_minutes: number;
   action_type: "envoyer_message";
   template_key: string;
+  /** Version de modèle épinglée, ou `null` pour « version active ». */
+  template_version: number | null;
   channel: CommunicationChannel;
   exit_rules: Json;
   status: CommunicationAutomationStatus;
@@ -2224,6 +2235,7 @@ export interface Database {
           p_conditions?: Json;
           p_exit_rules?: Json;
           p_notes?: string | null;
+          p_template_version?: number | null;
         };
         Returns: Json;
       };
