@@ -202,6 +202,26 @@ const envSchema = z.object({
   // prospect et n'est plus appele depuis que SMSFactor est configure.
   // Present ⇒ il PRIME sur l'envoi Lumail (jamais les deux : doublon d'alerte).
   ALERTE_LEAD_WEBHOOK_URL: z.string().optional(),
+
+  // QUI DECLENCHE UNE ALERTE IMMEDIATE, UN MAIL PAR LEAD.
+  //
+  // `tous` = le comportement historique : chaque lead alerte. Douze mails par
+  // jour et par personne, mesure faite sur les neuf jours suivant la reprise
+  // du 14 octobre — c'est ce qui polluait leur boite.
+  //
+  // `urgents` = seuls les leads au-dessus d'1 M€ arrives entre 8h et 19h,
+  // soit environ trois par jour. Tout le reste part dans le recapitulatif de
+  // 8h30, 13h00 et 17h30.
+  //
+  // Defaut `tous` A DESSEIN : tant que le recapitulatif ne tourne pas, basculer
+  // sur `urgents` priverait les leads sous 1 M€ de TOUTE notification. On
+  // n'active donc le filtre qu'une fois le recapitulatif verifie.
+  ALERTE_LEAD_IMMEDIATE: z.enum(["tous", "urgents"]).default("tous"),
+
+  // Secret partage qui protege l'endpoint de recapitulatif, appele par Make.
+  // L'endpoint rend des noms et des telephones : sans ce jeton il ne repond
+  // rien du tout, plutot que de s'ouvrir par defaut.
+  RECAP_LEADS_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

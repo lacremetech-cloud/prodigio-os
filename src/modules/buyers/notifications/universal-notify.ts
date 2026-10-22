@@ -147,6 +147,7 @@ export function ficheLeadUniverselle(
     email: a.emailRaw ?? null,
     bien: input.propertyName,
     budget: BUDGETS[a.budgetChoice ?? ""] ?? null,
+    budgetChoice: a.budgetChoice ?? null,
     provenance: origineDeLaDemande(input.request.context),
     score: input.score
       ? {

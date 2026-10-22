@@ -20,6 +20,7 @@ const LEAD: FicheLead = {
   email: "lea.bernard@example.com",
   bien: "Villa Verdun",
   budget: "Plus d'1 M€",
+  budgetChoice: "plus_1m",
   provenance: "meta · cpc",
   score: { overall: 82, priority: "Prioritaire" },
   buyerProfileId: "11111111-2222-3333-4444-555555555555",

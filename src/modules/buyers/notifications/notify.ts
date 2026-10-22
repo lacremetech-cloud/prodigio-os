@@ -72,6 +72,12 @@ export function ficheLeadHistorique(
     email: c.emailRaw ?? null,
     bien: input.propertyName,
     budget: bande ? budgetBandLabels[bande] ?? null : null,
+    /* Ce tunnel ne pose pas la question actuelle : il n'a qu'une ANCIENNE
+       tranche, et « 800 k€ – 1,2 M€ » chevauche le million. La convertir
+       inventerait une réponse jamais donnée, donc `null` : ces leads ne
+       déclenchent pas d'alerte immédiate et passent par le récapitulatif.
+       Sans effet en pratique — un seul dépôt en neuf jours n'a pas de code. */
+    budgetChoice: null,
     // Ce tunnel ne porte pas de parametres de campagne dans l'alerte.
     provenance: null,
     score: {

@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { contactName } from "@/modules/crm/format";
 import { maskContactValue } from "@/modules/crm/auth/roles";
@@ -16,6 +17,7 @@ import type {
   PropertyRow,
   TaskRow,
 } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 /**
  * Couche d'accès en LECTURE du CRM Acquéreurs. Toutes les requêtes passent par
@@ -171,8 +173,18 @@ function propertyLabelOf(p: PropertyRow | undefined): string | null {
  */
 export const PLAFOND_LISTE = 2000;
 
-export async function loadBuyerList(canViewContacts: boolean): Promise<BuyerListBundle> {
-  const supabase = await createSupabaseServerClient();
+/**
+ * `client` fourni = appel SANS session utilisateur (recapitulatif envoye par
+ * Make). On passe alors le client admin : la RLS ne peut rien accorder a une
+ * requete anonyme, et le recapitulatif doit compter les memes dossiers que les
+ * ecrans — un mail qui annonce « 4 en retard » devant une liste qui en montre
+ * 7 est un mail qui ment. Aucun autre appelant ne doit s'en servir.
+ */
+export async function loadBuyerList(
+  canViewContacts: boolean,
+  client?: SupabaseClient<Database>,
+): Promise<BuyerListBundle> {
+  const supabase = client ?? (await createSupabaseServerClient());
 
   const [
     { data: profiles },

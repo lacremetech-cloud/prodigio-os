@@ -4,6 +4,7 @@ import { env as globalEnv, isLumailConfigured, mandateCrmBaseUrl } from "@/confi
 import type { Env } from "@/config";
 import { createLumailProvider } from "@/modules/communications/providers/lumail";
 import type { ProviderTransportOptions } from "@/modules/communications/providers/types";
+import { meriteAlerteImmediate } from "./urgence";
 
 /**
  * ALERTE E-MAIL À L'ÉQUIPE POUR CHAQUE NOUVEAU LEAD.
@@ -36,6 +37,12 @@ export interface FicheLead {
   bien: string | null;
   /** Déjà en clair (« Plus d'1 M€ »), jamais le code technique. */
   budget: string | null;
+  /**
+   * Le CODE, lui, sert à décider si ce lead justifie une alerte immédiate.
+   * Le libellé ne peut pas : il est traduit, et deux codes différents peuvent
+   * porter le même mot.
+   */
+  budgetChoice: string | null;
   provenance: string | null;
   score: { overall: number | null; priority: string | null } | null;
   buyerProfileId: string | null;
@@ -279,6 +286,19 @@ export async function alerterEquipe(
   deps: AlerteEmailDeps & { fetchImpl?: typeof fetch } = {},
 ): Promise<{ canal: "webhook" | "email" | "aucun"; status: string }> {
   const env = deps.env ?? globalEnv;
+
+  /* LE TRI PASSE AVANT LES DEUX TUNNELS, pas dans l'un d'eux : sinon basculer
+     de Make vers Lumail changerait aussi qui est alerté. Un lead écarté ici
+     n'est pas perdu — il part dans le récapitulatif de 8h30, 13h00 ou 17h30. */
+  if (
+    !meriteAlerteImmediate(
+      { budgetChoice: lead.budgetChoice, recuLe: lead.recuLe },
+      env.ALERTE_LEAD_IMMEDIATE,
+    )
+  ) {
+    return { canal: "aucun", status: "differe" };
+  }
+
   if (env.ALERTE_LEAD_WEBHOOK_URL) {
     const r = await alerterEquipeParWebhook(lead, { env, fetchImpl: deps.fetchImpl });
     return { canal: "webhook", status: r.status };
