@@ -31,6 +31,7 @@ sont configurées, sans jamais révéler une valeur.
 | 7 | Les deux webhooks Make | Make → chaque scénario → régénérer l'URL du déclencheur, mettre à jour l'appelant | Le scénario concerné ne se déclenche plus | Moyenne |
 | 8 | Identifiants Académie Florale | Le service concerné | Hors Prodigio OS | Moyenne |
 | 9 | Mots de passe du compte de recette `recette.claude@prodigio.fr` (deux valeurs, gardées dans mon bac à sable) | Prodigio OS → profil du compte, ou réinitialisation par e-mail | Rien : le compte est déjà neutralisé et ne se connecte plus | Basse |
+| 10 | Mot de passe choisi pour `orofino.nicolas@gmail.com` | Le compte n'existe pas encore : passer par l'invitation, qui laisse la personne choisir le sien | Rien | **Ne pas l'utiliser** |
 
 **Non concerné :** le jeton d'API SMSFactor n'a jamais transité par la
 conversation — il a été posé directement dans Vercel. Rien à faire, sauf
@@ -42,6 +43,12 @@ fichiers de recette : la règle du dernier paragraphe vaut aussi pour les
 secrets qu'on croit sans importance. Le compte étant déjà neutralisé, rien
 n'est exposé qui puisse servir — la ligne est là pour que le renouvellement ne
 soit pas oublié le jour où ce compte serait réactivé.
+
+Le mot de passe de la ligne 10 a ete dicte dans une conversation de travail le
+22 octobre 2026, pour un compte a creer. Il n'a jamais ete pose nulle part, et
+il ne doit pas l'etre : l'invitation laisse la personne choisir le sien, ce
+qui supprime le probleme au lieu de le gerer. Voir
+`29-AJOUTER-UN-COMMERCIAL.md`.
 
 ## Ordre conseillé
 
