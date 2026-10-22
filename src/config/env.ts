@@ -216,7 +216,16 @@ const envSchema = z.object({
   // Defaut `tous` A DESSEIN : tant que le recapitulatif ne tourne pas, basculer
   // sur `urgents` priverait les leads sous 1 M€ de TOUTE notification. On
   // n'active donc le filtre qu'une fois le recapitulatif verifie.
-  ALERTE_LEAD_IMMEDIATE: z.enum(["tous", "urgents"]).default("tous"),
+  // `.catch` ET NON `.default` SEUL : `env` est construit avec `parse` au
+  // chargement du module, et `@/config` est importe par le middleware comme
+  // par chaque page. Une valeur inattendue — « urgent » au singulier, une
+  // majuscule, un espace colle — ferait donc echouer la validation au
+  // demarrage et mettrait TOUT le site a terre, pas seulement les alertes.
+  // Une faute de frappe dans un panneau de configuration ne doit pas pouvoir
+  // provoquer une panne de production. On retombe donc sur `tous`, le
+  // comportement historique, et l'endpoint de recapitulatif expose la
+  // politique reellement retenue pour qu'une faute se voie au lieu de passer.
+  ALERTE_LEAD_IMMEDIATE: z.enum(["tous", "urgents"]).default("tous").catch("tous"),
 
   // Secret partage qui protege l'endpoint de recapitulatif, appele par Make.
   // L'endpoint rend des noms et des telephones : sans ce jeton il ne repond

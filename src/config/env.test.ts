@@ -309,3 +309,20 @@ describe("communications — configuration des fournisseurs", () => {
     }
   });
 });
+
+describe("ALERTE_LEAD_IMMEDIATE", () => {
+  it("vaut « tous » par defaut", () => {
+    expect(parseEnv({}).ALERTE_LEAD_IMMEDIATE).toBe("tous");
+  });
+
+  it("accepte « urgents »", () => {
+    expect(parseEnv({ ALERTE_LEAD_IMMEDIATE: "urgents" }).ALERTE_LEAD_IMMEDIATE).toBe("urgents");
+  });
+
+  it("ne fait PAS tomber le site sur une faute de frappe", () => {
+    for (const faute of ["urgent", "Urgents", " urgents", "URGENTS", "nimporte quoi"]) {
+      expect(() => parseEnv({ ALERTE_LEAD_IMMEDIATE: faute })).not.toThrow();
+      expect(parseEnv({ ALERTE_LEAD_IMMEDIATE: faute }).ALERTE_LEAD_IMMEDIATE).toBe("tous");
+    }
+  });
+});
