@@ -126,6 +126,11 @@ export async function GET(request: Request) {
       nombre: recap.nombre,
       depuis: debut.toISOString(),
       manuel,
+      /* La politique d'alerte immediate, en clair dans la reponse. Sans elle,
+         savoir si la bascule `urgents` a bien pris effet exige d'attendre un
+         lead hors horaires : on ne peut pas verifier une mise en service a la
+         demande. Visible seulement du porteur du jeton. */
+      politique: env.ALERTE_LEAD_IMMEDIATE,
     },
     { headers: { "cache-control": "no-store" } },
   );
