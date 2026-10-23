@@ -4,6 +4,7 @@ import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
 import { memberDisplayName } from "@/modules/crm/data/queries";
+import { membresAffectables } from "@/modules/crm/data/membres";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
 import { BandeauFile } from "@/components/crm/buyers/bandeau-file";
@@ -107,10 +108,10 @@ export default async function BuyersPipelinePage({
      tache. Ils sont deja charges — le bandeau les utilise juste au-dessus. */
   const lignes = retenues.map(toInboxRow);
 
-  const memberOptions = [...members.entries()].map(([userId]) => ({
-    userId,
-    name: memberDisplayName(userId, members),
-  }));
+  /* Un compte suspendu — le compte de recette, par exemple — ne doit pas être
+     proposé : on croirait avoir confié le dossier. La règle vit dans un seul
+     endroit, `membresAffectables`. */
+  const memberOptions = membresAffectables(members);
 
   return (
     <div className="flex flex-col gap-5">

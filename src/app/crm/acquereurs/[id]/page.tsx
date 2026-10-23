@@ -12,6 +12,7 @@ import {
 } from "@/modules/crm/auth/roles";
 import { getBuyerProfileDetail } from "@/modules/buyers/crm/queries";
 import { memberDisplayName } from "@/modules/crm/data/queries";
+import { membresAffectables } from "@/modules/crm/data/membres";
 import { buyerAuditEventLabels, buyerStageVisual } from "@/modules/buyers/crm/labels";
 import { formatCents } from "@/modules/buyers/crm/criteria";
 import {
@@ -174,10 +175,10 @@ export default async function BuyerProfilePage({
     ),
   ].map(([id, label]) => ({ id, label }));
 
-  const memberOptions = [...members.entries()].map(([userId, info]) => ({
-    userId,
-    name: memberDisplayName(userId, members),
-  }));
+  /* Un compte suspendu — le compte de recette, par exemple — ne doit pas être
+     proposé : on croirait avoir confié le dossier. La règle vit dans un seul
+     endroit, `membresAffectables`. */
+  const memberOptions = membresAffectables(members);
 
   /* Donnees du bandeau de tete. Toutes viennent de ce qui est deja charge :
      rien n'est invente pour remplir la ligne. */

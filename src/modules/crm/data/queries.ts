@@ -21,12 +21,11 @@ import type {
  * l'agrégat « Lead » en mémoire (volumétrie faible).
  */
 
-export interface MemberInfo {
-  email: string | null;
-  role: string;
-  /** Nom court choisi par l'organisation. Absent tant qu'il n'est pas saisi. */
-  displayName: string | null;
-}
+/* `MemberInfo` et `memberDisplayName` vivent desormais dans `noms.ts` : du
+   calcul pur, qu'on ne pouvait pas tester tant qu'il etait enferme ici derriere
+   « server-only ». Re-exportes pour que les appelants ne changent pas. */
+export { memberDisplayName, type MemberInfo } from "./noms";
+import { memberDisplayName, type MemberInfo } from "./noms";
 
 export async function getMembersMap(): Promise<Map<string, MemberInfo>> {
   const supabase = await createSupabaseServerClient();
@@ -38,30 +37,11 @@ export async function getMembersMap(): Promise<Map<string, MemberInfo>> {
         email: m.email ?? null,
         role: m.role,
         displayName: m.display_name ?? null,
+        status: m.status ?? "actif",
       });
     }
   }
   return map;
-}
-
-/**
- * Nom affichable d'un membre. UNIQUE endroit où cette décision se prend :
- * elle était recopiée dans cinq fichiers, qui divergeaient déjà.
- *
- * Le nom choisi par l'organisation d'abord. À défaut, la partie locale de
- * l'e-mail — lisible par personne (« casteljc69 »), mais toujours préférable à
- * un identifiant. À défaut encore, un identifiant court, qui ne devrait jamais
- * s'afficher.
- */
-export function memberDisplayName(
-  userId: string,
-  members: Map<string, MemberInfo>,
-): string {
-  const info = members.get(userId);
-  const nom = info?.displayName?.trim();
-  if (nom) return nom;
-  if (info?.email) return info.email.split("@")[0] || info.email;
-  return `Membre ${userId.slice(0, 6)}`;
 }
 
 interface LeadBundle {

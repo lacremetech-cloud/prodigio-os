@@ -9,8 +9,8 @@ const ANTOINE = "22222222-2222-2222-2222-222222222222";
 const INCONNU = "33333333-3333-3333-3333-333333333333";
 
 const membres = new Map([
-  [JC, { email: "casteljc69@gmail.com", role: "commercial", displayName: "JC" }],
-  [ANTOINE, { email: "adelombares@kprojects.fr", role: "commercial", displayName: null }],
+  [JC, { email: "casteljc69@gmail.com", role: "commercial", displayName: "JC", status: "actif" }],
+  [ANTOINE, { email: "adelombares@kprojects.fr", role: "commercial", displayName: null, status: "actif" }],
 ]);
 
 describe("nom affichable d'un membre", () => {
@@ -23,7 +23,7 @@ describe("nom affichable d'un membre", () => {
   });
 
   it("ignore un nom qui ne contient que des espaces", () => {
-    const m = new Map([[JC, { email: "casteljc69@gmail.com", role: "commercial", displayName: "   " }]]);
+    const m = new Map([[JC, { email: "casteljc69@gmail.com", role: "commercial", displayName: "   ", status: "actif" }]]);
     expect(memberDisplayName(JC, m)).toBe("casteljc69");
   });
 

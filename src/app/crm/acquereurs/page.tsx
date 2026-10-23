@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { memberDisplayName } from "@/modules/crm/data/queries";
+import { membresAffectables } from "@/modules/crm/data/membres";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
@@ -55,10 +56,10 @@ export default async function BuyersInboxPage({
   const visibles = items.filter((i) => dansLaSelection(i.propertyId, selection));
   const rows = visibles.map(toInboxRow);
 
-  const memberOptions = [...members.entries()].map(([userId, info]) => ({
-    userId,
-    name: memberDisplayName(userId, members),
-  }));
+  /* Un compte suspendu — le compte de recette, par exemple — ne doit pas être
+     proposé : on croirait avoir confié le dossier. La règle vit dans un seul
+     endroit, `membresAffectables`. */
+  const memberOptions = membresAffectables(members);
 
   return (
     <div className="flex flex-col gap-5">
