@@ -253,7 +253,11 @@ export function PanneauTraitement({
     );
     setAttribution(false);
     if (!r.ok) {
-      setErreur(r.error ?? "L’attribution a échoué.");
+      /* Le pied de panneau est la seule zone d'erreur, et il est collé aux
+         boutons d'enregistrement : sans ce préfixe, un échec d'attribution se
+         lit comme un échec de sauvegarde. C'est ce qui nous a fait chercher au
+         mauvais endroit le 23 octobre. */
+      setErreur(r.error ? `Attribution impossible. ${r.error}` : "L’attribution a échoué.");
       return;
     }
     onEnregistre();
@@ -310,7 +314,11 @@ export function PanneauTraitement({
     if (!resultatAction.ok) {
       // La saisie reste intacte et on NE BOUGE PAS de dossier : réécrire une
       // note qu'on vient de taper est la pire façon de perdre une session.
-      setErreur(resultatAction.error ?? "L’enregistrement a échoué. Réessayez.");
+      setErreur(
+        resultatAction.error
+          ? `Enregistrement impossible. ${resultatAction.error}`
+          : "L’enregistrement a échoué. Réessayez.",
+      );
       return;
     }
     saleRef.current = false;

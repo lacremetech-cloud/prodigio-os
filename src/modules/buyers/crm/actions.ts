@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { messageUtilisateur as humanize } from "./erreurs";
 import { after } from "next/server";
 import { z } from "zod";
 import {
@@ -36,18 +37,10 @@ export interface ActionResult {
   requiresAction?: "offre" | "resultat" | "reouverture";
 }
 
-function humanize(code: string | undefined, message: string): string {
-  switch (code) {
-    case "28000":
-      return "Session expirée. Reconnectez-vous.";
-    case "42501":
-      return message || "Droits insuffisants pour cette action.";
-    case "22023":
-      return message || "Données invalides.";
-    default:
-      return message || "Une erreur est survenue. Réessayez.";
-  }
-}
+/* La traduction vit dans `erreurs.ts` : ce fichier porte « use server » et ne
+   peut exporter que des fonctions asynchrones, donc rien d'ici n'est testable
+   directement. Le nom local reste `humanize` pour ne pas toucher aux dix-huit
+   appels. */
 
 /**
  * Lance un effet de bord APRES la reponse : une remontee de conversion ne doit
