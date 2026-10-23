@@ -219,43 +219,32 @@ export async function assignBuyerAction(input: unknown): Promise<ActionResult> {
 /**
  * « M'attribuer ce lead ».
  *
- * Passe par `crm_buyer_claim` et NON par `crm_buyer_assign` : prendre un
- * dossier libre et réaffecter celui d'un collègue sont deux actes différents.
- * Le second reste réservé à l'encadrement — sans quoi deux associés pourraient
- * se reprendre leurs dossiers sans que l'autre le sache.
+ * L'ATTRIBUTION EST LIBRE. Prendre un dossier qu'un collègue suit ne refuse
+ * plus rien : le dossier change de main, et l'ancien responsable est relevé et
+ * nommé dans la trace d'audit. Ils travaillent ensemble sur les mêmes biens ;
+ * leur demander une autorisation pour un geste quotidien n'avait pas de sens.
  *
- * Un dossier déjà suivi ne lève pas d'erreur : la fonction RENVOIE le nom du
- * responsable, pour qu'on l'affiche. « Jean-Charles suit déjà ce dossier » dit
- * quoi faire ; « droits insuffisants » ne dit rien.
+ * Ce qui reste vérifié n'est pas une contrainte d'attribution mais de
+ * visibilité : un commercial n'agit que sur les dossiers des biens qui lui
+ * sont confiés.
+ *
+ * Reste séparé de `crm_buyer_assign` parce que les deux gestes ne portent pas
+ * la même intention — prendre pour soi, ou confier à quelqu'un — et que la
+ * trace d'audit les distingue.
  */
 export async function selfAssignBuyerAction(input: unknown): Promise<ActionResult> {
   await requireCrmSession();
   const parsed = z.object({ buyerProfileId: uuid }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Saisie invalide." };
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("crm_buyer_claim", {
+  const { error } = await supabase.rpc("crm_buyer_claim", {
     p_buyer_profile_id: parsed.data.buyerProfileId,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
 
-  const reponse = (data ?? {}) as {
-    ok?: boolean;
-    raison?: string;
-    responsable_nom?: string | null;
-  };
-  if (reponse.ok === false) {
-    /* La liste est rafraîchie DANS les deux cas : celui qui perd la course doit
-       voir le responsable apparaître, pas seulement lire qu'il a perdu. */
-    revalidateBuyer(parsed.data.buyerProfileId);
-    const nom = reponse.responsable_nom?.trim();
-    return {
-      ok: false,
-      error: nom
-        ? `${nom} suit déjà ce dossier.`
-        : "Ce dossier a déjà un responsable.",
-    };
-  }
-
+  /* Plus de branche de refus : `crm_buyer_claim` ne refuse plus. En garder une
+     ici donnerait du code mort avec un commentaire qui ment — exactement ce
+     qu'on a déjà payé ailleurs. */
   revalidateBuyer(parsed.data.buyerProfileId);
   return { ok: true };
 }
