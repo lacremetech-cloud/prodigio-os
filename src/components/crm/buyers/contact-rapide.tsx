@@ -18,6 +18,8 @@
  * même temps.
  */
 
+import { lienWhatsApp } from "@/modules/buyers/crm/message-whatsapp";
+
 function IconeTelephone() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden
@@ -59,8 +61,10 @@ export function ContactRapide({
   /** En liste, l'icône seule suffit : le libellé reste pour les lecteurs d'écran. */
   compact?: boolean;
 }) {
-  // WhatsApp veut le numéro sans le plus ni les espaces.
-  const wa = numero ? numero.replace(/\D/g, "") : "";
+  /* Le lien WhatsApp porte le message déjà écrit : le commercial relit et
+     appuie sur envoyer dans WhatsApp. Rien n'est consigné ici — ouvrir
+     WhatsApp n'est pas un envoi. */
+  const wa = lienWhatsApp(numero);
 
   const actions: {
     cle: string;
@@ -86,10 +90,10 @@ export function ContactRapide({
       icone: <IconeEnveloppe />,
     });
   }
-  if (numero) {
+  if (wa) {
     actions.push({
       cle: "wa",
-      href: `https://wa.me/${wa}`,
+      href: wa,
       label: `WhatsApp au ${numero}`,
       icone: <IconeWhatsApp />,
       externe: true,
