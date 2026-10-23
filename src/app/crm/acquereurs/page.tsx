@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { memberDisplayName } from "@/modules/crm/data/queries";
 import { membresAffectables } from "@/modules/crm/data/membres";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";

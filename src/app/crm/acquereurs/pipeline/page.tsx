@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
-import { memberDisplayName } from "@/modules/crm/data/queries";
 import { membresAffectables } from "@/modules/crm/data/membres";
 import { BuyerKanbanBoard } from "@/components/crm/buyers/buyer-kanban";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
