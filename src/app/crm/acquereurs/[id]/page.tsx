@@ -5,7 +5,6 @@ import type { CSSProperties } from "react";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import {
   canDecideMandate,
-  canOperate,
   canTreatBuyers,
   canViewBuyerHistory,
   canViewContactDetails,
@@ -122,11 +121,16 @@ export default async function BuyerProfilePage({
   const session = await requireCrmSession(`/crm/acquereurs/${id}`);
   const canViewContacts = canViewContactDetails(session.roles);
   const canOperateBuyers = canTreatBuyers(session.roles);
-  /* Réaffecter — donner un dossier à quelqu'un, retirer celui d'un autre —
-     reste un acte d'encadrement. Un commercial prend un dossier libre et rend
-     le sien, rien de plus : entre deux associés, pouvoir se reprendre un
-     dossier en silence est une source de conflit. */
-  const canReassignBuyers = canOperate(session.roles);
+  /* L'AFFECTATION EST LIBRE, et cette page était la dernière à l'ignorer.
+     Elle demandait `canOperate` — administrateur, manager ou setter — donc un
+     commercial n'y voyait que « M'attribuer ce lead », jamais la liste de ses
+     collègues. La base, elle, a ouvert l'affectation aux commerciaux le
+     19 octobre, et `crm_buyer_claim` ne refuse plus rien depuis le 23. Trois
+     endroits disaient trois choses ; ils disent maintenant la même.
+
+     La règle est celle du panneau et celle de la fonction SQL : qui peut
+     traiter un dossier peut le confier. */
+  const canReassignBuyers = canTreatBuyers(session.roles);
   const canDecide = canDecideMandate(session.roles);
   const showAudit = canViewBuyerHistory(session.roles);
 

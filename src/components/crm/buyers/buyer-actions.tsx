@@ -18,7 +18,6 @@ import {
 } from "@/modules/buyers/crm/actions";
 import {
   buyerQualificationLabels,
-  buyerResponsibilityLabels,
   buyerStageLabels,
 } from "@/modules/buyers/crm/labels";
 import { movableBuyerStages } from "@/modules/buyers/crm/pipeline";
@@ -208,7 +207,6 @@ export function BuyerAssignmentForm({
 }) {
   const { pending, error, done, run } = useAction();
   const [userId, setUserId] = useState("");
-  const [responsibility, setResponsibility] = useState("setter");
 
   return (
     <div className="flex flex-col gap-2">
@@ -217,8 +215,13 @@ export function BuyerAssignmentForm({
       ) : (
         <ul className="flex flex-wrap gap-1.5">
           {assignees.map((a) => (
+            /* Le nom, et rien d'autre. La puce affichait « Nom · Setter » ;
+               depuis que la base inscrit « commercial » pour un commercial,
+               ce suffixe est le même pour tout le monde et ne distingue plus
+               personne. Il affichait en prime le jeton brut, « commercial »
+               n'ayant pas de libellé. */
             <li key={a.userId} className="crm-chip">
-              {a.name} · {buyerResponsibilityLabels[a.responsibility] ?? a.responsibility}
+              {a.name}
               {canAssign ? (
                 <button
                   type="button"
@@ -265,26 +268,11 @@ export function BuyerAssignmentForm({
               ))}
             </select>
           </label>
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="crm-label">Responsabilité</span>
-            <select
-              className="crm-select"
-              value={responsibility}
-              onChange={(e) => setResponsibility(e.target.value)}
-              aria-label="Responsabilité"
-            >
-              {Object.entries(buyerResponsibilityLabels).map(([k, label]) => (
-                <option key={k} value={k}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
           <button
             type="button"
             className="crm-btn crm-btn--sm"
             disabled={pending || !userId}
-            onClick={() => run(() => assignBuyerAction({ buyerProfileId, userId, responsibility }))}
+            onClick={() => run(() => assignBuyerAction({ buyerProfileId, userId }))}
           >
             Affecter
           </button>
@@ -292,9 +280,10 @@ export function BuyerAssignmentForm({
         </div>
       ) : null}
 
-      {/* « M'attribuer » vit HORS du bloc de réaffectation : un commercial y a
-          droit, au menu « Affecter à » non. Et il ne sert à rien quand le
-          dossier a déjà un responsable. */}
+      {/* « M'attribuer » reste un raccourci : un clic au lieu de chercher son
+          propre nom dans la liste. Il vit hors du bloc de réaffectation parce
+          qu'il ne sert à rien quand le dossier a déjà un responsable — dans ce
+          cas on passe par la liste, qui reprend le dossier à son détenteur. */}
       {canSelfAssign && assignees.length === 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <button
