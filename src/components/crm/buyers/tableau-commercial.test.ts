@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  aTraiterEnPriorite,
   compterPourCommercial,
   premierTraitement,
 } from "./tableau-commercial";
@@ -82,34 +81,6 @@ describe("compterPourCommercial", () => {
       aRappeler: 0,
       enCours: 1,
     });
-  });
-});
-
-describe("aTraiterEnPriorite", () => {
-  it("fait passer le retard avant l’absence d’action", () => {
-    // L'échéance avait été prise et elle est dépassée : c'est plus urgent
-    // qu'un dossier pour lequel rien n'a encore été promis.
-    const l = aTraiterEnPriorite([
-      dossier({ id: "sans", noNextAction: true }),
-      dossier({ id: "retard", overdue: true }),
-    ]);
-    expect(l.map((d) => d.profile.id)).toEqual(["retard", "sans"]);
-  });
-
-  it("classe les plus fraîches d’abord à urgence égale", () => {
-    const l = aTraiterEnPriorite([
-      dossier({ id: "vieux", noNextAction: true, lastInterestAt: hier }),
-      dossier({ id: "frais", noNextAction: true, lastInterestAt: maintenant }),
-    ]);
-    expect(l.map((d) => d.profile.id)).toEqual(["frais", "vieux"]);
-  });
-
-  it("laisse de côté ce qui est à jour, et ce qui est clos", () => {
-    const l = aTraiterEnPriorite([
-      dossier({ id: "ok" }),
-      dossier({ id: "clos", overdue: true, outcome: "perdu" }),
-    ]);
-    expect(l).toEqual([]);
   });
 });
 

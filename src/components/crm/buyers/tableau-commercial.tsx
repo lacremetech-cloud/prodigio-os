@@ -6,8 +6,6 @@ import type { Visite } from "@/modules/buyers/crm/visites";
 import { CourbeArrivees } from "./courbe-arrivees";
 import { datesDArrivee } from "@/modules/buyers/crm/arrivees";
 import {
-  BUDGET_CHOICE_COURT,
-  type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
 
 /**
@@ -121,29 +119,6 @@ export function premierTraitement(items: BuyerListItem[]): {
 }
 
 /**
- * Les dossiers a traiter, dans l'ordre ou ils brulent.
- *
- * Le tableau de bord annonçait « 3 sans action prevue » et s'arretait la : il
- * fallait cliquer, puis relire la liste pour retrouver lesquels. Un ecran du
- * matin doit donner les noms, pas seulement leur nombre.
- *
- * Un retard passe avant une absence d'action : l'echeance etait prise, elle est
- * depassee. Ensuite les arrivees recentes, les plus fraiches d'abord — un lead
- * refroidit vite.
- */
-export function aTraiterEnPriorite(items: BuyerListItem[]): BuyerListItem[] {
-  return items
-    .filter(encoreOuvert)
-    .filter((i) => i.overdue || i.noNextAction)
-    .sort((a, b) => {
-      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
-      return (b.profile.last_interest_at ?? "").localeCompare(
-        a.profile.last_interest_at ?? "",
-      );
-    });
-}
-
-/**
  * Tuile de chiffre. Elle etait grise sur gris : un nombre, un libelle pale,
  * aucun repere. Elle porte desormais une pastille d'icone coloree et un
  * chiffre qui se lit de l'autre bout de la piece — c'est le seul ecran que le
@@ -214,7 +189,6 @@ export function TableauCommercial({
 }) {
   const c = compterPourCommercial(items);
   const prochaines = visites.slice(0, 5);
-  const priorites = aTraiterEnPriorite(items);
   const traitement = premierTraitement(items);
   return (
     <section className="flex flex-col gap-4">
@@ -289,56 +263,6 @@ export function TableauCommercial({
         </div>
       ) : null}
 
-      <div className="crm-panel flex flex-col gap-2 p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-bold text-[var(--crm-text)]">À traiter en priorité</h2>
-          {priorites.length > 5 ? (
-            <Link prefetch={false}
-              href="/crm/acquereurs?signal=sans_action"
-              className="text-xs font-medium text-[var(--crm-univers)] hover:underline"
-            >
-              Les {priorites.length}
-            </Link>
-          ) : null}
-        </div>
-        {priorites.length === 0 ? (
-          <p className="rounded-[10px] border border-dashed border-[var(--crm-line)] px-3 py-5 text-center text-xs text-[var(--crm-text-faint)]">
-            Chaque dossier ouvert a sa prochaine action. Rien ne traîne.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {priorites.slice(0, 5).map((d) => (
-              <li key={d.profile.id}>
-                <Link prefetch={false}
-                  href={`/crm/acquereurs/${d.profile.id}`}
-                  className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel-2)] px-3 py-2.5 transition-colors hover:border-[var(--crm-line-hover)]"
-                >
-                  <span className="min-w-0">
-                    <span className="crm-ellipsis block text-sm font-semibold text-[var(--crm-text)]">
-                      {d.name}
-                    </span>
-                    <span className="crm-ellipsis block text-[11px] text-[var(--crm-text-faint)]">
-                      {d.propertyLabel ?? "Bien non précisé"}
-                      {d.budgetChoice
-                        ? ` · ${BUDGET_CHOICE_COURT[d.budgetChoice as BuyerBudgetChoice] ?? d.budgetChoice}`
-                        : ""}
-                    </span>
-                  </span>
-                  {/* Le motif est ecrit, jamais seulement couleur. */}
-                  <span
-                    className="shrink-0 text-[11px] font-semibold"
-                    style={{
-                      color: d.overdue ? "var(--crm-vif-perdu)" : "var(--crm-vif-a_contacter)",
-                    }}
-                  >
-                    {d.overdue ? "! En retard" : "☎︎ Sans action"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
       {/* Ce qui est cale, et quand. Le compteur disait « 3 visites » sans
           jamais dire lesquelles ni a quelle heure : il fallait ouvrir le
