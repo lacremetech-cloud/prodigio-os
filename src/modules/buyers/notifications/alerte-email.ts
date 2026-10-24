@@ -224,6 +224,14 @@ export interface ChargeAlerteEquipe {
   recu_le: string;
   fiche_url: string;
   interest_id: string;
+  /**
+   * Le tri d'urgence VOYAGE dans la charge, il ne filtre plus l'appel.
+   * `true` : Make envoie l'alerte interne a Antoine, JC et Nicolas.
+   * `false` : Make saute cette SEULE branche. Le premier contact automatique
+   * part quand meme, et le lead reparait dans le recapitulatif de 8 h 30,
+   * 13 h ou 17 h 30.
+   */
+  alerte_interne: boolean;
 }
 
 /** Ce que Make recoit. Les noms sont ceux cables dans le scenario. */
@@ -243,6 +251,10 @@ export function chargeAlerteEquipe(lead: FicheLead, env: Env = globalEnv): Charg
       lead.buyerProfileId ? `/${encodeURIComponent(lead.buyerProfileId)}` : ""
     }`,
     interest_id: lead.interestId,
+    alerte_interne: meriteAlerteImmediate(
+      { budgetChoice: lead.budgetChoice, recuLe: lead.recuLe },
+      env.ALERTE_LEAD_IMMEDIATE,
+    ),
   };
 }
 
@@ -280,6 +292,13 @@ export async function alerterEquipeParWebhook(
  * Le webhook PRIME : c'est le chemin actif aujourd'hui. Jamais les deux, sinon
  * Antoine recevrait deux fois la meme alerte — la meme regle que pour l'accuse
  * de reception, pour la meme raison.
+ *
+ * ET IL PART POUR CHAQUE LEAD, SANS CONDITION. Le meme webhook declenche
+ * desormais le premier e-mail automatique a l'acquereur : le filtrer, c'est
+ * laisser sans reponse celui dont le budget ne justifie pas de faire sonner un
+ * portable. Le tri d'urgence ne decide donc plus QUI est appele, seulement si
+ * l'alerte INTERNE part — il voyage dans `alerte_interne` et c'est Make qui
+ * coupe cette seule branche.
  */
 export async function alerterEquipe(
   lead: FicheLead,
@@ -287,9 +306,17 @@ export async function alerterEquipe(
 ): Promise<{ canal: "webhook" | "email" | "aucun"; status: string }> {
   const env = deps.env ?? globalEnv;
 
-  /* LE TRI PASSE AVANT LES DEUX TUNNELS, pas dans l'un d'eux : sinon basculer
-     de Make vers Lumail changerait aussi qui est alerté. Un lead écarté ici
-     n'est pas perdu — il part dans le récapitulatif de 8h30, 13h00 ou 17h30. */
+  /* AUCUN TRI AVANT CE POST. La charge porte `alerte_interne` et c'est Make
+     qui s'en sert pour n'ecarter que le mail interne. */
+  if (env.ALERTE_LEAD_WEBHOOK_URL) {
+    const r = await alerterEquipeParWebhook(lead, { env, fetchImpl: deps.fetchImpl });
+    return { canal: "webhook", status: r.status };
+  }
+
+  /* Lumail, lui, ne sait porter QUE l'alerte interne — rien d'autre ne passe
+     par ce tunnel. Le tri s'y applique donc directement, sans rien priver
+     d'autre. Un lead ecarte ici n'est pas perdu : il part dans le
+     recapitulatif de 8 h 30, 13 h ou 17 h 30. */
   if (
     !meriteAlerteImmediate(
       { budgetChoice: lead.budgetChoice, recuLe: lead.recuLe },
@@ -299,10 +326,6 @@ export async function alerterEquipe(
     return { canal: "aucun", status: "differe" };
   }
 
-  if (env.ALERTE_LEAD_WEBHOOK_URL) {
-    const r = await alerterEquipeParWebhook(lead, { env, fetchImpl: deps.fetchImpl });
-    return { canal: "webhook", status: r.status };
-  }
   const r = await alerterEquipeParEmail(lead, deps);
   return { canal: r.status === "skipped" ? "aucun" : "email", status: r.status };
 }

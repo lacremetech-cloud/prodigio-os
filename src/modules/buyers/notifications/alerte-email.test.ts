@@ -271,3 +271,81 @@ describe("aiguillage : JAMAIS les deux canaux", () => {
     expect(r.canal).toBe("aucun");
   });
 });
+
+describe("le tri d'urgence ne coupe JAMAIS le webhook", () => {
+  const WH = "https://hook.eu2.make.com/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy";
+
+  function faussetteWebhook() {
+    const appels: Array<{ url: string; charge: Record<string, unknown> }> = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      appels.push({ url, charge: JSON.parse(String(init.body)) });
+      return { ok: true, status: 200 } as unknown as Response;
+    }) as unknown as typeof fetch;
+    return { appels, fetchImpl };
+  }
+
+  it("poste le lead ecarte de l'alerte interne, au lieu de le laisser tomber", async () => {
+    // Ce webhook ne porte plus seulement l'alerte interne : il declenche aussi
+    // le premier e-mail automatique a l'acquereur. Le couper au nom du tri,
+    // c'est laisser sans reponse celui dont le budget n'est « que » de 500 k€.
+    const { appels, fetchImpl } = faussetteWebhook();
+    const r = await alerterEquipe(
+      { ...LEAD, budgetChoice: "500k_1m" },
+      {
+        env: envWith({ ALERTE_LEAD_WEBHOOK_URL: WH, ALERTE_LEAD_IMMEDIATE: "urgents" }),
+        fetchImpl,
+      },
+    );
+    expect(r).toEqual({ canal: "webhook", status: "sent" });
+    expect(appels).toHaveLength(1);
+    expect(appels[0]?.charge.alerte_interne).toBe(false);
+  });
+
+  it("poste aussi hors des horaires d'ouverture", async () => {
+    const { appels, fetchImpl } = faussetteWebhook();
+    // 03 h 00 UTC = 05 h 00 a Paris : personne a reveiller, mais un acquereur
+    // a qui repondre.
+    await alerterEquipe(
+      { ...LEAD, recuLe: new Date("2026-10-16T03:00:00Z") },
+      {
+        env: envWith({ ALERTE_LEAD_WEBHOOK_URL: WH, ALERTE_LEAD_IMMEDIATE: "urgents" }),
+        fetchImpl,
+      },
+    );
+    expect(appels).toHaveLength(1);
+    expect(appels[0]?.charge.alerte_interne).toBe(false);
+  });
+
+  it("marque l'alerte interne quand le lead la merite", async () => {
+    const { appels, fetchImpl } = faussetteWebhook();
+    await alerterEquipe(LEAD, {
+      env: envWith({ ALERTE_LEAD_WEBHOOK_URL: WH, ALERTE_LEAD_IMMEDIATE: "urgents" }),
+      fetchImpl,
+    });
+    expect(appels[0]?.charge.alerte_interne).toBe(true);
+  });
+
+  it("politique « tous » : chacun merite l'alerte interne", async () => {
+    const { appels, fetchImpl } = faussetteWebhook();
+    await alerterEquipe(
+      { ...LEAD, budgetChoice: "aucun_projet", recuLe: new Date("2026-10-16T03:00:00Z") },
+      { env: envWith({ ALERTE_LEAD_WEBHOOK_URL: WH, ALERTE_LEAD_IMMEDIATE: "tous" }), fetchImpl },
+    );
+    expect(appels[0]?.charge.alerte_interne).toBe(true);
+  });
+
+  it("sans webhook, le tri gouverne encore le tunnel Lumail", async () => {
+    // Lumail ne sait porter QUE l'alerte interne : la filtrer ne prive de rien
+    // d'autre. Le lead reparait au recapitulatif.
+    const lumail = faussetteLumail();
+    const r = await alerterEquipe(
+      { ...LEAD, budgetChoice: "500k_1m" },
+      {
+        env: envWith({ ALERTE_LEAD_IMMEDIATE: "urgents" }),
+        transport: { fetchImpl: lumail.fetchImpl },
+      },
+    );
+    expect(r).toEqual({ canal: "aucun", status: "differe" });
+    expect(lumail.appels).toHaveLength(0);
+  });
+});
