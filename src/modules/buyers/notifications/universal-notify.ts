@@ -34,14 +34,32 @@ export interface AlerteAcquereurInput {
   } | null;
 }
 
+/**
+ * LES LIBELLÉS QUE MAKE COMPARE CARACTÈRE PAR CARACTÈRE.
+ *
+ * Ce ne sont pas de simples textes d'affichage. Le sous-scénario « JCAN IMMO —
+ * premier contact » choisit lequel des trois messages partira en testant
+ * `budget_libelle` avec une égalité STRICTE. Renommer une valeur ici fait
+ * tomber le lead dans aucune branche, et il repart sans e-mail — en silence,
+ * sans erreur nulle part. C'est exactement ce qui est arrivé aux tranches
+ * « 1 à 2 M€ » et « 2 à 3 M€ », écrites ici avec « à » et là-bas avec un
+ * tiret : deux écritures pour une seule tranche.
+ *
+ * Elles sont donc alignées sur le tiret demi-cadratin, qui est aussi celui de
+ * `BUDGET_CHOICE_COURT` (les colonnes du CRM). Un test épingle les six valeurs
+ * pour qu'un renommage ne puisse plus passer inaperçu.
+ */
 const BUDGETS: Record<string, string> = {
   aucun_projet: "Aucun projet déclaré",
   "500k_1m": "500 k€ à 1 M€",
   plus_1m: "Plus d'1 M€",
-  "1m_2m": "1 à 2 M€",
-  "2m_3m": "2 à 3 M€",
+  "1m_2m": "1 – 2 M€",
+  "2m_3m": "2 – 3 M€",
   plus_3m: "Plus de 3 M€",
 };
+
+/** Exporté POUR LE TEST qui les épingle, pas pour être réutilisé ailleurs. */
+export const LIBELLES_BUDGET_TRANSMIS: Readonly<Record<string, string>> = BUDGETS;
 
 const PRIORITES: Record<string, string> = {
   a_qualifier: "À qualifier",
