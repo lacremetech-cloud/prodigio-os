@@ -6,7 +6,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canDecideMandate } from "@/modules/crm/auth/roles";
 import { isSupabaseAdminConfigured } from "@/config";
-import type { PropertyPublicMediaRow } from "@/lib/supabase/types";
 import {
   buildMasterPath,
   copyMasterToPublic,
@@ -393,5 +392,3 @@ export async function setBuyerInterestStatusAction(input: unknown): Promise<Acti
   revalidateProperty(parsed.data.propertyId);
   return { ok: true };
 }
-
-export type { PropertyPublicMediaRow };
