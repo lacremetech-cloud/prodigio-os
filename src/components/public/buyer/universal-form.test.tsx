@@ -227,3 +227,65 @@ describe("remise du dossier", () => {
     expect(postMessage).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * LE FORMULAIRE ANGLAIS.
+ *
+ * Les publicités 9 à 12 des Airelles pointent sur `?lang=en`. Ce qui suit
+ * vérifie les deux choses qui comptent : que l'écran est réellement en
+ * anglais, et que la réponse envoyée au serveur porte le MÊME code qu'en
+ * français. Un libellé traduit qui changerait le code stocké ferait dérailler
+ * le score, l'alerte au-dessus d'1 M€ et le choix du modèle d'e-mail.
+ */
+describe("version anglaise", () => {
+  it("pose la question et les réponses en anglais", () => {
+    renderForm({ langue: "en" });
+    expect(screen.getByText("Do you have a project in mind? If so, what is your budget?")).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByLabelText("No, not at the moment")).toBeTruthy();
+    expect(screen.getByLabelText("Yes, between €500,000 and €1 million")).toBeTruthy();
+    expect(screen.getByLabelText("More than €1 million")).toBeTruthy();
+  });
+
+  it("ne laisse aucun texte français à l'écran", () => {
+    renderForm({ langue: "en" });
+    const texte = document.body.textContent ?? "";
+    for (const mot of ["Étape", "Continuer", "Votre projet", "budget ?"]) {
+      expect(texte, mot).not.toContain(mot);
+    }
+    expect(texte).toContain("Step 1 of 2");
+  });
+
+  it("mène jusqu'au bout et envoie le MÊME code de budget", async () => {
+    renderForm({ langue: "en" });
+    fireEvent.click(screen.getByLabelText("More than €1 million"));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await waitFor(() => screen.getByLabelText("First name"));
+
+    fireEvent.change(screen.getByLabelText("First name"), { target: { value: "James" } });
+    fireEvent.change(screen.getByLabelText("Last name"), { target: { value: "Clarke" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "j@example.test" } });
+    fireEvent.change(screen.getByLabelText("Phone"), { target: { value: "0612345678" } });
+    fireEvent.click(screen.getByRole("button", { name: /request the brochure/i }));
+
+    await screen.findByText("Your request has been received.");
+    const envoye = submit.mock.calls[0]?.[0] as { answers?: { budgetChoice?: string } };
+    expect(envoye?.answers?.budgetChoice).toBe("plus_1m");
+  });
+
+  it("affiche la mention de confidentialité en anglais", async () => {
+    renderForm({ langue: "en" });
+    fireEvent.click(screen.getByLabelText("No, not at the moment"));
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await waitFor(() => screen.getByLabelText("First name"));
+    expect(document.body.textContent).toContain("never shared with third parties");
+  });
+
+  it("sans paramètre, reste en français", () => {
+    // La garantie pour les deux villas de Cassis : leurs adresses déjà
+    // collées ne portent aucun `?lang=`, et rien ne doit changer pour elles.
+    renderForm();
+    expect(screen.getByText(BUDGET_QUESTION)).toBeTruthy();
+    expect(document.body.textContent).toContain("Étape 1 / 2");
+  });
+});

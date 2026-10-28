@@ -12,19 +12,14 @@ import {
 import { generateIdempotencyKey } from "@/modules/mandates/funnel/idempotency";
 import { BUYER_TURNSTILE_ACTION } from "@/modules/buyers/funnel/turnstile";
 import { submitUniversalInterestAction } from "@/modules/buyers/funnel/universal-submit";
+import { universalSubmissionRequestSchema } from "@/modules/buyers/funnel/universal-payload";
 import {
-  UNIVERSAL_PRIVACY_NOTICE,
-  universalSubmissionRequestSchema,
-} from "@/modules/buyers/funnel/universal-payload";
-import {
-  BUDGET_CHOICE_LABELS,
-  BUDGET_QUESTION,
   BUDGET_CHOICES_PROPOSES,
-  UNIVERSAL_STEPS,
   universalStepOneSchema,
   universalStepTwoSchema,
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
+import { textes, type LangueFormulaire } from "@/modules/buyers/funnel/langue";
 import {
   isEmbedded,
   notifyParentBrochure,
@@ -81,12 +76,16 @@ export function UniversalBuyerForm({
   slug,
   propertyName,
   brochureAvailable,
+  langue = "fr",
 }: {
   slug: string;
   /** Renseigné UNIQUEMENT si la vitrine est publiée. Sinon la page reste anonyme. */
   propertyName: string | null;
   brochureAvailable: boolean;
+  /** Lue dans l'URL (`?lang=`). Absente ou inconnue : le français, comme avant. */
+  langue?: LangueFormulaire;
 }) {
+  const t = textes(langue);
   const [step, setStep] = useState<1 | 2>(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -183,7 +182,7 @@ export function UniversalBuyerForm({
   function goToContact() {
     const parsed = universalStepOneSchema.safeParse({ budgetChoice: draft.budgetChoice });
     if (!parsed.success) {
-      setErrors({ budgetChoice: parsed.error.issues[0]?.message ?? "Réponse requise." });
+      setErrors({ budgetChoice: parsed.error.issues[0]?.message ?? t.erreurReponseRequise });
       return;
     }
     setErrors({});
@@ -252,14 +251,14 @@ export function UniversalBuyerForm({
     });
     if (!request.success) {
       setStatus("error");
-      setErrorMessage("Votre saisie n'a pas pu être validée. Vérifiez les champs.");
+      setErrorMessage(t.erreurValidation);
       return;
     }
 
     if (verificationRequise && turnstileTokenRef.current === null) {
       setStatus("error");
       setErrorMessage(
-        "La vérification de sécurité n'est pas terminée. Patientez un instant, puis réessayez.",
+        t.erreurVerification,
       );
       return;
     }
@@ -287,7 +286,7 @@ export function UniversalBuyerForm({
          se ressemblent sur une capture d'écran, et on cherche du mauvais
          côté. */
       setErrorMessage(
-        "Le serveur n'a pas répondu. Réessayez dans un instant. (réf. RES-SERVEUR)",
+        t.erreurServeur,
       );
     } finally {
       inFlightRef.current = false;
@@ -299,38 +298,33 @@ export function UniversalBuyerForm({
     return (
       <div ref={rootRef} className="uf-root">
         <div className="uf-card" role="status">
-          <h1 className="uf-title">Votre demande est enregistrée.</h1>
-          <p className="uf-text">
-            Merci. Nous revenons vers vous rapidement
-            {propertyName ? ` au sujet de ${propertyName}` : ""}.
-          </p>
+          <h1 className="uf-title">{t.confirmationTitre}</h1>
+          <p className="uf-text">{t.confirmationCorps(propertyName)}</p>
           {brochureUrl ? (
             <a className="uf-btn uf-btn--primary uf-btn--wide" href={brochureUrl} target="_blank" rel="noopener noreferrer">
-              Accéder à la brochure
+              {t.accederBrochure}
             </a>
           ) : brochureAvailable ? (
-            <p className="uf-note">
-              La brochure vous sera transmise par votre interlocuteur.
-            </p>
+            <p className="uf-note">{t.brochureAVenir}</p>
           ) : null}
         </div>
       </div>
     );
   }
 
-  const stepTitle = UNIVERSAL_STEPS[step - 1]?.title ?? "";
+  const stepTitle = t.titresEtapes[step - 1] ?? "";
 
   return (
     <div ref={rootRef} className="uf-root">
       <div className="uf-card">
-        <p className="uf-step" aria-label={`Étape ${step} sur 2`}>
-          Étape {step} / 2 · {stepTitle}
+        <p className="uf-step" aria-label={t.etapeAria(step)}>
+          {t.etape(step, stepTitle)}
         </p>
 
         {/* ----------------------------------------------------------- 1 */}
         {step === 1 ? (
           <fieldset className="uf-fieldset">
-            <legend className="uf-title">{BUDGET_QUESTION}</legend>
+            <legend className="uf-title">{t.questionBudget}</legend>
             <div className="uf-choices">
               {/* Les TROIS réponses proposées, et non toutes celles qui
                   peuvent exister en base : les anciennes tranches restent
@@ -351,7 +345,7 @@ export function UniversalBuyerForm({
                       setErrors({});
                     }}
                   />
-                  <span>{BUDGET_CHOICE_LABELS[choice]}</span>
+                  <span>{t.choixBudget[choice]}</span>
                 </label>
               ))}
             </div>
@@ -361,7 +355,7 @@ export function UniversalBuyerForm({
               </p>
             ) : null}
             <button type="button" className="uf-btn uf-btn--primary uf-btn--wide" onClick={goToContact}>
-              Continuer
+              {t.continuer}
             </button>
           </fieldset>
         ) : null}
@@ -375,18 +369,18 @@ export function UniversalBuyerForm({
               void submit();
             }}
           >
-            <h1 className="uf-title">Recevoir la brochure</h1>
+            <h1 className="uf-title">{t.titreContact}</h1>
 
             <div className="uf-grid">
               <Field
-                label="Prénom"
+                label={t.prenom}
                 value={draft.firstName}
                 onChange={set("firstName")}
                 error={errors.firstName}
                 autoComplete="given-name"
               />
               <Field
-                label="Nom"
+                label={t.nom}
                 value={draft.lastName}
                 onChange={set("lastName")}
                 error={errors.lastName}
@@ -394,7 +388,7 @@ export function UniversalBuyerForm({
               />
             </div>
             <Field
-              label="E-mail"
+              label={t.email}
               type="email"
               value={draft.emailRaw}
               onChange={set("emailRaw")}
@@ -402,7 +396,7 @@ export function UniversalBuyerForm({
               autoComplete="email"
             />
             <PhoneField
-              label="Téléphone"
+              label={t.telephone}
               numberValue={draft.phoneRaw}
               country={draft.phoneCountry}
               onNumberChange={set("phoneRaw")}
@@ -425,7 +419,7 @@ export function UniversalBuyerForm({
             </div>
 
             {/* Information, pas demande d'accord : aucune case, nulle part. */}
-            <p className="uf-note">{UNIVERSAL_PRIVACY_NOTICE}</p>
+            <p className="uf-note">{t.mentionConfidentialite}</p>
 
             {TURNSTILE_SITE_KEY ? (
               <TurnstileWidget
@@ -446,7 +440,7 @@ export function UniversalBuyerForm({
 
             <div className="uf-actions">
               <button type="button" className="uf-btn" onClick={() => setStep(1)}>
-                ← Retour
+                {t.retour}
               </button>
               <button
                 type="submit"
@@ -454,10 +448,10 @@ export function UniversalBuyerForm({
                 disabled={status === "submitting" || (verificationRequise && !tokenPret)}
               >
                 {status === "submitting"
-                  ? "Envoi…"
+                  ? t.envoiEnCours
                   : verificationRequise && !tokenPret
-                    ? "Vérification…"
-                    : "Recevoir la brochure"}
+                    ? t.verificationEnCours
+                    : t.envoyer}
               </button>
             </div>
           </form>
