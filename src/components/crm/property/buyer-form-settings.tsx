@@ -25,6 +25,7 @@ export function BuyerFormSettings({
   suggestedSlug,
   initialStatus,
   initialBrochureUrl,
+  initialBrochureUrlEn,
   initialOrigins,
   publicationStatus,
   canActivate,
@@ -37,6 +38,8 @@ export function BuyerFormSettings({
   suggestedSlug: string;
   initialStatus: string;
   initialBrochureUrl: string | null;
+  /** Adresse servie aux parcours anglais. Vide = l'adresse française. */
+  initialBrochureUrlEn: string | null;
   initialOrigins: string[];
   publicationStatus: string;
   /** Activer la collecte est réservé aux décisionnaires. */
@@ -47,6 +50,7 @@ export function BuyerFormSettings({
   const [slug, setSlug] = useState(initialSlug ?? suggestedSlug);
   const [status, setStatus] = useState(initialStatus);
   const [brochureUrl, setBrochureUrl] = useState(initialBrochureUrl ?? "");
+  const [brochureUrlEn, setBrochureUrlEn] = useState(initialBrochureUrlEn ?? "");
   const [origins, setOrigins] = useState(initialOrigins.join("\n"));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -54,7 +58,8 @@ export function BuyerFormSettings({
   const [copied, setCopied] = useState<"url" | "code" | null>(null);
 
   /** Replié par défaut : on ne déplie que si quelque chose y est déjà réglé. */
-  const optionsOpen = Boolean(initialBrochureUrl) || initialOrigins.length > 0;
+  const optionsOpen =
+    Boolean(initialBrochureUrl) || Boolean(initialBrochureUrlEn) || initialOrigins.length > 0;
 
   const formUrl = useMemo(
     () => (slug.trim() ? `${siteUrl.replace(/\/$/, "")}/bien/${slug.trim()}/interet` : ""),
@@ -85,6 +90,7 @@ export function BuyerFormSettings({
           slug: slug.trim() || null,
           status: nextStatus ?? null,
           brochureUrl: brochureUrl.trim(),
+          brochureUrlEn: brochureUrlEn.trim(),
           allowedOrigins: origins,
         }),
       );
@@ -162,6 +168,24 @@ export function BuyerFormSettings({
           <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
             Remise à l’écran immédiatement après une demande valide. Jamais exposée
             avant : deviner l’identifiant public ne suffit pas à l’obtenir.
+          </p>
+
+          <TextField
+            label="Destination de la brochure — parcours anglais"
+            value={brochureUrlEn}
+            onChange={setBrochureUrlEn}
+            placeholder="https://…/en/brochure/"
+          />
+          {/* Le piège que cette ligne évite : le site n'accepte une redirection
+              que vers SA PROPRE origine. Une adresse d'un autre domaine n'échoue
+              pas bruyamment — le visiteur reste simplement sur le formulaire
+              qu'il vient de remplir, sans message. */}
+          <p className="crm-wrap text-[11px] text-[var(--crm-text-faint)]">
+            Servie aux demandes déposées depuis une page en anglais (celles chargées
+            avec <code>?lang=en</code>). Laissée vide, c’est l’adresse française qui
+            est remise : une brochure dans la mauvaise langue vaut mieux qu’aucune
+            brochure. Les deux adresses doivent appartenir au domaine du site, sinon
+            la redirection est refusée par le navigateur.
           </p>
 
           <TextArea

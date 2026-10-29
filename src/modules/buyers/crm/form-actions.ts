@@ -43,6 +43,7 @@ const schema = z.object({
   slug: z.string().trim().max(120).nullable().optional(),
   status: z.enum(["inactif", "actif"]).nullable().optional(),
   brochureUrl: z.string().trim().max(2000).nullable().optional(),
+  brochureUrlEn: z.string().trim().max(2000).nullable().optional(),
   /** Saisi en texte libre, une origine par ligne ou séparées par des virgules. */
   allowedOrigins: z.string().trim().max(4000).nullable().optional(),
 });
@@ -99,6 +100,7 @@ export async function setBuyerFormSettingsAction(
     p_slug: d.slug ?? null,
     p_status: d.status ?? null,
     p_brochure_url: d.brochureUrl ?? null,
+    p_brochure_url_en: d.brochureUrlEn ?? null,
     p_allowed_origins: origins,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };

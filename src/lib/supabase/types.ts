@@ -651,6 +651,12 @@ export type PropertyPublicConfigRow = {
   buyer_form_status: "inactif" | "actif";
   /** Destination remise après un dépôt valide ; jamais exposée avant. */
   buyer_form_brochure_url: string | null;
+  /**
+   * La même, pour les parcours anglais. Vide = on sert l'adresse française :
+   * une brochure dans la mauvaise langue vaut mieux qu'aucune brochure, et les
+   * deux villas de Cassis n'ont pas de version anglaise.
+   */
+  buyer_form_brochure_url_en: string | null;
   /** Origines autorisées à embarquer le formulaire (`frame-ancestors`). */
   buyer_form_allowed_origins: string[];
   /**
@@ -1451,7 +1457,7 @@ export interface Database {
           renvoie une adresse que `buyer_form_context`, ouverte à l'anonyme,
           ne laisse volontairement pas sortir. */
       brochure_cible: {
-        Args: { p_slug: string };
+        Args: { p_slug: string; p_langue?: string };
         Returns: { property_id: string; brochure_url: string }[];
       };
       /** Prendre pour soi un dossier SANS responsable. Ne réaffecte jamais :
@@ -1839,7 +1845,7 @@ export interface Database {
       buyer_form_context: { Args: { p_slug: string }; Returns: Json };
       /** Adresse de la brochure, délivrée contre un intérêt réellement enregistré. */
       buyer_form_brochure: {
-        Args: { p_slug: string; p_interest_id: string };
+        Args: { p_slug: string; p_interest_id: string; p_langue?: string };
         Returns: string | null;
       };
       crm_property_set_buyer_form: {
@@ -1849,6 +1855,7 @@ export interface Database {
           p_status?: string | null;
           p_brochure_url?: string | null;
           p_allowed_origins?: string[] | null;
+          p_brochure_url_en?: string | null;
         };
         Returns: {
           ok: boolean;

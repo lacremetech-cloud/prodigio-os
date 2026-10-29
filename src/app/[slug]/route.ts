@@ -53,7 +53,17 @@ export async function GET(request: Request, { params }: RouteProps): Promise<Res
   let propertyId: string;
   try {
     const admin = getSupabaseAdminClient();
-    const { data, error } = await admin.rpc("brochure_cible", { p_slug: slug });
+    /* La langue vient de l'adresse du lien court. Tout ce qui n'est pas « en »
+       retombe sur le français : un lien recopié à la main ne doit pas aboutir
+       à une 404, il doit aboutir à la brochure. */
+    const langue =
+      new URL(request.url).searchParams.get("lang")?.trim().toLowerCase().slice(0, 2) === "en"
+        ? "en"
+        : "fr";
+    const { data, error } = await admin.rpc("brochure_cible", {
+      p_slug: slug,
+      p_langue: langue,
+    });
     const ligne = Array.isArray(data) ? data[0] : null;
     if (error || !ligne?.brochure_url || !ligne?.property_id) return introuvable();
     cible = ligne.brochure_url;

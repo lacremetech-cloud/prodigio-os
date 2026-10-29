@@ -53,6 +53,19 @@ export const universalSubmissionRequestSchema = z.object({
   slug: z.string().trim().min(1).max(120),
   answers: universalBuyerAnswersSchema,
   context: clientContextSchema,
+  /**
+   * La langue dans laquelle le formulaire a été REMPLI.
+   *
+   * Elle ne sert pas à décorer : c'est elle qui décide de l'adresse de brochure
+   * renvoyée au site. La landing anglaise des Airelles charge le formulaire
+   * avec `?lang=en` et attend `/en/brochure/` ; sans cette information, un
+   * parcours anglais payé au clic se terminait sur la brochure française.
+   *
+   * `default("fr")` et non `required` : les deux villas de Cassis tournent
+   * aujourd'hui et leurs navigateurs déjà chargés n'envoient pas ce champ. Une
+   * demande sans langue est une demande française — ce qu'elle a toujours été.
+   */
+  langue: z.enum(["fr", "en"]).default("fr"),
 });
 
 export type UniversalSubmissionRequest = z.infer<typeof universalSubmissionRequestSchema>;

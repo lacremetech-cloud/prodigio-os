@@ -269,6 +269,10 @@ export function UniversalBuyerForm({
     try {
       const result = await submitUniversalInterestAction({
         ...request.data,
+        /* La langue AFFICHÉE, pas celle du navigateur : c'est le texte que la
+           personne a réellement lu qui doit décider de la brochure qu'elle
+           reçoit. */
+        langue,
         turnstileToken: turnstileTokenRef.current,
       });
       if (result.ok) {

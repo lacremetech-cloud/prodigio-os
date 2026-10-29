@@ -208,6 +208,7 @@ export default async function PropertyCockpitPage({
               suggestedSlug={suggestedSlug}
               initialStatus={publicExperience.config?.buyer_form_status ?? "inactif"}
               initialBrochureUrl={publicExperience.config?.buyer_form_brochure_url ?? null}
+              initialBrochureUrlEn={publicExperience.config?.buyer_form_brochure_url_en ?? null}
               initialOrigins={publicExperience.config?.buyer_form_allowed_origins ?? []}
               publicationStatus={publicExperience.config?.publication_status ?? "brouillon"}
               canActivate={canDecide}

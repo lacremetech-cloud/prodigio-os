@@ -21,11 +21,29 @@ export function slugValide(slug: unknown): slug is string {
   return typeof slug === "string" && FORME_SLUG.test(slug);
 }
 
-/** `https://brochure.prodigio.fr/verdun`. Null si le slug est inexploitable. */
-export function lienBrochure(slug: string | null | undefined): string | null {
+/**
+ * `https://brochure.prodigio.fr/verdun`. Null si le slug est inexploitable.
+ *
+ * LA LANGUE VOYAGE DANS L'ADRESSE, pas dans un second slug. Un parcours
+ * anglais produit `…/airelles?lang=en`, et la route la repasse à
+ * `brochure_cible` pour servir `/en/brochure/`.
+ *
+ * Pourquoi un paramètre et non `airelles-en` : le lien court est ce qui permet
+ * de ne JAMAIS écrire l'adresse d'une vitrine dans un SMS — un SMS parti ne se
+ * corrige pas. Un second slug par langue doublerait ce qu'il faut tenir à jour
+ * et finirait par diverger. Le français, lui, n'écrit rien : son adresse ne
+ * change pas d'un caractère, et aucun SMS déjà reçu ne s'en trouve modifié.
+ */
+export function lienBrochure(
+  slug: string | null | undefined,
+  langue: string | null | undefined = "fr",
+): string | null {
   const s = (slug ?? "").trim().toLowerCase();
   if (!slugValide(s)) return null;
-  return `${brochureBaseUrl()}/${s}`;
+  const base = `${brochureBaseUrl()}/${s}`;
+  return (langue ?? "fr").trim().toLowerCase().slice(0, 2) === "en"
+    ? `${base}?lang=en`
+    : base;
 }
 
 /**

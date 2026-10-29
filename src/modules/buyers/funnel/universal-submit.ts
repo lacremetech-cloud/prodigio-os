@@ -235,7 +235,9 @@ export async function submitUniversalInterestAction(
                n'a pas de slug. */
             const texte = composerMessage({
               firstName: request.answers.firstName,
-              brochureUrl: lienBrochure(config.brochureSlug ?? config.slug) ?? config.brochureUrl,
+              brochureUrl:
+                lienBrochure(config.brochureSlug ?? config.slug, request.langue) ??
+                config.brochureUrl,
             });
             if (!texte) return;
             const envoi = await envoyerSms(telephone, texte);
@@ -335,6 +337,12 @@ export async function submitUniversalInterestAction(
       const { data: url } = await supabase.rpc("buyer_form_brochure", {
         p_slug: request.slug,
         p_interest_id: result.interest_id,
+        /* C'EST CETTE LIGNE QUI DÉBLOQUE LE PARCOURS ANGLAIS. Le site n'accepte
+           une redirection que vers sa propre origine : lui renvoyer l'adresse
+           française depuis la landing anglaise n'échouait pas bruyamment, le
+           visiteur restait simplement sur le formulaire qu'il venait de
+           remplir. */
+        p_langue: request.langue,
       });
       if (typeof url === "string" && url.length > 0) brochureUrl = url;
     }

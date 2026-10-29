@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { estUnRobot, slugValide } = await import("./lien-brochure");
+const { estUnRobot, lienBrochure, slugValide } = await import("./lien-brochure");
 
 describe("forme d'un code de brochure", () => {
   it("accepte ce qu'on pose à la main", () => {
@@ -60,5 +60,55 @@ describe("ce qui compte comme une ouverture", () => {
     expect(estUnRobot(null)).toBe(true);
     expect(estUnRobot("")).toBe(true);
     expect(estUnRobot("   ")).toBe(true);
+  });
+});
+
+describe("le lien court porte la langue", () => {
+  /*
+   * POURQUOI CE BLOC EXISTE.
+   *
+   * Les types des appels RPC de supabase-js ne sont PAS vérifiés : une
+   * contre-épreuve l'a montré — passer `p_langue_inexistant` au lieu de
+   * `p_langue` ne produit aucune erreur de compilation. Une faute de frappe
+   * dans le nom d'un argument retomberait donc en silence sur le français, et
+   * la seule trace serait un prospect anglais qui reçoit la brochure
+   * française. Ce que le compilateur ne garde pas, les tests le gardent.
+   *
+   * Les attentes sont écrites RELATIVEMENT au lien français, et non avec un
+   * domaine en dur : le socle se lit dans l'environnement, et ce bloc parle du
+   * marqueur de langue, pas de l'adresse du service.
+   */
+
+  it("laisse le français intact, au caractère près", () => {
+    // LE POINT LE PLUS IMPORTANT DU FICHIER. Des SMS français sont déjà
+    // partis, et un SMS parti ne se corrige pas. Si cette adresse changeait,
+    // les messages déjà reçus pointeraient dans le vide.
+    const fr = lienBrochure("verdun");
+    expect(fr).toBeTruthy();
+    expect(fr).not.toContain("lang=");
+    for (const langue of ["fr", null, undefined] as const) {
+      expect(lienBrochure("verdun", langue), String(langue)).toBe(fr);
+    }
+  });
+
+  it("marque l'anglais, et seulement l'anglais", () => {
+    const fr = lienBrochure("airelles")!;
+    for (const langue of ["en", "EN", "en-GB", " en "]) {
+      expect(lienBrochure("airelles", langue), langue).toBe(`${fr}?lang=en`);
+    }
+  });
+
+  it("retombe sur le français pour toute langue inconnue", () => {
+    // Une valeur inattendue doit mener à une brochure, jamais à une 404.
+    const fr = lienBrochure("airelles");
+    for (const langue of ["de", "", "   ", "n'importe quoi"]) {
+      expect(lienBrochure("airelles", langue), langue).toBe(fr);
+    }
+  });
+
+  it("refuse toujours un slug inexploitable, quelle que soit la langue", () => {
+    expect(lienBrochure("", "en")).toBeNull();
+    expect(lienBrochure("avec/barre", "en")).toBeNull();
+    expect(lienBrochure(null, "en")).toBeNull();
   });
 });
