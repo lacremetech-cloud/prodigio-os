@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import {
+  canArchiveBuyer,
   canDecideMandate,
   canTreatBuyers,
   canViewBuyerHistory,
@@ -52,6 +53,7 @@ import {
   BuyerTaskList,
 } from "@/components/crm/buyers/buyer-actions";
 import { SuiviCommercial } from "@/components/crm/buyers/suivi-commercial";
+import { ArchiverContact } from "@/components/crm/buyers/archiver-contact";
 import { changementsLisibles } from "@/modules/buyers/crm/journal";
 import { etatFigePertinent } from "@/modules/buyers/crm/reprise";
 import { budgetARepeter } from "@/modules/buyers/crm/budget-affichage";
@@ -132,6 +134,10 @@ export default async function BuyerProfilePage({
      traiter un dossier peut le confier. */
   const canReassignBuyers = canTreatBuyers(session.roles);
   const canDecide = canDecideMandate(session.roles);
+  /* Administrateur SEUL — ni manager, ni setter, ni commercial. Le bouton ne
+     s'affiche pas pour eux, et `crm_buyer_archive` refuserait l'appel même
+     forgé à la main. */
+  const peutArchiver = canArchiveBuyer(session.roles);
   const showAudit = canViewBuyerHistory(session.roles);
 
   const detail = await getBuyerProfileDetail(id, canViewContacts);
@@ -698,6 +704,13 @@ export default async function BuyerProfilePage({
             <section className="crm-panel p-4">
               <SectionTitle eyebrow="Action dédiée" title="Rouvrir le dossier" />
               <BuyerReopenForm buyerProfileId={profile.id} />
+            </section>
+          ) : null}
+
+          {peutArchiver ? (
+            <section className="crm-panel p-4">
+              <SectionTitle eyebrow="Administration" title="Archiver ce contact" />
+              <ArchiverContact buyerProfileId={profile.id} nom={detail.name} />
             </section>
           ) : null}
 

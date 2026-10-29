@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ASSIGNABLE_ROLES,
+  canArchiveBuyer,
   canConnectCalendar,
   canDecideSegment,
   canManageAppointments,
@@ -142,5 +143,25 @@ describe("canTreatBuyers", () => {
   it("reste fermé à qui n'a ni l'un ni l'autre", () => {
     expect(canTreatBuyers(["partenaire_lecture"])).toBe(false);
     expect(canTreatBuyers([])).toBe(false);
+  });
+});
+
+describe("canArchiveBuyer", () => {
+  it("n'ouvre qu'à l'administrateur", () => {
+    expect(canArchiveBuyer(["administrateur"])).toBe(true);
+  });
+
+  it("LE POINT QUI COMPTE : ferme à tous les autres, manager compris", () => {
+    // La demande était explicite : « que les commerciaux, les setters, etc.
+    // eux ne puissent jamais supprimer de contact ». Le manager n'y est pas
+    // non plus — archiver une fiche la retire des listes de toute l'équipe.
+    for (const r of ["manager", "setter", "commercial", "agent_immobilier", "partenaire_lecture"]) {
+      expect(canArchiveBuyer([r]), r).toBe(false);
+    }
+    expect(canArchiveBuyer([])).toBe(false);
+  });
+
+  it("suffit d'être administrateur en plus d'autre chose", () => {
+    expect(canArchiveBuyer(["commercial", "administrateur"])).toBe(true);
   });
 });

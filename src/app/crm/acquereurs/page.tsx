@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { membresAffectables } from "@/modules/crm/data/membres";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
+import Link from "next/link";
+import { canArchiveBuyer, canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
 import { BuyerInbox } from "@/components/crm/buyers/buyer-inbox";
 import { BarreProjets } from "@/components/crm/buyers/barre-projets";
@@ -63,10 +64,27 @@ export default async function BuyersInboxPage({
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <p className="crm-eyebrow">CRM Acquéreurs</p>
-        <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">
-          Boîte de réception acquéreurs
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="crm-eyebrow">CRM Acquéreurs</p>
+            <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">
+              Boîte de réception acquéreurs
+            </h1>
+          </div>
+          {/* La porte des archives, pour l'administrateur SEUL. Délibérément
+              ici et non dans le menu permanent : c'est un écran rare, et on le
+              cherche à côté de la liste dont les fiches ont disparu. Sans
+              compteur — cet écran est le chemin chaud du commercial, il ne
+              mérite pas une requête de plus pour un nombre décoratif. */}
+          {canArchiveBuyer(session.roles) ? (
+            <Link
+              href="/crm/acquereurs/archives"
+              className="crm-btn crm-btn--sm crm-btn--ghost"
+            >
+              Contacts archivés
+            </Link>
+          ) : null}
+        </div>
         {/* Masquée sur téléphone : ces trois lignes expliquent une règle qu'on
             apprend le premier jour, et elles coûtaient 90 px avant le premier
             nom — sur le seul écran où l'on travaille debout. */}

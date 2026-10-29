@@ -146,4 +146,6 @@ export const buyerAuditEventLabels: Record<string, string> = {
   acquereur_traitement: "Suivi enregistré",
   acquereur_tache: "Tâche",
   acquereur_reouverture: "Dossier rouvert",
+  acquereur_archive: "Contact archivé",
+  acquereur_desarchive: "Contact rétabli",
 };

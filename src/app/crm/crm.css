@@ -419,6 +419,21 @@
 .crm-btn--ghost {
   background: transparent;
 }
+/* Action conséquente : supprimer un média, un document, archiver un contact.
+   Quatre composants demandaient déjà `crm-btn--danger` alors que la classe
+   n'existait pas : leurs boutons de suppression avaient donc exactement
+   l'apparence d'un bouton neutre. On la définit ici plutôt que de laisser
+   quatre appels sans effet. Teintée, pas criarde — le bouton doit se
+   distinguer, pas effrayer. */
+.crm-btn--danger {
+  background: color-mix(in srgb, var(--crm-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--crm-danger) 45%, transparent);
+  color: var(--crm-danger);
+}
+.crm-btn--danger:hover {
+  background: color-mix(in srgb, var(--crm-danger) 20%, transparent);
+  border-color: var(--crm-danger);
+}
 .crm-btn--sm {
   min-height: 2rem; /* 32px */
   padding: 0.25rem 0.75rem;

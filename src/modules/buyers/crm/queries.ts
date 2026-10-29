@@ -200,6 +200,14 @@ export async function loadBuyerList(
     supabase
       .from("buyer_profiles")
       .select("*")
+      /* LES FICHES ARCHIVÉES SORTENT DE TOUTES LES LISTES, ICI ET NULLE PART
+         AILLEURS. Tout ce que renvoie cette fonction — les lignes, le Kanban,
+         les six compteurs, le récapitulatif par e-mail de 8 h 30, 13 h et
+         17 h 30 — dérive de `profiles`. Une seule ligne de filtre, donc, et pas
+         un filtre par écran : c'est ce qui garantit qu'un compteur ne pourra
+         pas annoncer « 4 en retard » devant une liste qui en montre 3.
+         L'administrateur les retrouve par `loadArchivedBuyers`. */
+      .is("archive_le", null)
       .order("last_interest_at", { ascending: false })
       .limit(PLAFOND_LISTE),
     supabase.from("contacts").select("*").limit(PLAFOND_LISTE),
@@ -813,4 +821,80 @@ export async function listBuyersForProperty(
     });
   }
   return rows;
+}
+
+// --- Les fiches archivées (écran administrateur) -----------------------------
+
+export interface ContactArchive {
+  buyerProfileId: string;
+  nom: string;
+  email: string | null;
+  telephone: string | null;
+  /** ISO. */
+  archiveLe: string;
+  archivePar: string | null;
+  motif: string | null;
+  /** Nombre de manifestations d'intérêt rattachées, archivées avec la fiche. */
+  nbInterets: number;
+}
+
+/**
+ * Les fiches archivées, pour que l'administrateur puisse les relire et les
+ * rétablir.
+ *
+ * SANS CET ÉCRAN, L'ARCHIVAGE SERAIT UNE SUPPRESSION. Une fiche retirée des
+ * listes et introuvable ensuite est perdue, quoi qu'en dise la base : la
+ * réversibilité n'existe que si quelqu'un peut voir ce qu'il y a à rétablir.
+ *
+ * Volontairement maigre — ni tâches, ni critères, ni agrégats d'activité. On
+ * vient ici pour reconnaître une fiche et décider, pas pour la travailler ; et
+ * c'est un écran rare, qui n'a pas à coûter ce que coûte la liste de travail.
+ *
+ * La RLS reste l'autorité sur ce qui est lisible : cette fonction ne lève
+ * aucune politique.
+ */
+export async function loadArchivedBuyers(): Promise<ContactArchive[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: profiles }, { data: contacts }, { data: interests }, members] = await Promise.all([
+    supabase
+      .from("buyer_profiles")
+      .select("*")
+      .not("archive_le", "is", null)
+      .order("archive_le", { ascending: false })
+      .limit(PLAFOND_LISTE),
+    supabase.from("contacts").select("*").limit(PLAFOND_LISTE),
+    supabase
+      .from("buyer_interests")
+      .select("buyer_profile_id")
+      .not("buyer_profile_id", "is", null)
+      .limit(PLAFOND_LISTE),
+    getMembersMap(),
+  ]);
+
+  const contactById = new Map((contacts ?? []).map((c) => [c.id, c as ContactRow]));
+
+  const interetsParProfil = new Map<string, number>();
+  for (const i of (interests ?? []) as { buyer_profile_id: string | null }[]) {
+    if (!i.buyer_profile_id) continue;
+    interetsParProfil.set(i.buyer_profile_id, (interetsParProfil.get(i.buyer_profile_id) ?? 0) + 1);
+  }
+
+  return ((profiles ?? []) as BuyerProfileRow[]).map((p) => {
+    const c = contactById.get(p.contact_id);
+    const nom = [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim();
+
+    return {
+      buyerProfileId: p.id,
+      /* Une fiche sans nom lisible reste identifiable : sinon la ligne serait
+         vide et on ne saurait pas ce qu'on rétablit. */
+      nom: nom || c?.company_name || c?.email || "Contact sans nom",
+      email: c?.email ?? null,
+      telephone: c?.phone ?? null,
+      archiveLe: p.archive_le!,
+      archivePar: p.archive_par ? memberDisplayName(p.archive_par, members) : null,
+      motif: p.archive_motif,
+      nbInterets: interetsParProfil.get(p.id) ?? 0,
+    };
+  });
 }

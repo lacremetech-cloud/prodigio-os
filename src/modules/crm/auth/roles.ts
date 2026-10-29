@@ -241,6 +241,23 @@ export function canAdminEconomicRules(roles: readonly string[]): boolean {
 }
 
 /**
+ * Peut archiver un contact acquéreur — et le rétablir. **Administrateur seul.**
+ *
+ * Plus strict que `canDecideMandate` (qui inclut le manager) et que
+ * `canTreatBuyers` (qui inclut le commercial). Un commercial, un setter ou un
+ * manager ne retire pas une fiche des listes de l'équipe : c'est le geste qui
+ * fait disparaître un lead de l'écran de tout le monde.
+ *
+ * Miroir UI de `crm_has_role('administrateur')` dans `crm_buyer_archive` et
+ * `crm_buyer_desarchive`. La base reste l'autorité : ce helper ne sert qu'à ne
+ * pas afficher un bouton qui serait refusé. Masquer un bouton n'est pas un
+ * droit — c'est la fonction SQL qui refuse.
+ */
+export function canArchiveBuyer(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur"]);
+}
+
+/**
  * Peut renseigner un compte rendu d'estimation : administrateur / manager, ou
  * agent immobilier (restreint EN BASE à ses seuls dossiers affectés). Miroir UI
  * grossier de `crm_can_report_estimation()`.

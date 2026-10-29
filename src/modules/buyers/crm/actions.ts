@@ -10,7 +10,7 @@ import {
 } from "./vocabulaire";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canDecideMandate } from "@/modules/crm/auth/roles";
+import { canArchiveBuyer, canDecideMandate } from "@/modules/crm/auth/roles";
 import { evaluateBuyerMove } from "./pipeline";
 import {
   conversionInscriptionTerminee,
@@ -810,5 +810,69 @@ export async function recordBuyerTreatmentAction(input: unknown): Promise<Action
   }
 
   revalidateBuyer(d.buyerProfileId);
+  return { ok: true };
+}
+
+// --- Archiver un contact (administrateur seul) --------------------------------
+/**
+ * ARCHIVER, ET NON SUPPRIMER.
+ *
+ * Le besoin est réel : les fiches de test, les mauvais numéros, celui qui
+ * déclare n'avoir jamais rien demandé, et les doublons encombrent les listes.
+ *
+ * Mais un `delete` ferait l'inverse du résultat recherché. Il détruirait en
+ * cascade l'historique d'appels, les tâches et les critères — le travail de
+ * JC et d'Antoine — tout en CONSERVANT les données personnelles, puisque
+ * `buyer_interests` porte le nom, l'e-mail et le téléphone en colonnes
+ * directes et n'est pas en cascade. On perdrait l'utile et on garderait le
+ * sensible. Voir la migration `20261029090000`.
+ *
+ * L'effacement définitif que commande une demande au titre du droit à
+ * l'effacement est un autre geste, avec d'autres garanties. Il n'est pas ici.
+ *
+ * LA PORTE EST POSÉE DEUX FOIS. Ici, pour ne pas montrer un bouton qui serait
+ * refusé ; et dans `crm_buyer_archive`, qui refuse l'appel même forgé à la
+ * main. La seconde est celle qui compte.
+ */
+const archiveSchema = z.object({
+  buyerProfileId: uuid,
+  motif: optionalText(500),
+});
+
+export async function archiverContactAction(input: unknown): Promise<ActionResult> {
+  const session = await requireCrmSession();
+  if (!canArchiveBuyer(session.roles)) {
+    return { ok: false, error: "Seul un administrateur peut archiver un contact." };
+  }
+  const parsed = archiveSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Saisie invalide." };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("crm_buyer_archive", {
+    p_buyer_profile_id: parsed.data.buyerProfileId,
+    p_motif: parsed.data.motif ?? null,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+  revalidateBuyer(parsed.data.buyerProfileId);
+  revalidatePath("/crm/acquereurs/archives");
+  return { ok: true };
+}
+
+/** La porte de sortie, sans laquelle l'archivage serait une suppression déguisée. */
+export async function retablirContactAction(input: unknown): Promise<ActionResult> {
+  const session = await requireCrmSession();
+  if (!canArchiveBuyer(session.roles)) {
+    return { ok: false, error: "Seul un administrateur peut rétablir un contact." };
+  }
+  const parsed = z.object({ buyerProfileId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Saisie invalide." };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("crm_buyer_desarchive", {
+    p_buyer_profile_id: parsed.data.buyerProfileId,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+  revalidateBuyer(parsed.data.buyerProfileId);
+  revalidatePath("/crm/acquereurs/archives");
   return { ok: true };
 }

@@ -942,6 +942,14 @@ export type BuyerProfileRow = {
   offer_recorded_by: string | null;
   offer_recorded_at: string | null;
   created_by: string | null;
+  /**
+   * Archivage — `null` = fiche active. Les listes et les compteurs ne
+   * retiennent que les fiches dont c'est `null`. Réservé à l'administrateur
+   * (`crm_buyer_archive`), et réversible (`crm_buyer_desarchive`).
+   */
+  archive_le: string | null;
+  archive_par: string | null;
+  archive_motif: string | null;
 };
 
 export type BuyerSearchCriteriaRow = {
@@ -2121,6 +2129,15 @@ export interface Database {
       };
       crm_buyer_reopen: {
         Args: { p_buyer_profile_id: string; p_reason: string };
+        Returns: Json;
+      };
+      /* Archivage — administrateur SEUL (la fonction refuse les autres rôles). */
+      crm_buyer_archive: {
+        Args: { p_buyer_profile_id: string; p_motif?: string | null };
+        Returns: Json;
+      };
+      crm_buyer_desarchive: {
+        Args: { p_buyer_profile_id: string };
         Returns: Json;
       };
       crm_buyer_log_activity: {

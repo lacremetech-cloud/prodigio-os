@@ -87,11 +87,18 @@ describe("surface EXECUTE — classification", () => {
     //      jamais la corriger : on contournait en créant une tâche de
     //      remplacement depuis un second formulaire, lequel disparaît.
     //
+    //    + `crm_buyer_archive` et `crm_buyer_desarchive` (`20261029090000`),
+    //      réservées au rôle `administrateur` seul : sortir des listes une
+    //      fiche de test, un mauvais numéro ou un doublon, et pouvoir la
+    //      rétablir. Un manager ou un commercial ne peut pas les appeler —
+    //      non parce que le bouton est caché, mais parce que la fonction
+    //      refuse.
+    //
     // Ce compte est une ALARME, pas une formalité : une fonction qui gagne
     // `EXECUTE` sans qu'on l'ait voulu fait échouer ce test.
-    expect(BUYER_EXECUTE_SURFACE).toHaveLength(19);
+    expect(BUYER_EXECUTE_SURFACE).toHaveLength(21);
     const names = BUYER_EXECUTE_SURFACE.map((e) => functionName(e.signature));
-    expect(new Set(names).size).toBe(19);
+    expect(new Set(names).size).toBe(21);
   });
 
   it("ne déclare aucun helper interne avec un droit anon ou authenticated", () => {
