@@ -32,6 +32,10 @@ import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/cr
    composant SERVEUR — puisse filtrer avec exactement les memes tranches. */
 export { BUDGET_FILTERS, budgetCorrespond } from "@/modules/buyers/crm/budget";
 import { BUDGET_FILTERS, budgetCorrespond, libelleBudget } from "@/modules/buyers/crm/budget";
+import {
+  QUALIFICATION_FILTERS,
+  qualificationCorrespond,
+} from "@/modules/buyers/crm/qualification-filtre";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -73,6 +77,7 @@ export function BuyerInbox({
   montrerProjet = true,
   contexte = "",
   budgetInitial,
+  qualificationInitiale,
   moiUserId = null,
   peutAffecterAutrui = false,
   chargeA,
@@ -98,6 +103,8 @@ export function BuyerInbox({
    * tranches reste ici, et une seule fois, pour qu'elle ne puisse pas deriver.
    */
   budgetInitial?: string;
+  /** Niveau de qualification posé par l'URL (`?qualification=`). */
+  qualificationInitiale?: string;
   /** Mon identifiant, et mon droit de confier un dossier a autrui. */
   moiUserId?: string | null;
   peutAffecterAutrui?: boolean;
@@ -139,6 +146,11 @@ export function BuyerInbox({
   const [budget, setBudget] = useState<string>(() =>
     BUDGET_FILTERS.some((b) => b.value === budgetInitial) ? budgetInitial! : "tous",
   );
+  const [qualif, setQualif] = useState<string>(() =>
+    QUALIFICATION_FILTERS.some((q) => q.value === qualificationInitiale)
+      ? qualificationInitiale!
+      : "tous",
+  );
   const [owner, setOwner] = useState<string>("tous");
 
   const [sort, setSort] = useState<SortKey>("urgence");
@@ -147,7 +159,10 @@ export function BuyerInbox({
      n'apparait pas, et rien a l'ecran ne dit pourquoi. La pastille porte donc
      le nombre de filtres actifs meme quand le bloc est ferme. */
   const filtresReplies =
-    (stage !== "tous" ? 1 : 0) + (budget !== "tous" ? 1 : 0) + (owner !== "tous" ? 1 : 0);
+    (stage !== "tous" ? 1 : 0) +
+    (budget !== "tous" ? 1 : 0) +
+    (qualif !== "tous" ? 1 : 0) +
+    (owner !== "tous" ? 1 : 0);
 
 
   const visible = useMemo(() => {
@@ -174,6 +189,7 @@ export function BuyerInbox({
         if (owner === "aucun" ? !r.unassigned : !r.assigneeIds.includes(owner)) return false;
       }
       if (budget !== "tous" && !budgetCorrespond(r, budget)) return false;
+      if (qualif !== "tous" && !qualificationCorrespond(r, qualif)) return false;
       if (!porteLeSignal(r, signal)) return false;
       return true;
     });
@@ -189,7 +205,7 @@ export function BuyerInbox({
       sorted.sort((a, b) => (b.lastInterestAt ?? "").localeCompare(a.lastInterestAt ?? ""));
     }
     return sorted;
-  }, [rows, search, stage, budget, owner, sort, signal]);
+  }, [rows, search, stage, budget, qualif, owner, sort, signal]);
 
   /**
    * La file d'appels porte sur ce qui est À L'ÉCRAN : filtrer par projet ou par
@@ -222,6 +238,13 @@ export function BuyerInbox({
       const b = BUDGET_FILTERS.find((x) => x.value === budget);
       actifs.push({ libelle: `budget « ${b?.label ?? budget} »`, retirer: () => setBudget("tous") });
     }
+    if (qualif && qualif !== "tous") {
+      const q = QUALIFICATION_FILTERS.find((x) => x.value === qualif);
+      actifs.push({
+        libelle: `qualification « ${q?.label ?? qualif} »`,
+        retirer: () => setQualif("tous"),
+      });
+    }
     if (stage && stage !== "tous") {
       actifs.push({
         /* `?? stage` et non `|| stage` : un libelle absent se remplace par la
@@ -239,7 +262,7 @@ export function BuyerInbox({
       actifs.push({ libelle: `recherche « ${search.trim()} »`, retirer: () => setSearch("") });
     }
     return actifs;
-  }, [signal, budget, stage, owner, search, members]);
+  }, [signal, budget, qualif, stage, owner, search, members]);
 
   /** Revenir a la liste entiere d'un seul geste. */
   function toutRetirer() {
@@ -417,6 +440,41 @@ export function BuyerInbox({
               onClick={() => setBudget(b.value)}
             >
               {b.label}
+              <span className="crm-rapide__n">{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* LE NIVEAU DE QUALIFICATION, TROISIÈME RANGÉE — la MÊME que sur le
+          pipeline, avec le même vocabulaire et le même prédicat
+          (`qualificationCorrespond`). Les deux vues avaient déjà divergé une
+          fois en décidant chacune dans son coin qui était « à contacter » ;
+          un seul module partagé rend la divergence impossible.
+
+          À ne pas confondre avec « Fort potentiel » de la première rangée :
+          celle-là porte sur un score CALCULÉ, celle-ci sur le jugement POSÉ
+          par qui a eu la personne au téléphone. */}
+      <div className="crm-rapides" role="group" aria-label="Niveau de qualification">
+        {QUALIFICATION_FILTERS.map((q) => {
+          /* Le nombre que CETTE qualification ouvrira : croisé avec le signal
+             et la tranche courants, mais pas avec la qualification courante —
+             sinon toutes les autres afficheraient zéro. */
+          const n = rows.filter(
+            (r) =>
+              porteLeSignal(r, signal) &&
+              budgetCorrespond(r, budget) &&
+              qualificationCorrespond(r, q.value),
+          ).length;
+          return (
+            <button
+              key={q.value}
+              type="button"
+              className="crm-rapide"
+              aria-pressed={qualif === q.value}
+              onClick={() => setQualif(q.value)}
+            >
+              {q.label}
               <span className="crm-rapide__n">{n}</span>
             </button>
           );

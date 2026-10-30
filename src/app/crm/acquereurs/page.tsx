@@ -15,6 +15,7 @@ import {
   lireVue,
 } from "@/modules/buyers/crm/navigation";
 import { comptesParProjet } from "@/modules/buyers/crm/comptes";
+import { lireQualificationFiltre } from "@/modules/buyers/crm/qualification-filtre";
 
 export const metadata: Metadata = { title: "Acquéreurs" };
 
@@ -47,6 +48,9 @@ export default async function BuyersInboxPage({
   const signal = lireSignal(params.signal);
   const selection = lireProjets(params.projets, projets);
   const vue = lireVue(params.vue);
+  /* Le niveau de qualification vient de l'adresse, comme la tranche de budget :
+     c'est ce qui le conserve en passant du pipeline à la liste. */
+  const qualif = lireQualificationFiltre(params.qualification);
 
   // Les compteurs de la barre portent sur les dossiers ACTIFS, tous projets
   // confondus : ils doivent rester lisibles quelle que soit la sélection, c'est
@@ -109,6 +113,8 @@ export default async function BuyersInboxPage({
         selection={selection}
         vue={vue}
         signal={signal}
+        budget={typeof params.budget === "string" ? params.budget : undefined}
+        qualification={qualif}
         comptes={comptes}
         base={{ liste: "/crm/acquereurs", pipeline: "/crm/acquereurs/pipeline" }}
       />
@@ -132,6 +138,7 @@ export default async function BuyersInboxPage({
         /* `?budget=plus_1m` : la destination du commercial apres connexion. La
            valeur est validee par la liste des tranches, dans le composant. */
         budgetInitial={typeof params.budget === "string" ? params.budget : undefined}
+        qualificationInitiale={qualif}
         signalInitial={signal}
         /* Le badge de projet n'a de sens que si plusieurs projets sont à
            l'écran : sous un onglet de projet, le répéter sur chaque ligne

@@ -26,6 +26,8 @@ export function BarreProjets({
   selection,
   vue,
   signal,
+  budget,
+  qualification,
   comptes,
   base,
 }: {
@@ -33,6 +35,18 @@ export function BarreProjets({
   selection: string[];
   vue: VueAcquereurs;
   signal?: string;
+  /**
+   * Les DEUX autres axes, portés par chaque lien de cette barre.
+   *
+   * Sans eux, choisir « Villa Verdun » effaçait la tranche de budget qu'on
+   * venait de poser — et aurait effacé le niveau de qualification de la même
+   * façon. L'état vit dans l'adresse : un axe absent de l'adresse est un axe
+   * perdu au premier clic. On garde donc les trois ensemble, y compris en
+   * passant de la liste au pipeline, ce qui est précisément ce que cette barre
+   * promet.
+   */
+  budget?: string;
+  qualification?: string;
   /** Dossiers ACTIFS par projet. Un dossier clos ne demande plus rien. */
   comptes: Map<string, number>;
   /** Route de la vue liste (le pipeline a la sienne). */
@@ -50,7 +64,7 @@ export function BarreProjets({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2" role="group" aria-label="Projet">
         <Link
-          href={`${route(vue)}${ecrireNavigation({ projets: [], vue, signal })}`}
+          href={`${route(vue)}${ecrireNavigation({ projets: [], vue, signal, budget, qualification })}`}
           /* Pas de préchargement : chaque variante de cette barre est un rendu
              serveur COMPLET de la liste. Les précharger toutes coûtait, mesuré,
              quinze allers-retours par changement de projet — pour un lien sur
@@ -68,7 +82,13 @@ export function BarreProjets({
           return (
             <Link
               key={p.id}
-              href={`${route(vue)}${ecrireNavigation({ projets: bascule(p.id), vue, signal })}`}
+              href={`${route(vue)}${ecrireNavigation({
+                projets: bascule(p.id),
+                vue,
+                signal,
+                budget,
+                qualification,
+              })}`}
               prefetch={false}
               aria-current={actif ? "true" : undefined}
               className="crm-projet"
@@ -88,7 +108,13 @@ export function BarreProjets({
         {(["liste", "pipeline"] as VueAcquereurs[]).map((v) => (
           <Link
             key={v}
-            href={`${route(v)}${ecrireNavigation({ projets: selection, vue: v, signal })}`}
+            href={`${route(v)}${ecrireNavigation({
+              projets: selection,
+              vue: v,
+              signal,
+              budget,
+              qualification,
+            })}`}
             prefetch={false}
             aria-current={vue === v ? "true" : undefined}
             className="crm-vues__choix"

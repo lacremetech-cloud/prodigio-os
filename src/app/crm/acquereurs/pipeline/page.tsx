@@ -17,6 +17,12 @@ import { FILTRES_RAPIDES, lireSignal, porteLeSignal } from "@/modules/buyers/crm
 import { qualification as definitionQualification } from "@/modules/buyers/crm/vocabulaire";
 import { comptesParProjet } from "@/modules/buyers/crm/comptes";
 import { BUDGET_FILTERS, budgetCorrespond } from "@/modules/buyers/crm/budget";
+import {
+  QUALIFICATION_FILTERS,
+  demandeLesNonQualifies,
+  lireQualificationFiltre,
+  qualificationCorrespond,
+} from "@/modules/buyers/crm/qualification-filtre";
 
 export const metadata: Metadata = { title: "Pipeline Acquéreurs" };
 
@@ -55,6 +61,10 @@ export default async function BuyersPipelinePage({
     typeof params.budget === "string" && BUDGET_FILTERS.some((b) => b.value === params.budget)
       ? params.budget
       : "tous";
+  /* TROISIÈME AXE. Le niveau de qualification se croise avec les deux autres :
+     « les plus d'1 M€ encore à qualifier » est la question qu'on se pose, pas
+     « soit le budget, soit la qualification ». */
+  const qualif = lireQualificationFiltre(params.qualification);
   /* LES COMPTEURS DISENT CE QUE LA VUE MONTRE.
      Ils comptaient TOUS les dossiers, y compris les non qualifies que le
      pipeline ecarte : la barre annonçait 75 quand le tableau en posait 72, et
@@ -66,8 +76,9 @@ export default async function BuyersPipelinePage({
       annoncer son propre nombre, et non zero des qu'une autre est choisie. */
   function dansLeSignal(i: (typeof items)[number]): boolean {
     const ligne = toInboxRow(i);
+    if (!qualificationCorrespond(ligne, qualif)) return false;
     if (!porteLeSignal(ligne, signal)) return false;
-    if (signal === "non_qualifies") return true;
+    if (signal === "non_qualifies" || demandeLesNonQualifies(qualif)) return true;
     return ligne.qualification !== "non_qualifie";
   }
 
@@ -76,8 +87,13 @@ export default async function BuyersPipelinePage({
   function dansLePipeline(i: (typeof items)[number]): boolean {
     const ligne = toInboxRow(i);
     if (!budgetCorrespond(ligne, budget)) return false;
+    if (!qualificationCorrespond(ligne, qualif)) return false;
     if (!porteLeSignal(ligne, signal)) return false;
-    if (signal === "non_qualifies") return true;
+    /* Le pipeline écarte les non qualifiés de toutes ses colonnes — un dossier
+       écarté ne doit pas revenir tous les matins dans « à contacter ». Mais les
+       DEMANDER explicitement les fait revenir : sinon la pastille annoncerait 9
+       et en ouvrirait 0. */
+    if (signal === "non_qualifies" || demandeLesNonQualifies(qualif)) return true;
     return ligne.qualification !== "non_qualifie";
   }
 
@@ -126,6 +142,8 @@ export default async function BuyersPipelinePage({
         selection={selection}
         vue={vue}
         signal={signal}
+        budget={budget}
+        qualification={qualif}
         comptes={comptes}
         base={{ liste: "/crm/acquereurs", pipeline: "/crm/acquereurs/pipeline" }}
       />
@@ -160,8 +178,9 @@ export default async function BuyersPipelinePage({
           const n = visibles.filter((i) => {
             const ligne = toInboxRow(i);
             if (!budgetCorrespond(ligne, budget)) return false;
+            if (!qualificationCorrespond(ligne, qualif)) return false;
             if (!porteLeSignal(ligne, f.signal)) return false;
-            if (f.signal === "non_qualifies") return true;
+            if (f.signal === "non_qualifies" || demandeLesNonQualifies(qualif)) return true;
             return ligne.qualification !== "non_qualifie";
           }).length;
           return (
@@ -172,6 +191,7 @@ export default async function BuyersPipelinePage({
                 vue,
                 signal: f.signal,
                 budget,
+                qualification: qualif,
               })}`}
               /* Les MEMES classes que la liste : deux vues, une seule
                  apparence. Elles portaient deux habillages differents pour la
@@ -205,11 +225,54 @@ export default async function BuyersPipelinePage({
                 vue,
                 signal,
                 budget: b.value,
+                qualification: qualif,
               })}`}
               className="crm-rapide"
               aria-pressed={budget === b.value}
             >
               {b.label}
+              <span className="crm-rapide__n">{n}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* LE NIVEAU DE QUALIFICATION, TROISIÈME RANGÉE. Même mécanique que les
+          deux précédentes : des LIENS, donc le filtre vit dans l'adresse — il
+          survit à un rechargement, se partage, et reste le même en passant de
+          la liste au pipeline.
+
+          À ne pas confondre avec « Fort potentiel » de la première rangée :
+          celle-là porte sur un score CALCULÉ (`recommended_priority`), celle-ci
+          sur le jugement POSÉ par qui a eu la personne au téléphone. */}
+      <div className="crm-rapides">
+        {QUALIFICATION_FILTERS.map((q) => {
+          /* Chaque pastille annonce ce QU'ELLE ouvrira : sa propre
+             qualification, croisée avec le signal et la tranche courants — pas
+             avec la qualification courante, sinon toutes les autres
+             afficheraient zéro. */
+          const n = visibles.filter((i) => {
+            const ligne = toInboxRow(i);
+            if (!budgetCorrespond(ligne, budget)) return false;
+            if (!qualificationCorrespond(ligne, q.value)) return false;
+            if (!porteLeSignal(ligne, signal)) return false;
+            if (signal === "non_qualifies" || demandeLesNonQualifies(q.value)) return true;
+            return ligne.qualification !== "non_qualifie";
+          }).length;
+          return (
+            <Link
+              key={q.value}
+              href={`/crm/acquereurs/pipeline${ecrireNavigation({
+                projets: selection,
+                vue,
+                signal,
+                budget,
+                qualification: q.value,
+              })}`}
+              className="crm-rapide"
+              aria-pressed={qualif === q.value}
+            >
+              {q.label}
               <span className="crm-rapide__n">{n}</span>
             </Link>
           );

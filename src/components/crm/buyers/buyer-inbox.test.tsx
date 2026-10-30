@@ -128,7 +128,7 @@ describe("BuyerInbox", () => {
    * (`qualificationStatus`), dont le vocabulaire porte un sens différent.
    */
   it("montre la qualification du projet, jamais le score automatique", () => {
-    const { queryByText, getAllByText } = render(
+    const { queryByText, queryAllByText, getAllByText } = render(
       <BuyerInbox
         rows={[
           dossier({
@@ -142,9 +142,22 @@ describe("BuyerInbox", () => {
       />,
     );
     expect(queryByText(/Score 45/)).toBeNull();
+
+    /* Les assertions portent sur la LIGNE, pas sur l'écran entier.
+       La rangée de filtres par niveau de qualification affiche, elle, les
+       quatre libellés en permanence — c'est son travail. Chercher « Non
+       qualifié » partout attrapait donc la pastille et faisait échouer un test
+       qui a raison sur le fond. On exclut les pastilles (`.crm-rapide`) pour
+       continuer à vérifier exactement ce que ce test veut vérifier : le badge
+       de la ligne. */
+    const horsFiltres = (texte: string) =>
+      queryAllByText(texte).filter((n) => !n.closest(".crm-rapide"));
+
+    // La qualification de la MANIFESTATION est bien affichée sur la ligne.
     expect(getAllByText("Gros potentiel").length).toBeGreaterThan(0);
+    expect(horsFiltres("Gros potentiel").length).toBeGreaterThan(0);
     // L'ancien statut du profil ne doit surtout pas s'afficher à sa place.
-    expect(queryByText("Non qualifié")).toBeNull();
+    expect(horsFiltres("Non qualifié")).toEqual([]);
   });
 
   /* La couleur de ligne ne dit QUE la qualification. Un gros potentiel qui n'a
