@@ -876,3 +876,48 @@ export async function retablirContactAction(input: unknown): Promise<ActionResul
   revalidatePath("/crm/acquereurs/archives");
   return { ok: true };
 }
+
+// --- Corriger un budget mal déclaré ------------------------------------------
+/**
+ * LA DÉCLARATION N'EST PAS ÉCRASÉE, LA CORRECTION S'AJOUTE À CÔTÉ.
+ *
+ * Le cas vient d'Yves GUENIN, le 2 novembre : il avait coché
+ * « 500 000 € – 1 M€ » pour un projet au-dessus du million. Il a fallu écrire
+ * en base à la main, parce qu'aucune fonction n'écrivait `budget_choice` après
+ * l'envoi du formulaire.
+ *
+ * Ce que la personne a répondu reste sur sa manifestation : c'est une preuve
+ * horodatée, et la colonne s'appelle « Budget déclaré ». Ce que l'équipe
+ * retient vit sur la personne, et c'est lui que lisent les filtres, le Kanban
+ * et les récapitulatifs. La fiche montre les deux.
+ *
+ * MÊME PORTE QUE CHANGER L'ÉTAPE (`crm_buyer_can_operate`), commerciaux
+ * compris : celui qui a eu la personne au téléphone est celui qui sait que la
+ * case est fausse. C'était la demande — « que ce soit pour les commerciaux ou
+ * pour tout le monde ».
+ */
+const budgetSchema = z.object({
+  buyerProfileId: uuid,
+  /* `null` RETIRE la correction et rend la déclaration : sans cette sortie,
+     une correction posée par erreur serait définitive. */
+  budgetChoice: z
+    .enum(["aucun_projet", "500k_1m", "plus_1m", "1m_2m", "2m_3m", "plus_3m"])
+    .nullable(),
+  motif: optionalText(2000),
+});
+
+export async function corrigerBudgetAction(input: unknown): Promise<ActionResult> {
+  await requireCrmSession();
+  const parsed = budgetSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Tranche de budget inconnue." };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("crm_buyer_set_budget", {
+    p_buyer_profile_id: parsed.data.buyerProfileId,
+    p_budget_choice: parsed.data.budgetChoice,
+    p_motif: parsed.data.motif ?? null,
+  });
+  if (error) return { ok: false, error: humanize(error.code, error.message) };
+  revalidateBuyer(parsed.data.buyerProfileId);
+  return { ok: true };
+}

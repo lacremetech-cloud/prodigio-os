@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { contactName } from "@/modules/crm/format";
 import { maskContactValue } from "@/modules/crm/auth/roles";
 import { getMembersMap, memberDisplayName, type MemberInfo } from "@/modules/crm/data/queries";
+import { budgetEffectif } from "./budget";
 import type { BuyerKanbanCard } from "./pipeline";
 import type {
   ActivityRow,
@@ -86,7 +87,20 @@ export interface BuyerListItem {
    * depot n'avait pas de budget, et la liste affichait « Non renseigne »
    * alors qu'elle avait repondu « 500 000 € – 1 M€ » douze minutes plus tot.
    */
+  /**
+   * ATTENTION — c'est le budget EFFECTIF : la correction de l'équipe si elle
+   * existe, la déclaration sinon. C'est lui que lisent les filtres, le
+   * libellé, le Kanban et les récapitulatifs, pour qu'ils disent tous la même
+   * chose. La déclaration d'origine reste lisible dans `budgetDeclare`.
+   */
   budgetChoice: string | null;
+  /** Ce que la personne a RÉPONDU au formulaire. Jamais écrasé. */
+  budgetDeclare: string | null;
+  /** La correction, si l'équipe en a posé une — sinon `null`. */
+  budgetCorrige: string | null;
+  budgetCorrigeMotif: string | null;
+  budgetCorrigePar: string | null;
+  budgetCorrigeLe: string | null;
   /**
    * L'ancienne colonne, en dernier recours.
    *
@@ -411,7 +425,18 @@ export async function loadBuyerList(
       newInterest: profileInterests.some((i) => i.review_status === "nouveau"),
       /* Le plus recent QUI EXISTE : `principale` est le dernier depot, et un
          depot peut ne pas porter de budget. */
-      budgetChoice: parDate.find((i) => i.budget_choice)?.budget_choice ?? null,
+      /* La correction prime, la declaration reste lisible a cote. UN seul
+         endroit tranche — `budgetEffectif` — pour que la liste, le pipeline et
+         le recapitulatif du soir ne puissent pas se contredire. */
+      budgetChoice: budgetEffectif(
+        parDate.find((i) => i.budget_choice)?.budget_choice ?? null,
+        profile.budget_choice_corrige,
+      ),
+      budgetDeclare: parDate.find((i) => i.budget_choice)?.budget_choice ?? null,
+      budgetCorrige: profile.budget_choice_corrige,
+      budgetCorrigeMotif: profile.budget_corrige_motif,
+      budgetCorrigePar: profile.budget_corrige_par,
+      budgetCorrigeLe: profile.budget_corrige_le,
       budgetBand: parDate.find((i) => i.budget_choice)
         ? null
         : (parDate.find((i) => i.budget_band)?.budget_band ?? null),
@@ -505,7 +530,11 @@ export interface BuyerInboxRow {
   unassigned: boolean;
   budgetMinCents: number | null;
   budgetMaxCents: number | null;
+  /** Budget EFFECTIF : correction si elle existe, déclaration sinon. */
   budgetChoice: string | null;
+  /** Ce que la personne a répondu — pour pouvoir dire « il avait déclaré X ». */
+  budgetDeclare: string | null;
+  budgetCorrige: string | null;
   /** C'est elle, et elle seule, qui colore la ligne. */
   qualification: BuyerQualification;
   qualificationReason: string | null;
@@ -563,6 +592,8 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     budgetMinCents: item.budgetMinCents,
     budgetMaxCents: item.budgetMaxCents,
     budgetChoice: item.budgetChoice,
+    budgetDeclare: item.budgetDeclare,
+    budgetCorrige: item.budgetCorrige,
   };
 }
 

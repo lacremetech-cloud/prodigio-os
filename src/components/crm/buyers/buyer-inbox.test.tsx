@@ -70,6 +70,8 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   unassigned: true,
   budgetMinCents: null,
   budgetChoice: "1m_2m",
+  budgetDeclare: "1m_2m",
+  budgetCorrige: null,
   budgetMaxCents: null,
   ...over,
 });

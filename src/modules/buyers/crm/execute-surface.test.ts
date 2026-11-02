@@ -96,9 +96,13 @@ describe("surface EXECUTE — classification", () => {
     //
     // Ce compte est une ALARME, pas une formalité : une fonction qui gagne
     // `EXECUTE` sans qu'on l'ait voulu fait échouer ce test.
-    expect(BUYER_EXECUTE_SURFACE).toHaveLength(21);
+    //    + `crm_buyer_set_budget` (`20261102100000`), qui corrige un budget
+    //      mal déclaré sans écraser la déclaration d'origine. Il a fallu
+    //      écrire en base à la main pour Yves GUENIN avant qu'elle existe.
+    //
+    expect(BUYER_EXECUTE_SURFACE).toHaveLength(22);
     const names = BUYER_EXECUTE_SURFACE.map((e) => functionName(e.signature));
-    expect(new Set(names).size).toBe(21);
+    expect(new Set(names).size).toBe(22);
   });
 
   it("ne déclare aucun helper interne avec un droit anon ou authenticated", () => {

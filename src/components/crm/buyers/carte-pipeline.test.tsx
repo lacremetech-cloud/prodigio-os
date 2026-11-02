@@ -66,6 +66,8 @@ const row: BuyerInboxRow = {
   budgetMinCents: null,
   budgetMaxCents: null,
   budgetChoice: "plus_1m",
+  budgetDeclare: "plus_1m",
+  budgetCorrige: null,
 };
 
 const card: BuyerKanbanCard = {

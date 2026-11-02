@@ -57,7 +57,8 @@ import { ArchiverContact } from "@/components/crm/buyers/archiver-contact";
 import { changementsLisibles } from "@/modules/buyers/crm/journal";
 import { etatFigePertinent } from "@/modules/buyers/crm/reprise";
 import { budgetARepeter } from "@/modules/buyers/crm/budget-affichage";
-import { libelleBudget } from "@/modules/buyers/crm/budget";
+import { budgetEffectif, libelleBudget } from "@/modules/buyers/crm/budget";
+import { CorrigerBudget } from "@/components/crm/buyers/corriger-budget";
 
 export const metadata: Metadata = { title: "Fiche acquéreur" };
 
@@ -198,9 +199,13 @@ export default async function BuyerProfilePage({
      porter aucun budget, et l'en-tete affichait alors « Non renseigne » alors
      que la personne avait repondu douze minutes plus tot. */
   const choixBudget = interests.find((i) => i.interest.budget_choice)?.interest.budget_choice ?? null;
+  /* Le budget RETENU : la correction de l'équipe si elle existe, la
+     déclaration sinon — exactement ce que lisent les filtres, le pipeline et
+     les récapitulatifs, pour que l'en-tête ne puisse pas les contredire. */
+  const budgetRetenu = budgetEffectif(choixBudget, profile.budget_choice_corrige);
   const resumeBudget = libelleBudget({
-    budgetChoice: choixBudget,
-    budgetBand: choixBudget
+    budgetChoice: budgetRetenu,
+    budgetBand: budgetRetenu
       ? null
       : (interests.find((i) => i.interest.budget_band)?.interest.budget_band ?? null),
   });
@@ -255,9 +260,22 @@ export default async function BuyerProfilePage({
           <Resume label="Bien demandé">
             {resumeBien ?? <Absent>Aucun bien rattaché</Absent>}
           </Resume>
-          <Resume label="Budget déclaré">
+          {/* « Budget déclaré » DEVIENT faux dès qu'une correction existe :
+              l'étiquette suit donc la valeur affichée, et la déclaration
+              d'origine est rappelée juste en dessous. Laisser « déclaré » sur
+              une valeur corrigée ferait croire que le prospect a dit ça. */}
+          <Resume label={profile.budget_choice_corrige ? "Budget retenu" : "Budget déclaré"}>
             {resumeBudget ? (
-              <span className="font-semibold">{resumeBudget}</span>
+              <>
+                <span className="font-semibold">{resumeBudget}</span>
+                {profile.budget_choice_corrige ? (
+                  <span className="ml-2 text-xs text-[var(--crm-text-dim)]">
+                    corrigé — déclaré&nbsp;:{" "}
+                    {libelleBudget({ budgetChoice: choixBudget, budgetBand: null }) ??
+                      "non renseigné"}
+                  </span>
+                ) : null}
+              </>
             ) : (
               <Absent>Non renseigné</Absent>
             )}
@@ -307,6 +325,22 @@ export default async function BuyerProfilePage({
         }
         modifiable={canOperateBuyers && !isClosed}
       />
+
+      {/* LE BUDGET SE CORRIGE. Il ne se corrigeait pas : il a fallu écrire en
+          base à la main pour Yves GUENIN, qui avait coché la mauvaise case.
+          Même porte que l'étape et la qualification — commerciaux compris,
+          parce que c'est au téléphone qu'on s'en aperçoit. */}
+      {canOperateBuyers && !isClosed ? (
+        <section className="crm-panel p-4">
+          <SectionTitle eyebrow="Ce qu’il nous faut" title="Budget" />
+          <CorrigerBudget
+            buyerProfileId={profile.id}
+            declare={choixBudget}
+            corrige={profile.budget_choice_corrige}
+            motif={profile.budget_corrige_motif}
+          />
+        </section>
+      ) : null}
 
       {profile.outcome ? (
         <div className="rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel-2)] p-3">

@@ -36,7 +36,7 @@ export interface ExecuteSurfaceEntry {
 }
 
 /**
- * Les 20 fonctions SQL du module CRM Acquéreurs, classées : les 17 créées par
+ * Les 21 fonctions SQL du module CRM Acquéreurs, classées : les 17 créées par
  * `buyers_crm_v1`, plus `crm_buyer_interest_set_status` héritée de la migration
  * de l'expérience publique du bien.
  *
@@ -82,6 +82,11 @@ export const BUYER_EXECUTE_SURFACE: readonly ExecuteSurfaceEntry[] = [
        (`crm_has_role('administrateur')`), et c'est elle qui refuse un manager,
        un setter ou un commercial. Le GRANT dit « un utilisateur connecté peut
        frapper à la porte », pas « peut entrer ». */
+    /* Corriger un budget mal déclaré. Porte ordinaire du traitement
+       (`crm_buyer_can_operate`), commerciaux compris : c'est au téléphone
+       qu'on s'aperçoit que la case est fausse. N'écrase jamais la
+       déclaration — voir la migration `20261102100000`. */
+    ["crm_buyer_set_budget(uuid, text, text)", "Fiche acquéreur — correction du budget"],
     ["crm_buyer_archive(uuid, text)", "Fiche acquéreur — archivage (administrateur)"],
     ["crm_buyer_desarchive(uuid)", "Fiche acquéreur — rétablissement (administrateur)"],
   ] as const).map(

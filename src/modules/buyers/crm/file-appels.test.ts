@@ -42,6 +42,8 @@ function ligne(over: Partial<BuyerInboxRow> = {}): BuyerInboxRow {
     budgetMinCents: null,
     budgetMaxCents: null,
     budgetChoice: null,
+    budgetDeclare: null,
+    budgetCorrige: null,
     qualification: "a_qualifier",
     qualificationReason: null,
     callAttempts: 0,

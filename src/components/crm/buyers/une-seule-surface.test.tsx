@@ -74,6 +74,8 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   budgetMinCents: null,
   budgetMaxCents: null,
   budgetChoice: "plus_1m",
+  budgetDeclare: "plus_1m",
+  budgetCorrige: null,
   ...over,
 });
 const membres = [{ userId: "u-1", name: "Jean-Charles C." }];

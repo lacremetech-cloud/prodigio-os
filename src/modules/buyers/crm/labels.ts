@@ -148,4 +148,5 @@ export const buyerAuditEventLabels: Record<string, string> = {
   acquereur_reouverture: "Dossier rouvert",
   acquereur_archive: "Contact archivé",
   acquereur_desarchive: "Contact rétabli",
+  acquereur_budget: "Budget corrigé",
 };

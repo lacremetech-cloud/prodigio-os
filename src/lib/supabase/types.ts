@@ -956,6 +956,16 @@ export type BuyerProfileRow = {
   archive_le: string | null;
   archive_par: string | null;
   archive_motif: string | null;
+  /**
+   * Budget retenu par l'équipe quand la réponse au formulaire est fausse.
+   * NULL = aucune correction. C'est cette valeur que lisent en priorité les
+   * écrans, les filtres et les récapitulatifs ;
+   * `buyer_interests.budget_choice` garde la déclaration, intacte.
+   */
+  budget_choice_corrige: string | null;
+  budget_corrige_par: string | null;
+  budget_corrige_le: string | null;
+  budget_corrige_motif: string | null;
 };
 
 export type BuyerSearchCriteriaRow = {
@@ -2136,6 +2146,17 @@ export interface Database {
       };
       crm_buyer_reopen: {
         Args: { p_buyer_profile_id: string; p_reason: string };
+        Returns: Json;
+      };
+      /* Corriger un budget mal déclaré. `p_budget_choice` à null retire la
+         correction et rend la déclaration. Porte : crm_buyer_can_operate —
+         la même que changer l'étape, commerciaux compris. */
+      crm_buyer_set_budget: {
+        Args: {
+          p_buyer_profile_id: string;
+          p_budget_choice?: string | null;
+          p_motif?: string | null;
+        };
         Returns: Json;
       };
       /* Archivage — administrateur SEUL (la fonction refuse les autres rôles). */

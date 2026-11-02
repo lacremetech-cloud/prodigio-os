@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { env, mandateCrmBaseUrl } from "@/config";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { loadBuyerList, toInboxRow } from "@/modules/buyers/crm/queries";
+import { budgetEffectif } from "@/modules/buyers/crm/budget";
 import { porteLeSignal } from "@/modules/buyers/crm/signaux";
 import {
   construireRecap,
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
   const base = mandateCrmBaseUrl(env);
   const admin = getSupabaseAdminClient();
 
-  const [{ data: interets }, { data: biens }] = await Promise.all([
+  const [{ data: interets }, { data: biens }, { data: profils }] = await Promise.all([
     admin
       .from("buyer_interests")
       .select(
@@ -67,18 +68,33 @@ export async function GET(request: Request) {
       .gte("created_at", debut.toISOString())
       .order("created_at", { ascending: true }),
     admin.from("properties").select("id, project_name"),
+    /* LES CORRECTIONS DE BUDGET. Sans elles, le récapitulatif de 8 h 30
+       annoncerait « 500 000 € – 1 M€ » pour quelqu'un que l'équipe a reclassé
+       au-dessus du million la veille — et le mail contredirait l'écran que
+       JC et Antoine ont sous les yeux. */
+    admin.from("buyer_profiles").select("id, budget_choice_corrige"),
   ]);
 
   const nomDuBien = new Map((biens ?? []).map((b) => [b.id, b.project_name]));
+  const correctionDuProfil = new Map(
+    ((profils ?? []) as { id: string; budget_choice_corrige: string | null }[])
+      .filter((p) => p.budget_choice_corrige)
+      .map((p) => [p.id, p.budget_choice_corrige]),
+  );
 
   const leads: LeadRecap[] = (interets ?? []).map((i) => {
     const recuLe = new Date(i.created_at as string);
     const nom = `${i.contact_first_name ?? ""} ${i.contact_last_name ?? ""}`.trim();
+    /* Le budget RETENU, le même que partout ailleurs. */
+    const budget = budgetEffectif(
+      i.budget_choice ?? null,
+      i.buyer_profile_id ? (correctionDuProfil.get(i.buyer_profile_id) ?? null) : null,
+    );
     return {
       nom: nom || null,
       telephone: i.contact_phone_raw ?? null,
       bien: (i.property_id && nomDuBien.get(i.property_id)) || null,
-      budgetChoice: i.budget_choice ?? null,
+      budgetChoice: budget,
       recuLe,
       ficheUrl: `${base}/crm/acquereurs${
         i.buyer_profile_id ? `/${encodeURIComponent(i.buyer_profile_id)}` : ""
@@ -86,7 +102,7 @@ export async function GET(request: Request) {
       /* Marque « deja alerte » selon la MEME regle que l'alerte immediate :
          deux calculs separes finiraient par se contredire. */
       dejaAlerte: meriteAlerteImmediate(
-        { budgetChoice: i.budget_choice ?? null, recuLe },
+        { budgetChoice: budget, recuLe },
         env.ALERTE_LEAD_IMMEDIATE,
       ),
     };

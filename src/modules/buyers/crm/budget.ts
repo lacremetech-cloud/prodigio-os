@@ -56,6 +56,26 @@ export const BUDGET_FILTERS: ReadonlyArray<{
   { value: "sans_reponse", label: "Sans réponse", choix: [] },
 ];
 
+/**
+ * LE BUDGET QUI FAIT FOI : la correction de l'équipe si elle existe, la
+ * déclaration sinon.
+ *
+ * Un seul endroit décide, et tout le reste en découle — filtres, libellés,
+ * Kanban, récapitulatifs. Si chaque écran choisissait lui-même entre les deux
+ * valeurs, un prospect corrigé apparaîtrait sous « Plus d'1 M€ » dans la liste
+ * et sous « 500 k – 1 M€ » dans le récapitulatif du soir, et plus personne ne
+ * saurait lequel croire.
+ *
+ * La déclaration n'est JAMAIS écrasée : elle reste sur la manifestation, et la
+ * fiche montre les deux.
+ */
+export function budgetEffectif(
+  declare: string | null | undefined,
+  corrige: string | null | undefined,
+): string | null {
+  return corrige ?? declare ?? null;
+}
+
 export function budgetCorrespond(row: BuyerInboxRow, filtre: string): boolean {
   const f = BUDGET_FILTERS.find((b) => b.value === filtre);
   if (!f || f.choix === null) return true;
