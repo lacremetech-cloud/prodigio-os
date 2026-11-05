@@ -139,13 +139,27 @@ export default async function BuyersInboxPage({
            valeur est validee par la liste des tranches, dans le composant. */
         budgetInitial={typeof params.budget === "string" ? params.budget : undefined}
         qualificationInitiale={qualif}
+        /* Étape et responsable viennent de l'adresse eux aussi : c'est ce qui
+           les fait survivre au « Précédent » du navigateur. */
+        stageInitial={typeof params.stage === "string" ? params.stage : undefined}
+        responsableInitial={
+          typeof params.responsable === "string" ? params.responsable : undefined
+        }
         signalInitial={signal}
         /* Le badge de projet n'a de sens que si plusieurs projets sont à
            l'écran : sous un onglet de projet, le répéter sur chaque ligne
            n'apprend rien et prend la place du reste. */
         chargeA={chargeA}
         montrerProjet={selection.length !== 1}
-        contexte={ecrireNavigation({ projets: selection, vue, signal })}
+        /* La photo prise au chargement ; `BuyerInbox` la complete ensuite avec
+           l'etat VIVANT des filtres avant de la passer a la fiche. */
+        contexte={ecrireNavigation({
+          projets: selection,
+          vue,
+          signal,
+          budget: typeof params.budget === "string" ? params.budget : undefined,
+          qualification: qualif,
+        })}
       />
     </div>
   );

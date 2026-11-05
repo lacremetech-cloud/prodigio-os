@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Chip, EmptyState } from "@/components/crm/ui";
 import { cssVarRef } from "@/modules/crm/status-visuals";
@@ -78,6 +78,8 @@ export function BuyerInbox({
   contexte = "",
   budgetInitial,
   qualificationInitiale,
+  stageInitial,
+  responsableInitial,
   moiUserId = null,
   peutAffecterAutrui = false,
   chargeA,
@@ -105,6 +107,9 @@ export function BuyerInbox({
   budgetInitial?: string;
   /** Niveau de qualification posé par l'URL (`?qualification=`). */
   qualificationInitiale?: string;
+  /** Étape et responsable posés par l'URL — mêmes raisons. */
+  stageInitial?: string;
+  responsableInitial?: string;
   /** Mon identifiant, et mon droit de confier un dossier a autrui. */
   moiUserId?: string | null;
   peutAffecterAutrui?: boolean;
@@ -142,7 +147,7 @@ export function BuyerInbox({
       "Vous avez une saisie non enregistrée sur ce dossier. La perdre ?",
     );
   }
-  const [stage, setStage] = useState<string>("tous");
+  const [stage, setStage] = useState<string>(stageInitial ?? "tous");
   const [budget, setBudget] = useState<string>(() =>
     BUDGET_FILTERS.some((b) => b.value === budgetInitial) ? budgetInitial! : "tous",
   );
@@ -151,7 +156,7 @@ export function BuyerInbox({
       ? qualificationInitiale!
       : "tous",
   );
-  const [owner, setOwner] = useState<string>("tous");
+  const [owner, setOwner] = useState<string>(responsableInitial ?? "tous");
 
   const [sort, setSort] = useState<SortKey>("urgence");
 
@@ -164,6 +169,71 @@ export function BuyerInbox({
     (qualif !== "tous" ? 1 : 0) +
     (owner !== "tous" ? 1 : 0);
 
+
+  /**
+   * LES FILTRES VIVENT DANS L'ADRESSE.
+   *
+   * Le défaut signalé le 5 novembre : « lorsque l'on met des filtres, que l'on
+   * clique sur un prospect, si on revient en arrière tous les filtres se sont
+   * enlevés et il faut à chaque fois les remettre ». Il est réel et il était
+   * entier : ces cinq filtres ne vivaient QUE dans la mémoire de ce composant.
+   * Le bouton « Précédent » du navigateur revenait donc sur une adresse qui
+   * n'avait jamais su qu'ils existaient, et le composant repartait de zéro.
+   *
+   * POURQUOI `history.replaceState` ET NON `router.replace`. Ce dernier
+   * redemande la page au serveur à CHAQUE clic de pastille — exactement la
+   * tempête de rechargements qu'on a passé du temps à supprimer, sur l'écran
+   * le plus chargé du CRM. `replaceState` ne fait qu'écrire l'adresse : aucun
+   * aller-retour, aucun rendu. Le navigateur la mémorise, et c'est tout ce
+   * qu'il faut pour que « Précédent » retrouve l'écran qu'on avait.
+   *
+   * `replace` et non `push` : filtrer n'est pas naviguer. Sinon, revenir en
+   * arrière déferait les filtres un par un au lieu de quitter la liste.
+   *
+   * La recherche texte n'y est PAS : elle change à chaque frappe, et personne
+   * ne veut d'une adresse qui se réécrit vingt fois par mot.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const poser = (cle: string, valeur: string | null) => {
+      if (valeur && valeur !== "tous") q.set(cle, valeur);
+      else q.delete(cle);
+    };
+    poser("signal", signal);
+    poser("budget", budget);
+    poser("qualification", qualif);
+    poser("stage", stage);
+    poser("responsable", owner);
+    const chaine = q.toString();
+    const cible = `${window.location.pathname}${chaine ? `?${chaine}` : ""}`;
+    /* Ne rien écrire quand rien ne change : une entrée d'historique identique
+       n'apporte rien et brouille le « Précédent ». */
+    if (cible !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(null, "", cible);
+    }
+  }, [signal, budget, qualif, stage, owner]);
+
+  /**
+   * Le contexte emporté vers la fiche : l'état VIVANT des filtres, pas la
+   * photo prise par le serveur au chargement. Sans ça, « ← Boîte de réception »
+   * ramenait aux filtres qu'on avait en arrivant, pas à ceux qu'on venait de
+   * poser.
+   */
+  const contexteVivant = useMemo(() => {
+    const q = new URLSearchParams(contexte.startsWith("?") ? contexte.slice(1) : contexte);
+    const poser = (cle: string, valeur: string | null) => {
+      if (valeur && valeur !== "tous") q.set(cle, valeur);
+      else q.delete(cle);
+    };
+    poser("signal", signal);
+    poser("budget", budget);
+    poser("qualification", qualif);
+    poser("stage", stage);
+    poser("responsable", owner);
+    const chaine = q.toString();
+    return chaine ? `?${chaine}` : "";
+  }, [contexte, signal, budget, qualif, stage, owner]);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -583,7 +653,7 @@ export function BuyerInbox({
           membres={members}
           moiUserId={moiUserId}
           peutAffecterAutrui={peutAffecterAutrui}
-          contexte={contexte}
+          contexte={contexteVivant}
           onFermer={() => {
             if (peutQuitter()) setOuvert(null);
           }}

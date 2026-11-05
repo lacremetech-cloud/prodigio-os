@@ -285,7 +285,15 @@ export default async function BuyersPipelinePage({
         /* Sous un onglet de projet, repeter son nom sur chaque carte
            n'apprend rien ; en vue « tous les projets », c'est indispensable. */
         montrerProjet={selection.length !== 1}
-        contexte={ecrireNavigation({ projets: selection, vue, signal })}
+        /* Le lien vers la fiche emporte les TROIS axes : revenir d'un dossier
+           doit rendre l'écran qu'on avait, pas une version a moitie filtree. */
+        contexte={ecrireNavigation({
+          projets: selection,
+          vue,
+          signal,
+          budget,
+          qualification: qualif,
+        })}
         rows={lignes}
         membres={memberOptions}
         /* Qui peut TRAITER un dossier peut le confier : les commerciaux

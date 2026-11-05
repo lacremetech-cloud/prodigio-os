@@ -52,6 +52,10 @@ export function ecrireNavigation(params: {
   /** Niveau de qualification — le TROISIÈME axe, même principe : on croise
       « plus d'1 M€ » et « à qualifier » au lieu de choisir. */
   qualification?: string;
+  /** Étape du pipeline, filtre détaillé de la liste. */
+  stage?: string;
+  /** Responsable : un identifiant de membre, ou « aucun ». */
+  responsable?: string;
 }): string {
   const q = new URLSearchParams();
   if (params.projets.length > 0) q.set("projets", params.projets.join(","));
@@ -60,6 +64,10 @@ export function ecrireNavigation(params: {
   if (params.budget && params.budget !== "tous") q.set("budget", params.budget);
   if (params.qualification && params.qualification !== "tous") {
     q.set("qualification", params.qualification);
+  }
+  if (params.stage && params.stage !== "tous") q.set("stage", params.stage);
+  if (params.responsable && params.responsable !== "tous") {
+    q.set("responsable", params.responsable);
   }
   const s = q.toString();
   return s ? `?${s}` : "";

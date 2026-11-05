@@ -114,12 +114,22 @@ export default async function BuyerProfilePage({
     const brut = Array.isArray(nav.projets) ? nav.projets.join(",") : nav.projets ?? "";
     return brut.split(",").map((v) => v.trim()).filter(Boolean);
   })();
+  /* TOUS les filtres reviennent, pas seulement le projet et le signal.
+     Budget, qualification, étape et responsable en étaient absents : on
+     revenait d'une fiche sur une liste à moitié filtrée, et il fallait tout
+     remettre à chaque dossier traité. */
+  const texte = (v: string | string[] | undefined) =>
+    typeof v === "string" ? v : undefined;
   const retour =
     (vueRetour === "pipeline" ? "/crm/acquereurs/pipeline" : "/crm/acquereurs") +
     ecrireNavigation({
       projets: projetsRetour,
       vue: vueRetour,
-      signal: typeof nav.signal === "string" ? nav.signal : undefined,
+      signal: texte(nav.signal),
+      budget: texte(nav.budget),
+      qualification: texte(nav.qualification),
+      stage: texte(nav.stage),
+      responsable: texte(nav.responsable),
     });
   const session = await requireCrmSession(`/crm/acquereurs/${id}`);
   const canViewContacts = canViewContactDetails(session.roles);
