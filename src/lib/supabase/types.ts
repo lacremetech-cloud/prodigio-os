@@ -1510,6 +1510,23 @@ export interface Database {
         Args: { p_buyer_profile_id: string };
         Returns: Json;
       };
+      /**
+       * Qui reçoit le récapitulatif d'un bien : les administrateurs et
+       * managers, plus les personnes à qui ce bien est confié. Déduite de
+       * `property_assignments`, la même source que `crm_property_access` —
+       * pas d'une liste écrite dans Make.
+       *
+       * Réservée à `service_role` : la route du récapitulatif tourne sans
+       * session, et la fonction rend les adresses de toute l'organisation.
+       */
+      crm_recap_recipients: {
+        Args: Record<string, never>;
+        Returns: {
+          property_id: string;
+          project_name: string | null;
+          email: string | null;
+        }[];
+      };
       crm_list_members_v2: {
         Args: Record<string, never>;
         Returns: {

@@ -132,12 +132,16 @@ function estAuDessus1M(code: string | null): boolean {
  * Sur un telephone la notification n'affiche que l'expediteur et l'objet : il
  * doit suffire a savoir s'il faut ouvrir maintenant ou ce soir.
  */
-export function sujetRecap(leads: readonly LeadRecap[]): string {
+export function sujetRecap(leads: readonly LeadRecap[], bien?: string | null): string {
   const n = leads.length;
   const gros = leads.filter((l) => estAuDessus1M(l.budgetChoice)).length;
   const tete = n === 1 ? "1 nouveau lead" : `${n} nouveaux leads`;
-  if (gros === 0) return tete;
-  return `${tete} — ${gros === 1 ? "1 au-dessus de 1 M€" : `${gros} au-dessus de 1 M€`}`;
+  /* LE BIEN EN TÊTE D'OBJET. Trois récapitulatifs arrivent dans la même
+     boîte à 8 h 30 ; sans le nom du bien, ils sont indiscernables dans la
+     liste des messages, et on ouvre les trois pour trouver le bon. */
+  const prefixe = (bien ?? "").trim() ? `${(bien ?? "").trim()} · ` : "";
+  if (gros === 0) return `${prefixe}${tete}`;
+  return `${prefixe}${tete} — ${gros === 1 ? "1 au-dessus de 1 M€" : `${gros} au-dessus de 1 M€`}`;
 }
 
 function blocPrioritaire(l: LeadRecap): string {
@@ -232,10 +236,20 @@ export function construireRecap(entree: {
   dormants: DossiersDormants;
   maintenant: Date;
   depuis: Date;
+  /**
+   * LE BIEN DE CE RÉCAPITULATIF, quand il n'en couvre qu'un.
+   *
+   * Vide = tous les biens, le comportement d'origine. Renseigné, le nom
+   * apparaît dans l'objet et en tête du message : Édouard reçoit « Les
+   * Airelles », Nicolas reçoit Cassis, et personne ne lit la liste de
+   * l'autre.
+   */
+  bien?: string | null;
 }): Recap {
   const { leads, dormants, maintenant, depuis } = entree;
+  const bien = (entree.bien ?? "").trim() || null;
   if (leads.length === 0) {
-    return { envoyer: false, sujet: sujetRecap(leads), html: "", nombre: 0 };
+    return { envoyer: false, sujet: sujetRecap(leads, bien), html: "", nombre: 0 };
   }
 
   const tri = [...leads].sort((a, b) => a.recuLe.getTime() - b.recuLe.getTime());
@@ -245,7 +259,13 @@ export function construireRecap(entree: {
 
   const tete = leads.length === 1 ? "1 nouveau lead" : `${leads.length} nouveaux leads`;
 
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:16px;color:#141f27;line-height:1.5"><p style="margin:0 0 2px;font-size:20px;font-weight:700">${tete}</p><p style="margin:0 0 24px;font-size:14px;color:#5a6b78">Depuis le récapitulatif de ${HEURE.format(
+  const chapeau = bien
+    ? `<p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#1B4F6B">${echappe(
+        bien,
+      )}</p>`
+    : "";
+
+  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:16px;color:#141f27;line-height:1.5">${chapeau}<p style="margin:0 0 2px;font-size:20px;font-weight:700">${tete}</p><p style="margin:0 0 24px;font-size:14px;color:#5a6b78">Depuis le récapitulatif de ${HEURE.format(
     depuis,
   )} — ${DATE_LONGUE.format(maintenant)}</p>${gros
     .map(blocPrioritaire)
@@ -254,5 +274,5 @@ export function construireRecap(entree: {
     reste,
   )}${pied(dormants)}<p style="margin:26px 0 0;padding-top:14px;border-top:1px solid #e3e8ec;font-size:13px;color:#8a99a5">Récapitulatif automatique de Prodigio OS — 8h30, 13h00, 17h30. Un créneau sans nouveau lead n'envoie rien.</p></div>`;
 
-  return { envoyer: true, sujet: sujetRecap(leads), html, nombre: leads.length };
+  return { envoyer: true, sujet: sujetRecap(leads, bien), html, nombre: leads.length };
 }
