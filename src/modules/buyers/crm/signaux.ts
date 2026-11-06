@@ -64,14 +64,23 @@ const SIGNAUX: Signal[] = [
  * « Non affectés » n'y figure PLUS. Il renvoyait 67 dossiers sur 75 — 89 % —
  * parce que presque rien n'est affecté : un filtre qui garde neuf lignes sur
  * dix ne sépare rien. Le signal reste défini et joignable par l'URL, pour le
- * jour où l'affectation deviendra une habitude. */
+ * jour où l'affectation deviendra une habitude.
+ *
+ * « Fort potentiel » n'y figure plus non plus, et pour une raison plus dure :
+ * il ne pouvait afficher que ZÉRO. Il lit `recommended_priority`, recalculé
+ * par `buyer_attach_interest` à partir de `buyer_interests.priority` — or ce
+ * champ vaut `a_qualifier` sur les 251 manifestations déposées, sans
+ * exception. Le moteur de score qui devait écrire `prioritaire` n'a jamais
+ * été branché. Une pastille qui affiche 0 quoi qu'il arrive n'est pas un
+ * filtre : c'est une promesse non tenue, à côté de cinq compteurs qui, eux,
+ * disent vrai. Le signal reste défini — le jour où le score existera, il
+ * suffira de remettre une ligne ici. */
 export const FILTRES_RAPIDES: { signal: Signal; label: string }[] = [
   { signal: "tous", label: "Tous" },
   { signal: "a_contacter", label: "À contacter" },
   { signal: "a_rappeler", label: "À rappeler" },
   { signal: "en_retard", label: "En retard" },
   { signal: "sans_action", label: "Sans action" },
-  { signal: "fort_potentiel", label: "Fort potentiel" },
 ];
 
 /** Normalise un paramètre d'URL : une valeur inconnue ne filtre rien. */

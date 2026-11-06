@@ -89,14 +89,13 @@ export default async function BuyersInboxPage({
             </Link>
           ) : null}
         </div>
-        {/* Masquée sur téléphone : ces trois lignes expliquent une règle qu'on
-            apprend le premier jour, et elles coûtaient 90 px avant le premier
-            nom — sur le seul écran où l'on travaille debout. */}
-        <p className="mt-1 hidden max-w-2xl text-sm text-[var(--crm-text-dim)] sm:block">
-          Une ligne par personne. Quelqu&rsquo;un qui s&rsquo;intéresse à deux projets apparaît
-          une seule fois, avec les deux biens en repère : une qualification, une étape, un
-          historique. Ce qui tient au bien — visites, offres, issue — reste sur sa fiche.
-        </p>
+        {/* PAS DE SOUS-TITRE. Il expliquait « une ligne par personne, même si
+            elle s'intéresse à deux projets » — une règle qu'on apprend le
+            premier jour et qu'on relit ensuite tous les jours pour rien. Il
+            avait déjà été masqué sur téléphone pour cette raison ; le garder
+            sur ordinateur revenait à dire que la place y est gratuite. Elle ne
+            l'est pas : c'étaient trois lignes avant le premier nom, sur
+            l'écran le plus ouvert du CRM. */}
       </header>
 
       {/* Tronquer une liste de leads sans le dire serait pire que lent : le

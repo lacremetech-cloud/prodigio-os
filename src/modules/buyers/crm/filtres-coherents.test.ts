@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { comptesParProjet } from "./comptes";
-import { FILTRES_RAPIDES, porteLeSignal } from "./signaux";
+import { FILTRES_RAPIDES, lireSignal, porteLeSignal } from "./signaux";
 import type { BuyerListItem, BuyerInboxRow } from "./queries";
 
 /**
@@ -136,7 +136,31 @@ describe("les deux vues proposent les mêmes pastilles", () => {
     for (const f of FILTRES_RAPIDES) {
       expect(() => porteLeSignal(vide, f.signal), f.signal).not.toThrow();
     }
-    expect(FILTRES_RAPIDES.map((f) => f.signal)).toContain("fort_potentiel");
     expect(FILTRES_RAPIDES.map((f) => f.signal)).toContain("a_contacter");
+  });
+
+  it("aucune pastille ne lit un champ que rien n'écrit", () => {
+    /*
+     * « Fort potentiel » a été retiré le 6 novembre, et c'est la seule raison
+     * pour laquelle ce test existe : il affichait 0 pour tout le monde, pour
+     * toujours. Il lit `recommended_priority`, recalculé depuis
+     * `buyer_interests.priority` — qui vaut `a_qualifier` sur les 251
+     * manifestations déposées, sans exception, parce que le moteur de score
+     * censé écrire `prioritaire` n'a jamais été branché.
+     *
+     * Une pastille qui ne peut pas varier n'est pas un filtre. Ce test
+     * tombera si on la remet sans avoir d'abord branché le score.
+     */
+    expect(FILTRES_RAPIDES.map((f) => f.signal)).not.toContain("fort_potentiel");
+
+    // Le signal, lui, reste joignable par l'URL et garde son prédicat : le
+    // jour où le score existe, il suffit de remettre une ligne.
+    expect(lireSignal("fort_potentiel")).toBe("fort_potentiel");
+    expect(() =>
+      porteLeSignal({ highPotential: true } as unknown as BuyerInboxRow, "fort_potentiel"),
+    ).not.toThrow();
+    expect(
+      porteLeSignal({ highPotential: true } as unknown as BuyerInboxRow, "fort_potentiel"),
+    ).toBe(true);
   });
 });
