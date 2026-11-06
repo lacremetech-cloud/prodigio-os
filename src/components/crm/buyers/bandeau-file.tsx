@@ -28,6 +28,13 @@ export function BandeauFile({
   const { actifs, nonQualifies, sorties } = comptesDeLaFile(rows);
   const lien = `${base}?signal=non_qualifies${contexte ? `&${contexte.replace(/^[?&]/, "")}` : ""}`;
 
+  /* SANS ECART, PAS DE BANDEAU. Sa raison d'etre est de dire que le total
+     affiche n'est pas le nombre d'appels a passer : « 16 dossiers » quand
+     deux sont ecartes. Quand rien n'est ecarte, il redit simplement le total
+     que la pastille « Tous » porte deja trente pixels plus bas. Une ligne de
+     plus pour une information deja la, sur l'ecran le plus ouvert du CRM. */
+  if (nonQualifies === 0 && sorties === 0) return null;
+
   return (
     <p className="crm-bandeau-file" role="status">
       <strong>

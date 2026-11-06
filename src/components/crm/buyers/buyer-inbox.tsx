@@ -21,10 +21,6 @@ import {
   buyerStageVisual,
   BUYER_PIPELINE_STAGES,
 } from "@/modules/buyers/crm/labels";
-import {
-  BUDGET_CHOICE_COURT,
-  type BuyerBudgetChoice,
-} from "@/modules/buyers/funnel/universal";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import { FILTRES_RAPIDES, porteLeSignal, type Signal } from "@/modules/buyers/crm/signaux";
 /* Re-exportes pour les appelants historiques (dont les tests) : le vocabulaire
@@ -364,39 +360,14 @@ export function BuyerInbox({
     setOuvert(ordre[0] ?? null);
   }
 
-  /* Chaque compteur est calcule par `porteLeSignal`, EXACTEMENT la fonction
-     qui filtrera la liste quand on cliquera dessus. Les deux etaient ecrits
-     separement, et « Nouveaux » comptait une valeur d'etape qui n'existe plus
-     depuis la reprise : il affichait zero avec treize dossiers a contacter,
-     sans rien signaler. */
-  const counters = useMemo(
-    () => ({
-      total: rows.length,
-      nouveaux: rows.filter((r) => porteLeSignal(r, "a_contacter")).length,
-      enRetard: rows.filter((r) => porteLeSignal(r, "en_retard")).length,
-      sansAction: rows.filter((r) => porteLeSignal(r, "sans_action")).length,
-      nonAffectes: rows.filter((r) => porteLeSignal(r, "non_affectes")).length,
-    }),
-    [rows],
-  );
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Compteurs reels, et cliquables : le compteur EST le filtre.
-
-          Sur telephone ils defilent sur UNE rangee au lieu d'occuper trois
-          lignes de grille. Les trois lignes coutaient 180 px avant le premier
-          dossier : on arrivait sur l'ecran et on ne voyait aucun nom. */}
-      <div className="crm-compteurs-file">
-        <Counter label="Dossiers" value={counters.total}
-                 signal="tous" actif={signal} onChoisir={setSignal} />
-        <Counter label="À contacter" value={counters.nouveaux} accent="--crm-acq-a_contacter"
-                 signal="a_contacter" actif={signal} onChoisir={setSignal} />
-        <Counter label="En retard" value={counters.enRetard} accent="--crm-acq-pas_interesse"
-                 signal="en_retard" actif={signal} onChoisir={setSignal} />
-        <Counter label="Sans action" value={counters.sansAction} accent="--crm-st-a_contacter"
-                 signal="sans_action" actif={signal} onChoisir={setSignal} />
-      </div>
+      {/* PAS DE COMPTEURS ICI. « DOSSIERS / À CONTACTER / EN RETARD / SANS
+          ACTION » en gros, puis « Tous / À contacter / En retard / Sans
+          action » en pastilles trente pixels plus bas : deux formes pour une
+          seule information, et deux fois la place. Ce sont les pastilles qui
+          restent — elles filtrent, alors que les compteurs ne faisaient que
+          compter la meme chose. */}
 
       {/* Recherche + filtres
 
@@ -458,11 +429,18 @@ export function BuyerInbox({
               label: buyerStageLabels[s] ?? s,
             })),
           ]} />
-          <Select label="Responsable" value={owner} onChange={setOwner} options={[
-            { value: "tous", label: "Tous" },
-            { value: "aucun", label: "Non affectés" },
-            ...members.map((m) => ({ value: m.userId, label: m.name })),
-          ]} />
+          {/* Trier par responsable n'a de sens qu'a plusieurs. Edouard est
+              seul sur Les Airelles : « Tous / Non affectes / Edouard » lui
+              propose de choisir entre trois formulations d'une meme reponse.
+              Le filtre reste joignable par l'URL (`?responsable=`) pour qui
+              partage un lien. */}
+          {members.length > 1 ? (
+            <Select label="Responsable" value={owner} onChange={setOwner} options={[
+              { value: "tous", label: "Tous" },
+              { value: "aucun", label: "Non affectés" },
+              ...members.map((m) => ({ value: m.userId, label: m.name })),
+            ]} />
+          ) : null}
         </div>
       </div>
 
@@ -665,70 +643,6 @@ export function BuyerInbox({
         />
       ) : null}
     </div>
-  );
-}
-
-/**
- * Tuile de compteur. Elle etait posee sur la surface douce, a meme la toile :
- * deux gris a un pour cent l'un de l'autre, le chiffre flottait dans le vide.
- * C'est une CARTE blanche, avec un filet de la couleur du compteur — on voit
- * la tuile, puis le chiffre, puis ce qu'il compte.
- *
- * Elle est surtout CLIQUABLE : lire « 4 en retard » sans pouvoir ouvrir les
- * quatre dossiers obligeait a aller rechercher soi-meme ce que le compteur
- * venait d'annoncer. Un second clic revient a la liste complete.
- *
- * Un compteur a zero n'est jamais mis en couleur, ni cliquable : zero « en
- * retard » est une bonne nouvelle, et un filtre qui ouvre le vide n'aide pas.
- */
-function Counter({
-  label,
-  value,
-  accent,
-  signal,
-  actif,
-  onChoisir,
-}: {
-  label: string;
-  value: number;
-  accent?: string;
-  signal: Signal;
-  actif: Signal;
-  onChoisir: (s: Signal) => void;
-}) {
-  const vif = Boolean(accent) && value > 0;
-  const estActif = actif === signal && signal !== "tous";
-  // « Dossiers » remet toujours la liste a plat ; les autres se decrochent.
-  const cliquable = signal === "tous" ? actif !== "tous" : value > 0;
-  const couleur = accent ? cssVarRef(accent) : "var(--crm-univers)";
-
-  return (
-    <button
-      type="button"
-      disabled={!cliquable && !estActif}
-      aria-pressed={estActif}
-      onClick={() => onChoisir(estActif ? "tous" : signal)}
-      className="crm-panel crm-compteur flex flex-col gap-0.5 px-3.5 py-3 text-left"
-      style={
-        {
-          /* Le liseré ne se colore QUE si le compteur compte quelque chose.
-             Un « 0 en retard » borde de rouge se lit comme une alerte, alors
-             que c'est exactement la bonne nouvelle. */
-          ...(accent && value > 0
-            ? { borderInlineStartWidth: "3px", borderInlineStartColor: couleur }
-            : {}),
-          ["--compteur" as keyof CSSProperties]: couleur,
-        } as CSSProperties
-      }
-    >
-      <span
-        className="text-[1.5rem] font-bold leading-tight tabular-nums text-[var(--crm-text)]"
-        style={vif ? ({ color: couleur } as CSSProperties) : undefined}
-      >
-        {value}
-      </span>
-      <span className="crm-kpi__label crm-wrap">{label}</span>
-    </button>
   );
 }
 

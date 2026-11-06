@@ -53,54 +53,72 @@ export function BarreProjets({
   base: { liste: string; pipeline: string };
 }) {
   const total = [...comptes.values()].reduce((t, n) => t + n, 0);
-  const route = (v: VueAcquereurs) => (v === "pipeline" ? base.pipeline : base.liste);
+  const route = (v: VueAcquereurs) =>
+    v === "pipeline" ? base.pipeline : base.liste;
 
   /** Un clic ajoute ou retire le projet : c'est ce qui rend la sélection
       multiple possible sans deuxième commande à expliquer. */
   const bascule = (id: string) =>
-    selection.includes(id) ? selection.filter((p) => p !== id) : [...selection, id];
+    selection.includes(id)
+      ? selection.filter((p) => p !== id)
+      : [...selection, id];
+
+  /* UN SEUL PROJET : PAS DE CHOIX A FAIRE. Proposer « Tous les projets » et
+     « Les Airelles aux 2 Alpes » a quelqu'un qui n'a que Les Airelles, c'est
+     demander de choisir entre deux formulations d'une meme reponse — et les
+     deux portent le meme compte, ce qui se lit comme une erreur. La bascule
+     Liste / Pipeline, elle, reste : elle ne depend pas du nombre de biens. */
+  const choixDeProjet = projets.length > 1;
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Projet">
-        <Link
-          href={`${route(vue)}${ecrireNavigation({ projets: [], vue, signal, budget, qualification })}`}
-          /* Pas de préchargement : chaque variante de cette barre est un rendu
+      {choixDeProjet ? (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Projet">
+          <Link
+            href={`${route(vue)}${ecrireNavigation({ projets: [], vue, signal, budget, qualification })}`}
+            /* Pas de préchargement : chaque variante de cette barre est un rendu
              serveur COMPLET de la liste. Les précharger toutes coûtait, mesuré,
              quinze allers-retours par changement de projet — pour un lien sur
              lequel on ne cliquera pas. */
-          prefetch={false}
-          aria-current={selection.length === 0 ? "true" : undefined}
-          className="crm-projet crm-projet--tous"
-        >
-          <span className="crm-projet__nom">Tous les projets</span>
-          <span className="crm-projet__compte">{total}</span>
-        </Link>
+            prefetch={false}
+            aria-current={selection.length === 0 ? "true" : undefined}
+            className="crm-projet crm-projet--tous"
+          >
+            <span className="crm-projet__nom">Tous les projets</span>
+            <span className="crm-projet__compte">{total}</span>
+          </Link>
 
-        {projets.map((p) => {
-          const actif = selection.includes(p.id);
-          return (
-            <Link
-              key={p.id}
-              href={`${route(vue)}${ecrireNavigation({
-                projets: bascule(p.id),
-                vue,
-                signal,
-                budget,
-                qualification,
-              })}`}
-              prefetch={false}
-              aria-current={actif ? "true" : undefined}
-              className="crm-projet"
-              style={{ ["--projet" as keyof CSSProperties]: `var(--crm-projet-${teinteProjet(p.id)})` } as CSSProperties}
-            >
-              <span className="crm-projet__pastille" aria-hidden />
-              <span className="crm-projet__nom">{p.label}</span>
-              <span className="crm-projet__compte">{comptes.get(p.id) ?? 0}</span>
-            </Link>
-          );
-        })}
-      </div>
+          {projets.map((p) => {
+            const actif = selection.includes(p.id);
+            return (
+              <Link
+                key={p.id}
+                href={`${route(vue)}${ecrireNavigation({
+                  projets: bascule(p.id),
+                  vue,
+                  signal,
+                  budget,
+                  qualification,
+                })}`}
+                prefetch={false}
+                aria-current={actif ? "true" : undefined}
+                className="crm-projet"
+                style={
+                  {
+                    ["--projet" as keyof CSSProperties]: `var(--crm-projet-${teinteProjet(p.id)})`,
+                  } as CSSProperties
+                }
+              >
+                <span className="crm-projet__pastille" aria-hidden />
+                <span className="crm-projet__nom">{p.label}</span>
+                <span className="crm-projet__compte">
+                  {comptes.get(p.id) ?? 0}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
 
       {/* La vue change, le projet et les filtres restent : ils voyagent dans
           l'URL, pas dans un état que la navigation effacerait. */}
@@ -149,7 +167,9 @@ export function BadgeProjet({
 }) {
   if (!label) return null;
   const style = propertyId
-    ? ({ ["--projet" as keyof CSSProperties]: `var(--crm-projet-${teinteProjet(propertyId)})` } as CSSProperties)
+    ? ({
+        ["--projet" as keyof CSSProperties]: `var(--crm-projet-${teinteProjet(propertyId)})`,
+      } as CSSProperties)
     : undefined;
   return (
     <span className={`crm-badge-projet ${className}`} style={style}>

@@ -1952,6 +1952,24 @@
   font-weight: 550;
   cursor: pointer;
 }
+/* RESERVE AU TELEPHONE, et dit ICI.
+
+   Le bouton porte `sm:hidden` dans le composant, et pourtant il s'affichait
+   sur ordinateur. Les deux regles ont la meme specificite (0,1,0), et
+   `crm.css` est importee par la mise en page du CRM, donc APRES les
+   utilitaires Tailwind de la mise en page racine : a egalite, la derniere
+   declaree gagne, et c'etait celle-ci.
+
+   Le bouton ne faisait rien sur grand ecran — les filtres y restent deplies
+   dans les deux etats — mais il occupait une place et invitait a un clic sans
+   effet. Poser la regle ici, ou le composant est habille, la met hors de
+   portee de l'ordre de chargement. */
+@media (min-width: 640px) {
+  .crm-replier {
+    display: none;
+  }
+}
+
 .crm-replier__pastille {
   display: inline-flex;
   align-items: center;
