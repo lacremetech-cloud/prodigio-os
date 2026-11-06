@@ -71,10 +71,22 @@ export const ROLE_PERMISSIONS: Record<CrmRole, string> = {
  *
  * Le commercial n'atterrit plus sur le tableau de bord. Il le disait lui-même :
  * « le tableau de bord, je le trouve sans utilité de gestion des leads au
- * quotidien, surtout quand on a besoin d'en traiter et d'aller vite » — et ce
- * qu'il faisait ensuite à la main, c'était ouvrir ses leads et filtrer par
- * budget. Il arrive donc directement là, sur les dossiers au-dessus d'un
- * million, ceux sur lesquels l'agence a décidé de se concentrer.
+ * quotidien, surtout quand on a besoin d'en traiter et d'aller vite ». Il
+ * arrive donc directement sur ses leads.
+ *
+ * MAIS SANS FILTRE POSÉ D'OFFICE. Il y en avait un : `?budget=plus_1m`, repris
+ * du geste que JC faisait à la main. C'était juste tant qu'il n'y avait que
+ * Cassis, où les deux maisons valent 1,39 et 1,49 M€ : au-dessus d'un million,
+ * c'était tout le marché.
+ *
+ * Les Airelles ont rendu ce raccourci faux. Les lots y partent de 525 000 €, et
+ * deux sur onze seulement dépassent le million : Édouard arrivait sur une liste
+ * vide, sans savoir que le vide venait d'un filtre qu'il n'avait pas posé. Un
+ * filtre qu'on n'a pas choisi et qui cache des dossiers est pire qu'un écran
+ * chargé — on ne cherche pas ce qu'on ignore.
+ *
+ * La pastille « Plus d'1 M€ » reste à un clic pour qui la veut, et un lien
+ * `?budget=plus_1m` continue de marcher.
  *
  * Le tableau de bord n'est pas supprimé : il reste à `/crm`, et dans son menu
  * sous « Mon tableau de bord ». Ne pas y atterrir n'est pas ne plus y aller.
@@ -84,7 +96,7 @@ export const ROLE_PERMISSIONS: Record<CrmRole, string> = {
  */
 export function roleHome(roles: readonly string[]): string {
   if (!hasCrmAccess(roles)) return "/acces";
-  if (isCommercialOnly(roles)) return "/crm/acquereurs?budget=plus_1m";
+  if (isCommercialOnly(roles)) return "/crm/acquereurs";
   return "/crm";
 }
 

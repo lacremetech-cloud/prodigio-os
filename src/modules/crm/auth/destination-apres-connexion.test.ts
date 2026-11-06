@@ -45,8 +45,21 @@ describe("la destination après connexion est bien CÂBLÉE", () => {
 });
 
 describe("roleHome : où atterrit-on", () => {
-  it("le commercial arrive sur ses leads, filtrés au-dessus d'un million", () => {
-    expect(roleHome(["commercial"])).toBe("/crm/acquereurs?budget=plus_1m");
+  it("le commercial arrive sur ses leads, SANS filtre posé d'office", () => {
+    /*
+     * Il y avait `?budget=plus_1m`, repris du geste que JC faisait à la main.
+     * Juste tant qu'il n'y avait que Cassis — deux maisons à 1,39 et 1,49 M€,
+     * donc au-dessus d'un million c'était tout le marché.
+     *
+     * Les Airelles l'ont rendu faux : les lots y partent de 525 000 €, deux
+     * sur onze passent le million. Édouard arrivait sur une liste vide sans
+     * savoir que le vide venait d'un filtre qu'il n'avait pas posé.
+     *
+     * Un filtre subi qui cache des dossiers est pire qu'un écran chargé : on
+     * ne cherche pas ce qu'on ignore.
+     */
+    expect(roleHome(["commercial"])).toBe("/crm/acquereurs");
+    expect(roleHome(["commercial"])).not.toContain("budget=");
   });
 
   it("les autres rôles gardent le tableau de bord", () => {
@@ -70,7 +83,7 @@ describe("safeRedirect : la destination demandée prime sur le rôle", () => {
   });
 
   it("sans destination, le rôle décide", () => {
-    expect(safeRedirect(undefined, ["commercial"])).toBe("/crm/acquereurs?budget=plus_1m");
+    expect(safeRedirect(undefined, ["commercial"])).toBe("/crm/acquereurs");
     expect(safeRedirect(undefined, ["administrateur"])).toBe("/crm");
   });
 

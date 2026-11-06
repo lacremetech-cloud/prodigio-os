@@ -134,8 +134,11 @@ export default async function BuyersInboxPage({
            meme regle (`crm_buyer_assign` passe par `crm_buyer_can_operate`). */
         moiUserId={session.userId}
         peutAffecterAutrui={canTreatBuyers(session.roles)}
-        /* `?budget=plus_1m` : la destination du commercial apres connexion. La
-           valeur est validee par la liste des tranches, dans le composant. */
+        /* La tranche vient de l'adresse, et de l'adresse SEULEMENT : plus
+           aucune n'est posee d'office a la connexion. Elle sert aux liens
+           partages et au retour depuis une fiche. La valeur est validee par la
+           liste des tranches, dans le composant : une tranche inconnue ne
+           filtre rien plutot que de vider la liste sans rien dire. */
         budgetInitial={typeof params.budget === "string" ? params.budget : undefined}
         qualificationInitiale={qualif}
         /* Étape et responsable viennent de l'adresse eux aussi : c'est ce qui
