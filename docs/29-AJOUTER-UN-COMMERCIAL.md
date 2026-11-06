@@ -1,82 +1,122 @@
 # Ajouter un commercial
 
-Trois étapes. **La troisième n'a aucune interface** : sans elle, la personne
-se connecte, voit un écran vide, et croit que l'outil est cassé.
+Deux étapes. La troisième, qui n'avait aucune interface et coûtait des leads
+en silence, est désormais portée par l'invitation elle-même.
 
 ---
 
-## 1. L'inviter — Paramètres → Équipe
+## 1. Fixer son périmètre sur l'invitation
 
-Rôle : **commercial**. Vous êtes le seul administrateur, c'est donc vous qui
-invitez.
+Un commercial ne voit **que** les leads des biens qui lui sont confiés. C'est
+voulu : Édouard ROWLANDSON (Cimalpes) suit les 2 Alpes et ne doit pas voir
+Cassis ; Nicolas suit Cassis et ne doit pas voir les 2 Alpes.
 
-L'invitation envoie un e-mail. La personne clique, **choisit son mot de
-passe**, et son adhésion est créée à ce moment-là.
+Le périmètre se décide au moment où on invite, pas trois jours plus tard quand
+la personne se plaint d'un écran vide. Il s'écrit sur l'invitation, et
+l'acceptation l'applique.
+
+```sql
+-- 1. L'invitation (role commercial).
+select crm_create_invitation(
+  p_email      => 'adresse@exemple.fr',
+  p_first_name => 'Prénom',
+  p_last_name  => 'Nom',
+  p_role       => 'commercial');
+
+-- 2. Les biens qu'elle emporte avec elle. Reprenez l'id renvoyé ci-dessus.
+select crm_invitation_set_scope(
+  '<id de l''invitation>'::uuid,
+  array(select id from properties
+         where project_name in ('Les Airelles aux 2 Alpes')));
+```
+
+`crm_invitation_set_scope` refuse un bien d'une autre organisation : on ne peut
+pas accorder un accès hors périmètre par inadvertance.
+
+Le formulaire **Paramètres → Équipe** crée l'invitation et envoie l'e-mail,
+mais ne pose pas encore le périmètre : la requête ci-dessus reste nécessaire
+jusqu'à ce que l'écran le propose.
 
 > **Ne transmettez pas de mot de passe.** L'invitation existe pour que chacun
 > choisisse le sien : rien à dicter au téléphone, rien à écrire dans une
 > conversation, rien à faire tourner. Un mot de passe envoyé par message est
 > un mot de passe à renouveler.
 
-## 2. Vérifier qu'elle a bien accepté
+## 2. Contrôler — les deux chiffres qui comptent
+
+Après que la personne a accepté :
 
 ```sql
-select u.email, m.role, m.status
-from organization_memberships m
-join auth.users u on u.id = m.user_id
+select u.email, m.role, m.status,
+       (select count(*) from property_assignments pa where pa.user_id = u.id) as biens,
+       (select string_agg(p.project_name, ' | ' order by p.project_name)
+          from property_assignments pa
+          join properties p on p.id = pa.property_id
+         where pa.user_id = u.id)                                             as lesquels
+from auth.users u
+join organization_memberships m on m.user_id = u.id
 where u.email = 'adresse@exemple.fr';
 ```
 
-Tant que rien ne sort, l'invitation n'a pas été acceptée : l'étape 3 ne
-servirait à rien.
-
-## 3. Lui confier les biens — **l'étape sans interface**
-
-Un commercial ne voit que les leads des biens qui lui sont confiés. C'est
-voulu : le jour où une villa à Perpignan sera suivie par d'autres, les
-commerciaux actuels ne doivent pas voir ses leads.
-
-Mais rien dans l'application ne permet de confier un bien. Sans cette étape,
-le nouveau venu a un compte valide et **zéro lead visible**, sans le moindre
-message d'erreur — ni pour lui, ni pour vous.
-
-Dans l'éditeur SQL de Supabase :
+`biens` à 0 veut dire que l'invitation n'avait pas de périmètre. La réparation
+est de reposer le périmètre puis de rejouer l'acceptation — elle est
+rejouable — ou, pour un membre déjà en place, d'affecter à la main :
 
 ```sql
 insert into property_assignments (property_id, user_id, responsibility, assigned_by)
-select p.id, nouveau.id, 'commercial', moi.id
+select p.id, qui.id, 'commercial', moi.id
 from properties p
-cross join (select id from auth.users where email = 'adresse@exemple.fr')  as nouveau
+cross join (select id from auth.users where email = 'adresse@exemple.fr')  as qui
 cross join (select id from auth.users where email = 'agence@indescale.com') as moi
-where p.project_name in ('Villa Verdun', 'Villa Jean Jaurès')
+where p.project_name in ('Les Airelles aux 2 Alpes')
 on conflict (property_id, user_id) do nothing;
 ```
 
-Adaptez la liste des biens. `assigned_by` garde une trace de qui a confié.
+## 3. Vérifier l'isolation, pas seulement l'accès
 
-## 4. Contrôler — le seul chiffre qui compte
+Un accès qui marche ne prouve pas qu'il est borné. On impersonne la session :
 
 ```sql
-select u.email,
-       (select count(*) from buyer_profiles bp
-         where exists (select 1 from buyer_interests bi
-                        where bi.buyer_profile_id = bp.id
-                          and bi.property_id in (select pa.property_id
-                                                   from property_assignments pa
-                                                  where pa.user_id = u.id))) as leads_visibles,
-       (select count(*) from buyer_profiles)                                 as total
-from auth.users u
-where u.email = 'adresse@exemple.fr';
+begin;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"<son uuid>","role":"authenticated"}';
+select p.project_name, count(*)
+from buyer_interests bi join properties p on p.id = bi.property_id
+group by p.project_name;
+rollback;
 ```
 
-`leads_visibles` doit égaler `total`. S'il vaut 0, l'étape 3 a été oubliée.
+Seuls ses biens doivent apparaître. **Faites la contre-épreuve** avec
+l'administrateur : si lui aussi voit peu de choses, le test ne prouve rien.
+
+---
+
+## Les deux pièges déjà rencontrés
+
+**Le rôle n'existait pas dans toutes les contraintes.** La migration du
+12 octobre a élargi `organization_memberships_role_check` mais pas
+`organization_invitations_role_check` : `crm_create_invitation` validait le
+rôle, puis la base refusait la ligne. Une valeur de vocabulaire ne vit jamais
+dans une seule contrainte. Un test (`roles-coherents.test.ts`) refuse
+désormais la prochaine divergence.
+
+**Un compte créé à la main en SQL casse l'authentification.** GoTrue lit
+`confirmation_token`, `recovery_token`, `email_change_token_new` et
+`email_change` dans des `string` Go, qui n'acceptent pas `NULL`. Une ligne
+`auth.users` insérée sans ces colonnes fait répondre 500 à `/recover` :
+
+    error finding user: sql: Scan error on column index 3,
+    name "confirmation_token": converting NULL to string is unsupported
+
+Posez-y `''`, comme le fait l'API d'administration. Mieux : passez par
+l'invitation, qui crée le compte proprement.
 
 ---
 
 ## Pourquoi ce document existe
 
-Parce que l'étape 3 est invisible et silencieuse. Un bien lancé sans
-affectation, ou un commercial ajouté sans biens, ne produit aucune erreur :
-les demandes arrivent, l'argent des publicités tourne, et personne ne voit
-rien. C'est le seul endroit de ce CRM où oublier un geste coûte des leads
-sans que rien ne le signale.
+Parce qu'un bien lancé sans affectation, ou un commercial ajouté sans biens,
+ne produit **aucune erreur** : les demandes arrivent, l'argent des publicités
+tourne, et personne ne voit rien. À l'écran, un CRM vide se confond trait pour
+trait avec un refus d'accès — on cherche alors le défaut du côté du mot de
+passe, là où il n'est pas.
