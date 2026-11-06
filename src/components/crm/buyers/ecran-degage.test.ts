@@ -62,8 +62,23 @@ describe("3. on ne fait pas choisir là où il n'y a pas de choix", () => {
     expect(apres).toContain("Pipeline");
   });
 
-  it("un seul responsable possible : pas de sélecteur de responsable", () => {
-    expect(inbox).toContain("members.length > 1 ?");
+  it("un seul responsable À L'ÉCRAN : pas de sélecteur de responsable", () => {
+    /*
+     * LE PREMIER JET ÉTAIT FAUX, et il n'aurait rien changé pour Édouard.
+     * Il testait `members.length`, qui compte les collaborateurs AFFECTABLES
+     * de toute l'organisation — cinq, Édouard compris. Le critère utile est
+     * le nombre de responsables distincts réellement présents dans les lignes
+     * visibles : à un seul, le filtre ne peut rendre que tout ou rien.
+     */
+    expect(inbox).toContain("responsablesDistincts > 1 ?");
+    expect(inbox).not.toContain("members.length > 1");
+    // Le calcul porte sur les LIGNES, pas sur l'annuaire.
+    const i = inbox.indexOf("const responsablesDistincts");
+    expect(i).toBeGreaterThan(-1);
+    const calcul = inbox.slice(i, i + 400);
+    expect(calcul).toContain("for (const r of rows)");
+    expect(calcul).toContain('cases.add("aucun")');
+    expect(calcul).toContain("assigneeIds");
   });
 });
 

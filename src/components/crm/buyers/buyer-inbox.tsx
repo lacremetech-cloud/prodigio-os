@@ -360,6 +360,18 @@ export function BuyerInbox({
     setOuvert(ordre[0] ?? null);
   }
 
+  /* Combien de « cases responsable » les lignes visibles occupent vraiment :
+     chaque responsable rencontre, plus « non affectes » s'il y a des lignes
+     sans personne. A un seul, le filtre ne peut rendre que tout ou rien. */
+  const responsablesDistincts = useMemo(() => {
+    const cases = new Set<string>();
+    for (const r of rows) {
+      if (r.unassigned) cases.add("aucun");
+      for (const id of r.assigneeIds ?? []) cases.add(id);
+    }
+    return cases.size;
+  }, [rows]);
+
   return (
     <div className="flex flex-col gap-4">
       {/* PAS DE COMPTEURS ICI. « DOSSIERS / À CONTACTER / EN RETARD / SANS
@@ -429,12 +441,15 @@ export function BuyerInbox({
               label: buyerStageLabels[s] ?? s,
             })),
           ]} />
-          {/* Trier par responsable n'a de sens qu'a plusieurs. Edouard est
-              seul sur Les Airelles : « Tous / Non affectes / Edouard » lui
-              propose de choisir entre trois formulations d'une meme reponse.
-              Le filtre reste joignable par l'URL (`?responsable=`) pour qui
-              partage un lien. */}
-          {members.length > 1 ? (
+          {/* Trier par responsable n'a de sens que si les lignes PEUVENT se
+              separer par responsable. Le critere n'est pas le nombre de
+              collaborateurs — `members` les liste tous, dans toute
+              l'organisation — mais le nombre de responsables distincts
+              reellement presents a l'ecran. Edouard, seul sur Les Airelles,
+              en voit au plus un : « Tous / Non affectes / Edouard » lui
+              propose alors trois formulations d'une meme reponse.
+              Le filtre reste joignable par l'URL (`?responsable=`). */}
+          {responsablesDistincts > 1 ? (
             <Select label="Responsable" value={owner} onChange={setOwner} options={[
               { value: "tous", label: "Tous" },
               { value: "aucun", label: "Non affectés" },
