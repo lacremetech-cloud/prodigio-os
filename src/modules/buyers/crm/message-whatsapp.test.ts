@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MESSAGE_WHATSAPP, lienWhatsApp } from "./message-whatsapp";
+import { MESSAGE_WHATSAPP, composerWhatsApp, lienWhatsApp } from "./message-whatsapp";
 
 /** Le texte dicté, recopié ici indépendamment du module : si l'un des deux
  *  bouge, le test casse. C'est le seul garde-fou contre une faute qui partirait
@@ -65,5 +65,57 @@ describe("le lien WhatsApp", () => {
     for (const v of [null, undefined, "", "   ", "non renseigné"]) {
       expect(lienWhatsApp(v)).toBeNull();
     }
+  });
+});
+
+describe("le message WhatsApp est celui du BIEN", () => {
+  /*
+   * Le texte historique parle d'une « maison a Cassis » et d'« une seconde
+   * maison situee a 3 min ». Envoye a un prospect des 2 Alpes — un
+   * appartement, dans les Alpes, sans seconde maison — il est faux a chaque
+   * ligne, et le bouton est a un clic sur chaque fiche.
+   */
+  const AIRELLES =
+    "Bonjour [Prénom], moi c’est Édouard, votre contact sur place pour le projet des appartements aux 2 Alpes.";
+
+  it("remplace le prénom quand on le connaît", () => {
+    expect(composerWhatsApp(AIRELLES, "Rayyan")).toBe(
+      "Bonjour Rayyan, moi c’est Édouard, votre contact sur place pour le projet des appartements aux 2 Alpes.",
+    );
+  });
+
+  it("LE CAS QUI COMPTE : sans prénom, la phrase reste correcte", () => {
+    // Un dépôt peut ne porter aucun prénom. Ni « Bonjour , » ni le crochet
+    // tel quel, et la virgule reste : « Bonjour moi c’est » se lirait comme
+    // une faute de frappe.
+    for (const vide of [null, undefined, "", "   "]) {
+      expect(composerWhatsApp(AIRELLES, vide), String(vide)).toBe(
+        "Bonjour, moi c’est Édouard, votre contact sur place pour le projet des appartements aux 2 Alpes.",
+      );
+    }
+  });
+
+  it("ne laisse jamais le jeton dans un message envoyé", () => {
+    for (const prenom of ["Rayyan", null, ""]) {
+      expect(composerWhatsApp(AIRELLES, prenom)).not.toContain("[Prénom]");
+    }
+  });
+
+  it("un bien sans message configuré retombe sur le texte historique", () => {
+    // Mieux vaut un texte lisible qu'une conversation WhatsApp vide.
+    for (const absent of [null, undefined, "", "   "]) {
+      expect(composerWhatsApp(absent, "Rayyan")).toBe(MESSAGE_WHATSAPP);
+    }
+  });
+
+  it("le texte de Cassis n'a pas de jeton, et n'est pas touché", () => {
+    expect(MESSAGE_WHATSAPP).not.toContain("[Prénom]");
+    expect(composerWhatsApp(MESSAGE_WHATSAPP, "Rayyan")).toBe(MESSAGE_WHATSAPP);
+  });
+
+  it("le lien porte le message du bien, pas un texte figé", () => {
+    const lien = lienWhatsApp("+33 6 62 78 45 04", AIRELLES, "Rayyan")!;
+    expect(lien).toContain("33662784504");
+    expect(decodeURIComponent(lien)).toContain("Bonjour Rayyan, moi c’est Édouard");
   });
 });

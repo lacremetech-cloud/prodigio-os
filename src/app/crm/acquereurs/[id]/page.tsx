@@ -408,7 +408,13 @@ export default async function BuyerProfilePage({
             </dl>
             {/* Memes boutons que la liste : le meme geste se fait de la meme
                 maniere aux deux endroits. */}
-            <ContactRapide numero={appelable} email={detail.email} className="mt-3" />
+            <ContactRapide
+              numero={appelable}
+              email={detail.email}
+              messageWhatsApp={detail.whatsappMessage}
+              prenom={detail.contact?.first_name ?? null}
+              className="mt-3"
+            />
           </section>
 
           {/* ---- 2. LE CONTEXTE : ce qu'on doit savoir avant de parler ------

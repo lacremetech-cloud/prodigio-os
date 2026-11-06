@@ -238,6 +238,9 @@ export async function submitUniversalInterestAction(
               brochureUrl:
                 lienBrochure(config.brochureSlug ?? config.slug, request.langue) ??
                 config.brochureUrl,
+              /* Signe par le BIEN : Cassis reste « JC & Antoine », les
+                 2 Alpes portent le nom de leur commercial. */
+              signature: config.signature,
             });
             if (!texte) return;
             const envoi = await envoyerSms(telephone, texte);

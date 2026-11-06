@@ -979,6 +979,8 @@ function BuyerRow({
                 ? row.emailMasked
                 : null
             }
+            messageWhatsApp={row.whatsappMessage}
+            prenom={row.firstName}
             compact
           />
         ) : (

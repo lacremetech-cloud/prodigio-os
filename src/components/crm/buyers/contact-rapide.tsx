@@ -51,12 +51,24 @@ function IconeWhatsApp() {
 export function ContactRapide({
   numero,
   email,
+  messageWhatsApp,
+  prenom,
   className,
   compact,
 }: {
   numero: string | null;
   /** Adresse e-mail, si elle est connue et visible pour ce rôle. */
   email?: string | null;
+  /**
+   * Le message WhatsApp DU BIEN, et le prénom du prospect.
+   *
+   * Ils ne sont pas décoratifs : le texte historique parle d'une « maison à
+   * Cassis » et d'« une seconde maison à 3 min ». Envoyé à un prospect des
+   * 2 Alpes, il est faux à chaque ligne — et le bouton est à un clic.
+   * Absents, on retombe sur ce texte historique, qui reste juste pour Cassis.
+   */
+  messageWhatsApp?: string | null;
+  prenom?: string | null;
   className?: string;
   /** En liste, l'icône seule suffit : le libellé reste pour les lecteurs d'écran. */
   compact?: boolean;
@@ -64,7 +76,7 @@ export function ContactRapide({
   /* Le lien WhatsApp porte le message déjà écrit : le commercial relit et
      appuie sur envoyer dans WhatsApp. Rien n'est consigné ici — ouvrir
      WhatsApp n'est pas un envoi. */
-  const wa = lienWhatsApp(numero);
+  const wa = lienWhatsApp(numero, messageWhatsApp, prenom);
 
   const actions: {
     cle: string;

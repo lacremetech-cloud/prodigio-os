@@ -66,6 +66,10 @@ export interface BuyerListItem {
   stage: string;
   contact: ContactRow | null;
   name: string;
+  /** Prénom seul : le modèle WhatsApp s'ouvre sur « Bonjour [Prénom] ». */
+  firstName: string | null;
+  /** Message WhatsApp pré-écrit DU BIEN. `null` = le texte de repli. */
+  whatsappMessage: string | null;
   emailMasked: string | null;
   phoneMasked: string | null;
   city: string | null;
@@ -207,6 +211,7 @@ export async function loadBuyerList(
     { data: assignments },
     { data: openTasks },
     { data: properties },
+    { data: configsPubliques },
     { data: criteria },
     members,
     { data: activityByInterest },
@@ -240,6 +245,10 @@ export async function loadBuyerList(
       .order("due_at", { ascending: true })
       .limit(PLAFOND_LISTE),
     supabase.from("properties").select("*"),
+    /* Le message WhatsApp de chaque bien. Il n'est plus le meme pour tous :
+       celui de Cassis parle d'une « maison » et d'« une seconde maison a
+       3 min », ce qui est faux pour un appartement des 2 Alpes. */
+    supabase.from("property_public_config").select("property_id, whatsapp_message"),
     supabase
       .from("buyer_search_criteria")
       .select("buyer_profile_id, budget_min_cents, budget_max_cents")
@@ -259,6 +268,11 @@ export async function loadBuyerList(
   );
   const contactById = new Map((contacts ?? []).map((c) => [c.id, c as ContactRow]));
   const propertyById = new Map((properties ?? []).map((p) => [p.id, p as PropertyRow]));
+  const whatsappParBien = new Map(
+    ((configsPubliques ?? []) as { property_id: string; whatsapp_message: string | null }[])
+      .filter((c) => c.whatsapp_message)
+      .map((c) => [c.property_id, c.whatsapp_message as string]),
+  );
 
   const interestsByProfile = new Map<string, BuyerInterestRow[]>();
   for (const raw of interests ?? []) {
@@ -342,6 +356,9 @@ export async function loadBuyerList(
       profile,
       contact,
       name: contactName(contact?.first_name ?? null, contact?.last_name ?? null),
+      /* Le prenom seul : le modele WhatsApp des Airelles s'ouvre sur
+         « Bonjour [Prenom] ». Le nom complet y sonnerait administratif. */
+      firstName: contact?.first_name ?? null,
       // Masquage CÔTÉ SERVEUR : la valeur réelle ne quitte jamais le serveur
       // pour un rôle non autorisé.
       emailMasked: maskContactValue(contact?.email ?? null, canViewContacts),
@@ -394,6 +411,12 @@ export async function loadBuyerList(
       interestId: principale?.id ?? null,
       propertyId: principale?.property_id ?? null,
       propertyLabel: propertyLabelOf(property) ?? null,
+      /* Le modele du bien PRINCIPAL : quelqu'un qui regarde deux biens recoit
+         celui de sa derniere demande — c'est de ce bien-la qu'il vient de
+         parler. */
+      whatsappMessage: principale?.property_id
+        ? (whatsappParBien.get(principale.property_id) ?? null)
+        : null,
       propertyLabels: parDate
         .slice()
         .reverse()
@@ -497,6 +520,10 @@ export interface BuyerInboxRow {
   interestId: string | null;
   buyerProfileId: string;
   name: string;
+  /** Prénom seul : le modèle WhatsApp s'ouvre sur « Bonjour [Prénom] ». */
+  firstName: string | null;
+  /** Message WhatsApp pré-écrit DU BIEN. `null` = le texte de repli. */
+  whatsappMessage: string | null;
   emailMasked: string | null;
   phoneMasked: string | null;
   city: string | null;
@@ -594,6 +621,8 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     budgetChoice: item.budgetChoice,
     budgetDeclare: item.budgetDeclare,
     budgetCorrige: item.budgetCorrige,
+    firstName: item.firstName,
+    whatsappMessage: item.whatsappMessage,
   };
 }
 
@@ -633,6 +662,8 @@ export interface BuyerProfileDetail {
   profile: BuyerProfileRow;
   contact: ContactRow | null;
   name: string;
+  /** Message WhatsApp DU BIEN de la demande la plus récente. */
+  whatsappMessage: string | null;
   /** Coordonnées déjà masquées selon le rôle. */
   email: string | null;
   phone: string | null;
@@ -737,6 +768,21 @@ export async function getBuyerProfileDetail(
     : { data: [] };
   const propertyById = new Map(((propertyRows ?? []) as PropertyRow[]).map((p) => [p.id, p]));
 
+  /* Le message WhatsApp du bien de la demande la plus recente. Le bouton est
+     sur cette fiche : lui laisser le texte de Cassis enverrait « la maison a
+     Cassis » au prospect des 2 Alpes. */
+  const { data: configRows } = propertyIds.length
+    ? await supabase
+        .from("property_public_config")
+        .select("property_id, whatsapp_message")
+        .in("property_id", propertyIds)
+    : { data: [] };
+  const bienPrincipal = interests[0]?.property_id ?? null;
+  const whatsappMessage =
+    (((configRows ?? []) as { property_id: string; whatsapp_message: string | null }[]).find(
+      (c) => c.property_id === bienPrincipal,
+    )?.whatsapp_message ?? null);
+
   const contact = (contactRow as ContactRow | null) ?? null;
 
   const tasks = (taskRows ?? []) as TaskRow[];
@@ -750,6 +796,7 @@ export async function getBuyerProfileDetail(
     profile,
     contact,
     name: contactName(contact?.first_name ?? null, contact?.last_name ?? null),
+    whatsappMessage,
     email: maskContactValue(contact?.email ?? null, canViewContacts),
     phone: maskContactValue(contact?.phone ?? null, canViewContacts),
     criteria: (criteriaRow as BuyerSearchCriteriaRow | null) ?? null,

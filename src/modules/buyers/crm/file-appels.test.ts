@@ -43,6 +43,8 @@ function ligne(over: Partial<BuyerInboxRow> = {}): BuyerInboxRow {
     budgetMaxCents: null,
     budgetChoice: null,
     budgetDeclare: null,
+    firstName: null,
+    whatsappMessage: null,
     budgetCorrige: null,
     qualification: "a_qualifier",
     qualificationReason: null,

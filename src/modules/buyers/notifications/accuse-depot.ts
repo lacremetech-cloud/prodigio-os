@@ -57,6 +57,8 @@ export interface ChargeAccuse {
 export interface ConfigDepot {
   webhookUrl: string | null;
   brochureUrl: string | null;
+  /** Qui signe l'accusé de CE bien. `null` = « JC & Antoine ». */
+  signature: string | null;
   slug: string | null;
   /** Code court du lien de brochure. À défaut, `slug` fait l'affaire. */
   brochureSlug: string | null;
@@ -86,7 +88,7 @@ export async function configDuDepot(
 
   const { data: config } = await supabase
     .from("property_public_config")
-    .select("slug, public_name, brochure_slug, buyer_form_brochure_url, buyer_form_webhook_url")
+    .select("slug, public_name, brochure_slug, buyer_form_brochure_url, buyer_form_webhook_url, contact_signature")
     .eq("property_id", propertyId)
     .maybeSingle();
   const ligne = config as {
@@ -94,6 +96,7 @@ export async function configDuDepot(
     public_name: string | null;
     brochure_slug: string | null;
     buyer_form_brochure_url: string | null;
+    contact_signature: string | null;
     buyer_form_webhook_url: string | null;
   } | null;
   if (!ligne) return null;
@@ -101,6 +104,7 @@ export async function configDuDepot(
   return {
     webhookUrl: ligne.buyer_form_webhook_url,
     brochureUrl: ligne.buyer_form_brochure_url,
+    signature: ligne.contact_signature,
     slug: ligne.slug,
     brochureSlug: ligne.brochure_slug,
     publicName: ligne.public_name,
@@ -254,6 +258,13 @@ export function pourSms(v: string): string {
 export function composerMessage(input: {
   firstName?: string | null;
   brochureUrl?: string | null;
+  /**
+   * Qui signe, pour CE bien. Il n'y a personne de connecté au moment où ce
+   * message part — il suit le dépôt à la seconde — donc la signature ne peut
+   * venir que du bien. « JC & Antoine » n'était juste que tant qu'il n'y avait
+   * que Cassis : les 2 Alpes sont suivies par quelqu'un d'autre.
+   */
+  signature?: string | null;
 }): string | null {
   const lien = net(input.brochureUrl);
   /* Sans lien, l'accusé n'a plus d'objet : il annoncerait une brochure sans
@@ -263,5 +274,6 @@ export function composerMessage(input: {
   const prenom = net(input.firstName);
   const salutation = prenom ? `Bonjour ${pourSms(prenom)},` : "Bonjour,";
 
-  return `${salutation} voici votre brochure : ${lien}\n\nNous vous appelons très vite.\nJC & Antoine`;
+  const signe = net(input.signature) ?? "JC & Antoine";
+  return `${salutation} voici votre brochure : ${lien}\n\nNous vous appelons très vite.\n${signe}`;
 }

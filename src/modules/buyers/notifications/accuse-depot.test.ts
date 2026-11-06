@@ -7,6 +7,7 @@ const { construireCharge, envoyerAccuseDepot } = await import("./accuse-depot");
 const CONFIG = {
   webhookUrl: "https://hook.eu2.make.test/abc",
   brochureUrl: "https://villa-verdun-cassis.vercel.app/dossier/",
+  signature: null,
   slug: "villa-verdun",
   brochureSlug: "verdun" as string | null,
   publicName: null as string | null,
@@ -227,5 +228,43 @@ describe("texte de l'accusé", () => {
   it("n'envoie rien sans lien : un accusé qui ne dit pas où est la brochure n'a pas d'objet", () => {
     expect(composerMessage({ firstName: "Rayyan" })).toBeNull();
     expect(composerMessage({ brochureUrl: "   " })).toBeNull();
+  });
+});
+
+describe("le SMS est signé par le BIEN", () => {
+  /*
+   * « JC & Antoine » n'était juste que tant qu'il n'y avait que Cassis. Les
+   * 2 Alpes sont suivies par Édouard ROWLANDSON (Cimalpes) : un accusé qui
+   * annoncerait JC pour ce bien enverrait le prospect vers la mauvaise
+   * personne, à la seconde où il dépose sa demande.
+   *
+   * Il n'y a PERSONNE de connecté à ce moment-là — le message part en même
+   * temps que le dépôt — donc la signature ne peut venir que du bien.
+   */
+  const LIEN = "https://brochure.prodigio.fr/airelles";
+
+  it("porte la signature du bien quand elle existe", () => {
+    const t = composerMessage({
+      firstName: "Rayyan",
+      brochureUrl: LIEN,
+      signature: "Édouard Rowlandson",
+    })!;
+    expect(t).toContain("Édouard Rowlandson");
+    expect(t).not.toContain("JC & Antoine");
+  });
+
+  it("garde « JC & Antoine » quand le bien n'en déclare pas", () => {
+    // Les deux villas de Cassis tournent : leur message ne doit pas bouger.
+    for (const vide of [null, undefined, "", "   "]) {
+      expect(composerMessage({ firstName: "Rayyan", brochureUrl: LIEN, signature: vide })!, String(vide))
+        .toContain("JC & Antoine");
+    }
+  });
+
+  it("ne change rien d'autre au message", () => {
+    const t = composerMessage({ firstName: "Rayyan", brochureUrl: LIEN, signature: "Édouard Rowlandson" })!;
+    expect(t).toContain("Bonjour Rayyan, voici votre brochure :");
+    expect(t).toContain(LIEN);
+    expect(t).toContain("Nous vous appelons très vite.");
   });
 });

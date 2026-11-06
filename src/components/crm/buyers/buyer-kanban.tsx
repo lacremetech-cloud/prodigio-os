@@ -625,6 +625,8 @@ function Card({
             <ContactRapide
               numero={row.phoneMasked}
               email={row.emailMasked}
+              messageWhatsApp={row.whatsappMessage}
+              prenom={row.firstName}
               className="mt-2"
               compact
             />

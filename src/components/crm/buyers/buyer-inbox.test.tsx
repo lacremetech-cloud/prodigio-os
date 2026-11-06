@@ -71,6 +71,8 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   budgetMinCents: null,
   budgetChoice: "1m_2m",
   budgetDeclare: "1m_2m",
+  firstName: null,
+  whatsappMessage: null,
   budgetCorrige: null,
   budgetMaxCents: null,
   ...over,

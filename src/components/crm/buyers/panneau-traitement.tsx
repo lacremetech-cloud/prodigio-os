@@ -423,7 +423,12 @@ export function PanneauTraitement({
 
         {/* Les boutons d'appel AVANT le formulaire : le geste le plus fréquent
             ne doit jamais se mériter par un défilement. */}
-        <ContactRapide numero={row.phoneMasked} email={row.emailMasked} />
+        <ContactRapide
+          numero={row.phoneMasked}
+          email={row.emailMasked}
+          messageWhatsApp={row.whatsappMessage}
+          prenom={row.firstName}
+        />
 
         {/* Les DEUX axes, côte à côte et toujours visibles. Ils répondent à deux
             questions distinctes — où en est le dossier, ce qu'on en pense — et

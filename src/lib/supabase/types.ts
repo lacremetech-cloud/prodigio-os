@@ -657,6 +657,10 @@ export type PropertyPublicConfigRow = {
    * deux villas de Cassis n'ont pas de version anglaise.
    */
   buyer_form_brochure_url_en: string | null;
+  /** Message WhatsApp pré-écrit DE CE BIEN ; `[Prénom]` y est substitué. */
+  whatsapp_message: string | null;
+  /** Qui signe le SMS et le premier e-mail automatiques de CE bien. */
+  contact_signature: string | null;
   /** Origines autorisées à embarquer le formulaire (`frame-ancestors`). */
   buyer_form_allowed_origins: string[];
   /**
@@ -1866,6 +1870,8 @@ export interface Database {
           p_brochure_url?: string | null;
           p_allowed_origins?: string[] | null;
           p_brochure_url_en?: string | null;
+          p_whatsapp_message?: string | null;
+          p_contact_signature?: string | null;
         };
         Returns: {
           ok: boolean;
