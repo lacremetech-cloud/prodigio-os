@@ -32,7 +32,7 @@ sont configurées, sans jamais révéler une valeur.
 | 8 | Identifiants Académie Florale | Le service concerné | Hors Prodigio OS | Moyenne |
 | 9 | Mots de passe du compte de recette `recette.claude@prodigio.fr` (deux valeurs, gardées dans mon bac à sable) | Prodigio OS → profil du compte, ou réinitialisation par e-mail | Rien : le compte est déjà neutralisé et ne se connecte plus | Basse |
 | 10 | Mot de passe choisi pour `orofino.nicolas@gmail.com` | Le compte n'existe pas encore : passer par l'invitation, qui laisse la personne choisir le sien | Rien | **Ne pas l'utiliser** |
-| 11 | Jeton du récapitulatif de leads (`RECAP_LEADS_TOKEN`) | Vercel → variable d'environnement, puis Make → scénario 10027310 → en-tête `authorization` du module HTTP | Le récapitulatif de 8 h 30, 13 h et 17 h 30 ne part plus jusqu'à ce que les deux côtés concordent | Moyenne |
+| ~~11~~ | ~~Jeton du récapitulatif de leads (`RECAP_LEADS_TOKEN`)~~ — **fait le 6 novembre** : valeur renouvelée, et déplacée dans un trousseau Make (elle ne figure plus dans le blueprint du scénario) | — | — | **Réglée** |
 
 **Non concerné :** le jeton d'API SMSFactor n'a jamais transité par la
 conversation — il a été posé directement dans Vercel. Rien à faire, sauf
@@ -51,11 +51,12 @@ il ne doit pas l'etre : l'invitation laisse la personne choisir le sien, ce
 qui supprime le probleme au lieu de le gerer. Voir
 `29-AJOUTER-UN-COMMERCIAL.md`.
 
-> **Note du 6 novembre.** Le jeton du récapitulatif (ligne 11) est écrit **en
-> clair** dans le blueprint du scénario Make, visible de quiconque ouvre le
-> scénario ou lit l'API Make. Ce n'est pas une fuite nouvelle, c'est sa place
-> actuelle : il est listé ici pour qu'il ne soit pas oublié au prochain tour.
-> Il ne donne accès qu'à la lecture du récapitulatif, pas à la base.
+> **Note du 6 novembre — réglée le même jour.** Le jeton du récapitulatif
+> était écrit en clair dans le blueprint du scénario Make, visible de
+> quiconque ouvrait le scénario ou lisait l'API Make. Il a été renouvelé et
+> déplacé dans un trousseau Make (`apikeyauth`) : le blueprint ne le contient
+> plus, et la valeur exposée ne vaut plus rien. Voir
+> `30-RECAPITULATIF-PAR-BIEN.md`.
 
 ## Ordre conseillé
 

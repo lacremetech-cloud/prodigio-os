@@ -47,44 +47,25 @@ absent.
 
 ---
 
-## L'étape qui reste — scénario Make 10027310
+## Le câblage, tel qu'il est
 
-Le scénario lit encore les champs **globaux**. Ils sont conservés à
-l'identique exprès : entre le déploiement et cette bascule, rien ne s'arrête,
-le récapitulatif part comme avant. Mais le trou n'est pas refermé tant que la
-bascule n'est pas faite.
+Scénario Make **10027310**, trois modules :
 
-**Pourquoi je ne l'ai pas faite moi-même :** le jeton d'accès à la route
-(`RECAP_LEADS_TOKEN`) est écrit en clair dans l'en-tête `authorization` du
-module HTTP de ce scénario. Réécrire le blueprint par l'API obligerait à
-recopier ce jeton dans une commande et dans un journal de session. C'est
-précisément ce qu'on ne fait plus.
+1. **HTTP → Make an API Key Auth request** sur `GET /api/recap-leads`.
+   La clé vit dans un trousseau Make (`apikeyauth`, « Prodigio OS — jeton du
+   récapitulatif »), **plus dans le blueprint**. Le jeton a été renouvelé au
+   passage : la valeur qui traînait en clair dans l'en-tête `authorization` est
+   morte, et la ligne 11 du registre de rotation est refermée.
+2. **Iterator** sur `1. data: recaps` — une sortie par bien.
+3. **Gmail** avec `destinataires`, `sujet`, `html`, derrière un filtre
+   `envoyer = true`.
 
-### Option A — trois réglages dans l'interface (2 minutes)
+Mapper un tableau d'adresses dans le champ *To* n'allait pas de soi : vérifié
+d'abord dans un scénario jetable (un envoi vers deux adresses, puis supprimé),
+pour ne pas le découvrir à 8 h 30.
 
-Le module HTTP n'est pas touché, donc le jeton ne bouge pas.
-
-1. Entre le module **HTTP** et le module **Gmail**, ajouter un **Iterator**
-   sur `1. data: recaps`.
-2. Sur le module **Gmail**, remplacer :
-   - *To* → `destinataires` (la collection de l'Iterator, telle quelle)
-   - *Subject* → `sujet`
-   - *Content / HTML* → `html`
-3. Sur le filtre devant Gmail, remplacer la condition par
-   `envoyer` **=** `true` (celui de l'Iterator, plus celui du module HTTP).
-
-### Option B — sortir le jeton du blueprint (recommandé)
-
-Remplacer le module HTTP par **HTTP → Make an API Key Auth request**, dont la
-clé vit dans une **connexion** Make et non dans le blueprint. Le jeton
-disparaît alors du scénario, ce qui referme aussi la ligne 11 du registre de
-rotation. La connexion se crée en remplissant un formulaire Make — personne
-n'a besoin de faire circuler la valeur.
-
-Une fois l'une ou l'autre faite, les champs globaux peuvent être retirés de la
-réponse.
-
----
+Les champs globaux de la réponse (`envoyer`, `sujet`, `html`) ne servent plus à
+personne. Ils peuvent être retirés de la route.
 
 ## Vérifier
 
