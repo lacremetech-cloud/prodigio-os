@@ -33,6 +33,7 @@ sont configurées, sans jamais révéler une valeur.
 | 9 | Mots de passe du compte de recette `recette.claude@prodigio.fr` (deux valeurs, gardées dans mon bac à sable) | Prodigio OS → profil du compte, ou réinitialisation par e-mail | Rien : le compte est déjà neutralisé et ne se connecte plus | Basse |
 | 10 | Mot de passe choisi pour `orofino.nicolas@gmail.com` | Le compte n'existe pas encore : passer par l'invitation, qui laisse la personne choisir le sien | Rien | **Ne pas l'utiliser** |
 | ~~11~~ | ~~Jeton du récapitulatif de leads (`RECAP_LEADS_TOKEN`)~~ — **fait le 6 novembre** : valeur renouvelée, et déplacée dans un trousseau Make (elle ne figure plus dans le blueprint du scénario) | — | — | **Réglée** |
+| 12 | Mot de passe CRM d'Édouard ROWLANDSON (Cimalpes) | Prodigio OS → profil, ou lien de réinitialisation envoyé par un administrateur | Rien : il se reconnecte avec le sien | **Haute** — posé le 6 novembre à la demande du propriétaire, après avoir circulé dans une conversation et dans une commande SQL. Court et devinable (nom de la société). À faire changer par Édouard à sa première connexion |
 
 **Non concerné :** le jeton d'API SMSFactor n'a jamais transité par la
 conversation — il a été posé directement dans Vercel. Rien à faire, sauf
