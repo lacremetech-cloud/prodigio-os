@@ -4,6 +4,7 @@ import {
   hashCity,
   hashCountry,
   hashEmail,
+  hashExternalId,
   hashName,
   hashPhone,
 } from "./hash";
@@ -50,6 +51,11 @@ export interface MetaIdentity {
   city?: string | null;
   /** Code ISO 3166-1 alpha-2, p. ex. `FR`. */
   country?: string | null;
+  /**
+   * Identifiant interne de l'acquéreur. Seule clé qui survit à un changement
+   * d'appareil : deux demandes du même acheteur se reconnaissent par elle.
+   */
+  externalId?: string | null;
   /** `fbclid` relevé sur l'URL d'arrivée, converti en cookie `_fbc`. */
   fbclid?: string | null;
   /** Date du clic publicitaire, pour horodater le `_fbc`. */
@@ -86,6 +92,7 @@ export function buildUserData(identity: MetaIdentity): Record<string, unknown> {
   const ln = hashName(identity.lastName);
   const ct = hashCity(identity.city);
   const country = hashCountry(identity.country);
+  const ext = hashExternalId(identity.externalId);
   // Meta attend un tableau pour les champs hachés (plusieurs valeurs possibles).
   if (em) data.em = [em];
   if (ph) data.ph = [ph];
@@ -93,6 +100,7 @@ export function buildUserData(identity: MetaIdentity): Record<string, unknown> {
   if (ln) data.ln = [ln];
   if (ct) data.ct = [ct];
   if (country) data.country = [country];
+  if (ext) data.external_id = [ext];
 
   // Ces trois-là partent en clair : Meta les attend ainsi, et ce ne sont pas
   // des identifiants nominatifs.

@@ -172,3 +172,47 @@ describe("peutEtreRattache", () => {
     expect(peutEtreRattache("Lead", { fbc: "fb.1.2.3" })).toBe(true);
   });
 });
+
+describe("external_id — l'identifiant interne de l'acquéreur", () => {
+  const PROFIL = "3f1b9c2e-7a4d-4f8b-9e21-0c5d6a8b1234";
+
+  it("part haché, jamais en clair", () => {
+    const d = buildUserData({ ...IDENTITE, externalId: PROFIL });
+    const serialise = JSON.stringify(d);
+    expect(serialise).not.toContain(PROFIL);
+    expect(d.external_id).toEqual([expect.stringMatching(/^[0-9a-f]{64}$/)]);
+  });
+
+  it("est présenté en tableau, comme les autres champs hachés", () => {
+    const d = buildUserData({ ...IDENTITE, externalId: PROFIL });
+    expect(Array.isArray(d.external_id)).toBe(true);
+  });
+
+  it("reconnaît le même acquéreur d'une demande à l'autre", () => {
+    /* C'est tout l'intérêt du champ : deux dépôts du même profil, depuis deux
+       appareils et sans le moindre fbclid commun, portent la même empreinte. */
+    const premier = buildUserData({ email: "a@example.test", externalId: PROFIL });
+    const second = buildUserData({ phone: "+33612345678", externalId: PROFIL });
+    expect(premier.external_id).toEqual(second.external_id);
+  });
+
+  it("ignore la casse de l'identifiant", () => {
+    const bas = buildUserData({ ...IDENTITE, externalId: PROFIL });
+    const haut = buildUserData({ ...IDENTITE, externalId: PROFIL.toUpperCase() });
+    expect(bas.external_id).toEqual(haut.external_id);
+  });
+
+  it("est omis plutôt qu'envoyé vide", () => {
+    expect(buildUserData({ ...IDENTITE, externalId: "   " }).external_id).toBeUndefined();
+    expect(buildUserData({ ...IDENTITE, externalId: null }).external_id).toBeUndefined();
+    expect(buildUserData(IDENTITE).external_id).toBeUndefined();
+  });
+
+  it("ne rattache à lui seul aucun événement commercial", () => {
+    /* Meta s'en sert pour recoller deux visites, pas pour reconnaître une
+       personne qu'il ne connaît pas : la règle stricte reste e-mail, téléphone
+       ou fbclid. Relâcher ce garde-fou ferait partir des Lead inattribuables. */
+    expect(hasMatchSignal(buildUserData({ externalId: PROFIL }))).toBe(false);
+    expect(peutEtreRattache("Lead", buildUserData({ externalId: PROFIL }))).toBe(false);
+  });
+});

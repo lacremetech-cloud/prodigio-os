@@ -45,6 +45,7 @@ interface LigneInteret {
   origin_url: string | null;
   created_at: string | null;
   property_id: string | null;
+  buyer_profile_id: string | null;
 }
 
 interface ContexteInteret {
@@ -60,7 +61,7 @@ async function contexteDeLaManifestation(
   const { data } = await supabase
     .from("buyer_interests")
     .select(
-      "contact_email, contact_phone, contact_first_name, contact_last_name, fbclid, origin_url, created_at, property_id",
+      "contact_email, contact_phone, contact_first_name, contact_last_name, fbclid, origin_url, created_at, property_id, buyer_profile_id",
     )
     .eq("id", interestId)
     .maybeSingle();
@@ -75,6 +76,7 @@ async function contexteDeLaManifestation(
       phone: ligne.contact_phone,
       firstName: ligne.contact_first_name,
       lastName: ligne.contact_last_name,
+      externalId: ligne.buyer_profile_id,
       fbclid: ligne.fbclid,
       clickedAt: ligne.created_at,
       // Ni IP ni user-agent ici : la conversion est déclenchée depuis le CRM,

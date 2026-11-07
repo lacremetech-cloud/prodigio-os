@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { after } from "next/server";
 import {
   composerMessage,
@@ -76,6 +77,20 @@ export async function submitUniversalInterestAction(
   }
 
   const { turnstileToken, ...request } = parsed.data;
+
+  /* L'adresse du visiteur, relevee MAINTENANT.
+     La conversion Meta part depuis `after()`, c'est-a-dire une fois la reponse
+     rendue : la portee de la requete n'y est plus garantie, et `headers()` y
+     serait un pari. On la capture donc ici, et la fermeture la transporte.
+     Premiere valeur de `x-forwarded-for` : les suivantes sont les relais. */
+  let adresseVisiteur: string | null = null;
+  try {
+    const entete = (await headers()).get("x-forwarded-for");
+    const premiere = entete?.split(",")[0]?.trim();
+    adresseVisiteur = premiere && premiere.length <= 64 ? premiere : null;
+  } catch {
+    /* Une mesure n'est jamais un motif d'echec pour un depot. */
+  }
 
   /*
    * Le pot de miel ne fait PLUS disparaitre la demande.
@@ -176,6 +191,14 @@ export async function submitUniversalInterestAction(
           // par bien dans le Gestionnaire de publicites, sans dependre du nom
           // donne aux campagnes.
           const bien = await bienDeLaManifestation(lecteur, interetId);
+          /* L'identifiant de profil est la seule cle de correspondance qui
+             survive a un changement d'appareil : le meme acheteur revenant
+             trois mois plus tard depuis un autre telephone porte le meme. */
+          const { data: profil } = await lecteur
+            .from("buyer_interests")
+            .select("buyer_profile_id")
+            .eq("id", interetId)
+            .maybeSingle();
           await conversionProspect({
             interestId: interetId,
             // Pour la trace : sans client, l'envoi partirait sans laisser
@@ -190,12 +213,17 @@ export async function submitUniversalInterestAction(
               firstName: request.answers.firstName,
               lastName: request.answers.lastName,
               country: request.answers.phoneCountry,
+              externalId:
+                (profil as { buyer_profile_id?: string | null } | null)?.buyer_profile_id ??
+                null,
               fbclid: touche?.fbclid ?? null,
               clickedAt: touche?.at ?? null,
               // Le navigateur du prospect : c'est le seul moment ou il est le
               // sien. Les conversions suivantes partent du CRM, ou il serait
               // celui du commercial.
               clientUserAgent: request.context.userAgent ?? null,
+              // Relevee avant `after()` : voir la capture en tete d'action.
+              clientIpAddress: adresseVisiteur,
             },
           });
         } catch (cause) {

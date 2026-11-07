@@ -76,6 +76,22 @@ export function hashCity(city: string | null | undefined): string | null {
 }
 
 /**
+ * Identifiant interne de l'acquéreur (`buyer_profile_id`).
+ *
+ * Meta l'accepte comme clé de correspondance à part entière, et c'est la seule
+ * que nous maîtrisons de bout en bout : le `fbclid` est perdu au changement
+ * d'appareil, le cookie n'existe pas puisque aucun pixel ne tourne, et
+ * l'adresse IP change de réseau en réseau. Le profil, lui, est le même quand le
+ * même acheteur revient trois mois plus tard depuis un autre téléphone.
+ *
+ * Haché comme le reste : aucune valeur ne quitte ce module en clair.
+ */
+export function hashExternalId(id: string | null | undefined): string | null {
+  if (typeof id !== "string") return null;
+  return empreinte(id.toLowerCase());
+}
+
+/**
  * Reconstitue le cookie `_fbc` à partir du `fbclid` porté par l'URL de la
  * publicité. Format imposé par Meta : `fb.1.<horodatage ms>.<fbclid>`.
  *
