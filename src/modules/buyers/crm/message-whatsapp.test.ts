@@ -119,3 +119,34 @@ describe("le message WhatsApp est celui du BIEN", () => {
     expect(decodeURIComponent(lien)).toContain("Bonjour Rayyan, moi c’est Édouard");
   });
 });
+
+describe("le jeton qui ouvre le message", () => {
+  /* Le modèle des Airelles commence par le prénom : « [Prénom] bonjour, ».
+     Le jeton n'a alors aucune espace devant lui, et la règle de repli écrite
+     pour « Bonjour [Prénom], » laissait sortir « bonjour, » — précédé d'une
+     espace et privé de sa majuscule. */
+  const MODELE = "[Prénom] bonjour,\n\nJe fais suite à votre intérêt.";
+
+  it("place le prénom quand il existe", () => {
+    expect(composerWhatsApp(MODELE, "Miguel")).toMatch(/^Miguel bonjour,/);
+  });
+
+  it("sans prénom, ouvre proprement sur une majuscule", () => {
+    const r = composerWhatsApp(MODELE, null);
+    expect(r).toMatch(/^Bonjour,/);
+    expect(r.startsWith(" ")).toBe(false);
+  });
+
+  it("ne change rien à un modèle dont le jeton est au milieu", () => {
+    expect(composerWhatsApp("Bonjour [Prénom], moi c’est Édouard.", null)).toBe(
+      "Bonjour, moi c’est Édouard.",
+    );
+    expect(composerWhatsApp("Bonjour [Prénom], moi c’est Édouard.", "Miguel")).toBe(
+      "Bonjour Miguel, moi c’est Édouard.",
+    );
+  });
+
+  it("un prénom fait de blancs est traité comme absent", () => {
+    expect(composerWhatsApp(MODELE, "   ")).toMatch(/^Bonjour,/);
+  });
+});

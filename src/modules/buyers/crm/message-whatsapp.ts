@@ -63,13 +63,22 @@ export function composerWhatsApp(
   const texte = (modele ?? "").trim() || MESSAGE_WHATSAPP;
   const p = (prenom ?? "").trim();
   if (!texte.includes(JETON_PRENOM)) return texte;
-  return p
-    ? texte.replaceAll(JETON_PRENOM, p)
-    : /* « Bonjour [Prenom], moi c'est... » doit devenir « Bonjour, moi
-         c'est... » : on retire le jeton ET l'espace qui le precede, mais on
-         GARDE la ponctuation qui suit. L'avaler donnerait « Bonjour moi
-         c'est », qui se lit comme une faute de frappe. */
-      texte.replaceAll(new RegExp(`[ \\t]*${ECHAPPE_PRENOM}`, "g"), "");
+  if (p) return texte.replaceAll(JETON_PRENOM, p);
+
+  /* « Bonjour [Prenom], moi c'est... » doit devenir « Bonjour, moi c'est... » :
+     on retire le jeton ET l'espace qui le precede, mais on GARDE la ponctuation
+     qui suit. L'avaler donnerait « Bonjour moi c'est », qui se lit comme une
+     faute de frappe. */
+  const sansJeton = texte.replaceAll(new RegExp(`[ \\t]*${ECHAPPE_PRENOM}`, "g"), "");
+
+  /* LE JETON PEUT OUVRIR LE MESSAGE, et c'est le cas du modele des Airelles :
+     « [Prenom] bonjour, ». Il n'a alors aucune espace devant lui a manger, et
+     la regle precedente laissait « bonjour, » — precede d'une espace et prive
+     de sa majuscule. On remet donc le message d'aplomb : plus d'espace en tete,
+     et la premiere lettre en capitale. Un modele deja correct n'y perd rien,
+     sa premiere lettre etant deja une majuscule. */
+  const net = sansJeton.replace(/^[ \t]+/, "");
+  return net.charAt(0).toUpperCase() + net.slice(1);
 }
 
 /** Le seul champ admis dans un modele, et sa forme echappee pour les regex. */
