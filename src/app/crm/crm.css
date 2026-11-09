@@ -93,8 +93,10 @@
      fait net. */
   --crm-acq-a_contacter: #6aa6ff;        /* bleu */
   --crm-acq-a_rappeler: #e6b45c;         /* orange */
+  --crm-acq-r1_planifie: #a78bfa;        /* violet */
   --crm-acq-en_discussion: #45c9b0;      /* turquoise */
   --crm-acq-visite_planifiee: #3b82f6;   /* bleu soutenu */
+  --crm-acq-offre_en_cours: #56c98a;     /* vert */
   --crm-acq-vivier: #8b8e97;             /* gris */
   --crm-acq-pas_interesse: #e8807f;      /* rouge */
   /* Sur fond sombre, un noir pur disparaitrait dans la page : on garde le
@@ -204,8 +206,10 @@
   /* --- Acquereurs : les huit etapes de traitement ---------------------- */
   --crm-acq-a_contacter: #2560c4;
   --crm-acq-a_rappeler: #b45309;
+  --crm-acq-r1_planifie: #6d28d9;
   --crm-acq-en_discussion: #0f766e;
   --crm-acq-visite_planifiee: #1d4ed8;
+  --crm-acq-offre_en_cours: #15803d;
   --crm-acq-vivier: #616c7e;
   --crm-acq-pas_interesse: #c62828;
   --crm-acq-mauvais_numero: #111827;     /* noir */

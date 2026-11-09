@@ -46,7 +46,9 @@ export const BUYER_KANBAN_COLUMNS = BUYER_PIPELINE_STAGES;
 const BUYER_STAGE_VISUALS: Record<string, { cssVar: string; icon: string }> = {
   a_contacter: { cssVar: "--crm-acq-a_contacter", icon: "✦" },
   a_rappeler: { cssVar: "--crm-acq-a_rappeler", icon: "☎︎" },
+  r1_planifie: { cssVar: "--crm-acq-r1_planifie", icon: "◓" },
   en_discussion: { cssVar: "--crm-acq-en_discussion", icon: "◗" },
+  offre_en_cours: { cssVar: "--crm-acq-offre_en_cours", icon: "◆" },
   visite_planifiee: { cssVar: "--crm-acq-visite_planifiee", icon: "◷" },
   vivier: { cssVar: "--crm-acq-vivier", icon: "◈" },
   pas_interesse: { cssVar: "--crm-acq-pas_interesse", icon: "✕" },

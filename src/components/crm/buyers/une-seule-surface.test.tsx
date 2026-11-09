@@ -144,8 +144,12 @@ describe("2. Le même panneau sur le pipeline", () => {
     const entetes = [...container.querySelectorAll(".crm-kanban-head__pastille")].map(
       (h) => h.textContent ?? "",
     );
-    expect(entetes.length).toBe(7);
+    expect(entetes.length).toBe(9);
     expect(entetes.join(" ")).toContain("À contacter");
+    /* Les deux colonnes ajoutées le 09/11/2026 sont rendues comme les autres :
+       si elles manquaient, le compte ci-dessus le dirait, mais pas lesquelles. */
+    expect(entetes.join(" ")).toContain("R1 planifié");
+    expect(entetes.join(" ")).toContain("Offre en cours");
   });
 
   it("sans les dossiers complets, la carte ne prétend pas pouvoir les ouvrir", () => {

@@ -863,13 +863,15 @@ export type BuyerInterestRow = {
  * compilation sur des lectures d'historique parfaitement légitimes.
  */
 export type BuyerPipelineStage =
-  // Le vocabulaire en service, porté par la personne.
+  // Le vocabulaire en service, porté par la personne, dans l'ordre des colonnes.
   | "a_contacter"
   | "a_rappeler"
+  | "r1_planifie"
   | "en_discussion"
   | "visite_planifiee"
-  | "vivier"
+  | "offre_en_cours"
   | "pas_interesse"
+  | "vivier"
   | "mauvais_numero"
   // Figé — historique des manifestations, antérieur au 14/10/2026.
   | "nouveau"

@@ -31,10 +31,12 @@
 export const ETAPES_ACQUEREUR = [
   "a_contacter",
   "a_rappeler",
+  "r1_planifie",
   "en_discussion",
   "visite_planifiee",
-  "vivier",
+  "offre_en_cours",
   "pas_interesse",
+  "vivier",
   "mauvais_numero",
 ] as const;
 
@@ -61,7 +63,7 @@ export interface DefinitionEtape {
   texteClair: boolean;
   /**
    * Dans la FILE ACTIVE : la personne attend encore quelque chose de nous.
-   * Les quatre dernières n'y sont pas — une personne écartée ne doit plus
+   * Les TROIS dernières n'y sont pas — une personne écartée ne doit plus
    * remonter dans « à contacter », et c'est exactement ce qui se produisait.
    */
   active: boolean;
@@ -95,6 +97,20 @@ export const ETAPES: readonly DefinitionEtape[] = [
     appelable: true,
   },
   {
+    valeur: "r1_planifie",
+    label: "R1 planifié",
+    /* Un rendez-vous POSÉ, pas une intention. « En discussion » disait déjà
+       qu'un échange avait lieu, jamais qu'une date existait : les deux se
+       confondaient dans la même colonne, et un dossier avec un créneau au
+       calendrier avait exactement l'air d'un dossier sans. */
+    sens: "Premier rendez-vous fixé, date retenue",
+    couleur: "--crm-acq-r1_planifie",
+    encre: "--crm-acq-sur-etape",
+    texteClair: true,
+    active: true,
+    appelable: true,
+  },
+  {
     valeur: "en_discussion",
     label: "En discussion",
     sens: "Échange engagé",
@@ -115,16 +131,13 @@ export const ETAPES: readonly DefinitionEtape[] = [
     appelable: true,
   },
   {
-    valeur: "vivier",
-    label: "Vivier",
-    sens: "Suivi mis en attente",
-    couleur: "--crm-acq-vivier",
+    valeur: "offre_en_cours",
+    label: "Offre en cours",
+    sens: "Offre déposée, en attente de réponse",
+    couleur: "--crm-acq-offre_en_cours",
     encre: "--crm-acq-sur-etape",
     texteClair: true,
-    /* Hors file active, mais PAS un échec : un gros potentiel peut être mis en
-       vivier sans rien perdre de sa qualification. C'est la case qui manquait,
-       et faute de laquelle ces gens finissaient en « perdu ». */
-    active: false,
+    active: true,
     appelable: true,
   },
   {
@@ -136,6 +149,19 @@ export const ETAPES: readonly DefinitionEtape[] = [
     texteClair: true,
     active: false,
     appelable: false,
+  },
+  {
+    valeur: "vivier",
+    label: "Vivier",
+    sens: "Suivi mis en attente",
+    couleur: "--crm-acq-vivier",
+    encre: "--crm-acq-sur-etape",
+    texteClair: true,
+    /* Hors file active, mais PAS un échec : un gros potentiel peut être mis en
+       vivier sans rien perdre de sa qualification. C'est la case qui manquait,
+       et faute de laquelle ces gens finissaient en « perdu ». */
+    active: false,
+    appelable: true,
   },
   {
     valeur: "mauvais_numero",

@@ -14,15 +14,17 @@ import {
   sortDeLaFileActive,
 } from "./vocabulaire";
 
-describe("les huit étapes", () => {
+describe("les neuf étapes", () => {
   it("sont exactement celles arrêtées avec l'agence, dans l'ordre", () => {
     expect(ETAPES.map((e) => e.label)).toEqual([
       "À contacter",
       "À rappeler",
+      "R1 planifié",
       "En discussion",
       "Visite planifiée",
-      "Vivier",
+      "Offre en cours",
       "Pas intéressé",
+      "Vivier",
       "Mauvais numéro",
     ]);
   });
@@ -32,7 +34,7 @@ describe("les huit étapes", () => {
        disaient presque la même chose. Un pipeline qui finit sur trois colonnes
        négatives décourage celui qui le regarde toute la journée. */
     expect(ETAPES.map((e) => e.valeur) as string[]).not.toContain("ecarte");
-    expect(ETAPES).toHaveLength(7);
+    expect(ETAPES).toHaveLength(9);
   });
 
   it("ne contient ni « nouveau », ni « perdu », ni « gagné », ni « offre »", () => {
@@ -55,12 +57,17 @@ describe("les huit étapes", () => {
     expect(ETAPES.map((e) => e.valeur)).toContain("vivier");
   });
 
-  it("quatre étapes sortent la personne de la file active", () => {
+  it("six étapes gardent la personne dans la file active", () => {
+    /* Un rendez-vous posé et une offre déposée sont des dossiers VIVANTS :
+       les sortir de la file active reviendrait à cesser de les suivre au
+       moment précis où ils comptent le plus. */
     expect(ETAPES_ACTIVES).toEqual([
       "a_contacter",
       "a_rappeler",
+      "r1_planifie",
       "en_discussion",
       "visite_planifiee",
+      "offre_en_cours",
     ]);
   });
 

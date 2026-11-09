@@ -38,13 +38,27 @@ describe("pipeline acquéreurs — colonnes", () => {
     }
   });
 
-  it("le cycle va de « à contacter » à « mauvais numéro », sept colonnes", () => {
-    /* Sept, et non huit : « Écarté » a été retiré — il faisait doublon avec
-       « Pas intéressé », et un pipeline qui finit sur trois colonnes négatives
-       décourage celui qui le regarde toute la journée. */
-    expect(BUYER_KANBAN_COLUMNS).toHaveLength(7);
-    expect(BUYER_KANBAN_COLUMNS[0]).toBe("a_contacter");
-    expect(BUYER_KANBAN_COLUMNS).toContain("vivier");
+  it("le cycle va de « à contacter » à « mauvais numéro », neuf colonnes", () => {
+    /* L'ORDRE EST LE CYCLE, et il est épinglé ici au complet : c'est lui que
+       le commercial lit de gauche à droite toute la journée. Deux colonnes se
+       sont ajoutées le 09/11/2026 — « R1 planifié » après « à rappeler », et
+       « Offre en cours » après « visite planifiée » — parce qu'un rendez-vous
+       POSÉ et une offre DÉPOSÉE ne se lisaient pas dans « en discussion ».
+       « Écarté » n'est toujours pas de retour : il faisait doublon avec
+       « Pas intéressé ». */
+    expect(BUYER_KANBAN_COLUMNS).toEqual([
+      "a_contacter",
+      "a_rappeler",
+      "r1_planifie",
+      "en_discussion",
+      "visite_planifiee",
+      "offre_en_cours",
+      "pas_interesse",
+      "vivier",
+      "mauvais_numero",
+    ]);
+    /* L'ancien vocabulaire reste dehors : « offre_en_cours » n'est pas
+       « offre », et les deux ne doivent jamais se confondre. */
     expect(BUYER_KANBAN_COLUMNS).not.toContain("offre");
     expect(BUYER_KANBAN_COLUMNS).not.toContain("gagne");
     expect(BUYER_KANBAN_COLUMNS).not.toContain("perdu");
