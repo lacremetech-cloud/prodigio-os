@@ -15,7 +15,7 @@
  */
 
 import { BUYER_KANBAN_COLUMNS } from "./labels";
-import type { BuyerPipelineStage, BuyerRecommendedPriority } from "@/lib/supabase/types";
+import type { BuyerPipelineStage } from "@/lib/supabase/types";
 
 /**
  * DTO minimal d'une carte du Kanban Acquéreurs, prêt à sérialiser vers le
@@ -36,8 +36,6 @@ export interface BuyerKanbanCard {
   properties: { id: string; label: string }[];
   city: string | null;
   /** Score automatique du meilleur intérêt (≠ qualification humaine). */
-  bestScore: number | null;
-  recommendedPriority: BuyerRecommendedPriority | null;
   qualificationLabel: string;
   interestCount: number;
   unassigned: boolean;
@@ -127,8 +125,6 @@ export function buyerUrgencyWeight(card: BuyerKanbanCard): number {
   if (card.newInterest) weight += 5;
   if (card.unassigned) weight += 4;
   if (card.noNextAction) weight += 3;
-  if (card.recommendedPriority === "prioritaire") weight += 2;
-  else if (card.recommendedPriority === "a_qualifier") weight += 1;
   return weight;
 }
 

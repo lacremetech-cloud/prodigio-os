@@ -28,7 +28,6 @@ export type Signal =
   | "en_cours"
   | "nouveaux"
   | "en_retard"
-  | "fort_potentiel"
   | "sans_action"
   | "non_affectes";
 
@@ -42,7 +41,6 @@ const SIGNAUX: Signal[] = [
   "en_cours",
   "nouveaux",
   "en_retard",
-  "fort_potentiel",
   "sans_action",
   "non_affectes",
 ];
@@ -136,8 +134,6 @@ export function porteLeSignal(row: BuyerInboxRow, signal: Signal): boolean {
       return row.stage === "a_contacter" && estEnTraitementActif(row);
     case "en_retard":
       return row.overdue;
-    case "fort_potentiel":
-      return row.highPotential;
     case "sans_action":
       return row.noNextAction;
     case "non_affectes":

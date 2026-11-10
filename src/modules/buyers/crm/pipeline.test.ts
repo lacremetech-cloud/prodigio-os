@@ -19,8 +19,6 @@ const card = (over: Partial<BuyerKanbanCard> = {}): BuyerKanbanCard => ({
   propertyLabel: "Villa Belvédère",
   properties: [{ id: "prop-1", label: "Villa Verdun" }],
   city: "Megève",
-  bestScore: 70,
-  recommendedPriority: "a_qualifier",
   qualificationLabel: "Non qualifié",
   interestCount: 1,
   unassigned: false,
@@ -148,10 +146,13 @@ describe("movableBuyerStages", () => {
 });
 
 describe("buyerUrgencyWeight", () => {
-  it("place un rappel en retard au-dessus d'un simple fort potentiel", () => {
+  it("place un rappel en retard au-dessus d'un dossier sans prochaine action", () => {
+    /* Le score ayant disparu le 10/11/2026, l'urgence ne pèse plus que des
+       faits opérationnels : un retard, une arrivée, un dossier sans
+       responsable, un dossier sans suite prévue. */
     const late = buyerUrgencyWeight(card({ overdue: true }));
-    const potential = buyerUrgencyWeight(card({ recommendedPriority: "prioritaire" }));
-    expect(late).toBeGreaterThan(potential);
+    const sansSuite = buyerUrgencyWeight(card({ noNextAction: true }));
+    expect(late).toBeGreaterThan(sansSuite);
   });
 
   it("cumule les signaux opérationnels", () => {
@@ -163,6 +164,6 @@ describe("buyerUrgencyWeight", () => {
   });
 
   it("un dossier sans aucun signal n'est pas urgent", () => {
-    expect(buyerUrgencyWeight(card({ recommendedPriority: null }))).toBe(0);
+    expect(buyerUrgencyWeight(card({}))).toBe(0);
   });
 });

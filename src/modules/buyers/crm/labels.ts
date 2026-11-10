@@ -18,7 +18,6 @@ import type {
   BuyerMatchFactor,
   BuyerPipelineStage,
   BuyerQualificationStatus,
-  BuyerRecommendedPriority,
 } from "@/lib/supabase/types";
 
 // --- Étapes de traitement ----------------------------------------------------
@@ -88,21 +87,11 @@ export const buyerQualificationVisual: Record<
   ecarte: { cssVar: "--crm-st-perdu", icon: "✕" },
 };
 
-// --- Recommandation opérationnelle (DÉRIVÉE des scores, ≠ qualification) -----
-export const buyerRecommendedPriorityLabels: Record<BuyerRecommendedPriority, string> = {
-  prioritaire: "Prioritaire",
-  a_qualifier: "À qualifier",
-  a_suivre: "À suivre",
-};
-
-export const buyerRecommendedPriorityVisual: Record<
-  BuyerRecommendedPriority,
-  { cssVar: string; icon: string }
-> = {
-  prioritaire: { cssVar: "--crm-st-signe", icon: "★" },
-  a_qualifier: { cssVar: "--crm-st-qualifie", icon: "◎" },
-  a_suivre: { cssVar: "--crm-st-neutre", icon: "•" },
-};
+/* La « recommandation opérationnelle » a été retirée le 10/11/2026.
+   Dérivée d'un score jamais branché, elle valait `a_qualifier` sur les 333
+   profils : trois libellés pour une seule valeur possible. Les colonnes
+   restent en base, elles ne gênent personne et serviront si un vrai score
+   par bien voit le jour. */
 
 // --- Résultat commercial du dossier ------------------------------------------
 export const buyerOutcomeLabels: Record<string, string> = {

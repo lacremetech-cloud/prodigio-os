@@ -39,8 +39,6 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   city: "Cassis",
   stage: "nouveau",
   qualificationStatus: "non_qualifie",
-  recommendedPriority: null,
-  bestScore: null,
   interestCount: 1,
   lastInterestAt: "2026-10-12T08:00:00.000Z",
   createdAt: "2026-10-12T08:00:00.000Z",
@@ -66,7 +64,6 @@ const dossier = (over: Partial<BuyerInboxRow> = {}): BuyerInboxRow => ({
   overdue: false,
   noNextAction: true,
   newInterest: true,
-  highPotential: false,
   unassigned: true,
   budgetMinCents: null,
   budgetChoice: "1m_2m",
@@ -136,7 +133,6 @@ describe("BuyerInbox", () => {
       <BuyerInbox
         rows={[
           dossier({
-            bestScore: 45,
             qualificationStatus: "non_qualifie",
             qualification: "gros_potentiel",
           }),

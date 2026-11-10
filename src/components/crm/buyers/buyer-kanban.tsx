@@ -523,7 +523,6 @@ function Card({
               >
                 {card.name}
               </span>
-              {card.recommendedPriority === "prioritaire" ? <Chip variant="gold">★</Chip> : null}
             </div>
             {/* TOUS les biens de la personne. Il n'y a plus qu'une carte par
                 personne : c'est elle qui doit dire sur quoi elle porte, sans

@@ -529,8 +529,6 @@ export interface BuyerInboxRow {
   city: string | null;
   stage: string;
   qualificationStatus: string;
-  recommendedPriority: string | null;
-  bestScore: number | null;
   interestCount: number;
   lastInterestAt: string | null;
   createdAt: string;
@@ -553,7 +551,6 @@ export interface BuyerInboxRow {
   overdue: boolean;
   noNextAction: boolean;
   newInterest: boolean;
-  highPotential: boolean;
   unassigned: boolean;
   budgetMinCents: number | null;
   budgetMaxCents: number | null;
@@ -587,8 +584,6 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     city: item.city,
     stage: item.stage,
     qualificationStatus: item.profile.qualification_status,
-    recommendedPriority: item.profile.recommended_priority,
-    bestScore: item.profile.best_overall_score,
     interestCount: item.profile.interest_count,
     lastInterestAt: item.profile.last_interest_at,
     createdAt: item.profile.created_at,
@@ -614,7 +609,6 @@ export function toInboxRow(item: BuyerListItem): BuyerInboxRow {
     overdue: item.overdue,
     noNextAction: item.noNextAction,
     newInterest: item.newInterest,
-    highPotential: item.profile.recommended_priority === "prioritaire",
     unassigned: item.assignees.length === 0,
     budgetMinCents: item.budgetMinCents,
     budgetMaxCents: item.budgetMaxCents,
@@ -638,8 +632,6 @@ export function toKanbanCard(item: BuyerListItem, qualificationLabel: string): B
     /* Tous les biens : une carte unique doit dire sur quoi elle porte. */
     properties: item.propertyLabels,
     city: item.city,
-    bestScore: item.profile.best_overall_score,
-    recommendedPriority: item.profile.recommended_priority,
     qualificationLabel,
     interestCount: item.profile.interest_count,
     unassigned: item.assignees.length === 0,

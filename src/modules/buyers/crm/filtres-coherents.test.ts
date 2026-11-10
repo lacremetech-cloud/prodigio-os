@@ -139,28 +139,22 @@ describe("les deux vues proposent les mêmes pastilles", () => {
     expect(FILTRES_RAPIDES.map((f) => f.signal)).toContain("a_contacter");
   });
 
-  it("aucune pastille ne lit un champ que rien n'écrit", () => {
+  it("le score a disparu : plus aucun écran ne lit une valeur qui ne varie pas", () => {
     /*
-     * « Fort potentiel » a été retiré le 6 novembre, et c'est la seule raison
-     * pour laquelle ce test existe : il affichait 0 pour tout le monde, pour
-     * toujours. Il lit `recommended_priority`, recalculé depuis
-     * `buyer_interests.priority` — qui vaut `a_qualifier` sur les 251
-     * manifestations déposées, sans exception, parce que le moteur de score
-     * censé écrire `prioritaire` n'a jamais été branché.
+     * Le score automatique a été RETIRÉ le 10/11/2026, pas mis de côté.
      *
-     * Une pastille qui ne peut pas varier n'est pas un filtre. Ce test
-     * tombera si on la remet sans avoir d'abord branché le score.
+     * Il valait `a_qualifier` sur les 333 profils et 45/100 sur les 322
+     * dossiers : il n'a jamais désigné personne. Le moteur qui devait
+     * l'écrire lisait `reference_value_cents`, resté vide sur les trois
+     * biens — sans prix de référence, aucun budget ne peut être jugé.
+     *
+     * Ce test tombe si « fort potentiel » revient dans les filtres OU si le
+     * signal est remis : le remettre sans avoir d'abord un vrai score par
+     * bien reviendrait à réafficher une pastille qui ne peut dire que zéro.
      */
     expect(FILTRES_RAPIDES.map((f) => f.signal)).not.toContain("fort_potentiel");
-
-    // Le signal, lui, reste joignable par l'URL et garde son prédicat : le
-    // jour où le score existe, il suffit de remettre une ligne.
-    expect(lireSignal("fort_potentiel")).toBe("fort_potentiel");
-    expect(() =>
-      porteLeSignal({ highPotential: true } as unknown as BuyerInboxRow, "fort_potentiel"),
-    ).not.toThrow();
-    expect(
-      porteLeSignal({ highPotential: true } as unknown as BuyerInboxRow, "fort_potentiel"),
-    ).toBe(true);
+    /* `lireSignal` ne connaît plus la valeur : elle retombe sur « tous »
+       plutôt que d'ouvrir une vue vide à qui garderait l'ancienne URL. */
+    expect(lireSignal("fort_potentiel")).toBe("tous");
   });
 });

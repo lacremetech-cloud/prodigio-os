@@ -5,14 +5,11 @@ import { cssVarRef } from "@/modules/crm/status-visuals";
 import { formatDateTime } from "@/modules/crm/format";
 import {
   buyerQualificationLabels,
-  buyerRecommendedPriorityLabels,
-  buyerRecommendedPriorityVisual,
   buyerStageVisual,
 } from "@/modules/buyers/crm/labels";
 import type { PropertyBuyerRow } from "@/modules/buyers/crm/queries";
 import type {
   BuyerQualificationStatus,
-  BuyerRecommendedPriority,
 } from "@/lib/supabase/types";
 
 /**
@@ -36,9 +33,6 @@ export function PropertyBuyersPanel({ rows }: { rows: PropertyBuyerRow[] }) {
       <ul className="flex flex-col gap-2">
         {rows.map(({ profile, name, phoneMasked, emailMasked, interest, assigneeNames }) => {
           const stageV = buyerStageVisual(profile.pipeline_stage);
-          const prioV = profile.recommended_priority
-            ? buyerRecommendedPriorityVisual[profile.recommended_priority]
-            : null;
           return (
             <li
               key={profile.id}
@@ -73,21 +67,6 @@ export function PropertyBuyersPanel({ rows }: { rows: PropertyBuyerRow[] }) {
                     <span aria-hidden>{stageV.icon}</span>
                     {stageV.label}
                   </span>
-                  {prioV && profile.recommended_priority ? (
-                    <span
-                      className="crm-chip crm-chip--accent"
-                      style={
-                        { ["--chip-accent" as keyof CSSProperties]: cssVarRef(prioV.cssVar) } as CSSProperties
-                      }
-                    >
-                      <span aria-hidden>{prioV.icon}</span>
-                      {
-                        buyerRecommendedPriorityLabels[
-                          profile.recommended_priority as BuyerRecommendedPriority
-                        ]
-                      }
-                    </span>
-                  ) : null}
                 </div>
               </div>
 

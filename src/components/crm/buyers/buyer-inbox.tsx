@@ -61,8 +61,6 @@ function urgency(row: BuyerInboxRow): number {
   if (row.newInterest) w += 5;
   if (row.unassigned) w += 4;
   if (row.noNextAction) w += 3;
-  if (row.recommendedPriority === "prioritaire") w += 2;
-  else if (row.recommendedPriority === "a_qualifier") w += 1;
   return w;
 }
 
@@ -262,7 +260,10 @@ export function BuyerInbox({
 
     const sorted = [...filtered];
     if (sort === "urgence") {
-      sorted.sort((a, b) => urgency(b) - urgency(a) || (b.bestScore ?? 0) - (a.bestScore ?? 0));
+      /* À urgence égale, le plus ancien d'abord : il attend depuis plus
+         longtemps. Départager au score ne départageait rien — il valait 45
+         pour tout le monde. */
+      sorted.sort((a, b) => urgency(b) - urgency(a) || a.createdAt.localeCompare(b.createdAt));
     } else if (sort === "arrivee") {
       sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     } else if (sort === "arrivee_ancienne") {
