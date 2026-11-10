@@ -346,10 +346,14 @@ export function TaskToggle({
             : setTaskStatus(taskId, "fait", opportunityId),
         )
       }
-      className={`crm-btn crm-btn--sm ${done ? "crm-btn--ghost" : ""}`}
-      aria-label={done ? "Tâche terminée" : "Marquer comme terminée"}
+      className={`crm-coche ${done ? "crm-coche--faite" : ""}`}
+      /* Le bouton ne porte plus de texte : l'intitulé passe par `aria-label`
+         et `title`, sans quoi il serait muet pour un lecteur d'écran et
+         illisible pour qui découvre l'écran. */
+      aria-label={done ? "Tâche terminée" : "Marquer la tâche comme terminée"}
+      title={done ? "Tâche terminée" : "Marquer comme terminée"}
     >
-      {done ? "✓ Terminée" : pending ? "…" : "Marquer terminée"}
+      {pending ? "…" : "✓"}
     </button>
   );
 }

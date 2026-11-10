@@ -112,8 +112,11 @@ export const ETAPES: readonly DefinitionEtape[] = [
   },
   {
     valeur: "en_discussion",
-    label: "En discussion",
-    sens: "Échange engagé",
+    /* Le libellé a changé le 10/11/2026, la VALEUR non : `en_discussion`
+       reste écrite en base et dans l'historique. Renommer la valeur aurait
+       demandé une migration et cassé les audits, pour un mot affiché. */
+    label: "Dossier envoyé / à relancer",
+    sens: "Dossier transmis, en attente de retour",
     couleur: "--crm-acq-en_discussion",
     encre: "--crm-acq-sur-etape",
     texteClair: true,

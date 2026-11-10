@@ -20,7 +20,7 @@ describe("les neuf étapes", () => {
       "À contacter",
       "À rappeler",
       "R1 planifié",
-      "En discussion",
+      "Dossier envoyé / à relancer",
       "Visite planifiée",
       "Offre en cours",
       "Pas intéressé",
@@ -116,7 +116,9 @@ describe("ce qu'une qualification entraîne", () => {
   it("laisse la personne à l'étape où elle en était", () => {
     /* Où en était la conversation reste vrai. Le jour où elle est
        requalifiée, on la retrouve au bon endroit, pas au début. */
-    expect(etape("en_discussion").label).toBe("En discussion");
+    /* La VALEUR est inchangée — c'est elle qui vit en base et dans les
+       audits. Seul le libellé affiché a changé le 10/11/2026. */
+    expect(etape("en_discussion").label).toBe("Dossier envoyé / à relancer");
     expect(sortDeLaFileActive("qualifie", "en_discussion")).toBe(false);
   });
 

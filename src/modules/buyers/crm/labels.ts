@@ -34,8 +34,8 @@ export const buyerStageLabels: Record<string, string> = {
      qu'un historique traduit. */
   nouveau: "À contacter",
   visite: "Visite planifiée",
-  offre: "En discussion",
-  gagne: "En discussion",
+  offre: "Dossier envoyé / à relancer",
+  gagne: "Dossier envoyé / à relancer",
   perdu: "Pas intéressé",
 };
 

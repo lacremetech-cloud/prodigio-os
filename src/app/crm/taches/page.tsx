@@ -18,6 +18,10 @@ function TaskSection({
   tone?: "danger" | "gold";
 }) {
   if (items.length === 0) return null;
+  /* « En retard » est la seule section au ton danger : c'est elle qui colore
+     ses lignes. Les tâches à venir restent neutres — tout alerter revient à
+     n'alerter de rien. */
+  const enRetard = tone === "danger";
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
@@ -30,7 +34,9 @@ function TaskSection({
         {items.map(({ task, kind, href, contactLabel, city, opportunityId, buyerProfileId }) => (
           <div
             key={task.id}
-            className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5"
+            className={`flex items-center justify-between gap-3 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-3.5 ${
+              enRetard ? "crm-tache--retard" : ""
+            }`}
           >
             <div className="min-w-0">
               <p className="crm-wrap text-sm font-medium text-[var(--crm-text)]">{task.title}</p>
@@ -39,7 +45,13 @@ function TaskSection({
                   {contactLabel}
                   {city ? ` · ${city}` : ""}
                 </Link>
-                {task.due_at ? ` · échéance ${formatDateTime(task.due_at)}` : " · sans échéance"}
+                {task.due_at ? (
+                  <span className={enRetard ? "crm-tache__echeance-retard" : undefined}>
+                    {` · échéance ${formatDateTime(task.due_at)}`}
+                  </span>
+                ) : (
+                  " · sans échéance"
+                )}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">

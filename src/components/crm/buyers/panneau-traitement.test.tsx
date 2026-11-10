@@ -232,7 +232,7 @@ describe("la suite à donner porte l'étape, sans la redemander", () => {
     fireEvent.click(getByRole("button", { name: "Appel — sans réponse" }));
     fireEvent.click(getByRole("button", { name: /Étape/ }));
     fireEvent.click(
-      within(getByRole("listbox")).getByRole("option", { name: /En discussion/ }),
+      within(getByRole("listbox")).getByRole("option", { name: /Dossier envoyé \/ à relancer/ }),
     );
     expect(queryByText(/L’étape passera à/)).toBeNull();
   });

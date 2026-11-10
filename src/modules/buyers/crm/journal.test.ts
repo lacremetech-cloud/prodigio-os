@@ -5,7 +5,7 @@ describe("ce que raconte l'historique", () => {
   it("dit l'étape AVANT et APRÈS, en toutes lettres", () => {
     expect(
       changementsLisibles({ stage: "a_rappeler" }, { stage: "en_discussion" }),
-    ).toEqual(["étape : À rappeler → En discussion"]);
+    ).toEqual(["étape : À rappeler → Dossier envoyé / à relancer"]);
   });
 
   it("traduit les valeurs disparues plutôt que de livrer un identifiant", () => {

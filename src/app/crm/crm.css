@@ -423,6 +423,61 @@
 .crm-btn--ghost {
   background: transparent;
 }
+
+/* --- Cocher une tâche ------------------------------------------------------
+   « Marquer terminée » prenait deux mots pour dire ce qu'une coche dit d'un
+   coup d'œil, et la même phrase se répétait sur chaque ligne. Le bouton est
+   vert au repos : c'est le geste qu'on vient chercher. Il se remplit au
+   survol, et reste rempli une fois la tâche faite. */
+.crm-coche {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--crm-success) 45%, transparent);
+  background: var(--crm-panel);
+  color: var(--crm-success);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.crm-coche:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--crm-success) 16%, var(--crm-panel));
+  border-color: var(--crm-success);
+}
+.crm-coche:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.crm-coche:focus-visible {
+  outline: 2px solid var(--crm-success);
+  outline-offset: 2px;
+}
+/* Déjà faite : remplie, et plus cliquable. */
+.crm-coche--faite {
+  background: color-mix(in srgb, var(--crm-success) 18%, var(--crm-panel));
+  border-color: var(--crm-success);
+  cursor: default;
+}
+.crm-coche:disabled {
+  cursor: default;
+}
+
+/* --- Une tâche en retard doit se voir de loin ------------------------------
+   Un liseré rouge au bord gauche, un fond à peine teinté, et l'échéance en
+   rouge. Assez pour qu'on la remarque sans la chercher ; pas assez pour
+   rendre la liste illisible quand il y en a huit d'affilée. */
+.crm-tache--retard {
+  border-color: color-mix(in srgb, var(--crm-danger) 40%, var(--crm-line));
+  background: color-mix(in srgb, var(--crm-danger) 7%, var(--crm-panel));
+  border-left: 3px solid var(--crm-danger);
+}
+.crm-tache__echeance-retard {
+  color: var(--crm-danger);
+  font-weight: 600;
+}
 /* Action conséquente : supprimer un média, un document, archiver un contact.
    Quatre composants demandaient déjà `crm-btn--danger` alors que la classe
    n'existait pas : leurs boutons de suppression avaient donc exactement
