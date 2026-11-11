@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   assignOpportunity,
@@ -37,10 +37,26 @@ function useAction() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const run = (fn: () => Promise<ActionResult>, onOk?: () => void) => {
+  /**
+    * `optimiste` est joué DANS la transition, avant l'aller-retour serveur :
+    * l'écran bouge au clic, pas au retour du réseau. Avec une base à Paris,
+    * cet aller-retour se compte en centaines de millisecondes — assez pour
+    * que le bouton paraisse mort.
+    *
+    * Un échec le reprend : `useOptimistic` revient de lui-même à l'état réel
+    * quand la transition se termine, et `router.refresh()` réaligne ensuite
+    * sur ce que dit vraiment la base. Rien n'est jamais affiché comme fait
+    * sans l'être.
+    */
+  const run = (
+    fn: () => Promise<ActionResult>,
+    onOk?: () => void,
+    optimiste?: () => void,
+  ) => {
     setError(null);
     setDone(false);
     start(async () => {
+      optimiste?.();
       const res = await safeAction(fn);
       if (res.ok) {
         setDone(true);
@@ -334,16 +350,21 @@ export function TaskToggle({
   buyerProfileId?: string;
 }) {
   const { pending, run } = useAction();
-  const done = status === "fait";
+  const reel = status === "fait";
+  /* Ce que l'écran montre : l'état réel, ou « faite » dès le clic. */
+  const [done, marquerFaite] = useOptimistic(reel, () => true);
   return (
     <button
       type="button"
       disabled={pending || done}
       onClick={() =>
-        run(() =>
-          buyerProfileId
-            ? setBuyerTaskStatusAction({ buyerProfileId, taskId, status: "fait" })
-            : setTaskStatus(taskId, "fait", opportunityId),
+        run(
+          () =>
+            buyerProfileId
+              ? setBuyerTaskStatusAction({ buyerProfileId, taskId, status: "fait" })
+              : setTaskStatus(taskId, "fait", opportunityId),
+          undefined,
+          () => marquerFaite(null),
         )
       }
       className={`crm-coche ${done ? "crm-coche--faite" : ""}`}
