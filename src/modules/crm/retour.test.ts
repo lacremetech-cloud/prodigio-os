@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chaineDeRetour, lienDeRetour } from "./retour";
+import { lireFiltrePipeline } from "./pipeline-filtre";
 
 /**
  * Le défaut que ces tests verrouillent : on filtre une liste, on ouvre une
@@ -39,5 +40,17 @@ describe("le retour vers une liste", () => {
     const lien = lienDeRetour("/crm/biens", { q: "villa été" });
     expect(lien.startsWith("/crm/biens?q=")).toBe(true);
     expect(new URL(lien, "https://exemple.test").searchParams.get("q")).toBe("villa été");
+  });
+});
+
+describe("le filtre du pipeline Mandats", () => {
+  it("se relit tel quel", () => {
+    expect(lireFiltrePipeline("en_retard")).toBe("en_retard");
+    expect(lireFiltrePipeline(["fort_potentiel"])).toBe("fort_potentiel");
+  });
+
+  it("ne filtre rien devant une valeur inconnue, au lieu de vider le tableau", () => {
+    expect(lireFiltrePipeline("inventé")).toBe("tous");
+    expect(lireFiltrePipeline(undefined)).toBe("tous");
   });
 });

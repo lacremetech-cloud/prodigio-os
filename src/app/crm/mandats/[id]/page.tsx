@@ -166,8 +166,18 @@ export default async function LeadDetailPage({
 }) {
   const { id } = await params;
   /* Le retour reconduit à l'écran d'où l'on vient : filtre, tri, recherche et
-     page ont voyagé dans l'adresse depuis la ligne cliquée. */
-  const retour = lienDeRetour("/crm/mandats", await searchParams);
+     page ont voyagé dans l'adresse depuis la ligne cliquée. `?retour=pipeline`
+     dit de quel des deux écrans — sans lui, qui venait du pipeline était
+     renvoyé sur la liste. */
+  const nav = await searchParams;
+  const ECRANS: Record<string, { chemin: string; libelle: string }> = {
+    pipeline: { chemin: "/crm/mandats/pipeline", libelle: "Pipeline" },
+    "rendez-vous": { chemin: "/crm/rendez-vous", libelle: "Rendez-vous" },
+  };
+  const origine =
+    typeof nav.retour === "string" ? ECRANS[nav.retour] : undefined;
+  const retour = lienDeRetour(origine?.chemin ?? "/crm/mandats", nav);
+  const libelleRetour = origine?.libelle ?? "Retour aux leads";
   const session = await requireCrmSession(`/crm/mandats/${id}`);
   const detail = await getLeadDetail(id);
   if (!detail) notFound();
@@ -247,7 +257,7 @@ export default async function LeadDetailPage({
       {/* En-tête */}
       <div className="flex flex-col gap-3">
         <Link href={retour} className="text-xs text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]">
-          ← Retour aux leads
+          ← {libelleRetour}
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">

@@ -7,10 +7,21 @@ import { contactName } from "@/modules/crm/format";
 import { propertyLabel, valueBandLabel } from "@/modules/crm/labels";
 import type { KanbanLead } from "@/modules/crm/kanban";
 import { KanbanBoard } from "@/components/crm/pipeline/kanban-board";
+import { lireFiltrePipeline } from "@/modules/crm/pipeline-filtre";
 
 export const metadata: Metadata = { title: "Pipeline" };
 
-export default async function PipelinePage() {
+export default async function PipelinePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  /* Recherche et filtre viennent de l'adresse : c'est ce qui les rend au
+     retour d'un dossier, et ce qui permet d'envoyer « le pipeline, en
+     retard » à un collègue. */
+  const sp = await searchParams;
+  const recherche = typeof sp.q === "string" ? sp.q.slice(0, 120) : "";
+  const filtre = lireFiltrePipeline(sp.filtre);
   const session = await requireCrmSession("/crm/mandats/pipeline");
   const canView = canViewContactDetails(session.roles);
   const canMove = canOperate(session.roles);
@@ -45,7 +56,13 @@ export default async function PipelinePage() {
         </p>
       </header>
 
-      <KanbanBoard leads={cards} canMove={canMove} canView={canView} />
+      <KanbanBoard
+        leads={cards}
+        canMove={canMove}
+        canView={canView}
+        rechercheInitiale={recherche}
+        filtreInitial={filtre}
+      />
     </div>
   );
 }

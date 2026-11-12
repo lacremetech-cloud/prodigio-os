@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import type { FiltreRapide } from "@/modules/crm/pipeline-filtre";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Chip } from "@/components/crm/ui";
@@ -29,10 +30,17 @@ export function KanbanBoard({
   leads,
   canMove,
   canView,
+  rechercheInitiale = "",
+  filtreInitial = "tous",
 }: {
   leads: KanbanLead[];
   canMove: boolean;
   canView: boolean;
+  /** La recherche et le filtre posés par l'adresse (`?q=`, `?filtre=`).
+      Sans eux, ouvrir un dossier depuis le pipeline puis revenir rendait un
+      tableau entier, à refiltrer — le même défaut que sur la liste. */
+  rechercheInitiale?: string;
+  filtreInitial?: FiltreRapide;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -47,8 +55,53 @@ export function KanbanBoard({
   const [grabbed, setGrabbed] = useState<Grabbed | null>(null);
 
   // Filtres (stables au déplacement : ils ne dépendent pas de la position).
-  const [search, setSearch] = useState("");
-  const [quick, setQuick] = useState<"tous" | "non_affecte" | "en_retard" | "fort_potentiel">("tous");
+  const [search, setSearch] = useState(rechercheInitiale);
+  const [quick, setQuick] = useState<FiltreRapide>(filtreInitial);
+
+  /**
+   * LA RECHERCHE ET LE FILTRE VIVENT DANS L'ADRESSE.
+   *
+   * Ils ne vivaient qu'ici : on filtrait « en retard », on ouvrait un dossier,
+   * on revenait — et le tableau était de nouveau complet. La recherche attend
+   * une pause de frappe de 400 ms pour ne pas réécrire l'adresse à chaque
+   * lettre ; le filtre, lui, s'écrit au clic.
+   *
+   * `history.replaceState` et non le routeur : ce dernier redemanderait la
+   * page au serveur à chaque pastille, remonterait le tableau et perdrait le
+   * défilement. `replace` et non `push` : filtrer n'est pas naviguer, sinon
+   * « Précédent » déferait les filtres un par un au lieu de quitter l'écran.
+   */
+  const [rechercheDansAdresse, setRechercheDansAdresse] = useState(search);
+  useEffect(() => {
+    const t = setTimeout(() => setRechercheDansAdresse(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const net = rechercheDansAdresse.trim();
+    if (net) q.set("q", net);
+    else q.delete("q");
+    if (quick !== "tous") q.set("filtre", quick);
+    else q.delete("filtre");
+    const chaine = q.toString();
+    const cible = `${window.location.pathname}${chaine ? `?${chaine}` : ""}`;
+    if (cible !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(null, "", cible);
+    }
+  }, [rechercheDansAdresse, quick]);
+
+  /* Ce que le lien vers un dossier emporte : l'état VIVANT, et de quel écran
+     on vient — la fiche sert le même bouton de retour aux deux, et sans ça
+     elle renverrait sur la liste ceux qui venaient du pipeline. */
+  const contexte = useMemo(() => {
+    const q = new URLSearchParams();
+    const net = search.trim();
+    if (net) q.set("q", net);
+    if (quick !== "tous") q.set("filtre", quick);
+    q.set("retour", "pipeline");
+    return `?${q.toString()}`;
+  }, [search, quick]);
 
   const byId = useMemo(() => new Map(leads.map((l) => [l.opportunityId, l])), [leads]);
   const stageOf = (l: KanbanLead) => stageOverride[l.opportunityId] ?? l.stage;
@@ -230,6 +283,7 @@ export function KanbanBoard({
                 ) : (
                   items.map((l) => (
                     <Card
+                      contexte={contexte}
                       key={l.opportunityId}
                       lead={l}
                       canView={canView}
@@ -260,6 +314,7 @@ export function KanbanBoard({
 
 function Card({
   lead,
+  contexte,
   canView,
   canMove,
   saving,
@@ -272,6 +327,8 @@ function Card({
   onMenuMove,
 }: {
   lead: KanbanLead;
+  /** L'état du pipeline, recopié dans les liens de la carte. */
+  contexte: string;
   canView: boolean;
   canMove: boolean;
   saving: boolean;
@@ -304,7 +361,7 @@ function Card({
           </button>
         ) : null}
         <div className="min-w-0 flex-1">
-          <Link href={`/crm/mandats/${lead.opportunityId}`} className="min-w-0">
+          <Link href={`/crm/mandats/${lead.opportunityId}${contexte}`} className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="crm-ellipsis text-sm font-medium text-[var(--crm-text)]" title={lead.name}>{lead.name}</span>
               {lead.highPotential ? <Chip variant="gold">★</Chip> : null}
@@ -361,7 +418,7 @@ function Card({
         <div className="rounded-[8px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] p-2">
           <p className="crm-wrap text-[11px] text-[var(--crm-text-dim)]">{notice.text}</p>
           {notice.action ? (
-            <Link href={`/crm/mandats/${lead.opportunityId}`} className="mt-1 inline-block text-[11px] text-[var(--crm-gold)] underline">
+            <Link href={`/crm/mandats/${lead.opportunityId}${contexte}`} className="mt-1 inline-block text-[11px] text-[var(--crm-gold)] underline">
               {notice.action === "mandat" ? "Ouvrir le dossier (mandat)" : "Ouvrir le dossier (résultat)"}
             </Link>
           ) : null}

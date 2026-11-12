@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ecrireDansAdresse } from "@/modules/crm/etat-dans-adresse";
 import { Agenda } from "./agenda";
 import { AppointmentsBoard, type BoardAppointment } from "./appointments-board";
 import type { AgendaEvent } from "@/modules/calendar/agenda";
@@ -16,14 +17,26 @@ export function RendezVousView({
   nowIso,
   canViewContacts,
   canManage,
+  ongletInitial = "agenda",
+  agentInitial = "",
+  statutInitial = "",
 }: {
   events: AgendaEvent[];
   board: BoardAppointment[];
   nowIso: string;
   canViewContacts: boolean;
   canManage: boolean;
+  /** L'onglet posé par l'adresse (`?onglet=liste`) : sans lui, revenir d'un
+      dossier ouvert depuis la liste rouvrait l'agenda. */
+  ongletInitial?: "agenda" | "liste";
+  /** Les filtres de la liste, posés par l'adresse eux aussi. */
+  agentInitial?: string;
+  statutInitial?: string;
 }) {
-  const [tab, setTab] = useState<"agenda" | "liste">("agenda");
+  const [tab, setTab] = useState<"agenda" | "liste">(ongletInitial);
+  useEffect(() => {
+    ecrireDansAdresse({ onglet: tab === "liste" ? "liste" : null });
+  }, [tab]);
   return (
     <div className="flex flex-col gap-5">
       <div className="crm-tabs" role="tablist" aria-label="Affichage des rendez-vous">
@@ -37,7 +50,12 @@ export function RendezVousView({
       {tab === "agenda" ? (
         <Agenda events={events} nowIso={nowIso} canViewContacts={canViewContacts} canManage={canManage} />
       ) : (
-        <AppointmentsBoard appointments={board} nowIso={nowIso} />
+        <AppointmentsBoard
+          appointments={board}
+          nowIso={nowIso}
+          agentInitial={agentInitial}
+          statutInitial={statutInitial}
+        />
       )}
     </div>
   );

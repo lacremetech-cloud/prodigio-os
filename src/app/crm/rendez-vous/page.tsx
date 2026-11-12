@@ -19,7 +19,16 @@ export const metadata: Metadata = { title: "Agenda" };
  * = tout ; agent = ses rendez-vous / dossiers affectés). Deux affichages internes :
  * Agenda visuel (semaine/mois/jour) et Liste chronologique.
  */
-export default async function AppointmentsPage() {
+export default async function AppointmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  /* L'onglet et les deux filtres viennent de l'adresse : c'est ce qui les rend
+     au retour d'un dossier, au lieu de rouvrir l'agenda non filtré. */
+  const sp = await searchParams;
+  const texte = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
+
   const session = await requireCrmSession("/crm/rendez-vous");
   // Cet agenda est celui des estimations vendeur, côté Mandats. Un commercial
   // du bien n'en voit rien : il y trouvait une page vide dont le titre lui
@@ -81,6 +90,9 @@ export default async function AppointmentsPage() {
         nowIso={nowIso}
         canViewContacts={canView}
         canManage={canManage}
+        ongletInitial={sp.onglet === "liste" ? "liste" : "agenda"}
+        agentInitial={texte(sp.agent)}
+        statutInitial={texte(sp.statut)}
       />
     </div>
   );

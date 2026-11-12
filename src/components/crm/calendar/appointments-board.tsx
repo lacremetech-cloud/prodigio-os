@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ecrireDansAdresse } from "@/modules/crm/etat-dans-adresse";
 import Link from "next/link";
 import { Chip } from "@/components/crm/ui";
 import {
@@ -35,12 +36,35 @@ const TZ = "Europe/Paris";
 export function AppointmentsBoard({
   appointments,
   nowIso,
+  agentInitial = "",
+  statutInitial = "",
 }: {
   appointments: BoardAppointment[];
   nowIso: string;
+  /** Agent et statut posés par l'adresse (`?agent=`, `?statut=`) : sans eux,
+      on filtrait la liste, on ouvrait un dossier, et on revenait sur la liste
+      entière — le défaut signalé sur les acquéreurs, au même endroit. */
+  agentInitial?: string;
+  statutInitial?: string;
 }) {
-  const [agent, setAgent] = useState("");
-  const [status, setStatus] = useState("");
+  const [agent, setAgent] = useState(agentInitial);
+  const [status, setStatus] = useState(statutInitial);
+
+  useEffect(() => {
+    ecrireDansAdresse({ agent: agent || null, statut: status || null });
+  }, [agent, status]);
+
+  /* Ce que le lien vers un dossier emporte : les deux filtres, l'onglet d'où
+     l'on vient, et le nom de l'écran — la fiche sert le même bouton de retour
+     à tout le monde, et sans ça elle renverrait sur la liste des leads. */
+  const contexte = useMemo(() => {
+    const q = new URLSearchParams();
+    if (agent) q.set("agent", agent);
+    if (status) q.set("statut", status);
+    q.set("onglet", "liste");
+    q.set("retour", "rendez-vous");
+    return `?${q.toString()}`;
+  }, [agent, status]);
 
   const agents = useMemo(() => {
     const map = new Map<string, string>();
@@ -146,7 +170,7 @@ export function AppointmentsBoard({
                 {section.items.map((a) => (
                   <li key={a.id}>
                     <Link
-                      href={`/crm/mandats/${a.opportunityId}`}
+                      href={`/crm/mandats/${a.opportunityId}${contexte}`}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[var(--crm-line-soft)] bg-[var(--crm-panel)] px-4 py-3 transition-colors hover:border-[var(--crm-line)] hover:bg-[var(--crm-panel-2)]"
                     >
                       <div className="min-w-0">
