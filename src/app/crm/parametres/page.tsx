@@ -128,6 +128,23 @@ export default async function SettingsPage() {
         </section>
       ) : null}
 
+      {isAdmin ? (
+        <section className="crm-panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">
+              Données du pilotage pub
+            </h2>
+            <p className="mt-1 text-sm text-[var(--crm-text-dim)]">
+              Conditions de commercialisation (prix, taux, part de Prodigio), lots des programmes et coûts fixes
+              de chaque bien. Versionnées, jamais effacées. Réservé aux administrateurs.
+            </p>
+          </div>
+          <Link href="/crm/pilotage/donnees" className="crm-btn crm-btn--primaire shrink-0">
+            Saisir
+          </Link>
+        </section>
+      ) : null}
+
       <section className="crm-panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--crm-text-dim)]">

@@ -176,6 +176,12 @@ export const auditEventLabels: Record<string, string> = {
   estimation_replanifiee: "Estimation reportée",
   estimation_annulee: "Estimation annulée",
   estimation_resultat: "Résultat de rendez-vous",
+  // Pilotage pub (administrateur seul ; le journal n'en garde aucun montant)
+  pilotage_conditions_saisies: "Pilotage — conditions de commercialisation",
+  pilotage_lot_cree: "Pilotage — lot créé",
+  pilotage_lot_modifie: "Pilotage — lot modifié",
+  pilotage_cout_saisi: "Pilotage — coût fixe saisi",
+  pilotage_cout_annule: "Pilotage — coût fixe annulé",
 };
 
 export const auditEntityLabels: Record<string, string> = {

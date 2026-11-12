@@ -175,8 +175,10 @@ Modèle d'attribution **multi-points de contact** (plus « une source unique »)
 - **Historique conservé** même si une campagne est renommée (les valeurs
   capturées ne sont pas réécrites).
 - **Décision MVP** : capter et conserver les données nécessaires à l'attribution
-  (premier/dernier contact au minimum). **Extension future** : import des
-  **dépenses** publicitaires et modèles d'attribution avancés (hors MVP).
+  (premier/dernier contact au minimum). **Extension future** : modèles
+  d'attribution avancés (hors MVP). La **lecture des dépenses** publicitaires
+  entre dans le périmètre avec le pilotage pub (décision du 12/11/2026, étape 2 —
+  voir [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md)).
 
 ### Qualification
 Informations recueillies pour évaluer le bien et le projet.
@@ -266,8 +268,11 @@ réécrites.
 - **Date d'entrée en vigueur** ; **historique des versions**.
 - **Décision MVP** : stockage et **versionnage** des règles + **snapshot** dans
   le Mandat **dès sa formalisation (statut `proposé`)**, pour figer les
-  conditions réellement proposées ; **pas** de calcul financier automatique (hors
-  MVP). Modifier une règle **ne réinterprète pas** les anciens dossiers.
+  conditions réellement proposées ; **pas** de calcul financier automatique des
+  partages d'un mandat. Modifier une règle **ne réinterprète pas** les anciens
+  dossiers. Le calcul des commissions du **pilotage pub** s'appuie sur des
+  **conditions de commercialisation par bien**, objet distinct (voir l'extension
+  ci-dessous) : il ne modifie ni une règle, ni un mandat.
 
 ### Décision de segment
 Segmentation **traçable**, pas seulement dérivée de la valeur.
@@ -572,3 +577,65 @@ d'**envoi aux contacts**, indépendante de tout fournisseur. Détail complet :
   `opposition_*` ajoutés de manière additive.
 - **Opportunité**, **Profil acquéreur**, **Bien**, **Rendez-vous d'estimation** :
   inchangés — simplement rattachables à une communication.
+
+---
+
+## Extension — Pilotage pub, étape 1 : les données
+
+Décision de Victor du 12/11/2026 (extension du périmètre du MVP, voir
+[02-MVP-SCOPE.md](02-MVP-SCOPE.md)). Migration
+`supabase/migrations/20261112150000_pilotage_conditions_lots_et_couts_fixes.sql`,
+**strictement additive**. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
+Tout est **réservé aux administrateurs**, en lecture comme en écriture.
+
+### Nouveaux objets
+
+| Objet du modèle | Définition | Table |
+|---|---|---|
+| **Conditions de commercialisation** | Ce qui détermine la commission d'**un bien** : vente en un bloc ou par lots, nature du prix, prix affiché, taux de commission, base HT/TTC des honoraires, part de Prodigio, TVA des honoraires, statut commercial et vente. **Versionnées** : chaque changement est une nouvelle ligne (date d'effet, auteur, motif) ; la version **en vigueur** à une date est la plus récente par date d'effet sans la dépasser. | `pilotage_conditions` |
+| **Lot de programme** | Unité vendue d'un programme (Les Airelles). Identité immuable : bien + **numéro**. | `pilotage_lots` |
+| **État d'un lot** | Description, prix, statut, prix de vente final, date de vente, retrait. États successifs ; le **dernier** fait foi. | `pilotage_lot_versions` |
+| **Coût fixe** | Dépense HT d'un bien (production/tournage, montage, photos, autre), avec note. Date et auteur de saisie notés d'office. **S'annule, ne s'efface pas** : l'annulation est datée et la ligne sort des calculs. | `pilotage_couts_fixes` |
+
+### Énumérations
+
+- **Statut commercial** (bien vendu en un bloc, ou lot) : `a_vendre` →
+  `sous_offre` → `compromis_signe` → `vendu`.
+- **Nature du prix** : `fai` (prix affiché frais d'agence inclus) ·
+  `ht_grille_promoteur` (prix HT de la grille d'un promoteur, pris comme prix
+  affiché — question ouverte, [05](05-OPEN-QUESTIONS.md) E).
+- **Base des honoraires** : `TTC` · `HT` · `a_confirmer`. La règle de calcul
+  validée suppose `TTC` ; sinon, aucun calcul.
+- **Type de coût fixe** : `production` · `montage` · `photos` · `autre`.
+
+### Distinctions fondamentales ajoutées
+
+- **Conditions de commercialisation ≠ EconomicRuleSet ≠ photographie du
+  mandat.** La règle économique (par partenaire × segment) sert à proposer un
+  mandat ; la photographie fige ce qui a été proposé ; les conditions décrivent
+  la commercialisation d'un bien, y compris d'un bien partenaire sans mandat.
+  Pour un bien sous mandat, une part laissée vide reprend la photographie ; un
+  écart entre les deux est **signalé**, jamais tranché en silence.
+- **Nature du prix ≠ base HT/TTC des honoraires.** Le HT d'une grille de
+  promoteur concerne la valeur du bien ; le HT/TTC des honoraires concerne le
+  taux de commission. Deux champs, jamais déduits l'un de l'autre.
+- **Statut commercial ≠ statut de la Fabrique ≠ étape du pipeline.** « Vendu »
+  dit l'issue de la commercialisation ; `properties.status` dit l'avancement de
+  la production du bien ; le pipeline acquéreur dit où en est un dossier.
+- **Commission potentielle ≠ commission encaissée.** La première se calcule sur
+  le prix affiché ; la seconde, seulement pour un bien ou un lot vendu, sur le
+  prix de vente final.
+- **Coût annulé ≠ coût supprimé.** Rien ne s'efface : l'annulation garde la
+  ligne, sa date et son auteur.
+- **Pilotage ≠ AuditEvent.** L'historique complet (valeurs, motifs) vit dans les
+  tables du pilotage, lisibles des seuls administrateurs. Le journal d'audit ne
+  reçoit que des identifiants — il est lisible par les managers.
+
+### Relations
+
+- **Bien** 1 — N **Conditions de commercialisation** (versions).
+- **Bien** 1 — N **Lot de programme** 1 — N **État d'un lot**.
+- **Bien** 1 — N **Coût fixe**.
+- **Bien** 0..1 — **Mandat** : sa photographie peut fournir la part de Prodigio.
+- Un bien qui porte un historique de pilotage ne se supprime pas
+  (`on delete restrict`).

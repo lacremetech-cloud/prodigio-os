@@ -177,6 +177,18 @@ biens.
 
 ---
 
+### Avancé hors séquence — Pilotage pub (décision du 12/11/2026)
+
+Une partie des analytics de commercialisation est avancée : le **pilotage pub**
+relie la dépense Meta Ads aux commissions de Prodigio, bien par bien, pour les
+seuls administrateurs. Quatre étapes, une PR chacune, chacune validée avant la
+suivante : (1) données — conditions de commercialisation versionnées, lots,
+coûts fixes ; (2) lecture des statistiques Meta en lecture seule ; (3) page
+Pilotage avec les données du CRM par bien, en nombres agrégés ; (4) remontée des
+conversions vers Meta, à la toute fin. Voir [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
+
+---
+
 ## Phase 6 — Automatisations avancées
 
 **Objectif** : industrialiser les process (post-portail).

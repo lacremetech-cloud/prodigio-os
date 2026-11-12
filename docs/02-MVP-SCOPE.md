@@ -116,7 +116,31 @@ Publicité
 - **PrivacyRecord / ConsentRecord** (finalité, base légale, notice, canaux,
   choix accordé/refusé/retiré, preuve, « ne plus contacter » par canal).
 - **Paramètres économiques configurables et versionnés** (seuil, partages, base
-  HT/TTC), même avec un seul partenaire ; **pas** de calcul financier automatique.
+  HT/TTC), même avec un seul partenaire ; **pas** de calcul financier automatique
+  des partages d'un mandat. *Exception : le pilotage pub, ci-dessous.*
+
+## Extension du périmètre — Pilotage pub (décision du 12/11/2026)
+
+Victor a décidé le **12 novembre 2026** d'intégrer à Prodigio OS le pilotage de
+la dépense publicitaire, construit d'abord hors du dépôt. Il relie la dépense
+Meta Ads aux commissions de Prodigio, bien par bien. Détail :
+[33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
+
+**Entre dans le périmètre**, en quatre étapes validées une à une :
+
+1. **Les données** — conditions de commercialisation **par bien**, versionnées
+   (prix affiché, taux de commission, part de Prodigio, base HT/TTC des
+   honoraires, TVA, statut commercial) ; **lots** d'un programme ; **coûts
+   fixes** saisis à la main ; **calcul des commissions** potentielles et
+   encaissées, exact, affiché aux seuls administrateurs.
+2. **La lecture des dépenses Meta Ads**, chaque matin, **en lecture seule**.
+3. **La page Pilotage**, avec les données du CRM par bien, **en nombres
+   agrégés seulement** (aucune donnée personnelle d'acquéreur).
+4. **La remontée de conversions vers Meta**, à la toute fin, avec Victor.
+
+**Reste exclu** : la facturation, tout versement et tout partage **comptable**
+automatique entre Prodigio et ses partenaires. Les montants du pilotage sont des
+indicateurs de pilotage, pas des écritures.
 
 ## Indicateurs minimums du tableau de bord
 
@@ -134,9 +158,10 @@ Publicité
 ## Fonctionnalités explicitement exclues du MVP
 
 - ❌ **Signature électronique** du mandat (l'issue est saisie manuellement).
-- ❌ **Import des dépenses** publicitaires et **calcul financier automatique** des
-  partages (les données d'attribution et les règles versionnées sont toutefois
-  capturées dès le départ).
+- ~~❌ **Import des dépenses** publicitaires et **calcul financier automatique** des
+  partages~~ — **exclusion levée le 12/11/2026** pour le pilotage pub (voir
+  ci-dessus). Restent exclus : la facturation et tout partage comptable
+  automatique.
 - ❌ Moteur **Biens & Acquéreurs** (fiche bien, landing bien, brochure, campagnes
   acheteurs, setting acheteurs, visites, offres, vente).
 - ❌ **Portail Propriétaire**.

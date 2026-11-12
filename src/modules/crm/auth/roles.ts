@@ -253,6 +253,19 @@ export function canAdminEconomicRules(roles: readonly string[]): boolean {
 }
 
 /**
+ * Peut voir et saisir le PILOTAGE PUB : commissions, parts, coûts fixes,
+ * dépenses publicitaires. **Administrateur seul** — décision de Victor du
+ * 12/11/2026, appliquée en base (RLS `crm_has_role('administrateur')` et
+ * fonctions `crm_pilotage_*`). Le manager pilote les dossiers, pas la
+ * rentabilité : aucun chiffre de commission ne lui est montré.
+ *
+ * Masquer un écran n'est pas un droit : c'est la base qui refuse.
+ */
+export function canPiloter(roles: readonly string[]): boolean {
+  return hasAnyRole(roles, ["administrateur"]);
+}
+
+/**
  * Peut archiver un contact acquéreur — et le rétablir. **Administrateur seul.**
  *
  * Plus strict que `canDecideMandate` (qui inclut le manager) et que
