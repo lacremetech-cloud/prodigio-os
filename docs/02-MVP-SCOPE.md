@@ -133,7 +133,10 @@ Meta Ads aux commissions de Prodigio, bien par bien. Détail :
    honoraires, TVA, statut commercial) ; **lots** d'un programme ; **coûts
    fixes** saisis à la main ; **calcul des commissions** potentielles et
    encaissées, exact, affiché aux seuls administrateurs.
-2. **La lecture des dépenses Meta Ads**, chaque matin, **en lecture seule**.
+2. **La lecture des dépenses Meta Ads**, chaque matin, **en lecture seule** :
+   statistiques par pub et par jour, contrôle contre la dépense du compte,
+   couverture par période, rattachement des campagnes aux biens réglable dans
+   l'application, et l'identifiant de la pub qui a amené chaque demande.
 3. **La page Pilotage**, avec les données du CRM par bien, **en nombres
    agrégés seulement** (aucune donnée personnelle d'acquéreur).
 4. **La remontée de conversions vers Meta**, à la toute fin, avec Victor.

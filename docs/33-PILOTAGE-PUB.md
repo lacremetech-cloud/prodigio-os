@@ -21,8 +21,8 @@ la suivante :
 
 | Étape | Contenu | État |
 |---|---|---|
-| **1. Les données** | Conditions de commercialisation versionnées, lots, coûts fixes, formulaires d'administration | **cette PR** |
-| 2. Lecture Meta | Statistiques Meta Ads chaque matin, **en lecture seule** ; rattachement des campagnes aux biens | à venir |
+| **1. Les données** | Conditions de commercialisation versionnées, lots, coûts fixes, formulaires d'administration | **fusionnée** (PR #79) |
+| **2. Lecture Meta** | Statistiques Meta Ads chaque matin, **en lecture seule** ; rattachement des campagnes aux biens | **cette PR** |
 | 3. Page Pilotage | Vue générale et onglets par bien, avec les données du CRM par bien (nombres agrégés seulement) | à venir |
 | 4. Remontée vers Meta | Conversions (API de conversions) — **à la toute fin, avec Victor, rien avant son feu vert** | à venir |
 
@@ -214,3 +214,155 @@ une base qui contient déjà un bien, et annule tout à la fin (`ROLLBACK`).
 - La commission encaissée d'un bien vendu sans prix final saisi est
   « manquante » (pas de repli sur le prix affiché) : à confirmer
   ([05](05-OPEN-QUESTIONS.md), E).
+
+---
+
+## 7. Étape 2 — la lecture des chiffres Meta, chaque matin, en lecture seule
+
+Décision de Victor du 12/11/2026 : lire, oui ; **écrire chez Meta, non**. Le
+jeton utilisé n'a que le droit `ads_read`, et le client n'émet que des requêtes
+`GET` (vérifié par un test). La remontée de conversions reste l'étape 4.
+
+### 7.1 Ce qui est lu, et quand
+
+**Chaque matin à 5 h 17 UTC** (6 h 17 l'hiver, 7 h 17 l'été, heure de Paris ;
+selon l'offre Vercel, l'appel peut glisser dans l'heure), Vercel Cron appelle
+`/api/pilotage/meta/synchro` (`vercel.json`). Vercel envoie
+lui-même le secret `CRON_SECRET` ; la route refuse tout appel qui ne le porte
+pas, et Vercel ne la déclenche que sur la production. Un administrateur peut
+aussi cliquer **« Lire Meta maintenant »** (Pilotage pub → Meta Ads).
+
+| Lecture | Requête Graph v27.0 | Rangée dans |
+|---|---|---|
+| Les pubs, jour par jour | `insights`, `level=ad`, `time_increment=1`, tranches de 30 jours, pagination par curseur | `pilotage_meta_insights` |
+| La dépense du compte (contrôle) | `insights`, `level=account`, `time_increment=1` | `pilotage_meta_controles` |
+| Les pubs (nom, statut, aperçu) | `ads` avec `preview_shareable_link` | `pilotage_meta_pubs` |
+| La couverture de chaque période proposée, par bien et au total | `insights`, `level=account`, `date_preset`, filtre `ad.id IN` (ou `NOT_IN` pour écarter le hors portefeuille) | `pilotage_meta_couverture` |
+
+Champs lus : `date_start`, `date_stop`, `campaign_id/name`, `adset_id/name`,
+`ad_id/name`, `spend`, `impressions`, `reach`, `frequency`, `clicks`,
+`inline_link_clicks`, `ctr`, `cpm`, `actions`, `cost_per_action_type`.
+
+- **Leads = l'action `lead` seule.** Meta renvoie aussi `onsite_web_lead`,
+  `offsite_conversion.fb_pixel_lead` et `offsite_lead_add_20_s_calls`, aux
+  mêmes valeurs : les additionner compterait chaque demande plusieurs fois.
+- **La première fois, tout l'historique** (depuis la création du compte, sans
+  remonter au-delà des 37 mois que Meta conserve) ; **ensuite, les 7 jours qui
+  précèdent le dernier jour enregistré**, jusqu'à aujourd'hui : Meta corrige
+  ses chiffres après coup.
+- **Remplacement par période, sans doublon.** Chaque période relue est effacée
+  puis réécrite d'un bloc, dans une seule transaction : ce que Meta a corrigé
+  est remplacé, ce qu'il ne renvoie plus disparaît.
+- **Contrôle chaque jour** : la somme des pubs, calculée en base, doit égaler
+  la dépense du compte. Écart toléré : un centime par pub et par jour (arrondis
+  de Meta). Les écarts s'affichent sur l'écran Meta.
+- **Une lecture à la fois** (verrou en base). Une lecture coupée en route
+  (limite de durée de la fonction) est close d'office vingt minutes plus tard ;
+  la suivante repart du dernier jour entièrement enregistré.
+- **Le temps est compté** : au-delà de 200 secondes, la lecture n'entame plus de
+  tranche, se déclare « partielle » et la suivante reprend. La couverture n'est
+  remplacée que si elle a été relue en entier.
+- **Erreurs** : reprise automatique sur les limites de débit (codes 4, 17, 32,
+  613, 80000–80014) ; message clair pour un jeton refusé (190) ou des droits
+  manquants ; jamais le texte brut de Meta, jamais le jeton, jamais l'adresse.
+
+### 7.2 Le rattachement des dépenses aux biens
+
+Réglable dans l'application (Pilotage pub → Meta Ads → Règles), jamais dans le
+code. Ordre, du plus fort au plus faible :
+
+1. une **exception par identifiant de campagne** ;
+2. le **BIEN du nom de la pub**, convention `BIEN | ANGLE | FORMAT | V1` ;
+3. le **BIEN du nom de la campagne**, convention `PRODIGIO | BIEN | LEADS`.
+
+Un jeton ne compte que s'il correspond à une règle en vigueur (accents et casse
+ignorés : « Jaurès » = « JAURES »). Une règle vise **un bien**, **plusieurs**
+(un groupe : la dépense se répartit **au prorata du prix affiché** — prix du
+bien, ou somme de ses lots ; un prix manquant rend la répartition impossible,
+et l'écran le dit), ou **« hors portefeuille »** (visible, mais hors des
+indicateurs — les quatre campagnes ELIOM, par exemple, par exception de
+campagne). Une dépense rattachée à rien est **orpheline** : comptée dans les
+totaux, et signalée.
+
+**Le rattachement n'est pas recopié dans chaque ligne** : il se calcule à la
+lecture, à partir des règles en vigueur. Changer une règle reclasse tout
+l'historique d'un coup, sans relancer de lecture. Une règle ne se modifie pas :
+elle se retire (datée, motif facultatif) et se remplace. Seule la **couverture**
+se lit chez Meta avec les règles du moment : après un changement de règle, elle
+suit à la lecture suivante ([05](05-OPEN-QUESTIONS.md), E).
+
+### 7.3 La pub exacte de chaque demande : `buyer_interests.meta_ad_id`
+
+Rempli à partir d'`utm_id` (adresse du formulaire, puis première visite) et, à
+défaut, d'un `utm_content` **numérique** — les campagnes de Cassis y
+envoyaient l'identifiant de la pub ([31](31-TRACKING-PUBLICITAIRE.md)) ; un
+texte n'est jamais pris pour un identifiant. **Les anciennes demandes sont
+complétées sans rien écraser**, sans toucher à leur date de mise à jour ; les
+nouvelles le sont à l'insertion, par un déclencheur qui avale toute erreur — un
+identifiant manquant ne fait jamais perdre une demande. C'est ce qui reliera, à
+l'étape 3, chaque demande du CRM à la pub exacte.
+
+### 7.4 Les variables — à coller par Victor dans Vercel
+
+Aucune ne passe par une conversation, aucune n'est dans le dépôt. Une variable
+posée vide compte comme absente : elle ne fait jamais tomber le site.
+
+| Variable | Valeur | Environnements |
+|---|---|---|
+| `META_ADS_READ_TOKEN` | jeton de l'utilisateur système « Prodigio », application Demetrias Ads API, **droit `ads_read` seul** | Production (et Preview pour essayer sur un aperçu) |
+| `META_AD_ACCOUNT_ID` | identifiant du compte publicitaire (avec ou sans `act_`) | Production (et Preview) |
+| `CRON_SECRET` | une longue suite aléatoire (64 caractères avec `openssl rand -hex 32` ; en dessous de 16, la route reste fermée) | Production |
+
+⚠️ **Jamais `META_CAPI_ACCESS_TOKEN`** pour lire : il écrit dans le pixel. Un
+test refuse qu'il apparaisse dans le module de lecture.
+
+Les aperçus Vercel utilisent la base de production : lire Meta depuis un
+aperçu y écrit les **vrais** chiffres, les mêmes que la production écrirait —
+aucune donnée de test.
+
+Après avoir ajouté les variables : **redéployer**, puis vérifier
+`https://go.prodigio.fr/api/health` → `"meta_lecture_pub": true` et
+`"lecture_du_matin": true`.
+
+### 7.5 Mise en service de l'étape 2
+
+1. Appliquer la migration `20261112170000_pilotage_lecture_meta.sql` (après
+   celle de l'étape 1 ; voir [07](07-SUPABASE-SETUP.md) §15).
+2. Poser les trois variables (§ 7.4) et redéployer.
+3. Pilotage pub → Meta Ads → **Lire Meta maintenant** : la première lecture
+   remonte l'historique (plusieurs clics peuvent être nécessaires si elle est
+   longue — elle reprend où elle s'est arrêtée).
+4. Saisir les **règles** : un jeton par bien, un groupe pour une dépense
+   commune à plusieurs biens, les exceptions par identifiant de campagne (dont
+   les quatre campagnes ELIOM, « hors portefeuille »). Vérifier qu'aucune
+   dépense ne reste orpheline sans raison.
+
+### 7.6 Recette locale
+
+```bash
+bash scripts/replay-migrations.sh
+psql -h /var/run/postgresql -p 55432 -U postgres -d prodigio -f scripts/pilotage-meta.sql
+```
+
+Droits (rôle de service seul pour écrire les chiffres), verrou d'une lecture à
+la fois, remplacement sans doublon ni reste, contrôle calculé en base, journal
+figé, règles (administrateur seul, retirées sans effacement), extraction de
+`meta_ad_id`, dépôt jamais bloqué, remplissage sans écraser. Les tests Vitest
+jouent la lecture entière avec un **faux Meta**, sans réseau.
+
+### 7.7 Limites de l'étape 2
+
+- Aucun tableau de bord encore : dépense par bien, ROAS, marge, données du CRM,
+  pubs gagnantes viendront à l'étape 3. L'écran Meta sert à **vérifier** la
+  lecture et à **régler** le rattachement.
+- La couverture d'une portée de plus de 100 pubs ne se lit pas en une requête :
+  elle s'affichera « — », comme pour des dates au choix.
+- Les leads sont comptés selon la fenêtre d'attribution que l'API applique
+  quand on ne lui en précise aucune, comme dans la requête du brief. Si un
+  ensemble de publicités est réglé autrement dans le Gestionnaire, ses leads
+  peuvent différer : c'est la première piste en cas d'écart
+  ([05](05-OPEN-QUESTIONS.md), E).
+- Les dépenses sont prises **HT**, comme le veut la règle de calcul. La devise
+  du compte est relevée à chaque lecture : un compte tenu dans une autre devise
+  que l'euro est signalé à l'écran.
+

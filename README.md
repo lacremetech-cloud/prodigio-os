@@ -218,8 +218,12 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
 - [docs/33-PILOTAGE-PUB.md](docs/33-PILOTAGE-PUB.md) — Pilotage pub (décision du
   12/11/2026) : relier la dépense publicitaire aux commissions, bien par bien,
   pour les seuls administrateurs. Étape 1 : conditions de commercialisation
-  versionnées, lots, coûts fixes, calcul exact des commissions.
-  **Migration non encore appliquée** — voir docs/07 §14.
+  versionnées, lots, coûts fixes, calcul exact des commissions (docs/07 §14).
+  Étape 2 : lecture des statistiques Meta Ads chaque matin, **en lecture
+  seule** (Vercel Cron), rattachement des campagnes aux biens réglable dans
+  l'application, identifiant de pub des demandes (docs/07 §15 ; variables
+  `META_ADS_READ_TOKEN`, `META_AD_ACCOUNT_ID`, `CRON_SECRET`, posées dans
+  Vercel). **Migrations non encore appliquées.**
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

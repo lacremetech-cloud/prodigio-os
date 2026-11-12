@@ -10,6 +10,7 @@ import { formatCentimes, formatMontant, formatTotal } from "@/modules/pilotage/a
 import { statutCommercialLabels } from "@/modules/pilotage/labels";
 import { Chip } from "@/components/crm/ui";
 import { AccesReserve, ErreurLecture, NonInstalle } from "@/components/crm/pilotage/vues";
+import { OngletsPilotage } from "@/components/crm/pilotage/onglets";
 
 export const metadata: Metadata = { title: "Données du pilotage" };
 
@@ -44,13 +45,16 @@ export default async function DonneesDuPilotagePage() {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
-      <header>
-        <p className="crm-eyebrow">Pilotage pub</p>
-        <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">Données du pilotage</h1>
-        <p className="mt-1 max-w-3xl text-sm text-[var(--crm-text-dim)]">
-          Conditions de commercialisation, lots et coûts fixes de chaque bien. Réservé aux administrateurs. Rien ne
-          s’efface : chaque modification ajoute une ligne datée, avec son auteur et son motif.
-        </p>
+      <header className="flex flex-col gap-3">
+        <div>
+          <p className="crm-eyebrow">Pilotage pub</p>
+          <h1 className="mt-1 text-2xl font-semibold text-[var(--crm-text)]">Données du pilotage</h1>
+          <p className="mt-1 max-w-3xl text-sm text-[var(--crm-text-dim)]">
+            Conditions de commercialisation, lots et coûts fixes de chaque bien. Réservé aux administrateurs. Rien ne
+            s’efface : chaque modification ajoute une ligne datée, avec son auteur et son motif.
+          </p>
+        </div>
+        <OngletsPilotage actif="donnees" />
       </header>
 
       <p className="crm-avertissement crm-wrap">

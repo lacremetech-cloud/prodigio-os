@@ -242,6 +242,9 @@ Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
 | Lire conditions, lots, coûts fixes, commissions | ✔ | — | — | — | — | — | — |
 | Saisir une version des conditions, un lot, un coût | ✔ | — | — | — | — | — | — |
 | Annuler un coût fixe | ✔ | — | — | — | — | — | — |
+| Lire les chiffres Meta, le journal des lectures, les règles de rattachement | ✔ | — | — | — | — | — | — |
+| Lancer une lecture Meta (« Lire Meta maintenant ») | ✔ | — | — | — | — | — | — |
+| Ajouter ou retirer une règle de rattachement | ✔ | — | — | — | — | — | — |
 
 - **En base** : RLS `crm_has_role('administrateur')` sur `pilotage_conditions`,
   `pilotage_lots`, `pilotage_lot_versions`, `pilotage_couts_fixes` ; droits par
@@ -256,4 +259,17 @@ Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
   événements du pilotage n'y portent donc que des identifiants, jamais un
   montant, un taux, une part ou un motif. Les masquer aussi aux managers est une
   décision ouverte ([05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md), E 26).
+- **Lecture Meta (étape 2)** : mêmes règles sur les six tables
+  `pilotage_meta_*`. Les chiffres Meta ne s'écrivent **que par le rôle de
+  service** : la route du matin (Vercel Cron, protégée par `CRON_SECRET`) et le
+  bouton d'un administrateur, côté serveur. Aucun navigateur, même
+  administrateur, ne peut écrire un chiffre Meta. Les règles passent par
+  `crm_pilotage_meta_ajouter_regle` / `crm_pilotage_meta_retirer_regle`
+  (administrateur, auditées sans contenu).
+- **Lecture seule chez Meta** : le jeton n'a que le droit `ads_read`, et le code
+  n'émet que des `GET`. Le jeton qui écrit (`META_CAPI_ACCESS_TOKEN`) n'est
+  jamais utilisé pour lire.
+- **`buyer_interests.meta_ad_id`** suit les droits existants de la demande
+  acquéreur : c'est un identifiant de pub, pas un chiffre du pilotage. Le
+  pilotage n'en tirera, à l'étape 3, que des **nombres agrégés**.
 
