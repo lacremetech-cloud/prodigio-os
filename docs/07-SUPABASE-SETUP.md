@@ -855,3 +855,100 @@ select conname, (select count(*) from regexp_matches(pg_get_constraintdef(oid), 
   from pg_constraint where conname in ('audit_events_event_type_check', 'audit_events_entity_type_check');
 -- attendu : 89 et 21.
 ```
+
+> Ces contrôles valent **juste après l'étape 1**. Une fois l'étape 2 appliquée
+> (§ 15), le motif `pilotage_%` trouve dix tables et plus de fonctions, et les
+> listes d'audit comptent 91 et 22.
+
+## 15. Pilotage pub — étape 2 (`20261112170000_pilotage_lecture_meta`) — **NON APPLIQUÉE**
+
+Détail fonctionnel : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 7. À appliquer
+**après** celle de l'étape 1 (§ 14).
+
+### Ce qu'elle crée
+
+- Six tables, **RLS active**, lecture réservée à l'administrateur, droits par
+  défaut retirés à `anon` et `authenticated`, aucune écriture directe :
+  `pilotage_meta_synchros` (journal des lectures, figé une fois clos),
+  `pilotage_meta_controles`, `pilotage_meta_insights`, `pilotage_meta_pubs`,
+  `pilotage_meta_couverture`, `pilotage_meta_regles`.
+- Cinq fonctions d'écriture des chiffres Meta, `SECURITY DEFINER`,
+  `search_path` figé, exécutables par le **seul rôle de service** (la lecture
+  du matin et le bouton, côté serveur) : `crm_pilotage_meta_synchro_demarrer`,
+  `crm_pilotage_meta_remplacer_tranche`, `crm_pilotage_meta_enregistrer_pubs`,
+  `crm_pilotage_meta_remplacer_couverture`, `crm_pilotage_meta_synchro_terminer`.
+- Deux fonctions de règles, administrateur seul, auditées sans contenu :
+  `crm_pilotage_meta_ajouter_regle`, `crm_pilotage_meta_retirer_regle` ; une
+  lecture des totaux sous la RLS de l'appelant (`SECURITY INVOKER`) :
+  `crm_pilotage_meta_totaux`.
+- Trois fonctions de déclencheur (`pilotage_meta_synchro_garde`,
+  `pilotage_meta_regle_garde`, `pilotage_buyer_interest_meta_ad_id`) et une
+  extraction (`pilotage_extraire_meta_ad_id`), fermées à `anon` et
+  `authenticated`.
+
+### Ce qu'elle modifie sur l'existant
+
+| Objet | Modification | Nature |
+|---|---|---|
+| `audit_events` | CHECK `entity_type` (21 → 22 valeurs) et `event_type` (89 → 91) **réécrits en entier** | **Additive** — aucune valeur retirée |
+| `buyer_interests` | Colonne `meta_ad_id` (vide par défaut) + index partiel | **Additive** |
+| `buyer_interests` | Déclencheur `buyer_interests_meta_ad_id` **avant insertion** : pose l'identifiant de pub, **avale toute erreur** (un dépôt n'échoue jamais à cause de lui), n'écrase jamais une valeur | **Additive** |
+| `buyer_interests` | **Remplissage** de `meta_ad_id` sur les anciennes lignes **où il est vide** et où un identifiant se lit — demandé par le brief, « en ajoutant sans rien écraser ». Le déclencheur de date de mise à jour est suspendu le temps de ce remplissage, dans la transaction : aucune demande ne paraît modifiée aujourd'hui | Ajout de valeurs dans une colonne **neuve** ; aucune autre colonne touchée |
+
+Deux protections, dans la migration elle-même :
+
+- **Attente bornée** : `lock_timeout` de 2 s. Si un verrou n'est pas obtenu à
+  temps, elle s'arrête (rien n'est modifié) au lieu de faire patienter les
+  dépôts du formulaire derrière elle. Il suffit alors de la relancer.
+- **Aucun autre déclencheur de mise à jour** sur `buyer_interests` que la date
+  de mise à jour : sinon (un webhook posé à la main, par exemple), le
+  remplissage pourrait envoyer une alerte par ligne — elle s'arrête, sans rien
+  avoir modifié, et le dit.
+
+**Aucune donnée de test, aucune valeur du compte publicitaire.** Vérifié
+localement sur une base rejouant les 66 migrations : politiques, fonctions,
+contraintes (hors les deux listes d'audit), droits, colonnes et déclencheurs
+**préexistants strictement identiques** avant et après ; rejouée deux fois de
+suite, sans erreur et sans différence ; la garde arrête bien la migration
+devant un déclencheur inconnu. Recette : `scripts/pilotage-meta.sql`.
+
+### Application
+
+Une seule fois, par l'outil officiel Supabase ou l'éditeur SQL (fichier
+transactionnel : `begin` / `commit`). De préférence à un moment calme. Tant
+qu'elle n'est pas appliquée, l'écran `/crm/pilotage/meta` affiche « Pas encore
+installé ».
+
+### Contrôles après application
+
+```sql
+-- Six tables Meta, RLS active.
+select tablename, rowsecurity from pg_tables
+ where schemaname = 'public' and tablename like 'pilotage_meta_%' order by 1;
+
+-- Écriture des chiffres : rôle de service seul.
+select p.proname,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie,
+       has_function_privilege('service_role', p.oid, 'execute') as service
+  from pg_proc p where p.proname like '%pilotage_meta%' order by 1;
+-- attendu : anon = false partout ; authentifie = true seulement pour
+-- ajouter_regle, retirer_regle et totaux ; service = true pour les cinq
+-- fonctions de la lecture (demarrer, remplacer_tranche, enregistrer_pubs,
+-- remplacer_couverture, terminer).
+
+-- Le déclencheur de date de mise à jour est bien réactivé.
+select tgname, tgenabled from pg_trigger
+ where tgrelid = 'public.buyer_interests'::regclass and not tgisinternal order by 1;
+-- attendu : buyer_interests_meta_ad_id, buyer_interests_set_updated_at et
+-- comm_buyer_interest_enqueue, tous à « O » (actifs).
+
+-- Combien de demandes ont retrouvé leur pub (un nombre, aucune donnée).
+select count(*) filter (where meta_ad_id is not null) as avec_pub, count(*) as demandes
+  from public.buyer_interests;
+
+-- Listes d'audit élargies.
+select conname, (select count(*) from regexp_matches(pg_get_constraintdef(oid), '''([a-z_]+)''', 'g'))
+  from pg_constraint where conname in ('audit_events_event_type_check', 'audit_events_entity_type_check');
+-- attendu : 91 et 22.
+```

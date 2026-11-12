@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import {
   brochureBaseUrl,
   isBuyerSlackConfigured,
+  isMetaAdsReadConfigured,
   isMetaCapiConfigured,
+  isPilotageCronConfigured,
   isSmsFactorConfigured,
   isSupabaseAdminConfigured,
 } from "@/config";
@@ -42,6 +44,10 @@ export function GET() {
         /* Sans jeton, l'accusé de réception repart vers l'automatisation
            externe, ou ne part pas du tout : autant le voir ici. */
         sms_accuse: isSmsFactorConfigured(),
+        /* Le pilotage pub lit Meta chaque matin : jeton de LECTURE et compte,
+           puis le secret de la tache planifiee. Deux booleens, jamais une valeur. */
+        meta_lecture_pub: isMetaAdsReadConfigured(),
+        lecture_du_matin: isPilotageCronConfigured(),
       },
       /* Le domaine, pas un secret : c'est l'adresse publique que portera le
          prochain SMS. Il est ici parce qu'une variable posée dans Vercel ne

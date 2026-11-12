@@ -12,6 +12,18 @@ import { z } from "zod";
  * suivante, en les déclarant `optional()` puis, le moment venu, requises dans
  * les seuls environnements concernés. Voir `.env.example`.
  */
+/**
+ * Variable facultative, et SANS RISQUE si elle est posée vide : une valeur vide
+ * ou faite d'espaces compte comme absente (et une valeur collée avec un espace
+ * de trop est nettoyée). Avec `z.string().min(1)`, une variable vide ferait
+ * échouer toute la configuration — donc tout le site, formulaire acquéreur
+ * compris — pour une simple erreur de saisie dans Vercel.
+ */
+const facultatifTolerant = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.trim() ? v.trim() : undefined));
+
 const envSchema = z.object({
   // Fourni par Next.js / Node ; borné aux valeurs connues, avec valeur par défaut.
   NODE_ENV: z
@@ -231,6 +243,24 @@ const envSchema = z.object({
   // L'endpoint rend des noms et des telephones : sans ce jeton il ne repond
   // rien du tout, plutot que de s'ouvrir par defaut.
   RECAP_LEADS_TOKEN: z.string().optional(),
+
+  // --- Meta Ads : LECTURE des statistiques (pilotage pub, etape 2) -------------
+  // Jeton d'un utilisateur systeme « Prodigio » (application Demetrias Ads API),
+  // avec le SEUL droit `ads_read`. STRICTEMENT serveur : jamais prefixe
+  // `NEXT_PUBLIC_`, jamais renvoye au client, jamais journalise, jamais mis
+  // dans une URL (il voyage dans l'en-tete Authorization).
+  // ⚠️ Ce n'est PAS `META_CAPI_ACCESS_TOKEN` : celui-la ECRIT dans le pixel,
+  // il ne doit jamais servir a lire. Absent ⇒ aucune lecture, le pilotage
+  // l'affiche, le reste de l'application fonctionne a l'identique.
+  META_ADS_READ_TOKEN: facultatifTolerant,
+  // Identifiant du compte publicitaire, avec ou sans « act_ ». Pas un secret,
+  // mais une variable : il change si le compte change, sans toucher au code.
+  META_AD_ACCOUNT_ID: facultatifTolerant,
+
+  // Secret de la tache planifiee Vercel Cron. Vercel l'envoie lui-meme dans
+  // l'en-tete `Authorization: Bearer …` de chaque appel planifie ; la route du
+  // matin refuse tout appel qui ne le porte pas. Absent ⇒ la route n'existe pas.
+  CRON_SECRET: facultatifTolerant,
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -397,6 +427,28 @@ export function isMetaCapiConfigured(
     typeof id === "string" && id.trim().length > 0 &&
     typeof token === "string" && token.trim().length > 0
   );
+}
+
+/**
+ * Lecture des statistiques Meta Ads configuree ? Jeton de LECTURE et compte
+ * publicitaire presents. Ne lit qu'une presence, jamais une valeur. Le jeton
+ * de l'API de conversions (`META_CAPI_ACCESS_TOKEN`) n'entre PAS en compte :
+ * il ecrit dans le pixel, il ne sert jamais a lire.
+ */
+export function isMetaAdsReadConfigured(
+  source: Pick<Env, "META_ADS_READ_TOKEN" | "META_AD_ACCOUNT_ID"> = env,
+): boolean {
+  const token = source.META_ADS_READ_TOKEN;
+  const compte = source.META_AD_ACCOUNT_ID;
+  return (
+    typeof token === "string" && token.trim().length > 0 &&
+    typeof compte === "string" && /^(act_)?\d{5,30}$/i.test(compte.trim())
+  );
+}
+
+/** La lecture du matin peut-elle etre declenchee (secret de Vercel Cron present) ? */
+export function isPilotageCronConfigured(source: Pick<Env, "CRON_SECRET"> = env): boolean {
+  return typeof source.CRON_SECRET === "string" && source.CRON_SECRET.trim().length >= 16;
 }
 
 /**
