@@ -184,6 +184,16 @@ export type OrganizationMembershipRow = {
     | "agent_immobilier"
     | "partenaire_lecture";
   status: "actif" | "suspendu";
+  /**
+   * Reçoit-il les alertes de lead PAR E-MAIL ?
+   *
+   * Faux pour qui les lit ailleurs : l'agence les suit dans Slack et ne veut
+   * pas les recevoir une seconde fois. Ne touche ni l'accès au CRM, ni le
+   * rôle, ni les biens suivis, ni Slack — il ne coupe que l'e-mail.
+   *
+   * Lu par `crm_recap_recipients()`, jamais depuis un écran.
+   */
+  recoit_alertes_email: boolean;
 }
 
 export type CrmRoleToken =
