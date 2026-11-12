@@ -1410,6 +1410,74 @@ export type CommunicationAutomationRunRow = {
   idempotency_key: string;
 };
 
+// --- Pilotage pub -------------------------------------------------------------
+// Miroir de 20261112150000_pilotage_conditions_lots_et_couts_fixes. Lecture
+// réservée aux administrateurs (RLS) ; aucune ligne ne se modifie ni ne
+// s'efface. Les `numeric` arrivent en nombre JSON, ou en texte selon la
+// configuration de PostgREST : `src/modules/pilotage/exact.ts` lit les deux.
+
+export type PilotageStatutCommercial = "a_vendre" | "sous_offre" | "compromis_signe" | "vendu";
+export type PilotageNaturePrix = "fai" | "ht_grille_promoteur";
+export type PilotageBaseHonoraires = "TTC" | "HT" | "a_confirmer";
+export type PilotageTypeCout = "production" | "montage" | "photos" | "autre";
+
+export type PilotageConditionsRow = {
+  id: string;
+  property_id: string;
+  date_effet: string;
+  vente_par_lots: boolean;
+  nature_prix: PilotageNaturePrix;
+  prix_affiche_cents: number | null;
+  taux_commission_pct: number | string | null;
+  base_honoraires: PilotageBaseHonoraires;
+  /** NULL : reprise de la photographie économique du mandat, s'il existe. */
+  part_prodigio_pct: number | string | null;
+  taux_tva_pct: number | string | null;
+  /** NULL quand le bien se vend par lots. */
+  statut_commercial: PilotageStatutCommercial | null;
+  prix_vente_final_cents: number | null;
+  vendu_le: string | null;
+  motif: string;
+  saisi_le: string;
+  saisi_par: string | null;
+};
+
+export type PilotageLotRow = {
+  id: string;
+  property_id: string;
+  numero: string;
+  cree_le: string;
+  cree_par: string | null;
+};
+
+export type PilotageLotVersionRow = {
+  id: string;
+  lot_id: string;
+  description: string | null;
+  prix_cents: number | null;
+  statut_commercial: PilotageStatutCommercial;
+  prix_vente_final_cents: number | null;
+  vendu_le: string | null;
+  retire: boolean;
+  motif: string;
+  saisi_le: string;
+  saisi_par: string | null;
+};
+
+export type PilotageCoutFixeRow = {
+  id: string;
+  property_id: string;
+  type_cout: PilotageTypeCout;
+  montant_ht_cents: number;
+  note: string | null;
+  saisi_le: string;
+  saisi_par: string | null;
+  cle_saisie: string | null;
+  annule_le: string | null;
+  annule_par: string | null;
+  motif_annulation: string | null;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -1457,6 +1525,10 @@ export interface Database {
       communication_suppressions: WithMutations<CommunicationSuppressionRow>;
       communication_automations: WithMutations<CommunicationAutomationRow>;
       communication_automation_runs: WithMutations<CommunicationAutomationRunRow>;
+      pilotage_conditions: WithMutations<PilotageConditionsRow>;
+      pilotage_lots: WithMutations<PilotageLotRow>;
+      pilotage_lot_versions: WithMutations<PilotageLotVersionRow>;
+      pilotage_couts_fixes: WithMutations<PilotageCoutFixeRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -2341,6 +2413,54 @@ export interface Database {
       };
       crm_comm_retry_message: { Args: { p_message_id: string }; Returns: Json };
       crm_comm_schedule_reminders: { Args: { p_hours_ahead?: number }; Returns: Json };
+      /* Pilotage pub — administrateur SEUL (chaque fonction revérifie le rôle). */
+      crm_pilotage_enregistrer_conditions: {
+        Args: {
+          p_property_id: string;
+          p_date_effet: string;
+          p_vente_par_lots: boolean;
+          p_nature_prix: string;
+          p_prix_affiche_cents: number | null;
+          p_taux_commission_pct: number | null;
+          p_base_honoraires: string;
+          p_part_prodigio_pct: number | null;
+          p_taux_tva_pct: number | null;
+          p_statut_commercial: string | null;
+          p_prix_vente_final_cents: number | null;
+          p_vendu_le: string | null;
+          p_motif: string;
+        };
+        Returns: Json;
+      };
+      crm_pilotage_enregistrer_lot: {
+        Args: {
+          p_lot_id: string | null;
+          p_property_id: string | null;
+          p_numero: string | null;
+          p_description: string | null;
+          p_prix_cents: number | null;
+          p_statut_commercial: string;
+          p_prix_vente_final_cents: number | null;
+          p_vendu_le: string | null;
+          p_retire: boolean;
+          p_motif: string;
+        };
+        Returns: Json;
+      };
+      crm_pilotage_saisir_cout_fixe: {
+        Args: {
+          p_property_id: string;
+          p_type_cout: string;
+          p_montant_ht_cents: number;
+          p_note: string | null;
+          p_cle_saisie: string | null;
+        };
+        Returns: Json;
+      };
+      crm_pilotage_annuler_cout_fixe: {
+        Args: { p_cout_id: string; p_motif: string | null };
+        Returns: Json;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

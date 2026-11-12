@@ -230,3 +230,30 @@ visibilité par défaut ouvrirait **tous** les messages.
 - **Masquage** : les coordonnées suivent les règles existantes
   (`crm_can_view_contact_details` / `maskContactValue`), appliquées **côté
   serveur**. La recherche ne porte jamais sur une coordonnée masquée.
+
+---
+
+## Pilotage pub — accès réservé aux administrateurs
+
+Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
+
+| Capacité | Admin Prodigio | Manager | Setter | Commercial | Agent immobilier | Partenaire lecture | `anon` |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| Lire conditions, lots, coûts fixes, commissions | ✔ | — | — | — | — | — | — |
+| Saisir une version des conditions, un lot, un coût | ✔ | — | — | — | — | — | — |
+| Annuler un coût fixe | ✔ | — | — | — | — | — | — |
+
+- **En base** : RLS `crm_has_role('administrateur')` sur `pilotage_conditions`,
+  `pilotage_lots`, `pilotage_lot_versions`, `pilotage_couts_fixes` ; droits par
+  défaut retirés à `anon` et `authenticated`, seule la lecture filtrée rendue ;
+  aucune écriture directe. Écritures par les fonctions `crm_pilotage_*`
+  (`SECURITY DEFINER`, rôle revérifié, `EXECUTE` refusé à `public` et `anon`).
+- **À l'écran** : `canPiloter` (administrateur) masque l'entrée « Pilotage pub »
+  et les pages ; masquer n'est pas un droit — c'est la base qui refuse.
+- **Aucun chiffre de commission** n'entre dans une table lisible par un
+  commercial (`property_public_config`, notamment).
+- **Journal d'audit** : lisible par les managers (politique existante). Les
+  événements du pilotage n'y portent donc que des identifiants, jamais un
+  montant, un taux, une part ou un motif. Les masquer aussi aux managers est une
+  décision ouverte ([05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md), E 26).
+

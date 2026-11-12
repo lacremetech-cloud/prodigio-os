@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/modules/crm/auth/actions";
 import { roleLabels } from "@/modules/crm/labels";
-import { isCommercialOnly, type CrmRole } from "@/modules/crm/auth/roles";
+import { canPiloter, isCommercialOnly, type CrmRole } from "@/modules/crm/auth/roles";
 import { Avatar } from "@/components/crm/ui";
 import { ThemeProvider } from "@/components/crm/theme/theme-provider";
 import {
@@ -54,6 +54,14 @@ const UNIVERS: Record<Univers, { label: string; accueil: string; items: NavItem[
 /** Ordre d'affichage de la bascule. */
 const ORDRE_UNIVERS: Univers[] = ["mandats", "biens"];
 
+/**
+ * Le pilotage pub — commissions, parts, coûts, dépenses publicitaires — est
+ * réservé aux administrateurs (décision du 12/11/2026). L'entrée n'est montrée
+ * qu'à eux ; la base, elle, refuse les autres quoi qu'il arrive. Il vit dans
+ * l'univers Biens : il parle de vendre des biens.
+ */
+const NAV_PILOTAGE: NavItem = { href: "/crm/pilotage/donnees", label: "Pilotage pub", icon: "◎" };
+
 /** Entrees communes aux deux univers : elles ne changent pas de couleur. */
 const NAV_HAUT: NavItem[] = [
   /* « Accueil » et non « Vue d'ensemble » : cette entrée mène au choix des
@@ -94,7 +102,8 @@ export function universDeLaRoute(pathname: string): Univers {
   if (
     pathname.startsWith("/crm/biens") ||
     pathname.startsWith("/crm/acquereurs") ||
-    pathname.startsWith("/crm/visites")
+    pathname.startsWith("/crm/visites") ||
+    pathname.startsWith("/crm/pilotage")
   ) {
     return "biens";
   }
@@ -169,13 +178,17 @@ function Bascule({ actif, onNavigate }: { actif: Univers; onNavigate?: () => voi
 function NavLinks({
   onNavigate,
   commercial,
+  pilote = false,
 }: {
   onNavigate?: () => void;
   commercial: boolean;
+  /** Administrateur : l'entrée « Pilotage pub » s'ajoute à l'univers Biens. */
+  pilote?: boolean;
 }) {
   const pathname = usePathname();
   const actif = universDeLaRoute(pathname);
   const univers = UNIVERS[actif];
+  const items = actif === "biens" && pilote ? [...univers.items, NAV_PILOTAGE] : univers.items;
 
   if (commercial) {
     return (
@@ -198,7 +211,7 @@ function NavLinks({
       <Bascule actif={actif} onNavigate={onNavigate} />
 
       <nav className="flex flex-col gap-1" aria-label={univers.label}>
-        {univers.items.map((item) => (
+        {items.map((item) => (
           <Lien key={item.href} item={item} actif={isActive(pathname, item)} onNavigate={onNavigate} />
         ))}
       </nav>
@@ -304,6 +317,7 @@ export function CrmShell({
   const router = useRouter();
   // L'univers actif teinte toute la coquille via `--crm-univers`.
   const commercial = isCommercialOnly(roles);
+  const pilote = canPiloter(roles);
   // Le commercial ne quitte jamais l'univers des biens : la bascule n'existe
   // pas pour lui, et l'accent doit rester le sien.
   const universRoute = universDeLaRoute(usePathname());
@@ -343,7 +357,7 @@ export function CrmShell({
           <Brand espace={espace} />
         </div>
         <div className="crm-scroll mt-6 min-h-0 flex-1 overflow-y-auto">
-          <NavLinks commercial={commercial} />
+          <NavLinks commercial={commercial} pilote={pilote} />
         </div>
         <UserCard name={name} photo={photo} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
       </aside>
@@ -361,7 +375,7 @@ export function CrmShell({
               <Brand espace={espace} />
             </div>
             <div className="crm-scroll mt-6 min-h-0 flex-1 overflow-y-auto">
-              <NavLinks commercial={commercial} onNavigate={() => setOpen(false)} />
+              <NavLinks commercial={commercial} pilote={pilote} onNavigate={() => setOpen(false)} />
             </div>
             <UserCard name={name} photo={photo} roleLabel={primary ? roleLabels[primary] : "Sans rôle"} />
           </aside>

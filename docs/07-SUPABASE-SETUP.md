@@ -787,3 +787,71 @@ envoi réel ait lieu — il n'est pas renseigné.
 
 Variables à créer manuellement dans Vercel (aucune n'est requise pour que
 l'application fonctionne) : voir [21-COMMUNICATIONS.md](21-COMMUNICATIONS.md) §12.
+
+---
+
+## 14. Pilotage pub — étape 1 (`20261112150000_pilotage_conditions_lots_et_couts_fixes`) — **NON APPLIQUÉE**
+
+Détail fonctionnel : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
+
+### Ce qu'elle crée
+
+- Quatre tables, **RLS active**, lecture réservée à l'administrateur
+  (`crm_has_role('administrateur')`), droits par défaut retirés à `anon` et
+  `authenticated`, aucune écriture directe : `pilotage_conditions`,
+  `pilotage_lots`, `pilotage_lot_versions`, `pilotage_couts_fixes`.
+- Quatre fonctions d'écriture `SECURITY DEFINER` (`search_path` figé,
+  administrateur seul, audit sans montant), `EXECUTE` refusé à `public` et
+  `anon` : `crm_pilotage_enregistrer_conditions`, `crm_pilotage_enregistrer_lot`,
+  `crm_pilotage_saisir_cout_fixe`, `crm_pilotage_annuler_cout_fixe`.
+- Deux fonctions de déclencheur (`pilotage_ligne_immuable`,
+  `pilotage_cout_fixe_garde`), exécutables par **aucun** client : aucune ligne
+  ne se modifie ni ne s'efface, sauf l'annulation d'un coût, une fois.
+
+### Ce qu'elle modifie sur l'existant
+
+| Objet | Modification | Nature |
+|---|---|---|
+| `audit_events` | CHECK `entity_type` (18 → 21 valeurs) et `event_type` (84 → 89) **réécrits en entier** | **Additive** — aucune valeur retirée (test `src/modules/crm/audit-contraintes.test.ts`) |
+
+**Aucune donnée insérée.** Vérifié localement par empreintes, sur une base
+rejouant toutes les migrations : politiques, fonctions, contraintes (hors les
+deux listes d'audit), droits de table et déclencheurs **préexistants
+strictement identiques** avant et après. Rejouée deux fois de suite : sans
+erreur.
+
+### Application
+
+Une seule fois, par l'outil officiel Supabase ou l'éditeur SQL (le fichier est
+transactionnel : `begin` / `commit`). Tant qu'elle n'est pas appliquée, les
+pages `/crm/pilotage/donnees` affichent « Pas encore installé ».
+
+⚠️ Les aperçus Vercel utilisent la base de production : une fois la migration
+appliquée, tout ce qui est saisi depuis un aperçu est **réel**.
+
+### Contrôles après application
+
+```sql
+-- Quatre tables, RLS active.
+select tablename, rowsecurity from pg_tables
+ where schemaname = 'public' and tablename like 'pilotage_%' order by 1;
+
+-- Aucun droit pour anon, aucune écriture directe pour authenticated.
+select table_name, grantee, string_agg(privilege_type, ', ' order by privilege_type)
+  from information_schema.role_table_grants
+ where table_schema = 'public' and table_name like 'pilotage_%'
+   and grantee in ('anon', 'authenticated')
+ group by 1, 2 order by 1, 2;
+-- attendu : authenticated | SELECT, sur les quatre tables ; aucune ligne anon.
+
+-- Fonctions : anon ne peut rien exécuter.
+select p.proname, has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie
+  from pg_proc p where p.proname like '%pilotage%' order by 1;
+-- attendu : anon = false partout ; authentifie = true pour les quatre crm_pilotage_*.
+
+-- Listes d'audit élargies.
+select conname, (select count(*) from regexp_matches(pg_get_constraintdef(oid), '''([a-z_]+)''', 'g'))
+  from pg_constraint where conname in ('audit_events_event_type_check', 'audit_events_entity_type_check');
+-- attendu : 89 et 21.
+```

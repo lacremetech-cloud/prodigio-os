@@ -52,6 +52,21 @@ des **paramètres configurables**, jamais comme des constantes codées en dur.
 | 19 | **Durées de conservation** | À définir par type de donnée ; par défaut **minimisation**. | Rétention, purge/archivage. |
 | 20 | **Validation juridique avant production** | **Obligatoire** avant mise en production des traitements RGPD. | Passage en production. |
 
+## E. Pilotage pub (décision du 12/11/2026)
+
+Voir [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md). Les règles de calcul ont été
+validées par Victor le 12/11/2026 ; restent ouverts :
+
+| # | Question ouverte | Statut / hypothèse de travail | Impact si changée |
+|---|---|---|---|
+| 21 | **Commission des Airelles : sur le prix HT de la grille du promoteur ?** | **Non tranché.** Aujourd'hui, le prix HT de la grille est **pris comme prix affiché** (nature du prix `ht_grille_promoteur`, signalée à l'écran). | Commission potentielle des Airelles. |
+| 22 | **Base HT des honoraires** | La règle validée suppose un **taux de commission TTC**. Avec une base HT ou « à confirmer », **aucune commission n'est calculée** : une autre formule reste à valider si un bien l'exige. | Tout bien dont le taux serait HT. |
+| 23 | **Commission encaissée sans prix de vente final** | **Hypothèse retenue : « manquante »** tant que le prix final n'est pas saisi — pas de repli sur le prix affiché, qui n'est pas ce qui a été payé. À confirmer. | Commission encaissée, ROAS réel. |
+| 24 | **Part de Prodigio : conditions du bien ou photographie du mandat ?** | Pour un bien sous mandat, la part saisie dans les conditions **prime** ; laissée vide, celle de la photographie du mandat s'applique ; un écart est **signalé**. La constitution range les parts dans des règles par partenaire × segment : les conditions par bien en sont **distinctes** et ne réinterprètent aucun mandat. | Commission des biens sous mandat. |
+| 25 | **Taux de TVA des honoraires** | **Saisi avec chaque version** des conditions (20 % dans la règle validée) ; jamais codé en dur. | Commission HT. |
+| 26 | **Événements du pilotage au journal d'audit** | Le journal est lisible par les managers : les événements du pilotage n'y portent **aucun montant**, seulement des identifiants. Un manager voit donc qu'une saisie a eu lieu, pas son contenu. Les masquer aussi aux managers demanderait de modifier la politique `audit_events_crm_read` — **non fait, à décider**. | Cloisonnement du pilotage. |
+| 27 | **Répartition d'un coût commun aux lots** | Au **prorata du prix** des lots (règle validée) ; appliquée à l'étape 3, sur la page Pilotage. | Rentabilité par lot. |
+
 ## Principes en attendant les décisions
 
 - Le **seuil premium**, les **partages** et la **base HT/TTC** restent des

@@ -215,6 +215,11 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   Configuration du formulaire acquéreur pour la Villa Jean Jaurès : valeurs,
   marche à suivre depuis l'interface de production, et ordre des opérations.
   **Préparée, non appliquée.**
+- [docs/33-PILOTAGE-PUB.md](docs/33-PILOTAGE-PUB.md) — Pilotage pub (décision du
+  12/11/2026) : relier la dépense publicitaire aux commissions, bien par bien,
+  pour les seuls administrateurs. Étape 1 : conditions de commercialisation
+  versionnées, lots, coûts fixes, calcul exact des commissions.
+  **Migration non encore appliquée** — voir docs/07 §14.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —
