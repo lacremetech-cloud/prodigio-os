@@ -56,6 +56,29 @@ export function ecrireNavigation(params: {
   stage?: string;
   /** Responsable : un identifiant de membre, ou « aucun ». */
   responsable?: string;
+  /**
+   * L'ORDRE DE LA LISTE, écrit `?tri=`.
+   *
+   * Il voyage comme les filtres, et pour la même raison. Il était le dernier à
+   * ne vivre que dans la mémoire du composant : on triait par date d'arrivée,
+   * on ouvrait un dossier, on revenait — et la liste était retriée par urgence
+   * sans que rien à l'écran ne le signale. C'est plus sournois qu'un filtre
+   * perdu : un filtre perdu se voit, la liste s'allonge ; un tri perdu ne se
+   * voit pas, on croit seulement que les dossiers ont bougé.
+   *
+   * `urgence` est l'ordre par défaut, et ne s'écrit pas : les adresses restent
+   * courtes tant qu'on n'a rien changé.
+   */
+  tri?: string;
+  /**
+   * La recherche texte, écrite `?q=`.
+   *
+   * Elle non plus ne survivait pas à l'ouverture d'une fiche : on cherchait un
+   * nom, on ouvrait le dossier, on revenait, et il fallait retaper. Le
+   * composant ne la pose dans l'adresse qu'APRÈS une pause de frappe — voir
+   * `buyer-inbox` — pour ne pas la réécrire à chaque lettre.
+   */
+  recherche?: string;
 }): string {
   const q = new URLSearchParams();
   if (params.projets.length > 0) q.set("projets", params.projets.join(","));
@@ -69,8 +92,31 @@ export function ecrireNavigation(params: {
   if (params.responsable && params.responsable !== "tous") {
     q.set("responsable", params.responsable);
   }
+  if (params.tri && params.tri !== TRI_PAR_DEFAUT) q.set("tri", params.tri);
+  if (params.recherche && params.recherche.trim()) q.set("q", params.recherche.trim());
   const s = q.toString();
   return s ? `?${s}` : "";
+}
+
+/** Les ordres possibles de la liste, et celui qu'on applique sans rien demander. */
+export const TRIS_ACQUEREURS = ["urgence", "arrivee", "arrivee_ancienne", "activite"] as const;
+export type TriAcquereurs = (typeof TRIS_ACQUEREURS)[number];
+export const TRI_PAR_DEFAUT: TriAcquereurs = "urgence";
+
+/**
+ * `?tri=`. Une valeur inconnue rend l'ordre par défaut plutôt qu'une liste
+ * vide ou une exception : un lien copié d'une version plus ancienne du CRM
+ * doit continuer d'ouvrir un écran utilisable.
+ */
+export function lireTri(valeur: string | string[] | undefined): TriAcquereurs {
+  const v = Array.isArray(valeur) ? valeur[0] : valeur;
+  return TRIS_ACQUEREURS.includes(v as TriAcquereurs) ? (v as TriAcquereurs) : TRI_PAR_DEFAUT;
+}
+
+/** `?q=`. Le texte cherché, borné : une adresse n'est pas un champ de saisie. */
+export function lireRecherche(valeur: string | string[] | undefined): string {
+  const v = Array.isArray(valeur) ? valeur[0] : valeur;
+  return typeof v === "string" ? v.slice(0, 120) : "";
 }
 
 /**

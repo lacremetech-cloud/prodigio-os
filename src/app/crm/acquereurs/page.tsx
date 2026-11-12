@@ -12,6 +12,8 @@ import {
   dansLaSelection,
   ecrireNavigation,
   lireProjets,
+  lireRecherche,
+  lireTri,
   lireVue,
 } from "@/modules/buyers/crm/navigation";
 import { comptesParProjet } from "@/modules/buyers/crm/comptes";
@@ -51,6 +53,11 @@ export default async function BuyersInboxPage({
   /* Le niveau de qualification vient de l'adresse, comme la tranche de budget :
      c'est ce qui le conserve en passant du pipeline à la liste. */
   const qualif = lireQualificationFiltre(params.qualification);
+  /* L'ordre de la liste et la recherche viennent de l'adresse, comme les
+     filtres : c'est ce qui les rend au retour d'une fiche, et ce qui permet
+     d'envoyer à un collègue « ma liste, triée par arrivée ». */
+  const tri = lireTri(params.tri);
+  const recherche = lireRecherche(params.q);
 
   // Les compteurs de la barre portent sur les dossiers ACTIFS, tous projets
   // confondus : ils doivent rester lisibles quelle que soit la sélection, c'est
@@ -148,6 +155,8 @@ export default async function BuyersInboxPage({
           typeof params.responsable === "string" ? params.responsable : undefined
         }
         signalInitial={signal}
+        triInitial={tri}
+        rechercheInitiale={recherche}
         /* Le badge de projet n'a de sens que si plusieurs projets sont à
            l'écran : sous un onglet de projet, le répéter sur chaque ligne
            n'apprend rien et prend la place du reste. */
@@ -161,6 +170,8 @@ export default async function BuyersInboxPage({
           signal,
           budget: typeof params.budget === "string" ? params.budget : undefined,
           qualification: qualif,
+          tri,
+          recherche,
         })}
       />
     </div>

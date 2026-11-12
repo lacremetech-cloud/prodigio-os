@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
+import { lienDeRetour } from "@/modules/crm/retour";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canDecideMandate, canOperate, canViewContactDetails } from "@/modules/crm/auth/roles";
 import {
@@ -61,6 +62,8 @@ export default async function PropertyCockpitPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  /* Le retour reconduit au portefeuille tel qu'on l'avait filtré. */
+  const retour = lienDeRetour("/crm/biens", await searchParams);
   const sp = await searchParams;
   const highlightInterest = Array.isArray(sp.interet) ? sp.interet[0] : sp.interet ?? null;
   const session = await requireCrmSession(`/crm/biens/${id}`);
@@ -129,7 +132,7 @@ export default async function PropertyCockpitPage({
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
       {/* Fil d'Ariane */}
-      <Link href="/crm/biens" className="text-xs text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]">
+      <Link href={retour} className="text-xs text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]">
         ← Portefeuille des biens
       </Link>
 

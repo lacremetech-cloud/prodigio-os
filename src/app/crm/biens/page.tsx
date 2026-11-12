@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import { chaineDeRetour } from "@/modules/crm/retour";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canDecideMandate } from "@/modules/crm/auth/roles";
 import { listProperties, type PropertyPortfolioItem } from "@/modules/properties/factory/queries";
@@ -71,6 +72,9 @@ export default async function PropertiesPortfolioPage({
   const session = await requireCrmSession("/crm/biens");
   const canCreate = canDecideMandate(session.roles);
   const sp = await searchParams;
+  /* L'état du portefeuille, recopié dans chaque lien de fiche : sans lui, on
+     revenait d'un bien sur le portefeuille entier, à refiltrer. */
+  const contexte = chaineDeRetour(sp);
   const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] ?? "" : v ?? "");
   const filters: Filters = {
     q: str(sp.q).trim(),
@@ -189,6 +193,7 @@ export default async function PropertiesPortfolioPage({
                   key={item.property.id}
                   item={item}
                   couverture={couvertures.get(item.property.id) ?? null}
+                  contexte={contexte}
                 />
               ))}
             </ul>
@@ -202,9 +207,13 @@ export default async function PropertiesPortfolioPage({
 function PropertyCard({
   item,
   couverture,
+  contexte,
 }: {
   item: PropertyPortfolioItem;
   couverture: string | null;
+  /** L'état du portefeuille (recherche, statut, avancement, responsable),
+      recopié dans les liens : c'est ce que le « ← Retour » de la fiche rendra. */
+  contexte: string;
 }) {
   const { property: p, readiness } = item;
   const visual = propertyStatusVisual[p.status as PropertyStatus];
@@ -213,7 +222,7 @@ function PropertyCard({
   return (
     <li className="crm-panel flex min-w-0 flex-col overflow-hidden crm-fade-in">
       <Link
-        href={`/crm/biens/${p.id}`}
+        href={`/crm/biens/${p.id}${contexte}`}
         aria-hidden={couverture ? undefined : true}
         tabIndex={-1}
         className="crm-media-vide block aspect-[16/9] w-full overflow-hidden"
@@ -236,7 +245,7 @@ function PropertyCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <Link
-            href={`/crm/biens/${p.id}`}
+            href={`/crm/biens/${p.id}${contexte}`}
             className="crm-wrap text-[17px] font-bold text-[var(--crm-text)] hover:text-[var(--crm-univers)]"
           >
             {propertyDisplayName(p)}
@@ -283,7 +292,7 @@ function PropertyCard({
         <p className="text-[11px] crm-aging--frais">✔ Prêt à lancer</p>
       ) : null}
 
-      <Link href={`/crm/biens/${p.id}`} className="crm-btn crm-btn--sm crm-btn--ghost mt-auto self-start">
+      <Link href={`/crm/biens/${p.id}${contexte}`} className="crm-btn crm-btn--sm crm-btn--ghost mt-auto self-start">
         Ouvrir le cockpit
       </Link>
       </div>

@@ -32,6 +32,7 @@ import {
   QUALIFICATION_FILTERS,
   qualificationCorrespond,
 } from "@/modules/buyers/crm/qualification-filtre";
+import { lireTri, TRI_PAR_DEFAUT, type TriAcquereurs } from "@/modules/buyers/crm/navigation";
 
 /**
  * Boîte de réception opérationnelle des acquéreurs.
@@ -52,7 +53,10 @@ import {
  * qui attendent depuis trois semaines. Un seul sens obligeait a lire la liste
  * a l'envers de tete.
  */
-type SortKey = "urgence" | "arrivee" | "arrivee_ancienne" | "activite";
+/* Les valeurs vivent dans `navigation`, avec les filtres : c'est ce module qui
+   les écrit dans l'adresse et les relit au retour d'une fiche. Les redéclarer
+   ici ferait diverger ce que l'écran propose de ce que l'adresse sait porter. */
+type SortKey = TriAcquereurs;
 
 
 function urgency(row: BuyerInboxRow): number {
@@ -74,6 +78,8 @@ export function BuyerInbox({
   qualificationInitiale,
   stageInitial,
   responsableInitial,
+  triInitial,
+  rechercheInitiale,
   moiUserId = null,
   peutAffecterAutrui = false,
   chargeA,
@@ -104,6 +110,10 @@ export function BuyerInbox({
   /** Étape et responsable posés par l'URL — mêmes raisons. */
   stageInitial?: string;
   responsableInitial?: string;
+  /** L'ordre de la liste (`?tri=`) et la recherche (`?q=`), posés par l'URL eux
+      aussi : c'est ce qui les fait survivre à l'aller-retour vers une fiche. */
+  triInitial?: string;
+  rechercheInitiale?: string;
   /** Mon identifiant, et mon droit de confier un dossier a autrui. */
   moiUserId?: string | null;
   peutAffecterAutrui?: boolean;
@@ -111,7 +121,7 @@ export function BuyerInbox({
   chargeA: string;
 }) {
   const [signal, setSignal] = useState<Signal>(signalInitial);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(rechercheInitiale ?? "");
   /* Replies sur telephone, deployes au-dela : voir le bloc de filtres. */
   const [filtresDeplies, setFiltresDeplies] = useState(false);
 
@@ -152,7 +162,22 @@ export function BuyerInbox({
   );
   const [owner, setOwner] = useState<string>(responsableInitial ?? "tous");
 
-  const [sort, setSort] = useState<SortKey>("urgence");
+  const [sort, setSort] = useState<SortKey>(() => lireTri(triInitial));
+
+  /**
+   * La recherche écrite dans l'adresse, en retard d'une pause de frappe.
+   *
+   * On veut deux choses contradictoires : que la recherche survive à
+   * l'ouverture d'une fiche, et que l'adresse ne se réécrive pas vingt fois
+   * par mot. Un délai de 400 ms les concilie — on tape sans rien déclencher,
+   * et dès qu'on s'arrête l'adresse rattrape. Le lien vers la fiche, lui,
+   * emporte la valeur VIVANTE : cliquer juste après avoir tapé ne perd rien.
+   */
+  const [rechercheDansAdresse, setRechercheDansAdresse] = useState(search);
+  useEffect(() => {
+    const t = setTimeout(() => setRechercheDansAdresse(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   /* Un filtre replie qui filtre encore est un piege : on cherche un nom, il
      n'apparait pas, et rien a l'ecran ne dit pourquoi. La pastille porte donc
@@ -184,8 +209,12 @@ export function BuyerInbox({
    * `replace` et non `push` : filtrer n'est pas naviguer. Sinon, revenir en
    * arrière déferait les filtres un par un au lieu de quitter la liste.
    *
-   * La recherche texte n'y est PAS : elle change à chaque frappe, et personne
-   * ne veut d'une adresse qui se réécrit vingt fois par mot.
+   * LA RECHERCHE ET LE TRI Y SONT MAINTENANT. Ils en étaient absents, et
+   * c'était le même défaut, à moitié corrigé : on triait par date d'arrivée ou
+   * on cherchait un nom, on ouvrait un dossier, on revenait — et l'ordre comme
+   * la recherche étaient repartis de zéro. La recherche passe par une pause de
+   * frappe (`rechercheDansAdresse`) : l'adresse ne se réécrit pas vingt fois
+   * par mot, mais elle finit toujours par savoir ce qu'on cherche.
    */
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -199,6 +228,8 @@ export function BuyerInbox({
     poser("qualification", qualif);
     poser("stage", stage);
     poser("responsable", owner);
+    poser("tri", sort === TRI_PAR_DEFAUT ? null : sort);
+    poser("q", rechercheDansAdresse.trim() || null);
     const chaine = q.toString();
     const cible = `${window.location.pathname}${chaine ? `?${chaine}` : ""}`;
     /* Ne rien écrire quand rien ne change : une entrée d'historique identique
@@ -206,7 +237,7 @@ export function BuyerInbox({
     if (cible !== `${window.location.pathname}${window.location.search}`) {
       window.history.replaceState(null, "", cible);
     }
-  }, [signal, budget, qualif, stage, owner]);
+  }, [signal, budget, qualif, stage, owner, sort, rechercheDansAdresse]);
 
   /**
    * Le contexte emporté vers la fiche : l'état VIVANT des filtres, pas la
@@ -225,9 +256,14 @@ export function BuyerInbox({
     poser("qualification", qualif);
     poser("stage", stage);
     poser("responsable", owner);
+    /* Le tri et la recherche VIVANTS, pas ceux de l'adresse : la recherche
+       attend une pause de frappe avant d'y être écrite, et cliquer sur une
+       ligne juste après avoir tapé ne doit pas perdre le mot qu'on cherchait. */
+    poser("tri", sort === TRI_PAR_DEFAUT ? null : sort);
+    poser("q", search.trim() || null);
     const chaine = q.toString();
     return chaine ? `?${chaine}` : "";
-  }, [contexte, signal, budget, qualif, stage, owner]);
+  }, [contexte, signal, budget, qualif, stage, owner, sort, search]);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();

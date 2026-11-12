@@ -114,10 +114,11 @@ export default async function BuyerProfilePage({
     const brut = Array.isArray(nav.projets) ? nav.projets.join(",") : nav.projets ?? "";
     return brut.split(",").map((v) => v.trim()).filter(Boolean);
   })();
-  /* TOUS les filtres reviennent, pas seulement le projet et le signal.
-     Budget, qualification, étape et responsable en étaient absents : on
-     revenait d'une fiche sur une liste à moitié filtrée, et il fallait tout
-     remettre à chaque dossier traité. */
+  /* TOUT revient : les filtres, MAIS AUSSI l'ordre de la liste et la
+     recherche. Budget, qualification, étape et responsable avaient déjà été
+     ajoutés ; le tri et la recherche manquaient encore, et c'était le même
+     défaut vu de l'autre bout — on revenait sur une liste re-triée par défaut,
+     ou vidée du nom qu'on venait de chercher, à chaque dossier traité. */
   const texte = (v: string | string[] | undefined) =>
     typeof v === "string" ? v : undefined;
   const retour =
@@ -130,6 +131,8 @@ export default async function BuyerProfilePage({
       qualification: texte(nav.qualification),
       stage: texte(nav.stage),
       responsable: texte(nav.responsable),
+      tri: texte(nav.tri),
+      recherche: texte(nav.q),
     });
   const session = await requireCrmSession(`/crm/acquereurs/${id}`);
   const canViewContacts = canViewContactDetails(session.roles);

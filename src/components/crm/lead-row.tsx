@@ -26,9 +26,13 @@ import {
 export function LeadRow({
   lead,
   canViewDetails,
+  contexte = "",
 }: {
   lead: Lead;
   canViewDetails: boolean;
+  /** L'état de la liste (filtre, tri, recherche, page), recopié dans le lien :
+      c'est lui que la fiche rendra par son « ← Retour aux leads ». */
+  contexte?: string;
 }) {
   const name = contactName(lead.contactFirstName, lead.contactLastName);
   const email = maskContactValue(lead.contactEmail, canViewDetails);
@@ -38,7 +42,7 @@ export function LeadRow({
 
   return (
     <Link
-      href={`/crm/mandats/${lead.opportunityId}`}
+      href={`/crm/mandats/${lead.opportunityId}${contexte}`}
       className="group flex flex-col gap-3 rounded-[12px] border border-[var(--crm-line)] bg-[var(--crm-panel)] p-4 transition-colors hover:border-[var(--crm-line-hover)] hover:bg-[var(--crm-panel-2)] sm:flex-row sm:items-center sm:gap-4"
     >
       <div className="min-w-0 flex-1">

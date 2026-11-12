@@ -11,6 +11,7 @@ import {
   dansLaSelection,
   ecrireNavigation,
   lireProjets,
+  lireRecherche,
   lireVue,
 } from "@/modules/buyers/crm/navigation";
 import { FILTRES_RAPIDES, lireSignal, porteLeSignal } from "@/modules/buyers/crm/signaux";
@@ -65,6 +66,9 @@ export default async function BuyersPipelinePage({
      « les plus d'1 M€ encore à qualifier » est la question qu'on se pose, pas
      « soit le budget, soit la qualification ». */
   const qualif = lireQualificationFiltre(params.qualification);
+  /* La recherche vient de l'adresse, comme les filtres : c'est ce qui la rend
+     au retour d'une fiche au lieu de rouvrir le pipeline entier. */
+  const recherche = lireRecherche(params.q);
   /* LES COMPTEURS DISENT CE QUE LA VUE MONTRE.
      Ils comptaient TOUS les dossiers, y compris les non qualifies que le
      pipeline ecarte : la barre annonçait 75 quand le tableau en posait 72, et
@@ -293,7 +297,9 @@ export default async function BuyersPipelinePage({
           signal,
           budget,
           qualification: qualif,
+          recherche,
         })}
+        rechercheInitiale={recherche}
         rows={lignes}
         membres={memberOptions}
         /* Qui peut TRAITER un dossier peut le confier : les commerciaux

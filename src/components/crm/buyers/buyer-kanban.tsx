@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
@@ -54,6 +54,7 @@ export function BuyerKanbanBoard({
   canMove,
   montrerProjet = true,
   contexte = "",
+  rechercheInitiale = "",
   rows = [],
   membres = [],
   moiUserId = null,
@@ -78,6 +79,9 @@ export function BuyerKanbanBoard({
   montrerProjet?: boolean;
   /** Selection courante, recopiee dans chaque lien de fiche. */
   contexte?: string;
+  /** La recherche posee par l'adresse (`?q=`) : c'est ce qui la rend au retour
+      d'une fiche, au lieu de rouvrir le pipeline entier. */
+  rechercheInitiale?: string;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -95,7 +99,46 @@ export function BuyerKanbanBoard({
   const [grabbed, setGrabbed] = useState<Grabbed | null>(null);
 
   // Filtres : stables au déplacement (ils ne dépendent pas de la position).
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(rechercheInitiale);
+
+  /**
+   * LA RECHERCHE VIT DANS L'ADRESSE, comme les filtres de la page.
+   *
+   * Elle ne vivait qu'ici : on cherchait un nom dans le pipeline, on ouvrait
+   * la fiche, on revenait — et les colonnes étaient de nouveau pleines, le mot
+   * cherché effacé. Le délai de 400 ms évite de réécrire l'adresse à chaque
+   * lettre ; `replaceState` évite de redemander la page au serveur, ce qui
+   * remonterait le tableau et perdrait le défilement.
+   */
+  const [rechercheDansAdresse, setRechercheDansAdresse] = useState(search);
+  useEffect(() => {
+    const t = setTimeout(() => setRechercheDansAdresse(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const net = rechercheDansAdresse.trim();
+    if (net) q.set("q", net);
+    else q.delete("q");
+    const chaine = q.toString();
+    const cible = `${window.location.pathname}${chaine ? `?${chaine}` : ""}`;
+    if (cible !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(null, "", cible);
+    }
+  }, [rechercheDansAdresse]);
+
+  /* Le contexte emporté vers une fiche : celui de la page, complété par la
+     recherche VIVANTE. Cliquer sur une carte juste après avoir tapé ne doit
+     pas perdre le mot — la version écrite dans l'adresse a 400 ms de retard. */
+  const contexteVivant = useMemo(() => {
+    const q = new URLSearchParams(contexte.startsWith("?") ? contexte.slice(1) : contexte);
+    const net = search.trim();
+    if (net) q.set("q", net);
+    else q.delete("q");
+    const chaine = q.toString();
+    return chaine ? `?${chaine}` : "";
+  }, [contexte, search]);
 
   /*
    * Tout ce tableau etait indexe sur la PERSONNE. Depuis qu'une carte
@@ -389,7 +432,7 @@ export function BuyerKanbanBoard({
                       }
                       notice={notice?.buyerProfileId === cleCarte(c) ? notice : null}
                       montrerProjet={montrerProjet}
-                      contexte={contexte}
+                      contexte={contexteVivant}
                       currentStage={stageOf(c)}
                       onDragStart={(e) => {
                         e.dataTransfer.setData("text/plain", cleCarte(c));
@@ -426,7 +469,7 @@ export function BuyerKanbanBoard({
           membres={membres}
           moiUserId={moiUserId}
           peutAffecterAutrui={peutAffecterAutrui}
-          contexte={contexte}
+          contexte={contexteVivant}
           onFermer={() => {
             if (peutQuitter()) setOuvert(null);
           }}

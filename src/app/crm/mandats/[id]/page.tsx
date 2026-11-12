@@ -20,6 +20,7 @@ import {
   appointmentStatusLabels,
   appointmentStatusTone,
 } from "@/modules/calendar/labels";
+import { lienDeRetour } from "@/modules/crm/retour";
 import { formatAppointmentRange } from "@/modules/calendar/format";
 import { DEFAULT_ESTIMATION_CONFIG } from "@/modules/calendar/config";
 import { EstimationScheduler } from "@/components/crm/calendar/estimation-scheduler";
@@ -158,10 +159,15 @@ const FACTOR_LABELS: Record<string, string> = {
 
 export default async function LeadDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  /* Le retour reconduit à l'écran d'où l'on vient : filtre, tri, recherche et
+     page ont voyagé dans l'adresse depuis la ligne cliquée. */
+  const retour = lienDeRetour("/crm/mandats", await searchParams);
   const session = await requireCrmSession(`/crm/mandats/${id}`);
   const detail = await getLeadDetail(id);
   if (!detail) notFound();
@@ -240,7 +246,7 @@ export default async function LeadDetailPage({
     <div className="mx-auto flex max-w-6xl flex-col gap-5">
       {/* En-tête */}
       <div className="flex flex-col gap-3">
-        <Link href="/crm/mandats" className="text-xs text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]">
+        <Link href={retour} className="text-xs text-[var(--crm-text-dim)] hover:text-[var(--crm-text)]">
           ← Retour aux leads
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">

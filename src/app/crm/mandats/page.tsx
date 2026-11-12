@@ -17,6 +17,7 @@ import {
 } from "@/modules/crm/leads";
 import { FilterBar } from "@/components/crm/filter-bar";
 import { LeadRow } from "@/components/crm/lead-row";
+import { chaineDeRetour } from "@/modules/crm/retour";
 import { EmptyState } from "@/components/crm/ui";
 
 export const metadata: Metadata = { title: "Leads Mandats" };
@@ -47,6 +48,10 @@ export default async function LeadsInboxPage({
   const session = await requireCrmSession("/crm/mandats");
   const canView = canViewContactDetails(session.roles);
   const params = await searchParams;
+  /* L'état de cette liste, recopié dans chaque lien de fiche : c'est ce que le
+     « ← Retour aux leads » de la fiche rendra. Sans lui, on revenait sur la
+     liste complète, page 1, non triée, à chaque dossier ouvert. */
+  const contexte = chaineDeRetour(params);
 
   const quick = ([
     "tous",
@@ -122,7 +127,12 @@ export default async function LeadsInboxPage({
       ) : (
         <div className="flex flex-col gap-2.5">
           {visible.map((lead) => (
-            <LeadRow key={lead.opportunityId} lead={lead} canViewDetails={canView} />
+            <LeadRow
+              key={lead.opportunityId}
+              lead={lead}
+              canViewDetails={canView}
+              contexte={contexte}
+            />
           ))}
         </div>
       )}
