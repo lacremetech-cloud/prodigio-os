@@ -76,10 +76,10 @@ export function HomeHero() {
           <div className="flex w-full flex-col items-center justify-center gap-3.5 sm:flex-row">
             {/* CTA primaire : éligibilité. Halo doré doux et pulsé pour attirer
                 l'œil sans alourdir le bouton clair. */}
-            <div className="relative w-full sm:w-auto">
+            <div className="cta-halo-host relative w-full sm:w-auto">
               <span
                 aria-hidden="true"
-                className="animate-glow pointer-events-none absolute -inset-3 -z-10 rounded-full bg-[radial-gradient(60%_60%_at_50%_50%,rgba(203,180,136,0.5)_0%,rgba(203,180,136,0)_70%)] blur-xl"
+                className="cta-halo pointer-events-none absolute -inset-3 -z-10 rounded-full bg-[radial-gradient(60%_60%_at_50%_50%,rgba(203,180,136,0.5)_0%,rgba(203,180,136,0)_70%)] blur-xl"
               />
               <LandingCta href={ANALYSE_ROUTE} tone="contrast" size="xl" className="w-full sm:w-auto">
                 {hero.ctaPrimary}
