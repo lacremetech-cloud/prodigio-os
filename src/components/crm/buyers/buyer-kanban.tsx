@@ -648,6 +648,42 @@ function Card({
                 </dd>
               </dl>
             ) : null}
+
+            {/*
+              CE QUE LA PERSONNE CHERCHE, SANS OUVRIR LA FICHE.
+
+              Le défaut : pour traiter le vivier, il fallait ouvrir les
+              quarante-six dossiers l'un après l'autre pour relire ce que
+              chacun cherchait — et sans ça, impossible de mettre un bien en
+              face d'une personne.
+
+              La note était DÉJÀ dans le navigateur : le panneau de traitement
+              la reçoit avec le reste de la ligne. La carte, elle, la jetait.
+              L'afficher ne coûte donc pas un octet de réseau de plus.
+
+              Pourquoi la note plutôt que les critères structurés : ces
+              derniers sont déduits du bien par lequel la personne est arrivée.
+              Trente-huit des quarante-six dossiers du vivier portent
+              « villa / cassis », ce que la carte dit déjà. La note, elle, est
+              écrite par le commercial après l'appel — c'est la seule phrase
+              qui dise « cherche un 3 pièces avec vue, budget 800 k ».
+
+              Trois lignes : la note médiane fait 179 caractères et tient tout
+              entière. Au-delà, le texte complet reste accessible au survol, et
+              d'un clic dans le dossier.
+            */}
+            {row?.lastNote ? (
+              <div className="crm-kanban-note" title={row.lastNote}>
+                <span className="crm-kanban-note__quand">
+                  {row.lastNoteAt ? formatDateTime(row.lastNoteAt) : "Dernière note"}
+                  {row.lastNoteBy ? ` · ${row.lastNoteBy}` : ""}
+                </span>
+                {/* La coupe porte sur le TEXTE SEUL. Englober la date dans le
+                    bloc coupé lui faisait manger une des trois lignes, et la
+                    dernière ressortait tranchée en deux hors de l'encadré. */}
+                <span className="crm-kanban-note__texte">{row.lastNote}</span>
+              </div>
+            ) : null}
           </button>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">

@@ -177,3 +177,56 @@ describe("la carte montre les mêmes informations que la liste", () => {
     expect(carte(container).queryByText("Nouvel intérêt")).toBeNull();
   });
 });
+
+/**
+ * « Quand on met un lead dans Vivier, on aurait besoin de voir d'un seul coup
+ * d'œil ce que la personne recherche […] pour pouvoir mettre un bien en
+ * face. »
+ *
+ * Traiter le vivier demandait d'ouvrir les quarante-six dossiers l'un après
+ * l'autre. La note d'appel arrivait pourtant DÉJÀ dans le navigateur — le
+ * panneau de traitement la reçoit avec le reste de la ligne — mais la carte
+ * la jetait.
+ *
+ * Les critères structurés ne pouvaient pas rendre ce service : déduits du
+ * bien par lequel la personne est arrivée, trente-huit des quarante-six
+ * dossiers du vivier portent « villa / cassis », ce que la carte dit déjà.
+ */
+describe("la dernière note sur la carte", () => {
+  it("affiche ce que la personne cherche, sans ouvrir la fiche", () => {
+    const { container } = monter({
+      lastNote: "Cherche un 3 pièces avec vue mer, budget 800 k, pas pressé.",
+      lastNoteAt: "2026-11-18T09:30:00.000Z",
+      lastNoteBy: "Édouard",
+    });
+    expect(carte(container).getByText(/3 pièces avec vue mer/)).toBeTruthy();
+  });
+
+  it("porte le texte ENTIER en survol, même quand l'affichage le coupe", () => {
+    /* Trois lignes suffisent à la note médiane (179 caractères), pas aux plus
+       longues — 1 817 au maximum. Couper sans rien offrir d'autre perdrait la
+       fin de la phrase, qui est souvent le budget. */
+    const longue = "A".repeat(900);
+    const { container } = monter({ lastNote: longue, lastNoteAt: null, lastNoteBy: null });
+    const note = container.querySelector(".crm-kanban-note") as HTMLElement;
+    expect(note.getAttribute("title")).toBe(longue);
+  });
+
+  it("ne montre rien du tout quand il n'y a pas de note", () => {
+    /* Deux cent cinquante-neuf cartes de la colonne « À contacter » n'en ont
+       aucune : y écrire « Aucune note » ajouterait une ligne vide à chacune. */
+    const { container } = monter({ lastNote: null });
+    expect(container.querySelector(".crm-kanban-note")).toBeNull();
+  });
+
+  it("date la note : une phrase de juillet ne se lit pas comme celle d'hier", () => {
+    const { container } = monter({
+      lastNote: "Rappeler après les vacances.",
+      lastNoteAt: "2026-11-18T09:30:00.000Z",
+      lastNoteBy: "Nicolas",
+    });
+    const note = container.querySelector(".crm-kanban-note") as HTMLElement;
+    expect(note.textContent).toContain("Nicolas");
+    expect(note.textContent).toMatch(/18/);
+  });
+});
