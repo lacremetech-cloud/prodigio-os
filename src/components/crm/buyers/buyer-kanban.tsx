@@ -55,6 +55,7 @@ export function BuyerKanbanBoard({
   montrerProjet = true,
   contexte = "",
   rechercheInitiale = "",
+  resumeDisponible = false,
   rows = [],
   membres = [],
   moiUserId = null,
@@ -82,6 +83,9 @@ export function BuyerKanbanBoard({
   /** La recherche posee par l'adresse (`?q=`) : c'est ce qui la rend au retour
       d'une fiche, au lieu de rouvrir le pipeline entier. */
   rechercheInitiale?: string;
+  /** La mise en forme d'une note par IA est-elle configurée ? Décidé côté
+      serveur : la présence d'une clé d'API ne se devine pas du navigateur. */
+  resumeDisponible?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -458,6 +462,7 @@ export function BuyerKanbanBoard({
 
       {rowOuverte ? (
         <PanneauTraitement
+          resumeDisponible={resumeDisponible}
           /* La CLE porte la remise a zero : changer de dossier remonte le
              panneau, donc aucune saisie du precedent ne peut survivre. */
           key={ouvert}

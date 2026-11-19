@@ -76,6 +76,7 @@ export function PanneauTraitement({
   moiUserId = null,
   peutAffecterAutrui = false,
   contexte,
+  resumeDisponible = false,
 }: {
   row: BuyerInboxRow;
   position: number;
@@ -113,6 +114,9 @@ export function PanneauTraitement({
       « Retour à la liste » de la fiche complète de rendre l'écran d'où l'on
       vient, et pas la liste remise à zéro. */
   contexte: string;
+  /** La mise en forme par IA est-elle configurée ? Décidé côté serveur : la
+      présence d'une clé d'API ne se devine pas depuis le navigateur. */
+  resumeDisponible?: boolean;
 }) {
   /* `null` = général. L'activité appartient d'abord à la personne ; le bien
      est une précision qu'on apporte quand l'échange la mérite. */
@@ -628,6 +632,8 @@ export function PanneauTraitement({
             note={note}
             onNote={setNote}
             disabled={enCours}
+            buyerProfileId={row.buyerProfileId}
+            resumeDisponible={resumeDisponible}
           />
 
           <div className="crm-bloc__suite">

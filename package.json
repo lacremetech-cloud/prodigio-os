@@ -12,6 +12,7 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
     "@supabase/ssr": "0.12.4",
     "@supabase/supabase-js": "2.111.0",
     "libphonenumber-js": "1.12.23",

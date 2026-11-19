@@ -631,10 +631,14 @@ export function BuyerReopenForm({ buyerProfileId }: { buyerProfileId: string }) 
  */
 export function BuyerActivityForm({
   buyerProfileId,
+  resumeDisponible = false,
   interests,
   members,
 }: {
   buyerProfileId: string;
+  /** La mise en forme d'une note par IA est-elle configurée ? Décidé côté
+      serveur : la présence d'une clé d'API ne se devine pas du navigateur. */
+  resumeDisponible?: boolean;
   /** Les projets de la personne : une activité se rattache à l'un d'eux. */
   interests: { id: string; label: string }[];
   members: { userId: string; name: string }[];
@@ -688,6 +692,8 @@ export function BuyerActivityForm({
         />
 
         <BlocActivite
+          buyerProfileId={buyerProfileId}
+          resumeDisponible={resumeDisponible}
           activite={activite}
           onActivite={setActivite}
           quand={quandActivite}

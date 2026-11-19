@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { estResumeIaConfigure } from "@/config";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
 import { loadBuyerList, toInboxRow, toKanbanCard } from "@/modules/buyers/crm/queries";
@@ -284,6 +285,7 @@ export default async function BuyersPipelinePage({
       </div>
 
       <BuyerKanbanBoard
+        resumeDisponible={estResumeIaConfigure()}
         cards={cards}
         canMove={canMove}
         /* Sous un onglet de projet, repeter son nom sur chaque carte

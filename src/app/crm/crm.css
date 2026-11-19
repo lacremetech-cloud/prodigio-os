@@ -2799,3 +2799,42 @@
   color: var(--crm-text-faint);
   margin-bottom: 2px;
 }
+
+/* ===================================================================== */
+/*  Dicter la note, puis la mettre en forme                               */
+/* ===================================================================== */
+/* Deux boutons discrets sous la zone de texte. Discrets a dessein : la
+   saisie au clavier reste le geste par defaut, et un commercial qui ne veut
+   ni dicter ni passer par l'IA ne doit pas avoir l'impression qu'on lui
+   force la main. */
+.crm-note-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* A l'ecoute : le bouton le dit, et ne le dit pas QUE par la couleur — son
+   libelle passe a « Arreter la dictee ». Le point rouge pulse doucement,
+   comme un enregistrement, pour qu'on n'oublie pas le micro ouvert. */
+.crm-note-outils__ecoute {
+  border-color: var(--crm-danger);
+  color: var(--crm-danger);
+  animation: crm-note-pulse 1.6s ease-in-out infinite;
+}
+@keyframes crm-note-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.62; }
+}
+/* Les animations sont une gene pour certaines personnes, et la loi comme le
+   bon sens demandent de les respecter. */
+@media (prefers-reduced-motion: reduce) {
+  .crm-note-outils__ecoute { animation: none; }
+}
+.crm-note-outils__message {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--crm-text-faint);
+}
