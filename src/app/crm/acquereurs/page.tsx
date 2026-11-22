@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { membresAffectables } from "@/modules/crm/data/membres";
+import { estResumeIaConfigure } from "@/config";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import Link from "next/link";
 import { canArchiveBuyer, canTreatBuyers, canViewContactDetails } from "@/modules/crm/auth/roles";
@@ -134,6 +135,7 @@ export default async function BuyersInboxPage({
       />
 
       <BuyerInbox
+        resumeDisponible={estResumeIaConfigure()}
         rows={rows}
         members={memberOptions}
         /* Qui peut TRAITER un dossier peut le confier : les commerciaux

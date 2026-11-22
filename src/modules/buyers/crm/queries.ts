@@ -214,7 +214,7 @@ export async function loadBuyerList(
     { data: configsPubliques },
     { data: criteria },
     members,
-    { data: activityByInterest },
+    { data: activityByProfile },
   ] = await Promise.all([
     supabase
       .from("buyer_profiles")
@@ -254,10 +254,17 @@ export async function loadBuyerList(
       .select("buyer_profile_id, budget_min_cents, budget_max_cents")
       .limit(PLAFOND_LISTE),
     getMembersMap(),
-    // Tentatives, dernier appel et dernière note : agrégés EN BASE. Rapatrier
-    // toutes les activités ferait grossir la charge avec le nombre d'appels
-    // passés, pour afficher deux nombres et une phrase.
-    supabase.from("crm_buyer_interest_activity").select("*").limit(PLAFOND_LISTE),
+    /* Tentatives, dernier appel et dernière note : agrégés EN BASE. Rapatrier
+       toutes les activités ferait grossir la charge avec le nombre d'appels
+       passés, pour afficher deux nombres et une phrase.
+
+       PAR PERSONNE, et non par manifestation d'intérêt. L'autre vue,
+       `crm_buyer_interest_activity`, écarte toute activité sans `interest_id` —
+       et les écrans de saisie consignent l'échange sur la PERSONNE. Le
+       19 novembre, elle laissait donc passer 11 notes sur 280 et 11 appels sur
+       103 : le vivier entier s'affichait muet. Voir la migration
+       20261119120000. */
+    supabase.from("crm_buyer_profile_activity").select("*").limit(PLAFOND_LISTE),
   ]);
 
   const criteriaByProfile = new Map(
@@ -323,9 +330,9 @@ export async function loadBuyerList(
     return (duProjet.due_at ?? "9999") <= (generale.due_at ?? "9999") ? duProjet : generale;
   }
 
-  /** Résumé d'historique par manifestation, tel que la base l'a agrégé. */
+  /** Résumé d'historique par PERSONNE, tel que la base l'a agrégé. */
   interface ResumeActivite {
-    interest_id: string;
+    buyer_profile_id: string;
     call_attempts: number | null;
     last_call_at: string | null;
     last_call_outcome: string | null;
@@ -333,8 +340,8 @@ export async function loadBuyerList(
     last_note_at: string | null;
     last_note_by: string | null;
   }
-  const activiteParManifestation = new Map<string, ResumeActivite>(
-    ((activityByInterest ?? []) as ResumeActivite[]).map((a) => [a.interest_id, a]),
+  const activiteParPersonne = new Map<string, ResumeActivite>(
+    ((activityByProfile ?? []) as ResumeActivite[]).map((a) => [a.buyer_profile_id, a]),
   );
 
   const now = Date.now();
@@ -385,24 +392,12 @@ export async function loadBuyerList(
     const principale = parDate[0] ?? null;
     const property = principale ? propertyById.get(principale.property_id) : undefined;
 
-    /* L'historique se cumule sur toutes les manifestations : trois tentatives
-       sur Verdun et une sur Jean Jaures font quatre tentatives sur la
-       personne, pas deux colonnes de deux. */
-    const activites = profileInterests
-      .map((i) => activiteParManifestation.get(i.id))
-      .filter((a): a is ResumeActivite => Boolean(a));
-    const plusRecent = <T,>(
-      valeur: (a: ResumeActivite) => string | null,
-      champ: (a: ResumeActivite) => T,
-    ): T | null => {
-      let gagnant: ResumeActivite | null = null;
-      for (const a of activites) {
-        const d = valeur(a);
-        if (!d) continue;
-        if (!gagnant || d > (valeur(gagnant) ?? "")) gagnant = a;
-      }
-      return gagnant ? champ(gagnant) : null;
-    };
+    /* L'historique est celui de la PERSONNE : trois tentatives sur Verdun et
+       une sur Jean Jaures font quatre tentatives sur la personne, pas deux
+       colonnes de deux. Quelqu'un qui suit deux biens lit donc la meme
+       derniere note sur ses deux lignes — c'est exact, la note est la sienne
+       et non celle d'un bien. Mieux vaut la lire deux fois que pas du tout. */
+    const activite = activiteParPersonne.get(profile.id) ?? null;
 
     const nextTask = nextTaskPour(profile.id, principale?.id ?? null);
 
@@ -463,12 +458,17 @@ export async function loadBuyerList(
       budgetBand: parDate.find((i) => i.budget_choice)
         ? null
         : (parDate.find((i) => i.budget_band)?.budget_band ?? null),
-      callAttempts: activites.reduce((n, a) => n + (a.call_attempts ?? 0), 0),
-      lastCallAt: plusRecent((a) => a.last_call_at, (a) => a.last_call_at),
-      lastCallOutcome: plusRecent((a) => a.last_call_at, (a) => a.last_call_outcome),
-      lastNote: plusRecent((a) => a.last_note_at, (a) => a.last_note),
-      lastNoteAt: plusRecent((a) => a.last_note_at, (a) => a.last_note_at),
-      lastNoteBy: plusRecent((a) => a.last_note_at, (a) => a.last_note_by),
+      callAttempts: activite?.call_attempts ?? 0,
+      lastCallAt: activite?.last_call_at ?? null,
+      lastCallOutcome: activite?.last_call_outcome ?? null,
+      lastNote: activite?.last_note ?? null,
+      lastNoteAt: activite?.last_note_at ?? null,
+      /* UN NOM, PAS UN IDENTIFIANT. La base stocke `author_user_id` ; la carte
+         affichait « 0fdbfaa5-8f7b-4711-… » a cote de la date. La traduction se
+         fait ici, au seul endroit ou la table des membres est deja chargee. */
+      lastNoteBy: activite?.last_note_by
+        ? memberDisplayName(activite.last_note_by, members)
+        : null,
       // Le numéro appartient à la PERSONNE : invalide ici, invalide partout.
       phoneInvalid: contact?.phone_status === "invalide",
     });

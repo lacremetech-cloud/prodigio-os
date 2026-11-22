@@ -80,6 +80,7 @@ export function BuyerInbox({
   responsableInitial,
   triInitial,
   rechercheInitiale,
+  resumeDisponible = false,
   moiUserId = null,
   peutAffecterAutrui = false,
   chargeA,
@@ -114,6 +115,9 @@ export function BuyerInbox({
       aussi : c'est ce qui les fait survivre à l'aller-retour vers une fiche. */
   triInitial?: string;
   rechercheInitiale?: string;
+  /** La mise en forme d'une note par IA est-elle configurée ? Décidé côté
+      serveur : la présence d'une clé d'API ne se devine pas du navigateur. */
+  resumeDisponible?: boolean;
   /** Mon identifiant, et mon droit de confier un dossier a autrui. */
   moiUserId?: string | null;
   peutAffecterAutrui?: boolean;
@@ -672,6 +676,7 @@ export function BuyerInbox({
 
       {rowOuverte ? (
         <PanneauTraitement
+          resumeDisponible={resumeDisponible}
           /* La CLÉ porte la remise à zéro : changer de dossier remonte le
              panneau, donc aucune saisie du précédent ne peut survivre. */
           key={ouvert}

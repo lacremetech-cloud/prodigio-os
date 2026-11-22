@@ -208,6 +208,13 @@ const envSchema = z.object({
   // Absente ⇒ aucune alerte e-mail (le canal Slack continue seul).
   ALERTES_LEADS_EMAILS: z.string().optional(),
 
+  // Cle de l'API Anthropic, pour structurer une note d'appel dictee ou un
+  // transcript colle. Absente ⇒ le bouton « Structurer » ne s'affiche pas et
+  // rien n'est tente : la saisie libre, elle, continue de marcher comme avant.
+  // L'IA ne remplace jamais le commercial — elle lui rend un brouillon qu'il
+  // relit, corrige et enregistre lui-meme.
+  ANTHROPIC_API_KEY: z.string().optional(),
+
   // Webhook Make dedie a l'alerte equipe. Make compose et envoie l'e-mail via
   // le compte Google de l'agence : pas de fournisseur d'envoi a contractualiser.
   // RIEN A VOIR avec `buyer_form_webhook_url` en base, qui porte l'accuse au
@@ -614,6 +621,18 @@ export function isAlerteLeadEmailConfigured(
   return brut
     .split(/[,;\s]+/)
     .some((a) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.trim()));
+}
+
+/**
+ * Indique si la mise en forme d'une note par l'IA est disponible.
+ *
+ * Absente ⇒ le bouton ne s'affiche pas. Aucune panne silencieuse : on ne
+ * propose pas une action qui echouerait, et la saisie libre reste entiere.
+ */
+export function estResumeIaConfigure(
+  source: Pick<Env, "ANTHROPIC_API_KEY"> = env,
+): boolean {
+  return typeof source.ANTHROPIC_API_KEY === "string" && source.ANTHROPIC_API_KEY.trim().length > 0;
 }
 
 /**

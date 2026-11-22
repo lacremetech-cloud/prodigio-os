@@ -2756,3 +2756,85 @@
   border: 1px solid var(--crm-line-soft);
   background: var(--crm-panel-2);
 }
+
+/* ===================================================================== */
+/*  La derniere note, sur la carte du Kanban                              */
+/* ===================================================================== */
+/* Pour traiter le vivier, le commercial doit voir ce que chacun cherche
+   SANS ouvrir quarante-six fiches. La note d'appel est la seule phrase qui
+   le dise : les criteres structures, eux, ne font que repeter le bien par
+   lequel la personne est arrivee.
+
+   Trois lignes coupees net : la note mediane fait 179 caracteres et tient
+   entiere ; les plus longues se lisent au survol (`title`) ou dans le
+   dossier. Sans cette limite, une carte de 1 800 caracteres mangeait la
+   colonne et on ne voyait plus les suivantes. */
+.crm-kanban-note {
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-line-soft);
+  border-left: 2px solid var(--crm-azur);
+  background: var(--crm-panel-2);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--crm-text);
+  text-align: left;
+}
+/* La coupe porte sur le TEXTE SEUL, pas sur l'encadre. Englober la date dans
+   le bloc coupe lui faisait manger une des trois lignes, et la derniere
+   ressortait tranchee en deux hors du cadre. */
+.crm-kanban-note__texte {
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.crm-kanban-note__quand {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--crm-text-faint);
+  margin-bottom: 2px;
+}
+
+/* ===================================================================== */
+/*  Dicter la note, puis la mettre en forme                               */
+/* ===================================================================== */
+/* Deux boutons discrets sous la zone de texte. Discrets a dessein : la
+   saisie au clavier reste le geste par defaut, et un commercial qui ne veut
+   ni dicter ni passer par l'IA ne doit pas avoir l'impression qu'on lui
+   force la main. */
+.crm-note-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* A l'ecoute : le bouton le dit, et ne le dit pas QUE par la couleur — son
+   libelle passe a « Arreter la dictee ». Le point rouge pulse doucement,
+   comme un enregistrement, pour qu'on n'oublie pas le micro ouvert. */
+.crm-note-outils__ecoute {
+  border-color: var(--crm-danger);
+  color: var(--crm-danger);
+  animation: crm-note-pulse 1.6s ease-in-out infinite;
+}
+@keyframes crm-note-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.62; }
+}
+/* Les animations sont une gene pour certaines personnes, et la loi comme le
+   bon sens demandent de les respecter. */
+@media (prefers-reduced-motion: reduce) {
+  .crm-note-outils__ecoute { animation: none; }
+}
+.crm-note-outils__message {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--crm-text-faint);
+}

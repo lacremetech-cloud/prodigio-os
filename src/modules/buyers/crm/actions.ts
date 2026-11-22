@@ -12,6 +12,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canArchiveBuyer, canDecideMandate } from "@/modules/crm/auth/roles";
 import { evaluateBuyerMove } from "./pipeline";
+import { mettreEnFormeLaNote } from "./resume-ia";
+import { LONGUEUR_MAX_MATIERE } from "./gabarit-note";
 import {
   conversionInscriptionTerminee,
   conversionRendezVous,
@@ -920,4 +922,64 @@ export async function corrigerBudgetAction(input: unknown): Promise<ActionResult
   if (error) return { ok: false, error: humanize(error.code, error.message) };
   revalidateBuyer(parsed.data.buyerProfileId);
   return { ok: true };
+}
+
+// --- Mettre en forme une note dictee ------------------------------------------
+const noteAStructurerSchema = z.object({
+  buyerProfileId: uuid,
+  /** La dictee ou le transcript colle. La borne haute vit dans le gabarit. */
+  brut: z.string().min(1, "Rien à mettre en forme.").max(LONGUEUR_MAX_MATIERE),
+});
+
+/**
+ * Rend une note mise en forme, SANS RIEN ENREGISTRER.
+ *
+ * Le commercial raccroche, dicte trois phrases ou colle son transcript, et
+ * récupère la note au format attendu. Il la relit, la corrige, et c'est lui
+ * qui l'enregistre — par le même chemin qu'avant, `logBuyerActivityAction`.
+ *
+ * Pourquoi ne pas enregistrer directement : une note d'appel est relue des
+ * semaines plus tard par quelqu'un qui n'était pas à l'appel, et sert à
+ * décider qui rappeler. Une phrase inventée par une machine et jamais relue y
+ * ferait plus de dégâts qu'une note absente. L'IA propose, l'humain signe.
+ *
+ * `crm_buyer_profile_access` n'est pas court-circuité : on vérifie que
+ * l'appelant a bien ce dossier avant de donner le moindre texte à l'IA — une
+ * action qui ne touche pas la base doit filtrer comme celles qui y touchent.
+ */
+export async function structurerNoteAction(
+  input: unknown,
+): Promise<ActionResult & { note?: string; tronquee?: boolean }> {
+  await requireCrmSession();
+  const parsed = noteAStructurerSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Saisie invalide." };
+  }
+  const d = parsed.data;
+
+  /* La RLS fait le filtrage : une lecture du dossier ne rend une ligne que si
+     l'appelant y a droit. Pas de fonction d'autorisation à appeler en plus —
+     c'est la même porte que partout ailleurs, et elle ne peut pas diverger. */
+  const supabase = await createSupabaseServerClient();
+  const { data: dossier, error: erreurAcces } = await supabase
+    .from("buyer_profiles")
+    .select("id")
+    .eq("id", d.buyerProfileId)
+    .maybeSingle();
+  if (erreurAcces) return { ok: false, error: humanize(erreurAcces.code, erreurAcces.message) };
+  if (!dossier) return { ok: false, error: "Dossier introuvable." };
+
+  const resultat = await mettreEnFormeLaNote(d.brut);
+  if (!resultat.ok) {
+    const messages: Record<typeof resultat.motif, string> = {
+      non_configure: "La mise en forme par IA n’est pas configurée.",
+      vide: "Rien à mettre en forme.",
+      indisponible:
+        "La mise en forme n’a pas abouti. Votre texte est intact — réessayez, ou enregistrez-le tel quel.",
+      refus:
+        "La mise en forme a été refusée pour ce texte. Enregistrez-le tel quel, ou reformulez.",
+    };
+    return { ok: false, error: messages[resultat.motif] };
+  }
+  return { ok: true, note: resultat.note, tronquee: resultat.tronquee };
 }

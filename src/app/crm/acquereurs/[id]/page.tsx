@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
+import { estResumeIaConfigure } from "@/config";
 import { requireCrmSession } from "@/modules/crm/auth/session";
 import {
   canArchiveBuyer,
@@ -474,6 +475,7 @@ export default async function BuyerProfilePage({
             {canOperateBuyers ? (
               <div className="mb-3">
                 <BuyerActivityForm
+            resumeDisponible={estResumeIaConfigure()}
                   buyerProfileId={profile.id}
                   interests={interests.map(({ interest, propertyLabel }) => ({
                     id: interest.id,

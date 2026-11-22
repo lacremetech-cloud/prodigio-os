@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { ACTIVITES, ETAPES, QUALIFICATIONS } from "@/modules/buyers/crm/vocabulaire";
+import { NoteAssistee } from "./note-assistee";
 
 /**
  * Les deux sélecteurs du vocabulaire, écrits UNE fois.
@@ -232,6 +233,8 @@ export function BlocActivite({
   note,
   onNote,
   disabled,
+  buyerProfileId,
+  resumeDisponible = false,
 }: {
   activite: string | null;
   onActivite: (v: string | null) => void;
@@ -240,6 +243,12 @@ export function BlocActivite({
   note: string;
   onNote: (v: string) => void;
   disabled?: boolean;
+  /** Le dossier concerné. La mise en forme vérifie l'accès avant d'envoyer
+      quoi que ce soit : une action qui ne touche pas la base doit filtrer
+      comme celles qui y touchent. */
+  buyerProfileId: string;
+  /** Faux quand la clé d'API manque : le bouton ne s'affiche alors pas. */
+  resumeDisponible?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -288,6 +297,17 @@ export function BlocActivite({
           onChange={(e) => onNote(e.target.value)}
         />
       </label>
+
+      {/* Dicter, puis mettre en forme. SOUS la zone de texte et non au-dessus :
+          on écrit d'abord, on s'outille ensuite — et un commercial qui ne veut
+          ni de l'un ni de l'autre ne voit qu'une ligne de boutons discrète. */}
+      <NoteAssistee
+        buyerProfileId={buyerProfileId}
+        note={note}
+        onNote={onNote}
+        disabled={disabled}
+        resumeDisponible={resumeDisponible}
+      />
     </div>
   );
 }
