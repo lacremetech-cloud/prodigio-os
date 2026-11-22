@@ -257,8 +257,8 @@ Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
   commercial (`property_public_config`, notamment).
 - **Journal d'audit** : lisible par les managers (politique existante). Les
   événements du pilotage n'y portent donc que des identifiants, jamais un
-  montant, un taux, une part ou un motif. Les masquer aussi aux managers est une
-  décision ouverte ([05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md), E 26).
+  montant, un taux, une part ou un motif. Victor a décidé le 22/11/2026 de ne
+  pas les masquer aux managers ([05-OPEN-QUESTIONS.md](05-OPEN-QUESTIONS.md), E 26).
 - **Lecture Meta (étape 2)** : mêmes règles sur les six tables
   `pilotage_meta_*`. Les chiffres Meta ne s'écrivent **que par le rôle de
   service** : la route du matin (Vercel Cron, protégée par `CRON_SECRET`) et le

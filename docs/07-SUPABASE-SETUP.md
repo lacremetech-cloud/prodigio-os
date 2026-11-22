@@ -790,7 +790,7 @@ l'application fonctionne) : voir [21-COMMUNICATIONS.md](21-COMMUNICATIONS.md) §
 
 ---
 
-## 14. Pilotage pub — étape 1 (`20261112150000_pilotage_conditions_lots_et_couts_fixes`) — **NON APPLIQUÉE**
+## 14. Pilotage pub — étape 1 (`20261112150000_pilotage_conditions_lots_et_couts_fixes`) — **APPLIQUÉE le 22/11/2026**
 
 Détail fonctionnel : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
 
@@ -856,11 +856,28 @@ select conname, (select count(*) from regexp_matches(pg_get_constraintdef(oid), 
 -- attendu : 89 et 21.
 ```
 
+### Résultat de l'application (22/11/2026)
+
+Appliquée en production dans l'éditeur SQL de Supabase, avec l'accord de
+Victor. Relevés faits sur place ce jour-là (non revérifiables depuis le dépôt) :
+
+- **Avant** : listes d'audit à 18 et 84 valeurs ; aucune ligne du journal hors
+  de ces listes.
+- **Après**, contrôles ci-dessus conformes : quatre tables en RLS ; `SELECT`
+  seul pour `authenticated`, rien pour `anon` ; les quatre fonctions
+  `crm_pilotage_*` fermées à `anon` et ouvertes à `authenticated` ; les deux
+  fonctions de déclencheur fermées ; 21 et 89 valeurs ; quatre déclencheurs
+  actifs, quatre politiques.
+- Valeurs de départ saisies ensuite par les formulaires de
+  `/crm/pilotage/donnees` (date d'effet 12/11/2026) ; le contrôle du calcul
+  donne le même total que le cockpit précédent. Aucune de ces valeurs n'est
+  recopiée dans le dépôt.
+
 > Ces contrôles valent **juste après l'étape 1**. Une fois l'étape 2 appliquée
 > (§ 15), le motif `pilotage_%` trouve dix tables et plus de fonctions, et les
 > listes d'audit comptent 91 et 22.
 
-## 15. Pilotage pub — étape 2 (`20261112170000_pilotage_lecture_meta`) — **NON APPLIQUÉE**
+## 15. Pilotage pub — étape 2 (`20261112170000_pilotage_lecture_meta`) — **APPLIQUÉE le 22/11/2026**
 
 Détail fonctionnel : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 7. À appliquer
 **après** celle de l'étape 1 (§ 14).
@@ -952,3 +969,26 @@ select conname, (select count(*) from regexp_matches(pg_get_constraintdef(oid), 
   from pg_constraint where conname in ('audit_events_event_type_check', 'audit_events_entity_type_check');
 -- attendu : 91 et 22.
 ```
+
+### Résultat de l'application (22/11/2026)
+
+Appliquée en production dans l'éditeur SQL de Supabase, après l'étape 1 et
+avec l'accord de Victor, le fichier relu en entier avant. Relevés faits sur
+place (non revérifiables depuis le dépôt) :
+
+- **Avant** : listes d'audit à 21 et 89 valeurs ; PostgreSQL 17.6 (la recette
+  locale tourne sur 16) ; sur `buyer_interests`, seulement
+  `buyer_interests_set_updated_at` (avant mise à jour) et
+  `comm_buyer_interest_enqueue` (après insertion) ; aucune transaction ouverte.
+- **Après**, contrôles ci-dessus conformes : six tables en RLS ; `anon` fermé
+  partout ; `authenticated` ouvert seulement à `ajouter_regle`,
+  `retirer_regle` et `totaux` ; le rôle de service ouvert aux cinq fonctions de
+  la lecture ; les trois déclencheurs de `buyer_interests` actifs ; **465
+  demandes sur 514** ont retrouvé leur pub (`meta_ad_id`) ; 22 et 91 valeurs.
+  Le site et le CRM fonctionnent.
+- Variables posées par Victor dans Vercel le même jour, type « Secret » :
+  `META_ADS_READ_TOKEN` et `META_AD_ACCOUNT_ID` (Production et Preview),
+  `CRON_SECRET` (Production seulement).
+
+Rejouée localement dans l'ordre de la production (la migration du 19/11
+d'abord, puis celles du 12/11) : sans erreur, mêmes listes d'audit.

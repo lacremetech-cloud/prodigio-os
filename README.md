@@ -223,7 +223,7 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   seule** (Vercel Cron), rattachement des campagnes aux biens réglable dans
   l'application, identifiant de pub des demandes (docs/07 §15 ; variables
   `META_ADS_READ_TOKEN`, `META_AD_ACCOUNT_ID`, `CRON_SECRET`, posées dans
-  Vercel). **Migrations non encore appliquées.**
+  Vercel). **Migrations appliquées en production le 22/11/2026.**
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

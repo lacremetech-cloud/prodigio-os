@@ -22,7 +22,7 @@ la suivante :
 | Étape | Contenu | État |
 |---|---|---|
 | **1. Les données** | Conditions de commercialisation versionnées, lots, coûts fixes, formulaires d'administration | **fusionnée** (PR #79) |
-| **2. Lecture Meta** | Statistiques Meta Ads chaque matin, **en lecture seule** ; rattachement des campagnes aux biens | **cette PR** |
+| **2. Lecture Meta** | Statistiques Meta Ads chaque matin, **en lecture seule** ; rattachement des campagnes aux biens | PR #80 — migrations appliquées le 22/11/2026 |
 | 3. Page Pilotage | Vue générale et onglets par bien, avec les données du CRM par bien (nombres agrégés seulement) | à venir |
 | 4. Remontée vers Meta | Conversions (API de conversions) — **à la toute fin, avec Victor, rien avant son feu vert** | à venir |
 
@@ -162,8 +162,8 @@ s'affiche « au moins … (1 ligne manque) ».
   numéro de lot, date d'effet) : ni prix, ni taux, ni part, ni montant, ni motif.
   Leurs types d'entité (`pilotage_*`) les tiennent hors de l'historique du bien
   affiché sur la fiche. *Un manager peut donc voir qu'une saisie a eu lieu, pas
-  ce qu'elle contient* — le restreindre davantage est une décision ouverte
-  ([05](05-OPEN-QUESTIONS.md), E).
+  ce qu'elle contient* — Victor a décidé le 22/11/2026 de laisser cette trace
+  visible ([05](05-OPEN-QUESTIONS.md), E 26).
 - **Double envoi** : un coût porte une clé tirée à l'affichage du formulaire ; la
   base la tient pour unique. Un double clic ne compte qu'une fois.
 - **Lecture complète** : les pages lisent page après page ; un total n'est
@@ -193,6 +193,9 @@ Garde-fous automatiques (Vitest, sur le SQL versionné) :
 
 Aucune variable d'environnement n'est nécessaire à l'étape 1.
 
+**Fait le 22/11/2026** : migration appliquée, contrôles conformes, valeurs de
+départ saisies et contrôlées ([07](07-SUPABASE-SETUP.md) §14).
+
 ### Recette locale (sans toucher à aucune base distante)
 
 ```bash
@@ -212,8 +215,8 @@ une base qui contient déjà un bien, et annule tout à la fin (`ROLLBACK`).
 - Un coût fixe d'un programme est commun à ses lots : sa répartition au prorata
   du prix se fera sur la page Pilotage (étape 3).
 - La commission encaissée d'un bien vendu sans prix final saisi est
-  « manquante » (pas de repli sur le prix affiché) : à confirmer
-  ([05](05-OPEN-QUESTIONS.md), E).
+  « manquante » (pas de repli sur le prix affiché) : décidé par Victor le
+  22/11/2026 ([05](05-OPEN-QUESTIONS.md), E 23).
 
 ---
 
@@ -337,6 +340,11 @@ Après avoir ajouté les variables : **redéployer**, puis vérifier
    les quatre campagnes ELIOM, « hors portefeuille »). Vérifier qu'aucune
    dépense ne reste orpheline sans raison.
 
+**Fait le 22/11/2026** : étapes 1 et 2 (migration appliquée, contrôles
+conformes, variables posées par Victor ; [07](07-SUPABASE-SETUP.md) §15).
+Restent le redéploiement — la fusion de la PR le déclenche —, la première
+lecture et les règles.
+
 ### 7.6 Recette locale
 
 ```bash
@@ -360,8 +368,8 @@ jouent la lecture entière avec un **faux Meta**, sans réseau.
 - Les leads sont comptés selon la fenêtre d'attribution que l'API applique
   quand on ne lui en précise aucune, comme dans la requête du brief. Si un
   ensemble de publicités est réglé autrement dans le Gestionnaire, ses leads
-  peuvent différer : c'est la première piste en cas d'écart
-  ([05](05-OPEN-QUESTIONS.md), E).
+  peuvent différer : c'est la première piste en cas d'écart. Choix validé par
+  Victor le 22/11/2026 ([05](05-OPEN-QUESTIONS.md), E 31).
 - Les dépenses sont prises **HT**, comme le veut la règle de calcul. La devise
   du compte est relevée à chaque lecture : un compte tenu dans une autre devise
   que l'euro est signalé à l'écran.

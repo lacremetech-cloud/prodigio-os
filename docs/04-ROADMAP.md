@@ -186,8 +186,11 @@ suivante : (1) données — conditions de commercialisation versionnées, lots,
 coûts fixes ; (2) lecture des statistiques Meta en lecture seule ; (3) page
 Pilotage avec les données du CRM par bien, en nombres agrégés ; (4) remontée des
 conversions vers Meta, à la toute fin. Voir [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
-État au 12/11/2026 : étape 1 fusionnée ; étape 2 proposée (lecture du matin par
-Vercel Cron, rattachement réglable dans l'application).
+État au 22/11/2026 : étape 1 fusionnée ; migrations des étapes 1 et 2
+appliquées en production ; étape 2 (PR #80 : lecture du matin par Vercel Cron,
+rattachement réglable dans l'application) validée par Victor pour la
+production. L'étape 3 attend son accord, après une première lecture Meta en
+production.
 
 ---
 
