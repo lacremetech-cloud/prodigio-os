@@ -18,6 +18,7 @@
  * s'est arrêtée. Rien n'est jamais écrit chez Meta.
  */
 
+import { detailDeLaPanne, type DetailDePanne } from "../erreurs";
 import { ErreurMeta } from "./graph";
 import type { LigneInsight, PubLue } from "./lecture";
 import { fenetreDeLecture, bornes, PERIODES, tranches, ajouterJours, type Periode } from "./periodes";
@@ -177,8 +178,38 @@ export interface ParametresLecture {
   demandeePar: string | null;
 }
 
+/**
+ * Le message d'une panne inattendue : l'étape et le code, jamais le texte brut
+ * de la base (qui peut citer une valeur). De quoi savoir OÙ chercher.
+ */
+export function messageDePanne(panne: DetailDePanne): string {
+  const ou = panne.etape ? `, à l’étape « ${panne.etape} »` : "";
+  const code = panne.code ? ` (code ${panne.code})` : "";
+  return `Erreur inattendue pendant la lecture Meta${ou}${code}. Ce qui a été enregistré avant reste valable.`;
+}
+
 export async function lireMeta(p: ParametresLecture): Promise<Bilan> {
-  const demarrage = await p.base.demarrer(p.declencheur, p.demandeePar);
+  let demarrage: Demarrage;
+  try {
+    demarrage = await p.base.demarrer(p.declencheur, p.demandeePar);
+  } catch (cause) {
+    // Avant même d'ouvrir la lecture : rien n'a été écrit. On le dit, au lieu
+    // de laisser la page ou la route du matin tomber.
+    const panne = detailDeLaPanne(cause);
+    console.error("pilotage : lecture Meta non démarrée", panne);
+    return {
+      statut: "echec",
+      synchroId: null,
+      periode: null,
+      lignes: 0,
+      tranches: 0,
+      appels: 0,
+      devise: null,
+      couverture: "non_relue",
+      ecarts: [],
+      message: messageDePanne(panne),
+    };
+  }
   if (!demarrage.ok) {
     return {
       statut: "occupe",
@@ -301,11 +332,11 @@ export async function lireMeta(p: ParametresLecture): Promise<Bilan> {
     });
     return { statut, synchroId: id, periode, lignes: lignesLues, tranches: tranchesFaites, appels: p.meta.appels, devise, couverture, ecarts, message };
   } catch (cause) {
-    const message =
-      cause instanceof ErreurMeta
-        ? cause.message
-        : "Erreur inattendue pendant la lecture Meta. Ce qui a été enregistré avant reste valable.";
-    if (!(cause instanceof ErreurMeta)) console.error("pilotage : lecture Meta interrompue", cause instanceof Error ? cause.name : "inconnue");
+    const panne = detailDeLaPanne(cause);
+    const message = cause instanceof ErreurMeta ? cause.message : messageDePanne(panne);
+    // Le journal de Vercel reçoit le genre, l'étape et le code : assez pour
+    // trouver la panne, rien qui puisse citer une donnée.
+    if (!(cause instanceof ErreurMeta)) console.error("pilotage : lecture Meta interrompue", panne);
     try {
       await p.base.terminer(id, {
         statut: "echec",

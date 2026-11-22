@@ -13,6 +13,11 @@
 -- Se joue sur une base LOCALE montée par `scripts/replay-migrations.sh` :
 --   psql -d prodigio -f scripts/pilotage-meta.sql
 --
+-- Jouable aussi avec la règle `safeupdate` de la production (un DELETE ou un
+-- UPDATE sans WHERE refusé, comme pour toute requête passée par l'API) :
+--   PGOPTIONS='-c session_preload_libraries=safeupdate' psql -d prodigio -f scripts/pilotage-meta.sql
+-- Les essais de réécriture visent toutes les lignes par `where true`.
+--
 -- Mêmes sécurités que `pilotage-donnees.sql` : refus sur une base non vierge,
 -- une seule transaction annulée à la fin. Données fictives uniquement.
 -- =============================================================================
@@ -214,12 +219,12 @@ end $$;
 
 reset role;
 do $$ begin
-  update public.pilotage_meta_synchros set erreur = 'réécrit';
+  update public.pilotage_meta_synchros set erreur = 'réécrit' where true;
   raise exception 'ÉCHEC : un journal terminé a été réécrit';
 exception when sqlstate '0A000' then null;
 end $$;
 do $$ begin
-  delete from public.pilotage_meta_synchros;
+  delete from public.pilotage_meta_synchros where true;
   raise exception 'ÉCHEC : le journal a été effacé';
 exception when sqlstate '0A000' then null;
 end $$;
@@ -324,7 +329,7 @@ end $$;
 
 reset role;
 do $$ begin
-  delete from public.pilotage_meta_regles;
+  delete from public.pilotage_meta_regles where true;
   raise exception 'ÉCHEC : une règle a été effacée';
 exception when sqlstate '0A000' then null;
 end $$;

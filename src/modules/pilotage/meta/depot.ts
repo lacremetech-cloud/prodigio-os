@@ -9,17 +9,12 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
+import { EcritureImpossible } from "../erreurs";
 import { toutLire } from "../lecture-complete";
 import type { RegleRattachement } from "./rattachement";
 import type { Demarrage, PortBase, PubDeLaPeriode } from "./synchro";
 
 type Client = SupabaseClient<Database>;
-
-class EcritureImpossible extends Error {
-  constructor(etape: string, readonly code: string | undefined) {
-    super(`écriture impossible (${etape})`);
-  }
-}
 
 function verifier(etape: string, error: { code?: string } | null): void {
   if (error) throw new EcritureImpossible(etape, error.code);
@@ -67,12 +62,14 @@ export function creerDepot(admin: Client): PortBase {
           .is("retiree_le", null)
           .order("id")
           .range(a, b),
+        "règles",
       );
     },
 
     async pubsDeLaPeriode(debut, fin): Promise<PubDeLaPeriode[]> {
       const lignes = await toutLire<{ ad_id: string; campaign_id: string | null; campaign_name: string | null; ad_name: string | null }>(
         (a, b) => admin.rpc("crm_pilotage_meta_totaux", { p_debut: debut, p_fin: fin }).order("ad_id").range(a, b),
+        "pubs de la période",
       );
       return lignes.map((p) => ({ ad_id: p.ad_id, campaign_id: p.campaign_id, campaign_name: p.campaign_name, ad_name: p.ad_name }));
     },

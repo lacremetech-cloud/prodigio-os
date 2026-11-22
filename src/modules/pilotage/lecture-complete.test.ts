@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { detailDeLaPanne, EcritureImpossible } from "./erreurs";
 import { LectureImpossible, TAILLE_DE_PAGE, toutLire } from "./lecture-complete";
 
 /**
@@ -38,5 +39,21 @@ describe("lire jusqu'au bout", () => {
     const erreur = await toutLire(async () => ({ data: null, error: { code: "42P01" } })).catch((e: unknown) => e);
     expect(erreur).toBeInstanceOf(LectureImpossible);
     expect((erreur as LectureImpossible).code).toBe("42P01");
+  });
+});
+
+describe("les pannes de la base ont un nom, une étape et un code", () => {
+  it("une lecture nommée porte son étape", async () => {
+    const erreur = await toutLire(async () => ({ data: null, error: { code: "PGRST205" } }), "règles").catch((e: unknown) => e);
+    expect(erreur).toMatchObject({ name: "LectureImpossible", etape: "règles", code: "PGRST205" });
+  });
+
+  it("le journal en tire le genre, l'étape et le code — jamais un texte venu de la base", () => {
+    const ecriture = new EcritureImpossible("couverture", "21000");
+    expect(ecriture.name).toBe("EcritureImpossible");
+    expect(detailDeLaPanne(ecriture)).toEqual({ erreur: "EcritureImpossible", etape: "couverture", code: "21000" });
+    expect(detailDeLaPanne(new LectureImpossible(undefined))).toEqual({ erreur: "LectureImpossible", etape: null, code: null });
+    expect(detailDeLaPanne(new RangeError("x"))).toEqual({ erreur: "RangeError", etape: null, code: null });
+    expect(detailDeLaPanne("bizarre")).toEqual({ erreur: "inconnue", etape: null, code: null });
   });
 });
