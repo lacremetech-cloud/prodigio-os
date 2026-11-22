@@ -999,7 +999,7 @@ place (non revérifiables depuis le dépôt) :
 Rejouée localement dans l'ordre de la production (la migration du 19/11
 d'abord, puis celles du 12/11) : sans erreur, mêmes listes d'audit.
 
-## 16. Pilotage pub — correctif de la couverture (`20261122200000_pilotage_couverture_safeupdate`) — **NON APPLIQUÉE**
+## 16. Pilotage pub — correctif de la couverture (`20261122200000_pilotage_couverture_safeupdate`) — **APPLIQUÉE le 22/11/2026**
 
 Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 7.8.
 
@@ -1055,6 +1055,23 @@ couverture par période proposée (et par bien rattaché) :
 ```sql
 select periode, count(*) from public.pilotage_meta_couverture group by 1 order by 1;
 ```
+
+### Résultat de l'application (22/11/2026, vers 20 h 40)
+
+Appliquée en production dans l'éditeur SQL de Supabase, avec l'accord écrit de
+Victor : le fichier lancé est celui de la PR #81 (empreinte SHA-256 vérifiée
+avant de lancer). Relevés faits sur place (non revérifiables depuis le dépôt) :
+
+- **Avant** : l'ancienne version en place (`delete` sans `WHERE`),
+  `safeupdate` présent sur `authenticator`, aucune lecture en cours, aucune
+  ligne de couverture.
+- **Après**, contrôle ci-dessus conforme : `true, true, false, false, true` ;
+  une seule fonction de ce nom.
+- **Lecture relancée** au bouton : « Réussie », couverture relue — une ligne
+  par période proposée pour le total et pour chaque bien ayant des pubs sur la
+  période (27 lignes, aucune sans valeur). Couvertures, impressions et dépense
+  du portefeuille recoupées avec le cockpit précédent, relu chez Meta dans la
+  foulée : identiques.
 
 ### Vérification locale
 

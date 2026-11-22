@@ -365,6 +365,9 @@ jouent la lecture entière avec un **faux Meta**, sans réseau.
 - Aucun tableau de bord encore : dépense par bien, ROAS, marge, données du CRM,
   pubs gagnantes viendront à l'étape 3. L'écran Meta sert à **vérifier** la
   lecture et à **régler** le rattachement.
+- La couverture est lue et rangée chaque matin, mais **aucun écran ne l'affiche
+  encore** : la fréquence (impressions ÷ couverture) est attendue sur la page
+  Pilotage, par période, au total et par bien (étape 3).
 - La couverture d'une portée de plus de 100 pubs ne se lit pas en une requête :
   elle s'affichera « — », comme pour des dates au choix.
 - Les leads sont comptés selon la fenêtre d'attribution que l'API applique
@@ -397,7 +400,7 @@ en « Échec » à l'écriture de la **couverture**.
   journal de Vercel (`pilotage : lecture Meta interrompue {erreur, etape,
   code}`) et à l'écran (« … à l'étape « couverture » (code 21000) … »). Jamais
   le texte brut de la base, qui peut citer une valeur.
-- **D'ici l'application du correctif**, chaque lecture (celle du matin
-  comprise) met bien à jour statistiques, contrôle et pubs, puis finit en
-  « Échec » à la couverture : rien n'est perdu, la fréquence par bien attend.
+- **Appliqué le 22/11/2026** vers 20 h 40 : la lecture suivante a fini
+  « Réussie », couverture relue et recoupée avec le cockpit précédent. Les
+  règles de rattachement sont saisies : plus aucune campagne orpheline.
 
