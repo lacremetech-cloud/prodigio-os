@@ -1478,6 +1478,114 @@ export type PilotageCoutFixeRow = {
   motif_annulation: string | null;
 };
 
+// --- Pilotage pub — lecture Meta (étape 2) -------------------------------------
+// Miroir de 20261112170000_pilotage_lecture_meta. Lecture administrateur seule ;
+// écritures de la lecture par le rôle de service.
+
+export type PilotageMetaSynchroRow = {
+  id: string;
+  demarree_le: string;
+  terminee_le: string | null;
+  declencheur: "matin" | "manuel";
+  demandee_par: string | null;
+  statut: "en_cours" | "reussie" | "partielle" | "echec";
+  periode_debut: string | null;
+  periode_fin: string | null;
+  couvert_jusqu_au: string | null;
+  appels_api: number;
+  lignes_lues: number;
+  devise: string | null;
+  erreur: string | null;
+  details: Json | null;
+};
+
+export type PilotageMetaControleRow = {
+  jour: string;
+  depense_pubs_cents: number;
+  depense_compte_cents: number;
+  pubs: number;
+  synchro_id: string | null;
+  verifie_le: string;
+};
+
+export type PilotageMetaPubRow = {
+  ad_id: string;
+  ad_name: string | null;
+  adset_id: string | null;
+  campaign_id: string | null;
+  statut: string | null;
+  lien_apercu: string | null;
+  cree_le_chez_meta: string | null;
+  vue_le: string;
+  synchro_id: string | null;
+};
+
+export type PilotageMetaCouvertureRow = {
+  periode: string;
+  property_id: string | null;
+  couverture: number | null;
+  impressions: number | null;
+  date_debut: string | null;
+  date_fin: string | null;
+  pubs: number;
+  raison: string | null;
+  synchro_id: string | null;
+  lu_le: string;
+};
+
+export type PilotageMetaRegleRow = {
+  id: string;
+  type_regle: "jeton" | "campagne";
+  valeur: string;
+  cible: "biens" | "hors_portefeuille";
+  biens: string[];
+  note: string | null;
+  creee_le: string;
+  creee_par: string | null;
+  retiree_le: string | null;
+  retiree_par: string | null;
+  motif_retrait: string | null;
+};
+
+export type PilotageMetaInsightRow = {
+  jour: string;
+  ad_id: string;
+  ad_name: string | null;
+  adset_id: string | null;
+  adset_name: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  depense_cents: number;
+  impressions: number;
+  couverture: number | null;
+  frequence: number | string | null;
+  clics: number;
+  clics_lien: number;
+  ctr: number | string | null;
+  cpm: number | string | null;
+  leads: number;
+  actions: Json | null;
+  cout_par_action: Json | null;
+  synchro_id: string | null;
+  lu_le: string;
+};
+
+export type PilotageMetaTotalPubRow = {
+  ad_id: string;
+  ad_name: string | null;
+  adset_id: string | null;
+  adset_name: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  depense_cents: number;
+  impressions: number;
+  clics: number;
+  clics_lien: number;
+  leads: number;
+  premier_jour: string;
+  dernier_jour: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -1529,6 +1637,12 @@ export interface Database {
       pilotage_lots: WithMutations<PilotageLotRow>;
       pilotage_lot_versions: WithMutations<PilotageLotVersionRow>;
       pilotage_couts_fixes: WithMutations<PilotageCoutFixeRow>;
+      pilotage_meta_synchros: WithMutations<PilotageMetaSynchroRow>;
+      pilotage_meta_insights: WithMutations<PilotageMetaInsightRow>;
+      pilotage_meta_controles: WithMutations<PilotageMetaControleRow>;
+      pilotage_meta_pubs: WithMutations<PilotageMetaPubRow>;
+      pilotage_meta_couverture: WithMutations<PilotageMetaCouvertureRow>;
+      pilotage_meta_regles: WithMutations<PilotageMetaRegleRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -2460,6 +2574,39 @@ export interface Database {
       crm_pilotage_annuler_cout_fixe: {
         Args: { p_cout_id: string; p_motif: string | null };
         Returns: Json;
+      };
+      /* Lecture Meta — rôle de service SEUL (route du matin, bouton côté serveur). */
+      crm_pilotage_meta_synchro_demarrer: {
+        Args: { p_declencheur: string; p_demandee_par: string | null };
+        Returns: Json;
+      };
+      crm_pilotage_meta_remplacer_tranche: {
+        Args: { p_synchro_id: string; p_debut: string; p_fin: string; p_lignes: Json; p_controle: Json };
+        Returns: Json;
+      };
+      crm_pilotage_meta_enregistrer_pubs: { Args: { p_synchro_id: string; p_pubs: Json }; Returns: number };
+      crm_pilotage_meta_remplacer_couverture: { Args: { p_synchro_id: string; p_lignes: Json }; Returns: number };
+      crm_pilotage_meta_synchro_terminer: {
+        Args: {
+          p_synchro_id: string;
+          p_statut: string;
+          p_erreur: string | null;
+          p_appels_api: number;
+          p_devise: string | null;
+          p_details: Json;
+        };
+        Returns: undefined;
+      };
+      /* Règles de rattachement — administrateur seul. */
+      crm_pilotage_meta_ajouter_regle: {
+        Args: { p_type_regle: string; p_valeur: string; p_cible: string; p_biens: string[]; p_note: string | null };
+        Returns: Json;
+      };
+      crm_pilotage_meta_retirer_regle: { Args: { p_regle_id: string; p_motif: string | null }; Returns: Json };
+      /* Totaux par pub sur une période — SECURITY INVOKER, la RLS s'applique. */
+      crm_pilotage_meta_totaux: {
+        Args: { p_debut: string | null; p_fin: string | null };
+        Returns: PilotageMetaTotalPubRow[];
       };
     };
     Enums: Record<string, never>;

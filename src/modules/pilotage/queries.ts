@@ -26,6 +26,7 @@ import type {
   PropertyRow,
 } from "@/lib/supabase/types";
 import { estNonInstalle } from "./erreurs";
+import { LectureImpossible, toutLire } from "./lecture-complete";
 
 export type Lecture<T> = { etat: "ok"; donnees: T } | { etat: "non_installe" } | { etat: "erreur" };
 
@@ -49,30 +50,6 @@ export interface DonneesPilotage {
   couts: PilotageCoutFixeRow[];
   /** Photographie économique du mandat du bien, s'il en a un. */
   photographieMandat: Json | null;
-}
-
-type Echec = { code?: string; message?: string } | null;
-
-class LectureImpossible extends Error {
-  constructor(readonly code: string | undefined) {
-    super("lecture du pilotage impossible");
-  }
-}
-
-const PAGE = 1000;
-
-/** Toutes les lignes d'une requête, page après page. */
-async function toutLire<T>(
-  requete: (debut: number, fin: number) => PromiseLike<{ data: unknown; error: Echec }>,
-): Promise<T[]> {
-  const lignes: T[] = [];
-  for (let debut = 0; ; debut += PAGE) {
-    const { data, error } = await requete(debut, debut + PAGE - 1);
-    if (error) throw new LectureImpossible(error.code);
-    const page = Array.isArray(data) ? (data as T[]) : [];
-    lignes.push(...page);
-    if (page.length < PAGE) return lignes;
-  }
 }
 
 const COLONNES_BIEN =
