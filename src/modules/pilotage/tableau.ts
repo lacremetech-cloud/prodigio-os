@@ -650,10 +650,13 @@ export function calculerTableau(e: EntreeTableau): TableauPilotage {
     dest.set(id, d);
   }
 
-  const premierJour = e.meta.depuisLeDebut.reduce<string | null>(
-    (min, p) => (p.premier_jour && (!min || p.premier_jour < min) ? p.premier_jour : min),
-    null,
-  );
+  // « Toute la période » commence à la première dépense du PORTEFEUILLE : une
+  // vieille campagne hors portefeuille, exclue des indicateurs et des
+  // graphiques, ne doit pas ouvrir l'axe sur des semaines vides.
+  const premierJour = e.meta.depuisLeDebut.reduce<string | null>((min, p) => {
+    if (dest.get(p.ad_id)?.type === "hors_portefeuille") return min;
+    return p.premier_jour && (!min || p.premier_jour < min) ? p.premier_jour : min;
+  }, null);
   const periode = resoudrePeriode(e.choix, e.jour, premierJour);
   const toujours = ventiler(e.meta.depuisLeDebut, dest);
   const surPeriode = ventiler(e.meta.surLaPeriode, dest);

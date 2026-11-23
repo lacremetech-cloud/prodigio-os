@@ -392,6 +392,15 @@ describe("pubs gagnantes, série par jour, alertes", () => {
     expect(textes).toContain("2 jours sur les 90 derniers : la somme des pubs s'écarte de la dépense du compte.");
   });
 
+  it("« toute la période » commence à la première dépense du portefeuille, pas à celle d'une vieille campagne hors portefeuille", () => {
+    const anciennes = meta({
+      depuisLeDebut: DEPUIS.map((p) => (p.ad_id === "33" ? { ...p, premier_jour: "2026-05-27" } : p)),
+    });
+    const t = tableau({ choix: { type: "proposee", periode: "toute_la_periode" }, meta: anciennes });
+    expect(t.periode.debut).toBe("2026-10-01");
+    expect(t.serie.points[0]!.debut).toBe("2026-10-01");
+  });
+
   it("les périodes : « toute la période » part du premier jour lu ; les dates au choix gardent leurs bornes", () => {
     expect(resoudrePeriode({ type: "proposee", periode: "toute_la_periode" }, JOUR, null)).toMatchObject({ debut: null, fin: JOUR });
     expect(resoudrePeriode({ type: "proposee", periode: "30_derniers_jours" }, JOUR, null)).toMatchObject({ debut: "2026-10-24", fin: "2026-11-22" });
