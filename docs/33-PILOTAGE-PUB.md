@@ -633,8 +633,9 @@ requête donne **exactement** les chiffres que la page tire des fonctions.
 
 - **Les offres ne peuvent pas être saisies aujourd'hui** :
   `crm_buyer_record_offer` écrit une étape `offre` qui n'existe plus dans le
-  pipeline (docs/05, n° 38). La page affiche « aucune offre saisie » et le
-  coût par offre « — », jamais 0 €.
+  pipeline ; les formulaires « Résultat commercial » et « Rouvrir » de la
+  fiche acquéreur sont en panne pour la même raison (docs/05, n° 38). La page
+  affiche « aucune offre saisie » et le coût par offre « — », jamais 0 €.
 - **« R1 planifié » et « Offre en cours »** n'existent que depuis le
   09/11/2026 (« Offre en cours » avait quitté le pipeline le 14/10/2026) :
   avant, personne ne pouvait les atteindre. L'écran le dit.
