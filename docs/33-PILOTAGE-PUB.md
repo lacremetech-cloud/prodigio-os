@@ -447,7 +447,8 @@ en le disant. Comme le cockpit de l'iMac, la page **rouvre sur la dernière
 période proposée choisie** (des dates au choix ne se retiennent pas), retenue
 par le navigateur (cookie de préférence `pilotage_periode`, limité aux pages
 du pilotage, relu avec la même validation) ; la première fois, sur **toute la
-période**.
+période**, qui commence à la première dépense du portefeuille (une campagne
+hors portefeuille ne l'avance pas).
 
 **Tout ce qui vient de Meta suit la période. La commission et la rentabilité
 restent « depuis le début ».**
