@@ -224,7 +224,9 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   l'application, identifiant de pub des demandes (docs/07 §15 ; variables
   `META_ADS_READ_TOKEN`, `META_AD_ACCOUNT_ID`, `CRON_SECRET`, posées dans
   Vercel). **Migrations appliquées en production le 22/11/2026**, correctif
-  de la couverture compris (`20261122200000`, docs/07 §16).
+  de la couverture compris (`20261122200000`, docs/07 §16). Étape 3a : la page
+  Pilotage (`/crm/pilotage`, vue générale et un onglet par bien), sans
+  migration — docs/33 §8.
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

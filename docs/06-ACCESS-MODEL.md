@@ -245,6 +245,7 @@ Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
 | Lire les chiffres Meta, le journal des lectures, les règles de rattachement | ✔ | — | — | — | — | — | — |
 | Lancer une lecture Meta (« Lire Meta maintenant ») | ✔ | — | — | — | — | — | — |
 | Ajouter ou retirer une règle de rattachement | ✔ | — | — | — | — | — | — |
+| Ouvrir la page Pilotage (vue générale, onglet d'un bien) | ✔ | — | — | — | — | — | — |
 
 - **En base** : RLS `crm_has_role('administrateur')` sur `pilotage_conditions`,
   `pilotage_lots`, `pilotage_lot_versions`, `pilotage_couts_fixes` ; droits par

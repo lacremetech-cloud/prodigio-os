@@ -18,9 +18,9 @@ import type {
 import { estNonInstalle } from "../erreurs";
 import { LectureImpossible, toutLire } from "../lecture-complete";
 import { lirePilotage, nomDuBien } from "../queries";
-import { syntheseDuBien, type SyntheseBien } from "../synthese";
+import { syntheseDuBien } from "../synthese";
+import { prixDeReference } from "../tableau";
 import { jourParis } from "../versions";
-import { centimesArrondis } from "../exact";
 import { ajouterJours } from "./periodes";
 import {
   indexerRegles,
@@ -71,14 +71,7 @@ export interface TableauMeta {
 
 export type LectureMeta = { etat: "ok"; donnees: TableauMeta } | { etat: "non_installe" } | { etat: "erreur" };
 
-/** Le prix qui sert de poids à la répartition d'un groupe : prix affiché, ou somme des lots. */
-export function prixDeReference(s: SyntheseBien): number | null {
-  const c = s.enVigueur;
-  if (!c) return null;
-  if (!c.vente_par_lots) return c.prix_affiche_cents;
-  const t = s.totalLots?.prix;
-  return t && t.complet && s.lots.length > 0 ? centimesArrondis(t.centimes) : null;
-}
+export { prixDeReference };
 
 function cleDe(r: Rattachement): string {
   if (r.type === "orpheline") return "orpheline";
