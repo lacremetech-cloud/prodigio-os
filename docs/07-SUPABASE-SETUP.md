@@ -1114,7 +1114,16 @@ Toutes : `plpgsql`, `stable`, **`security invoker`** (la RLS de l'appelant
 s'applique), `search_path` fixé, contrôle du rôle **administrateur** en
 première ligne (`crm_has_role` : `crm_require_role` n'est pas exécutable par
 un client) ; `execute` retiré à `public` et à `anon`, accordé à
-`authenticated`. Elles ne rendent **que des comptes**.
+`authenticated`.
+
+**Ce qu'elles rendent.** Les quatre que lit la page (`par_jour`, `cohorte`,
+`par_pub`, `debuts`) ne rendent **que des comptes**. La cinquième,
+`crm_pilotage_crm_demandes_resolues`, leur sert de base et rend **une ligne
+par demande**, faite d'identifiants seulement : demande, bien, personne, jour,
+pub ou campagne, provenance (`utm_source`). Aucun champ personnel (ni nom, ni
+téléphone, ni e-mail, ni adresse de formulaire), administrateur seulement ; la
+page ne l'appelle pas. L'en-tête de la migration les résume trop vite en
+« elles ne rendent que des comptes » : c'est ce paragraphe qui fait foi.
 
 ### Ce qu'elle modifie sur l'existant
 

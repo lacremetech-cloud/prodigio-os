@@ -578,8 +578,11 @@ Cinq fonctions de lecture (migration `20261123170000_pilotage_crm_agregats`,
 docs/07 § 17) : `crm_pilotage_crm_par_jour`, `…_cohorte`, `…_par_pub`,
 `…_debuts`, et `…_demandes_resolues` qui leur sert de base. Elles :
 
-- **ne rendent que des comptes** ; aucune ne lit une colonne personnelle (un
-  test le vérifie sur la migration et sur tout le code du pilotage) ;
+- ne lisent **aucune colonne personnelle** (un test le vérifie sur la
+  migration et sur tout le code du pilotage) ; les quatre que lit la page ne
+  rendent **que des comptes** ; `…_demandes_resolues`, leur base, rend une
+  ligne par demande faite d'identifiants seulement (demande, bien, personne,
+  jour, pub ou campagne, provenance) — la page ne l'appelle pas ;
 - s'exécutent **avec les droits de l'appelant** (la RLS s'applique) et
   vérifient d'abord le rôle **administrateur** (`crm_has_role`) ; un manager
   est refusé ; `anon` ne peut pas les appeler ;

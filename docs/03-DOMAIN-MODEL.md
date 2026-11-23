@@ -714,7 +714,9 @@ Migration `supabase/migrations/20261123170000_pilotage_crm_agregats.sql`,
 détail dans [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9. **Aucun nouvel
 objet** : cinq fonctions de lecture comptent, par bien et sur une période, des
 objets existants — demande acquéreur, personne (profil acquéreur), tâche de
-visite, affectation, journal d'audit — et ne rendent que des nombres.
+visite, affectation, journal d'audit. La page n'en reçoit que des nombres ;
+la fonction de base (`crm_pilotage_crm_demandes_resolues`) rend une ligne par
+demande, faite d'identifiants seulement.
 
 ### Distinctions à ne jamais confondre (ajouts 3b)
 

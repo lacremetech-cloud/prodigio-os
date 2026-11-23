@@ -278,8 +278,11 @@ Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
   `crm_pilotage_crm_*`, **`SECURITY INVOKER`** (la RLS de l'appelant
   s'applique) et refusées à tout autre rôle qu'administrateur dès leur
   première ligne (`crm_has_role`) ; `EXECUTE` refusé à `public` et `anon`.
-  Elles ne rendent **que des comptes** — aucune ligne, aucun nom, téléphone ou
-  e-mail d'acquéreur — et n'écrivent rien. La requête de recette
+  Aucune ne rend de nom, de téléphone, d'e-mail ni d'adresse d'acquéreur, et
+  aucune n'écrit. Les quatre que lit la page ne rendent **que des comptes** ;
+  `crm_pilotage_crm_demandes_resolues`, leur base, rend une ligne par demande
+  faite d'identifiants seulement (demande, bien, personne, jour, pub,
+  provenance), à l'administrateur seul. La requête de recette
   (`scripts/pilotage-crm-controles.sql`) suit la même règle : lecture seule,
   comptes seulement.
 
