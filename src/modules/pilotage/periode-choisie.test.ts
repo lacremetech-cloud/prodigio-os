@@ -39,9 +39,15 @@ describe("la période lue dans l'adresse, jamais crue sur parole", () => {
     expect(PERIODE_PAR_DEFAUT).toBe("toute_la_periode");
   });
 
-  it("sans période dans l'adresse, la dernière choisie (retenue par le navigateur)", () => {
+  it("sans période dans l'adresse, la dernière période proposée choisie (retenue par le navigateur)", () => {
     expect(lirePeriode({}, JOUR, "periode=hier").choix).toEqual({ type: "proposee", periode: "hier" });
-    expect(lirePeriode({}, JOUR, "du=2026-11-01&au=2026-11-15").choix).toEqual({ type: "dates", debut: "2026-11-01", fin: "2026-11-15" });
+  });
+
+  it("des dates au choix ne se retiennent pas, comme sur l'iMac", () => {
+    expect(lirePeriode({}, JOUR, "du=2026-11-01&au=2026-11-15")).toEqual({
+      choix: { type: "proposee", periode: PERIODE_PAR_DEFAUT },
+      corrigee: false,
+    });
   });
 
   it("l'adresse prime sur la mémoire ; une mémoire illisible est ignorée, sans alerte", () => {

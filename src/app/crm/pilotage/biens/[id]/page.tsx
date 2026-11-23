@@ -80,7 +80,7 @@ export default async function PilotageBienPage({
         </div>
         <OngletsPilotage actif={b.id} biens={t.biens} suffixe={suffixe} />
         <SelecteurPeriode chemin={chemin} choix={choix} aujourdHui={jour} />
-        <MemoriserPeriode requete={suffixe.slice(1)} />
+        <MemoriserPeriode requete={choix.type === "proposee" ? suffixe.slice(1) : null} />
         {corrigee ? (
           <p className="text-xs text-[var(--crm-warning)]">La période demandée était illisible : la période par défaut est affichée.</p>
         ) : null}

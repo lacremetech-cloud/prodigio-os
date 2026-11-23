@@ -444,9 +444,10 @@ période) ou **des dates au choix** ; les 7 et 30 derniers jours s'arrêtent à
 hier. La période se lit dans l'adresse (`?periode=…`, ou `?du=…&au=…`) :
 elle se partage, et une valeur illisible retombe sur la période par défaut
 en le disant. Comme le cockpit de l'iMac, la page **rouvre sur la dernière
-période choisie**, retenue par le navigateur (cookie de préférence
-`pilotage_periode`, limité aux pages du pilotage, relu avec la même
-validation) ; la première fois, sur **toute la période**.
+période proposée choisie** (des dates au choix ne se retiennent pas), retenue
+par le navigateur (cookie de préférence `pilotage_periode`, limité aux pages
+du pilotage, relu avec la même validation) ; la première fois, sur **toute la
+période**.
 
 **Tout ce qui vient de Meta suit la période. La commission et la rentabilité
 restent « depuis le début ».**

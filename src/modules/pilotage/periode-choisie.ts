@@ -15,7 +15,7 @@ import type { ChoixPeriode } from "./tableau";
 
 export const PERIODE_PAR_DEFAUT: Periode = "toute_la_periode";
 
-/** Le cookie qui retient la dernière période choisie (« periode=… » ou « du=…&au=… »). */
+/** Le cookie qui retient la dernière période PROPOSÉE choisie (« periode=… ») — pas des dates au choix, comme l'iMac. */
 export const COOKIE_PERIODE = "pilotage_periode";
 
 const jourIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((j) => {
@@ -40,15 +40,16 @@ function aUnePeriode(parametres: Parametres): boolean {
 }
 
 /**
- * La période de la page : celle de l'adresse ; à défaut, la dernière choisie
- * (`memorisee`, le contenu du cookie) si elle se relit ; à défaut, toute la période.
+ * La période de la page : celle de l'adresse ; à défaut, la dernière période
+ * proposée choisie (`memorisee`, le contenu du cookie) si elle se relit ; à
+ * défaut, toute la période. Comme le cockpit de l'iMac, des dates au choix ne
+ * se retiennent pas.
  */
 export function lirePeriode(parametres: Parametres, aujourdHui: string, memorisee?: string): PeriodeLue {
   if (!aUnePeriode(parametres) && memorisee) {
-    const retenus = Object.fromEntries(new URLSearchParams(memorisee));
-    if (aUnePeriode(retenus)) {
-      const p = lireDansAdresse(retenus, aujourdHui);
-      if (!p.corrigee) return p;
+    const retenue = new URLSearchParams(memorisee).get("periode");
+    if (retenue !== null && (PERIODES as readonly string[]).includes(retenue)) {
+      return { choix: { type: "proposee", periode: retenue as Periode }, corrigee: false };
     }
   }
   return lireDansAdresse(parametres, aujourdHui);
