@@ -1089,3 +1089,91 @@ avant de lancer). Relevés faits sur place (non revérifiables depuis le dépôt
 - Avec la vraie extension installée :
   `PGOPTIONS='-c session_preload_libraries=safeupdate' psql -d prodigio -f scripts/pilotage-meta.sql`.
 
+
+---
+
+## 18. Fiche acquéreur — offre, résultat, réouverture (`20261123200000_formulaires_acquereur_neuf_etapes`) — **NON APPLIQUÉE**
+
+Détail : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md), « Actions métier de la
+fiche ». À appliquer avec l'accord écrit de Victor. Indépendante du pilotage
+pub (§ 17) : l'ordre des deux est indifférent.
+
+### Pourquoi
+
+Le 12/10/2026, `20261012170000_pipeline_acquereur_huit_colonnes` a réécrit le
+corps de `crm_buyer_record_offer`, `crm_buyer_record_outcome` et
+`crm_buyer_reopen` vers les clés du pipeline à huit colonnes (`offre`,
+`gagne`, `perdu`, `visite`). Le pipeline compte neuf étapes depuis le
+10/11/2026, sans aucune de ces clés : la contrainte
+`buyer_profiles_pipeline_stage_check` refuse chaque appel (`23514`). Les
+formulaires « Offre », « Résultat commercial » et « Rouvrir » de la fiche
+acquéreur échouent donc tous. Constaté le 23/11/2026 : en production pour
+l'offre (relevé de la session de l'iMac), sur une base locale pour les trois.
+
+### Ce qu'elle change
+
+| Objet | Modification |
+|---|---|
+| `crm_buyer_record_offer(uuid, uuid, bigint, text)` | Le dossier passe en `offre_en_cours` (au lieu de `offre`) ; le journal de l'offre dit l'étape d'arrivée. |
+| `crm_buyer_record_outcome(uuid, text, text)` | `perdu` → `pas_interesse` ; `gagne` → **étape inchangée** (le résultat est noté sur la fiche). |
+| `crm_buyer_reopen(uuid, text)` | Le dossier repart en `a_rappeler` (au lieu de `visite`). |
+
+Règle décidée par Victor le 23/11/2026. Le reste de chaque fonction est
+inchangé : mêmes signatures, mêmes contrôles (`SECURITY DEFINER`,
+`search_path` fixé, rôles), mêmes écritures et même journal. Droits rappelés :
+`authenticated` et `service_role`, jamais `anon`. **Aucune table, aucune
+colonne, aucune donnée touchée.** Rejouable ; attente de verrou bornée à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+-- Les trois versions en place écrivent des étapes que le pipeline refuse.
+select proname,
+       prosrc like '%''offre''%' or prosrc like '%''gagne'' else ''perdu''%' or prosrc like '%''visite''%' as ancienne_version
+  from pg_proc
+ where pronamespace = 'public'::regnamespace
+   and proname in ('crm_buyer_record_offer', 'crm_buyer_record_outcome', 'crm_buyer_reopen')
+ order by 1;
+-- attendu : trois lignes, ancienne_version = true
+```
+
+### Contrôles après application
+
+```sql
+select proname,
+       prosecdef as security_definer,
+       has_function_privilege('anon', oid, 'execute') as anon,
+       has_function_privilege('authenticated', oid, 'execute') as authentifie,
+       has_function_privilege('service_role', oid, 'execute') as service
+  from pg_proc
+ where pronamespace = 'public'::regnamespace
+   and proname in ('crm_buyer_record_offer', 'crm_buyer_record_outcome', 'crm_buyer_reopen')
+ order by 1;
+-- attendu : trois lignes, true, false, true, true
+
+-- Plus aucune fonction acquéreur n'écrit une étape hors des neuf.
+select p.proname, m[1] as etape
+  from pg_proc p
+  cross join lateral regexp_matches(p.prosrc, 'pipeline_stage\s*=\s*''([a-z_]+)''', 'g') as m
+ where p.pronamespace = 'public'::regnamespace
+   and p.proname like 'crm\_buyer\_%'
+   and not (m[1] = any (public.crm_etapes_acquereur()));
+-- attendu : aucune ligne
+```
+
+Puis, dans l'application, sur la fiche d'un acquéreur : enregistrer une offre
+(le dossier passe en « Offre en cours »), et selon le cas un résultat ou une
+réouverture. Sur un vrai dossier seulement, comme le travail normal de
+l'équipe : aucune donnée de test en base.
+
+### Vérification locale
+
+- Rejeu des migrations sur une base vierge ; migration appliquée deux fois de
+  suite sans erreur.
+- `scripts/formulaires-acquereur.sql` : **RECETTE RÉUSSIE**, avec et sans la
+  règle `safeupdate` émulée — aucune étape hors des neuf, droits conservés,
+  offre, gagné (étape inchangée), perdu (motif exigé), réouverture (motif
+  exigé, résultat effacé), commercial refusé pour le résultat, dossier témoin
+  intact. Son premier contrôle échoue bien sur l'ancienne version de l'offre.
+- `src/modules/buyers/crm/etapes-ecrites.test.ts` relit la dernière
+  définition de chaque fonction `crm_buyer_*` des migrations.
