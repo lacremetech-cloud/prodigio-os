@@ -308,7 +308,24 @@ describe("la performance Meta sur la période", () => {
     const t = tableau();
     expect(t.global.frequence).toMatchObject({ etat: "ok", valeur: 20_000 / 9_000 });
     expect(t.biens.find((b) => b.id === A)!.frequence).toMatchObject({ etat: "ok", valeur: 12_000 / 5_000 });
-    // Pas de couverture lue pour B sur cette période : en attente, jamais 0.
+  });
+
+  it("un bien sans ligne de couverture sur une période relue : « — » s'il n'a rien diffusé, jamais « en attente » sans fin", () => {
+    // B n'a aucune pub sur la période : la lecture ne lui a pas écrit de ligne.
+    const sansDiffusion = meta({ surLaPeriode: PERIODE.filter((p) => p.ad_id !== "22") });
+    expect(tableau({ meta: sansDiffusion }).biens.find((b) => b.id === B)!.frequence).toEqual({
+      etat: "indisponible",
+      raison: "aucune diffusion sur la période",
+    });
+    // B diffuse (pub commune) mais n'a pas de ligne : une règle a changé depuis
+    // la lecture ; sa couverture sera lue à la prochaine.
+    expect(tableau().biens.find((b) => b.id === B)!.frequence).toEqual({ etat: "en_attente" });
+  });
+
+  it("la période elle-même pas encore relue (pas de ligne du total) : « en attente » partout", () => {
+    const t = tableau({ meta: meta({ couverture: [couverture(A, 5_000, 12_000)] }) });
+    expect(t.global.frequence).toEqual({ etat: "en_attente" });
+    expect(t.biens.find((b) => b.id === A)!.frequence).toEqual({ etat: "en_attente" });
     expect(t.biens.find((b) => b.id === B)!.frequence).toEqual({ etat: "en_attente" });
   });
 

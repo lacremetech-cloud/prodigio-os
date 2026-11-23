@@ -420,7 +420,7 @@ la page lit ce que les étapes 1 et 2 enregistrent déjà.
   calcul bien par bien et la formule écrite ; « Rentabilité · depuis le
   début » ; « Performance Meta » sur la période ; les graphiques de la dépense
   et des leads, une couleur par bien ; le tableau par bien en deux groupes de
-  colonnes (« depuis le début », « sur la période ») ; les 5 pubs gagnantes
+  colonnes (« depuis le début », « sur la période ») ; les 3 pubs gagnantes
   tous biens ; les coûts fixes bien par bien et par type ; « À savoir ».
 - **`/crm/pilotage/biens/[id]` — un onglet par bien** : la commission en
   grand, **pas le ROAS**, puis son calcul pas à pas ; pour un programme vendu
@@ -443,7 +443,10 @@ semaine, 30 derniers jours, ce mois-ci, le mois dernier, cette année, toute la
 période) ou **des dates au choix** ; les 7 et 30 derniers jours s'arrêtent à
 hier. La période se lit dans l'adresse (`?periode=…`, ou `?du=…&au=…`) :
 elle se partage, et une valeur illisible retombe sur la période par défaut
-— **30 derniers jours** — en le disant.
+en le disant. Comme le cockpit de l'iMac, la page **rouvre sur la dernière
+période choisie**, retenue par le navigateur (cookie de préférence
+`pilotage_periode`, limité aux pages du pilotage, relu avec la même
+validation) ; la première fois, sur **toute la période**.
 
 **Tout ce qui vient de Meta suit la période. La commission et la rentabilité
 restent « depuis le début ».**
@@ -465,8 +468,10 @@ Le calcul est une fonction pure, testée : `src/modules/pilotage/tableau.ts`.
   tous calculés sur des **sommes**, jamais en moyennant des taux.
 - **Fréquence = impressions ÷ couverture**, lues ensemble chez Meta pour
   chaque période proposée, au total et par bien (`pilotage_meta_couverture`) ;
-  « — » pour des dates au choix ; « en attente » si la couverture a été lue un
-  autre jour que celui de la page (elle se relit à la lecture suivante).
+  « — » pour des dates au choix, et pour un bien qui n'a rien diffusé sur la
+  période (la lecture n'écrit une ligne que pour les biens qui ont diffusé) ;
+  « en attente » seulement si la période n'a pas encore été relue (couverture
+  d'un autre jour) ou si une règle a changé depuis la lecture.
 - **Une pub commune à plusieurs biens** se répartit au prorata du prix
   affiché — sa dépense, et avec elle ses impressions, clics et leads : la
   somme des biens égale le total, et le coût par lead d'un bien reste

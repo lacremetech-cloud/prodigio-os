@@ -3,11 +3,13 @@ import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canPiloter } from "@/modules/crm/auth/roles";
 import { nowMs } from "@/modules/crm/format";
 import { jourParis } from "@/modules/pilotage/versions";
-import { lirePeriode, adressePeriode } from "@/modules/pilotage/periode-choisie";
+import { cookies } from "next/headers";
+import { lirePeriode, adressePeriode, COOKIE_PERIODE } from "@/modules/pilotage/periode-choisie";
 import { lireTableauPilotage } from "@/modules/pilotage/tableau-lecture";
 import { AccesReserve, ErreurLecture, NonInstalle } from "@/components/crm/pilotage/vues";
 import { OngletsPilotage } from "@/components/crm/pilotage/onglets";
 import { GraphiqueParJour } from "@/components/crm/pilotage/tableau/graphique";
+import { MemoriserPeriode } from "@/components/crm/pilotage/tableau/memoire";
 import {
   ASavoir,
   BlocPerformance,
@@ -21,6 +23,15 @@ import {
   TableauParBien,
 } from "@/components/crm/pilotage/tableau/blocs";
 import { Section, SelecteurPeriode } from "@/components/crm/pilotage/tableau/valeurs";
+
+/** Le cookie se relit tel quel s'il n'est pas encodé ; jamais d'exception sur une valeur abîmée. */
+function decodeURIComponentSur(v: string): string {
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    return v;
+  }
+}
 
 export const metadata: Metadata = { title: "Pilotage pub" };
 
@@ -39,7 +50,8 @@ export default async function PilotagePage({
 
   const maintenant = new Date(nowMs());
   const jour = jourParis(maintenant);
-  const { choix, corrigee } = lirePeriode(await searchParams, jour);
+  const memorisee = (await cookies()).get(COOKIE_PERIODE)?.value;
+  const { choix, corrigee } = lirePeriode(await searchParams, jour, memorisee ? decodeURIComponentSur(memorisee) : undefined);
   const lecture = await lireTableauPilotage(choix, maintenant);
   if (lecture.etat === "non_installe") return <NonInstalle />;
   if (lecture.etat === "erreur") return <ErreurLecture />;
@@ -62,6 +74,7 @@ export default async function PilotagePage({
         </div>
         <OngletsPilotage actif="general" biens={t.biens} suffixe={suffixe} />
         <SelecteurPeriode chemin="/crm/pilotage" choix={choix} aujourdHui={jour} />
+        <MemoriserPeriode requete={suffixe.slice(1)} />
         {corrigee ? (
           <p className="text-xs text-[var(--crm-warning)]">La période demandée était illisible : la période par défaut est affichée.</p>
         ) : null}

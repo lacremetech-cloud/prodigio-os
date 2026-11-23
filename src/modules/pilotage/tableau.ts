@@ -385,19 +385,33 @@ function frequence(
   lu: boolean,
   couverture: readonly PilotageMetaCouvertureRow[],
   bien: string | null,
+  /** Les impressions du bien sur la période, selon les règles en vigueur (pour un bien). */
+  impressionsDuBien: Exact | null,
 ): Frequence {
   if (choix.type === "dates") return { etat: "dates_au_choix" };
   if (!lu) return { etat: "en_attente" };
-  const ligne = couverture.find((c) => c.periode === choix.periode && (c.property_id ?? null) === bien);
-  if (!ligne) return { etat: "en_attente" };
-  // La couverture a été lue un autre jour que celui de la page : ses bornes ne
-  // sont plus celles de la période. Elle sera relue à la prochaine lecture.
   const b = bornes(choix.periode, jour);
-  if (ligne.date_fin !== b.fin || (b.debut !== null && ligne.date_debut !== b.debut)) return { etat: "en_attente" };
+  // Une couverture lue un autre jour que celui de la page n'a plus les bornes
+  // de la période : elle sera relue à la prochaine lecture.
+  const duJour = (l: PilotageMetaCouvertureRow) => l.date_fin === b.fin && (b.debut === null || l.date_debut === b.debut);
+  const total = couverture.find((c) => c.periode === choix.periode && (c.property_id ?? null) === null);
+  // Sans la ligne du total (ou d'un autre jour), la période elle-même n'a pas été relue.
+  if (!total || !duJour(total)) return { etat: "en_attente" };
+  const ligne = bien === null ? total : couverture.find((c) => c.periode === choix.periode && c.property_id === bien);
+  if (!ligne) {
+    // La lecture n'écrit une ligne que pour les biens qui ont diffusé sur la
+    // période. Pas de ligne et pas d'impression : rien n'a été diffusé — « — ».
+    // Pas de ligne MAIS des impressions : une règle a changé depuis la lecture,
+    // la couverture de ce bien sera lue à la prochaine.
+    return impressionsDuBien && !estNul(impressionsDuBien)
+      ? { etat: "en_attente" }
+      : { etat: "indisponible", raison: "aucune diffusion sur la période" };
+  }
+  if (!duJour(ligne)) return { etat: "en_attente" };
   if (ligne.couverture == null || ligne.impressions == null) {
     return { etat: "indisponible", raison: ligne.raison ?? "couverture non lue" };
   }
-  if (ligne.couverture <= 0) return { etat: "indisponible", raison: "personne n'a été touché sur la période" };
+  if (ligne.couverture <= 0) return { etat: "indisponible", raison: "aucune diffusion sur la période" };
   return {
     etat: "ok",
     valeur: ligne.impressions / ligne.couverture,
@@ -670,7 +684,14 @@ export function calculerTableau(e: EntreeTableau): TableauPilotage {
       depuisLeDebut: depuis,
       rentabilite: rentabilite(com.ht, pub, s.couts.totalHtCentimes),
       surLaPeriode: lecture.lu ? indicateurs(surPeriode.parBien.get(b.id) ?? compteursVides()) : null,
-      frequence: frequence(e.choix, e.jour, lecture.lu, e.meta.couverture, b.id),
+      frequence: frequence(
+        e.choix,
+        e.jour,
+        lecture.lu,
+        e.meta.couverture,
+        b.id,
+        surPeriode.parBien.get(b.id)?.impressions ?? null,
+      ),
       lots: lotsDuBien(s, pub),
       pubsGagnantes: gagnantes(
         e.meta.surLaPeriode,
@@ -698,8 +719,8 @@ export function calculerTableau(e: EntreeTableau): TableauPilotage {
     depuisLeDebut: depuisGlobal,
     rentabilite: rentabilite(sansCondition ? null : potentielHT, pubGlobale, coutsFixes),
     surLaPeriode: lecture.lu ? indicateurs(surPeriode.total) : null,
-    frequence: frequence(e.choix, e.jour, lecture.lu, e.meta.couverture, null),
-    pubsGagnantes: gagnantes(e.meta.surLaPeriode, dest, liens, (d) => d?.type !== "hors_portefeuille", 5),
+    frequence: frequence(e.choix, e.jour, lecture.lu, e.meta.couverture, null, null),
+    pubsGagnantes: gagnantes(e.meta.surLaPeriode, dest, liens, (d) => d?.type !== "hors_portefeuille", 3),
     horsPortefeuille: { depuisLeDebut: toujours.hors.depense, surLaPeriode: surPeriode.hors.depense, pubs: toujours.pubsHors },
     nonRattachee: {
       depuisLeDebut: toujours.nonRattachee.depense,

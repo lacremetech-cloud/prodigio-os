@@ -35,6 +35,22 @@ describe("la période lue dans l'adresse, jamais crue sur parole", () => {
     }
   });
 
+  it("par défaut, toute la période — comme le cockpit de l'iMac", () => {
+    expect(PERIODE_PAR_DEFAUT).toBe("toute_la_periode");
+  });
+
+  it("sans période dans l'adresse, la dernière choisie (retenue par le navigateur)", () => {
+    expect(lirePeriode({}, JOUR, "periode=hier").choix).toEqual({ type: "proposee", periode: "hier" });
+    expect(lirePeriode({}, JOUR, "du=2026-11-01&au=2026-11-15").choix).toEqual({ type: "dates", debut: "2026-11-01", fin: "2026-11-15" });
+  });
+
+  it("l'adresse prime sur la mémoire ; une mémoire illisible est ignorée, sans alerte", () => {
+    expect(lirePeriode({ periode: "ce_mois" }, JOUR, "periode=hier").choix).toEqual({ type: "proposee", periode: "ce_mois" });
+    for (const abimee of ["periode=n_importe_quoi", "du=2026-11-15&au=2026-11-01", "x=1", "%%%"]) {
+      expect(lirePeriode({}, JOUR, abimee)).toEqual({ choix: { type: "proposee", periode: PERIODE_PAR_DEFAUT }, corrigee: false });
+    }
+  });
+
   it("l'adresse d'une période se relit à l'identique", () => {
     expect(adressePeriode("/crm/pilotage", { type: "proposee", periode: "ce_mois" })).toBe("/crm/pilotage?periode=ce_mois");
     const a = adressePeriode("", { type: "dates", debut: "2026-11-01", fin: "2026-11-15" });
