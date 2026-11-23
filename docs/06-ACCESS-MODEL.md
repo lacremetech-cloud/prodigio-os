@@ -246,6 +246,7 @@ Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
 | Lancer une lecture Meta (« Lire Meta maintenant ») | ✔ | — | — | — | — | — | — |
 | Ajouter ou retirer une règle de rattachement | ✔ | — | — | — | — | — | — |
 | Ouvrir la page Pilotage (vue générale, onglet d'un bien) | ✔ | — | — | — | — | — | — |
+| Lire les chiffres du CRM du pilotage (comptes par bien et sur la période) | ✔ | — | — | — | — | — | — |
 
 - **En base** : RLS `crm_has_role('administrateur')` sur `pilotage_conditions`,
   `pilotage_lots`, `pilotage_lot_versions`, `pilotage_couts_fixes` ; droits par
@@ -272,5 +273,13 @@ Décision du 12/11/2026. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md).
   jamais utilisé pour lire.
 - **`buyer_interests.meta_ad_id`** suit les droits existants de la demande
   acquéreur : c'est un identifiant de pub, pas un chiffre du pilotage. Le
-  pilotage n'en tirera, à l'étape 3, que des **nombres agrégés**.
+  pilotage n'en tire que des **nombres agrégés**.
+- **Chiffres du CRM (étape 3b)** : cinq fonctions de lecture
+  `crm_pilotage_crm_*`, **`SECURITY INVOKER`** (la RLS de l'appelant
+  s'applique) et refusées à tout autre rôle qu'administrateur dès leur
+  première ligne (`crm_has_role`) ; `EXECUTE` refusé à `public` et `anon`.
+  Elles ne rendent **que des comptes** — aucune ligne, aucun nom, téléphone ou
+  e-mail d'acquéreur — et n'écrivent rien. La requête de recette
+  (`scripts/pilotage-crm-controles.sql`) suit la même règle : lecture seule,
+  comptes seulement.
 

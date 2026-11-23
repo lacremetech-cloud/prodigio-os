@@ -5,7 +5,9 @@ import { nowMs } from "@/modules/crm/format";
 import { jourParis } from "@/modules/pilotage/versions";
 import { cookies } from "next/headers";
 import { lirePeriode, adressePeriode, COOKIE_PERIODE } from "@/modules/pilotage/periode-choisie";
-import { lireTableauPilotage } from "@/modules/pilotage/tableau-lecture";
+import { lireCrmPilotage, lireTableauPilotage } from "@/modules/pilotage/tableau-lecture";
+import { getMembersMap } from "@/modules/crm/data/queries";
+import { SectionCrmGenerale } from "@/components/crm/pilotage/tableau/crm-sections";
 import { AccesReserve, ErreurLecture, NonInstalle } from "@/components/crm/pilotage/vues";
 import { OngletsPilotage } from "@/components/crm/pilotage/onglets";
 import { GraphiqueParJour } from "@/components/crm/pilotage/tableau/graphique";
@@ -52,7 +54,11 @@ export default async function PilotagePage({
   const jour = jourParis(maintenant);
   const memorisee = (await cookies()).get(COOKIE_PERIODE)?.value;
   const { choix, corrigee } = lirePeriode(await searchParams, jour, memorisee ? decodeURIComponentSur(memorisee) : undefined);
-  const lecture = await lireTableauPilotage(choix, maintenant);
+  const [lecture, crm, membres] = await Promise.all([
+    lireTableauPilotage(choix, maintenant),
+    lireCrmPilotage(choix, maintenant),
+    getMembersMap(),
+  ]);
   if (lecture.etat === "non_installe") return <NonInstalle />;
   if (lecture.etat === "erreur") return <ErreurLecture />;
   const t = lecture.tableau;
@@ -109,6 +115,8 @@ export default async function PilotagePage({
           <Section id="par-bien" titre="Bien par bien">
             <TableauParBien t={t} suffixe={suffixe} />
           </Section>
+
+          <SectionCrmGenerale t={t} crm={crm} membres={membres} />
 
           <Section id="gagnantes" titre={`Pubs gagnantes, tous biens · ${t.periode.libelle}`} sousTitre="Le plus de leads ; à égalité, le moins cher par lead.">
             <PubsGagnantes

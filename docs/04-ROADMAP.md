@@ -190,7 +190,9 @@ conversions vers Meta, à la toute fin. Voir [33-PILOTAGE-PUB.md](33-PILOTAGE-PU
 appliquées en production ; étape 2 (PR #80 : lecture du matin par Vercel Cron,
 rattachement réglable dans l'application) validée par Victor pour la
 production. Étape 3 lancée par Victor le 23/11/2026, en deux PR : 3a, la page
-Pilotage à parité avec le cockpit ; 3b, les données du CRM par bien.
+Pilotage à parité avec le cockpit (fusionnée, PR #82 et #83) ; 3b, les données
+du CRM par bien, en nombres seulement (docs/33 § 9 ; migration
+`20261123170000`, non appliquée — docs/07 § 17).
 
 ---
 

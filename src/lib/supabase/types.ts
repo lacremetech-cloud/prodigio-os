@@ -2608,6 +2608,34 @@ export interface Database {
         Args: { p_debut: string | null; p_fin: string | null };
         Returns: PilotageMetaTotalPubRow[];
       };
+      /* Pilotage, étape 3b : des COMPTES seulement, jamais une ligne d'acquéreur. */
+      crm_pilotage_crm_par_jour: {
+        Args: { p_debut: string | null; p_fin: string };
+        Returns: { property_id: string; jour: string; demandes: number }[];
+      };
+      crm_pilotage_crm_cohorte: {
+        Args: { p_debut: string | null; p_fin: string };
+        Returns: { property_id: string | null; mesures: Json }[];
+      };
+      crm_pilotage_crm_par_pub: {
+        Args: { p_debut: string | null; p_fin: string };
+        Returns: {
+          property_id: string;
+          niveau: "pub" | "campagne" | "aucun";
+          ad_id: string | null;
+          campaign_id: string | null;
+          demandes: number;
+          personnes: number;
+          qualifies: number;
+          visites: number;
+          visites_faites: number;
+          offres: number;
+        }[];
+      };
+      crm_pilotage_crm_debuts: {
+        Args: Record<string, never>;
+        Returns: { property_id: string | null; premier_jour: string }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

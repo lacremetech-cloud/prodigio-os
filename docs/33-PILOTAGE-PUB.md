@@ -509,11 +509,165 @@ Quelques milliers de lignes au plus ; les totaux par pub s'agrègent en base
 (`crm_pilotage_meta_totaux`), le reste se lit page après page. Chaque requête
 reste loin des 8 secondes que la production accorde à l'API.
 
-### 8.7 Ce qui reste pour 3b
+### 8.7 La suite : 3b
 
-Les données du CRM, par bien et sur la période (date d'arrivée de la
-demande) : demandes par jour, étapes du pipeline et sorties, qualification,
-visites, offres, taux de passage, provenance et commerciaux, **par pub** via
-`meta_ad_id` (avec la part non rattachée), coûts par lead CRM, par qualifié,
-par visite, par offre, et l'écart entre leads Meta et demandes reçues.
+Les chiffres du CRM, par bien et sur la période : § 9.
 
+---
+
+## 9. Étape 3b — les chiffres du CRM, par bien et sur la période
+
+Feu vert de Victor le 23/11/2026 (« Oui va s'y go on attaque ce chantier »,
+relayé par la session de l'iMac). **Des nombres seulement** : aucune ligne
+d'acquéreur ne quitte la base, aucun nom, téléphone ni e-mail à l'écran, dans
+les journaux ou dans les tests. Réservé aux administrateurs, en base comme à
+l'écran.
+
+### 9.1 Ce que montre la page
+
+- **Vue générale**, section « Le CRM · *période* », entre « Bien par bien » et
+  les pubs gagnantes :
+  - les définitions, en une phrase, et le nombre de demandes écartées
+    (personnes archivées) ;
+  - tuiles : **demandes reçues** (et le nombre de personnes), **personnes
+    qualifiées**, **visites** (faites, à faire, annulées à part), **offres** ;
+    puis **coût par demande, par personne qualifiée, par visite, par offre**,
+    chacun avec le nombre qui le divise ;
+  - « **Mêmes jours** », quand la période commence avant le CRM (§ 9.2) ;
+  - « **Meta et CRM** » : leads comptés par Meta, demandes reliées à une pub,
+    demandes en tout ;
+  - le graphique des **demandes reçues par jour** (par semaine au-delà de deux
+    mois), une couleur par bien — les mêmes que les graphiques Meta ;
+  - le tableau **bien par bien** (demandes, personnes, qualifiées, visites,
+    offres, leads Meta, demandes d'une pub, coût par demande) et son total en
+    **personnes distinctes** ;
+  - qualification, provenance, responsable du dossier.
+- **Onglet d'un bien**, section « Le CRM », avant « À savoir » : les mêmes
+  tuiles pour le bien ; « **Commission en jeu** » (la commission HT du bien, et
+  les personnes aujourd'hui en « visite planifiée » et en « offre en cours ») ;
+  le graphique ; le **tableau des étapes** (aujourd'hui, atteinte au moins une
+  fois, part des personnes arrivées) et les **taux de passage** « dossier
+  envoyé → visite planifiée → offre en cours » ; qualification, provenance,
+  responsables ; **pub par pub** (demandes, personnes, qualifiées, visites,
+  dont faites, offres), avec la part non rattachée.
+- Tant que la migration du 23/11/2026 n'est pas installée (docs/07 § 17),
+  seule la section « Le CRM » le dit ; le reste de la page s'affiche.
+
+### 9.2 Les définitions
+
+| Nombre | Définition exacte |
+|---|---|
+| **Période** | La **date d'arrivée de la demande** : `buyer_interests.created_at`, jour de Paris, du « du » au « au » inclus. |
+| **Demandes** | Des **demandes** (`buyer_interests`). Une personne qui demande deux fois compte deux demandes. |
+| **Personnes** | Les personnes (`buyer_profiles`) qui ont au moins une demande sur la période. Une personne qui a demandé deux biens compte **dans chacun**, et **une fois au total**. |
+| **Archivées** | Les demandes d'une personne archivée (`archive_le` : faux numéro, test, doublon) sont **écartées** partout, et leur nombre est dit. |
+| **Étape, qualification** | Celles de la **personne, aujourd'hui** : `buyer_profiles.pipeline_stage` (anciennes clés traduites par `crm_etape_v2`) et `.qualification`. Jamais les colonnes du même nom de `buyer_interests`, jamais `qualification_status` (valeurs par défaut, pas tenues à jour). |
+| **Personnes qualifiées** | Qualification « qualifié » ou « gros potentiel », aujourd'hui. |
+| **Étape atteinte** | L'étape actuelle, ou une étape du journal (`audit_events` de la personne, types `acquereur_stade` et `acquereur_traitement`, clé `stage` de `new_value`) ; « à contacter » pour toute personne arrivée. Une personne passée par une étape compte même si elle en est sortie. **Part** = atteinte ÷ personnes ; **passage** = atteinte de l'étape d'arrivée ÷ atteinte de l'étape de départ. |
+| **Visites** | Les tâches `kind = 'visite'` rattachées à une demande comptée (`tasks.interest_id`). La tuile = **à faire** (`a_faire`) + **faites** (`fait`) ; « à venir » = à faire et prévues à partir de maintenant ; annulées (`annule`) à part. |
+| **Offres** | Les personnes qui ont atteint « offre en cours » ; les **montants** saisis (`offer_amount_cents`) comptent pour le bien de l'offre (`offer_property_id`). Aucune offre : « aucune offre saisie », jamais 0 €. |
+| **Pub d'une demande** | Le premier identifiant **connu de la lecture Meta** (`pilotage_meta_pubs` ∪ `pilotage_meta_insights`) parmi : `meta_ad_id`, `utm_content` (colonne, adresse du formulaire, première visite), `utm_id` (adresse, première visite) ; sinon le **nom exact** d'une pub, s'il n'est porté que par une seule ; sinon la première **campagne** connue parmi `utm_campaign` (colonne, adresses) et `utm_id` ; sinon « **non rattachée** ». Un `utm_id` qui porte l'identifiant d'une campagne (Les Airelles) n'est donc jamais pris pour une pub. `meta_ad_id` n'est pas réécrit. |
+| **Provenance** | `utm_source` de la demande, regroupé à l'écran : fb et facebook → Facebook ; ig et instagram → Instagram ; prodigio-site → Site Prodigio ; vide → Non renseignée. |
+| **Responsable du dossier** | L'affectation **active de la personne** (`buyer_assignments`, `released_at` vide ; la première s'il y en a plusieurs), ou « sans responsable ». L'équipe du bien (`property_assignments`) est une autre liste, et l'écran le dit. |
+| **Mêmes jours** | Les coûts et les leads Meta mis en face des demandes ne comptent la dépense et les leads Meta qu'**à partir de la première demande reçue dans le CRM** pour ce bien (pour le total : la première, tous biens ; personnes archivées exclues), si ce jour est plus tardif que le début de la période : avant, les demandes n'arrivaient pas dans le CRM. L'écran donne ce jour (docs/05, n° 43). |
+| **Coût par …** | Pub HT Meta des mêmes jours (celle du bien, part des pubs communes comprise ; au total, celle du portefeuille, dépense non rattachée comprise, hors portefeuille exclu) ÷ le nombre du CRM. Rien à diviser : « — », jamais 0 € ; Meta pas encore lu : « en attente ». |
+
+### 9.3 En base
+
+Cinq fonctions de lecture (migration `20261123170000_pilotage_crm_agregats`,
+docs/07 § 17) : `crm_pilotage_crm_par_jour`, `…_cohorte`, `…_par_pub`,
+`…_debuts`, et `…_demandes_resolues` qui leur sert de base. Elles :
+
+- **ne rendent que des comptes** ; aucune ne lit une colonne personnelle (un
+  test le vérifie sur la migration et sur tout le code du pilotage) ;
+- s'exécutent **avec les droits de l'appelant** (la RLS s'applique) et
+  vérifient d'abord le rôle **administrateur** (`crm_has_role`) ; un manager
+  est refusé ; `anon` ne peut pas les appeler ;
+- **n'écrivent rien** (aucune table, aucune colonne, aucune donnée touchée) ;
+- lisent chaque table une fois par appel : essayées sur dix fois le volume du
+  CRM de novembre 2026, moins de 2 secondes chacune (la production en accorde
+  8 à l'API). Réécrites pour cela, elles donnent exactement les mêmes
+  chiffres que leur première version sur 5 500 demandes fictives et quatre
+  périodes.
+
+### 9.4 La recette, bloc par bloc
+
+`scripts/pilotage-crm-controles.sql` : **une seule requête, en lecture
+seule**, qui recalcule chaque chiffre directement sur les tables, sans passer
+par les fonctions de la page, et ne rend que des comptes (bloc, bien, mesure,
+valeur ; « TOTAL » en personnes distinctes ; une mesure absente vaut 0).
+Mettre dans `p` les dates de la période affichée (« Dates au choix » est le
+plus simple), lancer, comparer :
+
+| Bloc de la page | Lignes du contrôle |
+|---|---|
+| Tuile « Demandes reçues » et « N personnes » ; tableau bien par bien, colonnes Demandes et Personnes | `01 demandes` · demandes ; `02 personnes` |
+| Définitions : « N demandes écartées » | `01 demandes` · demandes archivées écartées |
+| Graphique « Demandes reçues » | `03 par jour` (une semaine = la somme de ses jours, du lundi au dimanche) |
+| Tuile « Personnes qualifiées » ; liste « Qualification » | `04 qualification` (la tuile = qualifie + gros_potentiel) |
+| Étapes, colonne « Aujourd'hui » ; « Commission en jeu » | `05 étape aujourd'hui` |
+| Étapes, « Atteinte au moins une fois », part, taux de passage | `06 étape atteinte` (÷ `02 personnes`, ou ÷ l'étape de départ) |
+| Tuile « Visites » (faites, à faire, annulées) | `07 visites` (la tuile = à faire + faites) |
+| Tuile « Offres », montants saisis | `08 offres` |
+| Liste « Provenance » | `09 provenance` (regroupée à l'écran, § 9.2) |
+| Liste « Responsable du dossier » | `10 responsable` (l'identifiant du membre ; son nom à l'écran) |
+| « Meta et CRM » : demandes reliées à une pub ; colonne « Demandes d'une pub » | `11 rattachement` · pub |
+| Pub par pub (onglet d'un bien), et « Non rattachées : N demande(s) » | `12 pub par pub` ; `11 rattachement` |
+| « Mêmes jours » | `13 premier jour du CRM` |
+| Leads Meta, coûts | voir ci-dessous |
+
+**Leads Meta et coûts.** Choisir des dates au choix qui commencent au jour
+donné par « Mêmes jours » (ou au début de la période s'il est plus tardif) :
+la section « Performance Meta » donne alors, pour ces jours, la **pub HT** et
+les **leads** du bien (ou du total) ; les nombres du CRM ne bougent pas
+(aucune demande avant ce jour). Coût = pub HT ÷ le nombre du CRM, arrondi au
+centime à l'affichage.
+
+La recette locale (`scripts/pilotage-crm.sql`, § 9.6) vérifie que cette
+requête donne **exactement** les chiffres que la page tire des fonctions.
+
+### 9.5 Limites connues
+
+- **Les offres ne peuvent pas être saisies aujourd'hui** :
+  `crm_buyer_record_offer` écrit une étape `offre` qui n'existe plus dans le
+  pipeline (docs/05, n° 38). La page affiche « aucune offre saisie » et le
+  coût par offre « — », jamais 0 €.
+- **« R1 planifié » et « Offre en cours »** n'existent que depuis le
+  09/11/2026 (« Offre en cours » avait quitté le pipeline le 14/10/2026) :
+  avant, personne ne pouvait les atteindre. L'écran le dit.
+- **Le journal** se rattache à la personne, pas au bien : l'étape atteinte
+  d'une personne vaut pour chacun de ses biens, comme son étape actuelle.
+  Recoupé en production le 23/11/2026 par la session de l'iMac (lecture
+  seule, comptes seulement) : chaque personne sortie de « à contacter » a un
+  changement d'étape tracé, et le dernier événement donne bien l'étape
+  actuelle.
+- **Une visite « faite »** est une tâche close : la sauvegarde d'un traitement
+  peut clore n'importe quelle tâche, quelle que soit l'activité notée
+  (docs/05, n° 39).
+- **Les Airelles** : les adresses des pubs portent `utm_id` = l'identifiant de
+  la **campagne** (docs/31 annonce celui de la pub). La page retrouve la pub
+  par `utm_content` ; si une demande n'a que l'identifiant de campagne, elle
+  est rattachée à la campagne (« pub inconnue »). Corriger les paramètres des
+  pubs est une décision de Victor (docs/05, n° 40) ; la page n'en dépend pas.
+- **Personnes archivées** : écartées partout, leur nombre dit (docs/05,
+  n° 41).
+- Le « **compterDossiers** » du CRM et sa tuile « En cours » comptent encore
+  sur l'ancienne étape `nouveau` : la page Pilotage ne s'en sert pas
+  (docs/05, n° 42).
+
+### 9.6 Recette locale
+
+- `scripts/pilotage-crm.sql`, sur une base locale vierge
+  (`scripts/replay-migrations.sh`), lancé depuis la racine du dépôt : droits
+  (administrateur seul, manager refusé, jamais `anon`) ; jour de Paris aux
+  bornes ; personne archivée exclue ; cohorte par bien et au total ; étapes
+  actuelles et atteintes (ancienne clé `visite` traduite) ; visites ; offres ;
+  provenance ; responsables ; rattachement par identifiant, par la première
+  visite, par nom unique, par campagne ; premier jour du CRM ; enfin, la
+  requête de contrôle du § 9.4 donne les chiffres de la page. Tout est
+  annulé à la fin.
+- Avec la règle `safeupdate` de la production émulée : même résultat (aucune
+  écriture).
+- `src/modules/pilotage/crm.test.ts` : coûts et leurs états, mêmes jours,
+  parts et passages, provenance, graphique ; garde-fous (aucune colonne
+  personnelle, rôle vérifié, jamais `anon`, contrôle en lecture seule).

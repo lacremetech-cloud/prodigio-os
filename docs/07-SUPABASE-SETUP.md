@@ -1089,3 +1089,90 @@ avant de lancer). Relevés faits sur place (non revérifiables depuis le dépôt
 - Avec la vraie extension installée :
   `PGOPTIONS='-c session_preload_libraries=safeupdate' psql -d prodigio -f scripts/pilotage-meta.sql`.
 
+
+---
+
+## 17. Pilotage pub — étape 3b, les chiffres du CRM (`20261123170000_pilotage_crm_agregats`) — **NON APPLIQUÉE**
+
+Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9. À appliquer avec l'accord
+écrit de Victor, comme les précédentes. Les aperçus Vercel lisant la base de
+production, la section « Le CRM » de la page Pilotage y affiche « les chiffres
+du CRM attendent l'installation de la migration du 23/11/2026 » tant qu'elle
+n'est pas appliquée ; le reste de la page s'affiche.
+
+### Ce qu'elle crée
+
+| Objet | Rôle |
+|---|---|
+| `crm_pilotage_crm_demandes_resolues(date, date)` | Les demandes de la période, résolues (bien, personne, jour de Paris, pub ou campagne, provenance) ; base des trois suivantes. |
+| `crm_pilotage_crm_par_jour(date, date)` | Les demandes reçues par bien et par jour (graphique). |
+| `crm_pilotage_crm_cohorte(date, date)` | Par bien et au total : demandes, personnes, étapes (aujourd'hui, atteintes), qualification, visites, offres, provenance, responsables, rattachement aux pubs. |
+| `crm_pilotage_crm_par_pub(date, date)` | Par bien et par pub (ou campagne, ou non rattachée) : demandes, personnes, qualifiées, visites, dont faites, offres. |
+| `crm_pilotage_crm_debuts()` | Le jour de la première demande reçue, par bien et au total (« mêmes jours »). |
+
+Toutes : `plpgsql`, `stable`, **`security invoker`** (la RLS de l'appelant
+s'applique), `search_path` fixé, contrôle du rôle **administrateur** en
+première ligne (`crm_has_role` : `crm_require_role` n'est pas exécutable par
+un client) ; `execute` retiré à `public` et à `anon`, accordé à
+`authenticated`. Elles ne rendent **que des comptes**.
+
+### Ce qu'elle modifie sur l'existant
+
+**Rien.** Aucune table, aucune colonne, aucune donnée, aucune fonction
+existante remplacée ; aucune écriture (`safeupdate` n'a rien à refuser).
+`meta_ad_id` n'est pas réécrit. Rejouable ; attente de verrou bornée à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+-- Aucune des cinq fonctions n'existe encore.
+select count(*) from pg_proc
+ where pronamespace = 'public'::regnamespace and proname like 'crm\_pilotage\_crm\_%';
+-- attendu : 0
+
+-- Les deux fonctions qu'elles appellent sont en place et exécutables par un client connecté.
+select proname, has_function_privilege('authenticated', oid, 'execute') as authentifie
+  from pg_proc
+ where pronamespace = 'public'::regnamespace and proname in ('crm_has_role', 'crm_etape_v2')
+ order by 1;
+-- attendu : crm_etape_v2 | true ; crm_has_role | true
+```
+
+### Contrôles après application
+
+```sql
+select p.proname,
+       pg_get_function_identity_arguments(p.oid) as arguments,
+       p.prosecdef as security_definer,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie
+  from pg_proc p
+ where p.pronamespace = 'public'::regnamespace and p.proname like 'crm\_pilotage\_crm\_%'
+ order by 1;
+-- attendu : 5 lignes — cohorte, debuts, demandes_resolues, par_jour, par_pub ;
+--           security_definer = false, anon = false, authentifie = true
+
+-- Sans administrateur connecté (l'éditeur SQL n'en a pas), l'appel est refusé.
+select * from public.crm_pilotage_crm_debuts();
+-- attendu : ERREUR « pilotage réservé aux administrateurs »
+```
+
+Puis, sur la page Pilotage (aperçu de la branche, ou production après la
+fusion) : la section « Le CRM » affiche ses chiffres. La recette les compare,
+bloc par bloc, à `scripts/pilotage-crm-controles.sql` (une requête en lecture
+seule, comptes seulement ; correspondance des blocs : docs/33 § 9.4).
+
+Retour arrière, s'il le fallait et avec l'accord de Victor : supprimer les cinq
+fonctions ; aucune donnée n'en dépend, et la page revient à « attendent
+l'installation ».
+
+### Vérification locale
+
+- Rejeu des 69 migrations sur une base vierge ; migration appliquée deux fois
+  de suite sans erreur.
+- `scripts/pilotage-crm.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée ; la requête de contrôle y donne exactement les
+  chiffres de la page.
+- Sur dix fois le volume du CRM de novembre 2026 (fictif) : moins de
+  2 secondes par fonction ; mêmes chiffres que la première version des
+  fonctions et que la requête de contrôle, sur plusieurs périodes.

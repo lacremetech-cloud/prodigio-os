@@ -24,6 +24,7 @@ import { toutLire } from "./lecture-complete";
 import { ajouterJours, bornes } from "./meta/periodes";
 import type { RegleRattachement } from "./meta/rattachement";
 import { lirePilotage, nomDuBien } from "./queries";
+import { mesuresCrmSchema, type LigneCrmJour, type LigneCrmPub, type MesuresCrm } from "./crm";
 import { calculerTableau, type ChoixPeriode, type LigneDuJour, type TableauPilotage } from "./tableau";
 import { jourParis } from "./versions";
 
@@ -128,3 +129,74 @@ export async function lireTableauPilotage(choix: ChoixPeriode, maintenant: Date)
     return { etat: "erreur" };
   }
 }
+
+export type LectureCrm =
+  | {
+      etat: "ok";
+      parJour: LigneCrmJour[];
+      cohorte: Map<string | null, MesuresCrm>;
+      parPub: LigneCrmPub[];
+      /** Le jour de la première demande reçue, par bien et au total (`null`), toutes périodes confondues. */
+      debuts: Map<string | null, string>;
+    }
+  | { etat: "non_installe" }
+  | { etat: "erreur" };
+
+/**
+ * Les chiffres du CRM de la page (étape 3b) : des COMPTES seulement, calculés
+ * en base par les fonctions `crm_pilotage_crm_*` — aucune ligne d'acquéreur ne
+ * quitte la base. Lus à part : si la migration manque, seule la partie CRM de
+ * la page le dit, le reste s'affiche.
+ */
+export async function lireCrmPilotage(choix: ChoixPeriode, maintenant: Date): Promise<LectureCrm> {
+  const supabase = await createSupabaseServerClient();
+  const jour = jourParis(maintenant);
+  const b = choix.type === "dates" ? { debut: choix.debut, fin: choix.fin } : bornes(choix.periode, jour);
+  const args = { p_debut: b.debut, p_fin: b.fin };
+  try {
+    const [parJour, cohorte, parPub, debuts] = await Promise.all([
+      toutLire<LigneCrmJour>(
+        (a, z) => supabase.rpc("crm_pilotage_crm_par_jour", args).order("jour").order("property_id").range(a, z),
+        "CRM, demandes par jour",
+      ),
+      toutLire<{ property_id: string | null; mesures: unknown }>(
+        (a, z) => supabase.rpc("crm_pilotage_crm_cohorte", args).order("property_id").range(a, z),
+        "CRM, cohorte",
+      ),
+      toutLire<LigneCrmPub>(
+        (a, z) =>
+          supabase
+            .rpc("crm_pilotage_crm_par_pub", args)
+            .order("property_id")
+            .order("niveau")
+            .order("ad_id")
+            .order("campaign_id")
+            .range(a, z),
+        "CRM, par pub",
+      ),
+      toutLire<{ property_id: string | null; premier_jour: string }>(
+        (a, z) => supabase.rpc("crm_pilotage_crm_debuts").order("property_id").range(a, z),
+        "CRM, premiers jours",
+      ),
+    ]);
+    const mesures = new Map<string | null, MesuresCrm>();
+    for (const l of cohorte) mesures.set(l.property_id ?? null, mesuresCrmSchema.parse(l.mesures));
+    return {
+      etat: "ok",
+      parJour,
+      cohorte: mesures,
+      parPub,
+      debuts: new Map(debuts.map((d) => [d.property_id ?? null, d.premier_jour])),
+    };
+  } catch (cause) {
+    const code = cause instanceof LectureImpossible ? cause.code : undefined;
+    if (estNonInstalle(code)) return { etat: "non_installe" };
+    console.error("pilotage : chiffres du CRM illisibles", {
+      erreur: cause instanceof Error ? cause.name : "inconnue",
+      etape: cause instanceof LectureImpossible ? (cause.etape ?? null) : null,
+      code: code ?? null,
+    });
+    return { etat: "erreur" };
+  }
+}
+
