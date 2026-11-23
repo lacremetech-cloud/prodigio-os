@@ -350,6 +350,8 @@ lecture et les règles.
 ```bash
 bash scripts/replay-migrations.sh
 psql -h /var/run/postgresql -p 55432 -U postgres -d prodigio -f scripts/pilotage-meta.sql
+# Avec la règle safeupdate de la production, si l'extension est installée :
+PGOPTIONS='-c session_preload_libraries=safeupdate' psql -h /var/run/postgresql -p 55432 -U postgres -d prodigio -f scripts/pilotage-meta.sql
 ```
 
 Droits (rôle de service seul pour écrire les chiffres), verrou d'une lecture à
@@ -363,6 +365,9 @@ jouent la lecture entière avec un **faux Meta**, sans réseau.
 - Aucun tableau de bord encore : dépense par bien, ROAS, marge, données du CRM,
   pubs gagnantes viendront à l'étape 3. L'écran Meta sert à **vérifier** la
   lecture et à **régler** le rattachement.
+- La couverture est lue et rangée chaque matin, mais **aucun écran ne l'affiche
+  encore** : la fréquence (impressions ÷ couverture) est attendue sur la page
+  Pilotage, par période, au total et par bien (étape 3).
 - La couverture d'une portée de plus de 100 pubs ne se lit pas en une requête :
   elle s'affichera « — », comme pour des dates au choix.
 - Les leads sont comptés selon la fenêtre d'attribution que l'API applique
@@ -373,4 +378,29 @@ jouent la lecture entière avec un **faux Meta**, sans réseau.
 - Les dépenses sont prises **HT**, comme le veut la règle de calcul. La devise
   du compte est relevée à chaque lecture : un compte tenu dans une autre devise
   que l'euro est signalé à l'écran.
+
+### 7.8 Incident du 22/11/2026 : la couverture refusée par `safeupdate`
+
+La première lecture en production a bien lu et enregistré l'historique
+(statistiques, contrôle sans écart, pubs et liens d'aperçu ; totaux par
+campagne identiques au cockpit précédent, au centime près), puis s'est arrêtée
+en « Échec » à l'écriture de la **couverture**.
+
+- **Cause** : en production, toute requête passée par l'API est soumise à
+  l'extension `safeupdate`, qui refuse un `DELETE` ou un `UPDATE` sans `WHERE`
+  — même dans une fonction `SECURITY DEFINER`. La fonction de la couverture
+  vidait sa table par un `delete` sans `WHERE`. En local, sans `safeupdate`,
+  tout passait.
+- **Correctif** : migration `20261122200000` — la même fonction, avec
+  `where true` ([07](07-SUPABASE-SETUP.md) § 16).
+- **Garde-fou** : `src/modules/crm/sans-where.test.ts` refuse désormais, pour
+  tout le dépôt, une fonction SQL qui écrit sans `WHERE` ; les recettes se
+  jouent aussi sous la règle (`PGOPTIONS`, § 7.6).
+- **Journal** : une panne de la base dit maintenant son étape et son code — au
+  journal de Vercel (`pilotage : lecture Meta interrompue {erreur, etape,
+  code}`) et à l'écran (« … à l'étape « couverture » (code 21000) … »). Jamais
+  le texte brut de la base, qui peut citer une valeur.
+- **Appliqué le 22/11/2026** vers 20 h 40 : la lecture suivante a fini
+  « Réussie », couverture relue et recoupée avec le cockpit précédent. Les
+  règles de rattachement sont saisies : plus aucune campagne orpheline.
 

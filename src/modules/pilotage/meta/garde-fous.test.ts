@@ -147,6 +147,32 @@ describe("l'identifiant de pub des demandes : sans risque pour le dépôt", () =
   });
 });
 
+describe("le correctif du 22/11/2026 : la couverture s'écrit malgré safeupdate", () => {
+  const CORRECTIF = sansCommentairesSql(
+    readFileSync(join(process.cwd(), "supabase", "migrations", "20261122200000_pilotage_couverture_safeupdate.sql"), "utf8"),
+  )
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+  it("la même fonction, mêmes sécurité et droits, avec `where true`", () => {
+    expect(CORRECTIF).toContain("create or replace function public.crm_pilotage_meta_remplacer_couverture( p_synchro_id uuid, p_lignes jsonb )");
+    expect(CORRECTIF).toMatch(/security definer set search_path = public, pg_temp as \$\$/);
+    expect(CORRECTIF).toContain("delete from public.pilotage_meta_couverture where true;");
+    expect(CORRECTIF).toContain(
+      "revoke all on function public.crm_pilotage_meta_remplacer_couverture(uuid, jsonb) from public, anon, authenticated;",
+    );
+    expect(CORRECTIF).toContain("grant execute on function public.crm_pilotage_meta_remplacer_couverture(uuid, jsonb) to service_role;");
+    expect(CORRECTIF).not.toMatch(/grant [^;]* to [^;]*\b(anon|authenticated|public)\b/);
+  });
+
+  it("rien d'autre : ni table, ni colonne, ni donnée", () => {
+    const horsCorps = CORRECTIF.replace(/as \$\$[\s\S]*?\$\$;/g, "");
+    expect(horsCorps).not.toMatch(/\b(create table|alter table|drop |insert into|update public|delete from|truncate)\b/);
+    expect(horsCorps).toMatch(/^ ?begin; set local lock_timeout = '2s'; create or replace function/);
+    expect(horsCorps.trim().endsWith("commit;")).toBe(true);
+  });
+});
+
 /** Tous les fichiers TypeScript (hors tests) d'un dossier, commentaires retirés. */
 function codeTypeScript(dossier: string): { fichier: string; code: string }[] {
   const out: { fichier: string; code: string }[] = [];

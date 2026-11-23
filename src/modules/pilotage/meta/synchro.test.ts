@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { EcritureImpossible } from "../erreurs";
 import { ErreurMeta, MESSAGE_JETON_REFUSE } from "./graph";
 import type { LigneInsight, PubLue } from "./lecture";
 import type { FiltreCouverture, PortMeta } from "./port-meta";
@@ -237,5 +238,59 @@ describe("le découpage des écritures et le contrôle", () => {
       ["a", ["1"]],
       ["b", ["1"]],
     ]);
+  });
+});
+
+describe("une panne de la base se dit : l'étape et le code, jamais le texte brut", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("la couverture refusée (le cas du 22/11/2026) : échec qui nomme l'étape et le code, au journal et à l'écran", async () => {
+    const journal = vi.spyOn(console, "error").mockImplementation(() => {});
+    const m = fauxMeta();
+    const b = fausseBase({ couvertJusquAu: "2026-11-10" });
+    b.base.remplacerCouverture = async () => {
+      throw new EcritureImpossible("couverture", "21000");
+    };
+    const bilan = await lireMeta(parametres(m.meta, b.base));
+    expect(bilan.statut).toBe("echec");
+    expect(bilan.message).toBe(
+      "Erreur inattendue pendant la lecture Meta, à l’étape « couverture » (code 21000). Ce qui a été enregistré avant reste valable.",
+    );
+    // Ce qui précède la couverture est bien enregistré, et le journal est clos avec le même message.
+    expect(b.ecritures.length).toBeGreaterThan(0);
+    expect(b.fins).toEqual([expect.objectContaining({ statut: "echec", erreur: bilan.message })]);
+    expect(journal).toHaveBeenCalledWith("pilotage : lecture Meta interrompue", {
+      erreur: "EcritureImpossible",
+      etape: "couverture",
+      code: "21000",
+    });
+  });
+
+  it("une erreur sans étape garde le message général, et le journal donne au moins son genre", async () => {
+    const journal = vi.spyOn(console, "error").mockImplementation(() => {});
+    const b = fausseBase();
+    b.base.regles = async () => {
+      throw new TypeError("valeur interne à ne pas afficher");
+    };
+    const bilan = await lireMeta(parametres(fauxMeta().meta, b.base));
+    expect(bilan.message).toBe("Erreur inattendue pendant la lecture Meta. Ce qui a été enregistré avant reste valable.");
+    expect(bilan.message).not.toContain("valeur interne");
+    expect(journal).toHaveBeenCalledWith("pilotage : lecture Meta interrompue", { erreur: "TypeError", etape: null, code: null });
+  });
+
+  it("une panne au démarrage ne fait tomber ni la page ni la route du matin", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const m = fauxMeta();
+    const b = fausseBase();
+    b.base.demarrer = async () => {
+      throw new EcritureImpossible("démarrage", "PGRST202");
+    };
+    const bilan = await lireMeta(parametres(m.meta, b.base));
+    expect(bilan).toMatchObject({ statut: "echec", synchroId: null, lignes: 0 });
+    expect(bilan.message).toContain("« démarrage » (code PGRST202)");
+    expect(m.meta.appels).toBe(0);
+    expect(b.fins).toEqual([]);
   });
 });

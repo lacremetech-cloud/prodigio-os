@@ -72,8 +72,10 @@ Voir [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 7.4.
 | `META_AD_ACCOUNT_ID` | Gestionnaire de publicités → identifiant du compte (avec ou sans `act_`) | Lecture désactivée (« lecture Meta non configurée ») | Pas un secret au sens strict, mais tenu hors du dépôt public |
 | `CRON_SECRET` | Une longue suite aléatoire — 64 caractères avec `openssl rand -hex 32` ; en dessous de 16, la route reste fermée — posée en **Production** ; Vercel Cron l'envoie lui-même à la route | La lecture automatique du matin n'a plus lieu (la route répond « introuvable » sans secret, « refusé » avec un mauvais) ; le bouton « Lire Meta maintenant » marche toujours | N'ouvre que la route `/api/pilotage/meta/synchro`, qui ne fait que lire Meta et écrire les chiffres du pilotage |
 
-**Posées le 22/11/2026** par Victor, type « Secret » : les deux premières en
-Production et Preview, `CRON_SECRET` en Production seulement.
+**Posées le 22/11/2026** par Victor : les deux premières en Production et
+Preview, `CRON_SECRET` en Production seulement. Elles sont pour l'instant en
+type « Config » : **à repasser en « Secret »**, pour que leur valeur ne soit
+plus relisible dans Vercel.
 
 Contrôle après pose ou rotation, une fois redéployé : `GET /api/health` →
 `"meta_lecture_pub": true` et `"lecture_du_matin": true`.

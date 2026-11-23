@@ -986,9 +986,106 @@ place (non revérifiables depuis le dépôt) :
   la lecture ; les trois déclencheurs de `buyer_interests` actifs ; **465
   demandes sur 514** ont retrouvé leur pub (`meta_ad_id`) ; 22 et 91 valeurs.
   Le site et le CRM fonctionnent.
-- Variables posées par Victor dans Vercel le même jour, type « Secret » :
+- Variables posées par Victor dans Vercel le même jour :
   `META_ADS_READ_TOKEN` et `META_AD_ACCOUNT_ID` (Production et Preview),
-  `CRON_SECRET` (Production seulement).
+  `CRON_SECRET` (Production seulement). Constaté le soir : elles sont en type
+  « Config » et non « Secret » — à repasser en « Secret », sans effet sur le
+  fonctionnement.
+- Première lecture, le soir même : statistiques, contrôle et pubs enregistrés
+  (totaux par campagne identiques au cockpit précédent, contrôle sans écart),
+  puis **« Échec » à l'écriture de la couverture** — corrigé par la migration
+  du § 16.
 
 Rejouée localement dans l'ordre de la production (la migration du 19/11
 d'abord, puis celles du 12/11) : sans erreur, mêmes listes d'audit.
+
+## 16. Pilotage pub — correctif de la couverture (`20261122200000_pilotage_couverture_safeupdate`) — **APPLIQUÉE le 22/11/2026**
+
+Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 7.8.
+
+### Pourquoi
+
+En production, Supabase charge l'extension **`safeupdate`** pour toute requête
+passée par l'API (`session_preload_libraries` du rôle `authenticator`) : un
+`DELETE` ou un `UPDATE` **sans `WHERE`** y est refusé (`21000`), y compris à
+l'intérieur d'une fonction `SECURITY DEFINER`. La fonction
+`crm_pilotage_meta_remplacer_couverture` vidait la table de couverture par un
+`delete` sans `WHERE` : la première lecture Meta, le 22/11/2026, s'est arrêtée
+là. Une base locale ne charge pas `safeupdate` : la recette ne pouvait pas le
+voir.
+
+### Ce qu'elle change
+
+| Objet | Modification | Nature |
+|---|---|---|
+| `crm_pilotage_meta_remplacer_couverture(uuid, jsonb)` | `create or replace` : le même corps, avec `where true` sur le `delete` (tout remplacer, exprès) | Remplacement d'une fonction de l'étape 2 — même signature, même `SECURITY DEFINER`, même `search_path`, mêmes droits (rôle de service seul, rappelés) |
+
+**Aucune table, aucune colonne, aucune donnée touchée.** Rejouable. Attente de
+verrou bornée à 2 s, comme l'étape 2.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+-- La version en place vide la table sans WHERE.
+select position('delete from public.pilotage_meta_couverture;' in prosrc) > 0 as ancienne_version
+  from pg_proc where proname = 'crm_pilotage_meta_remplacer_couverture';
+-- attendu : true
+
+-- La règle qui l'a refusée.
+select rolname, rolconfig from pg_roles where rolname = 'authenticator';
+-- attendu : session_preload_libraries contient safeupdate
+```
+
+### Contrôles après application
+
+```sql
+select position('where true' in prosrc) > 0 as corrigee,
+       prosecdef as security_definer,
+       has_function_privilege('anon', oid, 'execute') as anon,
+       has_function_privilege('authenticated', oid, 'execute') as authentifie,
+       has_function_privilege('service_role', oid, 'execute') as service
+  from pg_proc where proname = 'crm_pilotage_meta_remplacer_couverture';
+-- attendu : true, true, false, false, true
+```
+
+Puis, dans l'application : Pilotage pub → Meta Ads → **Lire Meta maintenant**.
+La lecture doit finir « Réussie », couverture relue ; en base, une ligne de
+couverture par période proposée (et par bien rattaché) :
+
+```sql
+select periode, count(*) from public.pilotage_meta_couverture group by 1 order by 1;
+```
+
+### Résultat de l'application (22/11/2026, vers 20 h 40)
+
+Appliquée en production dans l'éditeur SQL de Supabase, avec l'accord écrit de
+Victor : le fichier lancé est celui de la PR #81 (empreinte SHA-256 vérifiée
+avant de lancer). Relevés faits sur place (non revérifiables depuis le dépôt) :
+
+- **Avant** : l'ancienne version en place (`delete` sans `WHERE`),
+  `safeupdate` présent sur `authenticator`, aucune lecture en cours, aucune
+  ligne de couverture.
+- **Après**, contrôle ci-dessus conforme : `true, true, false, false, true` ;
+  une seule fonction de ce nom.
+- **Lecture relancée** au bouton : « Réussie », couverture relue — une ligne
+  par période proposée pour le total et pour chaque bien ayant des pubs sur la
+  période (27 lignes, aucune sans valeur). Couvertures, impressions et dépense
+  du portefeuille recoupées avec le cockpit précédent, relu chez Meta dans la
+  foulée : identiques.
+
+### Vérification locale
+
+- `src/modules/crm/sans-where.test.ts` relit **toutes** les fonctions des
+  migrations (leur dernière version) et refuse tout `DELETE` ou `UPDATE` sans
+  `WHERE` à son niveau. Le 22/11/2026, une seule fonction du dépôt était en
+  faute : celle-ci. Recoupé sur les 188 fonctions `plpgsql`/`sql` installées
+  par le rejeu.
+- `safeupdate` n'est pas empaqueté pour Ubuntu, et sa source (sur GitHub) est
+  hors d'atteinte de l'environnement de développement : la règle a été
+  **émulée** localement (même refus, au même moment : à l'analyse de chaque
+  requête, fonctions comprises). Avec elle : la lecture échouait comme en
+  production avant le correctif (`21000: DELETE requires a WHERE clause`) et
+  passe après ; les deux recettes passent.
+- Avec la vraie extension installée :
+  `PGOPTIONS='-c session_preload_libraries=safeupdate' psql -d prodigio -f scripts/pilotage-meta.sql`.
+

@@ -7,24 +7,26 @@
  * peuvent se chevaucher ou laisser un trou.
  */
 
-export type Echec = { code?: string; message?: string } | null;
+import { LectureImpossible } from "./erreurs";
 
-export class LectureImpossible extends Error {
-  constructor(readonly code: string | undefined) {
-    super("lecture du pilotage impossible");
-  }
-}
+export { LectureImpossible };
+
+export type Echec = { code?: string; message?: string } | null;
 
 export const TAILLE_DE_PAGE = 1000;
 
-/** Toutes les lignes d'une requête, page après page. */
+/**
+ * Toutes les lignes d'une requête, page après page. `etape` nomme la lecture
+ * dans l'erreur, pour le journal.
+ */
 export async function toutLire<T>(
   requete: (debut: number, fin: number) => PromiseLike<{ data: unknown; error: Echec }>,
+  etape?: string,
 ): Promise<T[]> {
   const lignes: T[] = [];
   for (let debut = 0; ; debut += TAILLE_DE_PAGE) {
     const { data, error } = await requete(debut, debut + TAILLE_DE_PAGE - 1);
-    if (error) throw new LectureImpossible(error.code);
+    if (error) throw new LectureImpossible(error.code, etape);
     const page = Array.isArray(data) ? (data as T[]) : [];
     lignes.push(...page);
     if (page.length < TAILLE_DE_PAGE) return lignes;

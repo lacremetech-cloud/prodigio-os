@@ -82,3 +82,11 @@ défaut de la colonne** dans la même migration. Une contrainte resserrée sans
 son défaut a rejeté 65 dépôts d'acquéreurs en vingt-deux heures, sans un
 signal. Un test relit désormais toutes les migrations et refuse ce cas
 (`src/modules/buyers/crm/valeurs-par-defaut.test.ts`).
+
+Une fonction SQL ne fait **jamais de `DELETE` ni d'`UPDATE` sans `WHERE`**. En
+production, toute requête passée par l'API est soumise à l'extension
+`safeupdate`, qui les refuse — même dans une fonction `SECURITY DEFINER` ou un
+déclencheur. Une base locale ne la charge pas : la recette passe, la production
+échoue (la lecture Meta du 22/11/2026). Pour tout viser exprès : `where true`.
+Un test relit toutes les fonctions des migrations et refuse ce cas
+(`src/modules/crm/sans-where.test.ts`).

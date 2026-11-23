@@ -11,6 +11,11 @@
 -- Se joue sur une base LOCALE montée par `scripts/replay-migrations.sh` :
 --   psql -d prodigio -f scripts/pilotage-donnees.sql
 --
+-- Jouable aussi avec la règle `safeupdate` de la production (un DELETE ou un
+-- UPDATE sans WHERE refusé, comme pour toute requête passée par l'API) :
+--   PGOPTIONS='-c session_preload_libraries=safeupdate' psql -d prodigio -f scripts/pilotage-donnees.sql
+-- Les essais de réécriture visent toutes les lignes par `where true`.
+--
 -- DEUX SÉCURITÉS, parce que les aperçus Vercel écrivent dans la base de
 -- production et qu'un script lancé au mauvais endroit ne doit rien y laisser :
 --   1. il refuse de tourner sur une base qui contient déjà un bien ;
@@ -339,32 +344,32 @@ end $$;
 reset role;
 
 do $$ begin
-  update public.pilotage_conditions set motif = 'réécrit';
+  update public.pilotage_conditions set motif = 'réécrit' where true;
   raise exception 'ÉCHEC : une version de conditions a été réécrite';
 exception when sqlstate '0A000' then null;
 end $$;
 do $$ begin
-  delete from public.pilotage_conditions;
+  delete from public.pilotage_conditions where true;
   raise exception 'ÉCHEC : une version de conditions a été effacée';
 exception when sqlstate '0A000' then null;
 end $$;
 do $$ begin
-  update public.pilotage_lots set numero = '99';
+  update public.pilotage_lots set numero = '99' where true;
   raise exception 'ÉCHEC : un lot a été renuméroté en direct';
 exception when sqlstate '0A000' then null;
 end $$;
 do $$ begin
-  delete from public.pilotage_lot_versions;
+  delete from public.pilotage_lot_versions where true;
   raise exception 'ÉCHEC : un état de lot a été effacé';
 exception when sqlstate '0A000' then null;
 end $$;
 do $$ begin
-  update public.pilotage_couts_fixes set montant_ht_cents = 1;
+  update public.pilotage_couts_fixes set montant_ht_cents = 1 where true;
   raise exception 'ÉCHEC : un montant de coût a été réécrit';
 exception when sqlstate '0A000' then null;
 end $$;
 do $$ begin
-  delete from public.pilotage_couts_fixes;
+  delete from public.pilotage_couts_fixes where true;
   raise exception 'ÉCHEC : un coût fixe a été effacé';
 exception when sqlstate '0A000' then null;
 end $$;
