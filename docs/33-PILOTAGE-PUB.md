@@ -23,7 +23,8 @@ la suivante :
 |---|---|---|
 | **1. Les données** | Conditions de commercialisation versionnées, lots, coûts fixes, formulaires d'administration | **fusionnée** (PR #79) |
 | **2. Lecture Meta** | Statistiques Meta Ads chaque matin, **en lecture seule** ; rattachement des campagnes aux biens | PR #80 — migrations appliquées le 22/11/2026 |
-| 3. Page Pilotage | Vue générale et onglets par bien, avec les données du CRM par bien (nombres agrégés seulement) | à venir |
+| **3a. Page Pilotage** | Vue générale et onglet par bien : la parité avec le cockpit (commissions, rentabilité, Meta par période, fréquence, pubs gagnantes, coûts, alertes) | **cette PR** |
+| 3b. Données du CRM | Par bien et sur la période, en nombres seulement : demandes, pipeline, qualification, visites, offres, par pub, coûts par étape | à venir |
 | 4. Remontée vers Meta | Conversions (API de conversions) — **à la toute fin, avec Victor, rien avant son feu vert** | à venir |
 
 Deux consignes de Victor tiennent pour toutes les étapes : lire les chiffres
@@ -403,4 +404,115 @@ en « Échec » à l'écriture de la **couverture**.
 - **Appliqué le 22/11/2026** vers 20 h 40 : la lecture suivante a fini
   « Réussie », couverture relue et recoupée avec le cockpit précédent. Les
   règles de rattachement sont saisies : plus aucune campagne orpheline.
+
+---
+
+## 8. Étape 3a — la page Pilotage : la parité avec le cockpit
+
+Décision de Victor du 23/11/2026 : l'étape 3 se livre en **deux PR** — 3a, la
+parité avec le cockpit de l'iMac ; 3b, les données du CRM. Aucune migration :
+la page lit ce que les étapes 1 et 2 enregistrent déjà.
+
+### 8.1 Les pages
+
+- **`/crm/pilotage` — vue générale** (l'entrée « Pilotage pub » du menu) :
+  la commission Prodigio potentielle en grand (HT, et TTC à côté) avec le
+  calcul bien par bien et la formule écrite ; « Rentabilité · depuis le
+  début » ; « Performance Meta » sur la période ; les graphiques de la dépense
+  et des leads, une couleur par bien ; le tableau par bien en deux groupes de
+  colonnes (« depuis le début », « sur la période ») ; les 3 pubs gagnantes
+  tous biens ; les coûts fixes bien par bien et par type ; « À savoir ».
+- **`/crm/pilotage/biens/[id]` — un onglet par bien** : la commission en
+  grand, **pas le ROAS**, puis son calcul pas à pas ; pour un programme vendu
+  par lots, **lot par lot**, la pub et les coûts fixes du programme répartis
+  entre les lots **au prorata du prix** ; la rentabilité, ROAS potentiel
+  compris ; les coûts fixes avec leur journal (annulation comprise) ; la
+  performance Meta et ses graphiques ; les 3 pubs gagnantes, chacune avec
+  « Voir la pub ».
+- Les onglets : Vue générale, un onglet par bien, puis les saisies et Meta
+  Ads. La période choisie suit d'un onglet de chiffres à l'autre.
+
+Réservé aux administrateurs : chaque page vérifie le rôle **avant** de lire
+(un test le refuse sinon), et la RLS de chaque table ne rend les lignes qu'à
+un administrateur.
+
+### 8.2 Les périodes
+
+Les neuf périodes proposées (aujourd'hui, hier, 7 derniers jours, cette
+semaine, 30 derniers jours, ce mois-ci, le mois dernier, cette année, toute la
+période) ou **des dates au choix** ; les 7 et 30 derniers jours s'arrêtent à
+hier. La période se lit dans l'adresse (`?periode=…`, ou `?du=…&au=…`) :
+elle se partage, et une valeur illisible retombe sur la période par défaut
+en le disant. Comme le cockpit de l'iMac, la page **rouvre sur la dernière
+période proposée choisie** (des dates au choix ne se retiennent pas), retenue
+par le navigateur (cookie de préférence `pilotage_periode`, limité aux pages
+du pilotage, relu avec la même validation) ; la première fois, sur **toute la
+période**.
+
+**Tout ce qui vient de Meta suit la période. La commission et la rentabilité
+restent « depuis le début ».**
+
+### 8.3 Ce qui se calcule, et comment
+
+Le calcul est une fonction pure, testée : `src/modules/pilotage/tableau.ts`.
+
+- **Commission** : celle de l'étape 1, exacte, arrondie à l'affichage ; le
+  total est la somme exacte des biens. Un bien sans conditions rend la
+  commission « manquante » et le total « au moins … ».
+- **Rentabilité · depuis le début** : pub Meta investie HT (hors
+  portefeuille exclu, dépense non rattachée comprise dans le total) ;
+  **ROAS potentiel = commission Prodigio HT ÷ pub HT** ; **marge nette HT
+  potentielle = commission HT − pub − coûts fixes** ; commission encaissée HT
+  (biens et lots vendus, au prix final) ; coûts fixes HT.
+- **Performance Meta · période** : pub HT, leads (l'action `lead`), coût par
+  lead, **CTR = tous les clics ÷ impressions** (le champ `ctr` de Meta), CPM ;
+  tous calculés sur des **sommes**, jamais en moyennant des taux.
+- **Fréquence = impressions ÷ couverture**, lues ensemble chez Meta pour
+  chaque période proposée, au total et par bien (`pilotage_meta_couverture`) ;
+  « — » pour des dates au choix, et pour un bien qui n'a rien diffusé sur la
+  période (la lecture n'écrit une ligne que pour les biens qui ont diffusé) ;
+  « en attente » seulement si la période n'a pas encore été relue (couverture
+  d'un autre jour) ou si une règle a changé depuis la lecture.
+- **Une pub commune à plusieurs biens** se répartit au prorata du prix
+  affiché — sa dépense, et avec elle ses impressions, clics et leads : la
+  somme des biens égale le total, et le coût par lead d'un bien reste
+  cohérent. Un prix manquant rend la répartition impossible : la dépense est
+  alors comptée dans le total, signalée, et absente des biens.
+- **Pubs gagnantes** : le plus de leads sur la période ; à égalité, le moins
+  cher par lead ; jamais une pub hors portefeuille.
+- **Graphiques** : une colonne par jour, par semaine au-delà de deux mois ;
+  une couleur par bien, dans un ordre fixe (celui des premières saisies), qui
+  ne change pas avec la période. Palette validée par calcul sur les surfaces
+  claire et sombre du CRM ; légende, survol au clavier comme à la souris, et
+  le tableau des chiffres pour qui ne lit pas les couleurs.
+
+### 8.4 Trois états, jamais un zéro inventé
+
+- « **manquant** » — une donnée du pilotage manque (conditions, prix, part…),
+  avec sa raison ;
+- « **en attente** » — Meta n'a pas encore été lu (ou pas pour cette
+  période) ;
+- « — » — sans objet (aucun lead, aucune dépense) ;
+- un vrai **0** — Meta a été lu, et il ne s'est rien passé.
+
+### 8.5 « À savoir »
+
+Lecture Meta en échec ou trop ancienne, dépense non rattachée, dépense hors
+portefeuille exclue, pub commune impossible à répartir, écarts de contrôle,
+devise autre que l'euro, et les alertes de chaque bien (conditions, lots sans
+prix…). Chaque alerte mène où la régler.
+
+### 8.6 Performance
+
+Quelques milliers de lignes au plus ; les totaux par pub s'agrègent en base
+(`crm_pilotage_meta_totaux`), le reste se lit page après page. Chaque requête
+reste loin des 8 secondes que la production accorde à l'API.
+
+### 8.7 Ce qui reste pour 3b
+
+Les données du CRM, par bien et sur la période (date d'arrivée de la
+demande) : demandes par jour, étapes du pipeline et sorties, qualification,
+visites, offres, taux de passage, provenance et commerciaux, **par pub** via
+`meta_ad_id` (avec la part non rattachée), coûts par lead CRM, par qualifié,
+par visite, par offre, et l'écart entre leads Meta et demandes reçues.
 

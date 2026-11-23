@@ -60,7 +60,7 @@ const ORDRE_UNIVERS: Univers[] = ["mandats", "biens"];
  * qu'à eux ; la base, elle, refuse les autres quoi qu'il arrive. Il vit dans
  * l'univers Biens : il parle de vendre des biens.
  */
-const NAV_PILOTAGE: NavItem = { href: "/crm/pilotage/donnees", label: "Pilotage pub", icon: "◎" };
+const NAV_PILOTAGE: NavItem = { href: "/crm/pilotage", label: "Pilotage pub", icon: "◎" };
 
 /** Entrees communes aux deux univers : elles ne changent pas de couleur. */
 const NAV_HAUT: NavItem[] = [
