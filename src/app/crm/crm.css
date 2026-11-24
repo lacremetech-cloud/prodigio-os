@@ -2868,20 +2868,30 @@
    bout du defilement, la ou l'oeil arrive. */
 .crm-kanban-suite {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px dashed var(--crm-line);
+  padding: 9px 10px;
+  /* PLEIN ET SOLIDE, PAS UN POINTILLE PALE.
+     Premiere version : texte `--crm-text-faint` en 11 px sur fond transparent,
+     borde de pointilles `--crm-line`. Reglee sur le theme SOMBRE, qui est le
+     defaut du code — mais l'equipe travaille en CLAIR, ou la meme regle donne
+     4,8:1 pour le texte et 1,5:1 pour le trait. Un bouton qu'on ne voit pas
+     est un bouton qui n'existe pas. */
+  /* Il emprunte la couleur DE SA COLONNE, deja posee sur `--col-vif` juste
+     au-dessus. Un gris neutre se noyait : le fond de la zone est lui-meme une
+     teinte pale de cette couleur, si bien qu'un remplissage `--crm-panel-2`
+     et une bordure `--crm-line-hover` n'y faisaient que 1,6:1. */
+  border: 1px solid color-mix(in srgb, var(--col-vif, var(--crm-line)) 48%, transparent);
   border-radius: 10px;
-  background: transparent;
-  color: var(--crm-text-faint);
-  font-size: 11px;
+  background: color-mix(in srgb, var(--col-vif, var(--crm-line)) 16%, var(--crm-panel));
+  color: var(--crm-text);
+  font-size: 12px;
+  font-weight: 500;
   text-align: center;
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 .crm-kanban-suite:hover {
-  border-color: var(--crm-line-hover);
-  background: var(--crm-panel-2);
-  color: var(--crm-text-dim);
+  border-color: color-mix(in srgb, var(--col-vif, var(--crm-line)) 75%, transparent);
+  background: color-mix(in srgb, var(--col-vif, var(--crm-line)) 28%, var(--crm-panel));
 }
 .crm-kanban-suite:focus-visible {
   outline: 2px solid var(--crm-focus);
@@ -2956,18 +2966,24 @@
 /* Le bouton qui l'ouvre, sur la carte. */
 .crm-kanban-deplacer {
   width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--crm-line-soft);
+  padding: 7px 10px;
+  /* Meme correction que `.crm-kanban-suite` : la bordure `--crm-line-soft` et
+     le texte en 11 px disparaissaient sur le theme clair. */
+  border: 1px solid var(--crm-line-hover);
   border-radius: 8px;
   background: var(--crm-panel-2);
-  color: var(--crm-text-dim);
-  font-size: 11px;
+  /* Pleine force : c'est une action, pas une legende. En `--crm-text-dim` sur
+     le theme clair, elle se lisait comme du texte eteint. */
+  color: var(--crm-text);
+  font-size: 12px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
 }
 .crm-kanban-deplacer:hover:not(:disabled) {
-  border-color: var(--crm-line-hover);
+  border-color: var(--crm-text-faint);
+  background: var(--crm-hover);
   color: var(--crm-text);
 }
 .crm-kanban-deplacer:disabled {
