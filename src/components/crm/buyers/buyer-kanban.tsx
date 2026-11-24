@@ -18,7 +18,7 @@ import {
   movableBuyerStages,
   type BuyerKanbanCard,
 } from "@/modules/buyers/crm/pipeline";
-import { moveBuyerCardAction } from "@/modules/buyers/crm/actions";
+import { chargerDossierAction, moveBuyerCardAction } from "@/modules/buyers/crm/actions";
 import { safeAction } from "@/modules/crm/safe-action";
 import type { BuyerInboxRow } from "@/modules/buyers/crm/queries";
 import { positionDansLaFile, suivantDansLaFile } from "@/modules/buyers/crm/file-appels";
@@ -29,7 +29,6 @@ import {
   QUALIFICATION_BADGE,
   QUALIFICATION_LABELS,
 } from "@/modules/buyers/crm/qualification";
-import { libelleBudget } from "@/modules/buyers/crm/budget";
 
 /**
  * Kanban Acquéreurs — mêmes standards que le Kanban Mandats :
@@ -49,6 +48,20 @@ interface Grabbed {
   targetIndex: number;
 }
 
+/**
+ * COMBIEN DE CARTES UNE COLONNE DESSINE AVANT QU'ON LE DEMANDE.
+ *
+ * « À contacter » en compte 264. Les 264 etaient dessinees, chacune avec ses
+ * trois boutons et son menu : pres de 19 000 noeuds pour un tableau dont on
+ * lit les cinq premieres cartes de chaque colonne. C'est ce qui accrochait au
+ * defilement et au glisser-deposer.
+ *
+ * 25 : de quoi remplir un ecran et demi sans avoir a cliquer, et de quoi
+ * diviser le DOM par huit. Le compteur de l'en-tete, lui, annonce TOUJOURS le
+ * total — on ne cache pas le travail, on retarde son dessin.
+ */
+const PLAFOND_COLONNE = 25;
+
 export function BuyerKanbanBoard({
   cards,
   canMove,
@@ -56,21 +69,12 @@ export function BuyerKanbanBoard({
   contexte = "",
   rechercheInitiale = "",
   resumeDisponible = false,
-  rows = [],
   membres = [],
   moiUserId = null,
   peutAffecterAutrui = false,
 }: {
   cards: BuyerKanbanCard[];
   canMove: boolean;
-  /**
-   * Les MEMES dossiers que `cards`, en entier.
-   *
-   * Une carte ne porte que de quoi se dessiner : ni e-mail, ni qualification,
-   * ni derniere note, ni prochaine tache. Le panneau a besoin de tout cela, et
-   * la page le charge deja pour le bandeau — aucune requete de plus.
-   */
-  rows?: BuyerInboxRow[];
   /** Pour « M'attribuer » et le choix du responsable dans le panneau. */
   membres?: { userId: string; name: string }[];
   /** Mon identifiant, et mon droit de confier un dossier a autrui. */
@@ -101,6 +105,23 @@ export function BuyerKanbanBoard({
   } | null>(null);
   const [live, setLive] = useState("");
   const [grabbed, setGrabbed] = useState<Grabbed | null>(null);
+  /** Les colonnes dont on a demande la suite. Par colonne : deplier « A
+      contacter » ne doit pas deplier les huit autres. */
+  const [deplie, setDeplie] = useState<Record<string, boolean>>({});
+  /** La carte dont le menu « Deplacer vers... » est ouvert. UN seul a la fois,
+      dessine une seule fois pour tout le tableau. */
+  const [menuPour, setMenuPour] = useState<string | null>(null);
+
+  /* Echap ferme le menu de deplacement : c'est le reflexe, et un panneau
+     modal qu'on ne peut fermer qu'a la souris est un piege au clavier. */
+  useEffect(() => {
+    if (!menuPour) return;
+    const surTouche = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuPour(null);
+    };
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [menuPour]);
 
   // Filtres : stables au déplacement (ils ne dépendent pas de la position).
   const [search, setSearch] = useState(rechercheInitiale);
@@ -188,10 +209,36 @@ export function BuyerKanbanBoard({
   const [ordreFile, setOrdreFile] = useState<string[]>([]);
   const saleRef = useRef(false);
 
-  const rowsById = useMemo(
-    () => new Map(rows.map((r) => [r.interestId ?? r.buyerProfileId, r])),
-    [rows],
-  );
+  /**
+   * LE DOSSIER OUVERT, DEMANDE A L'OUVERTURE.
+   *
+   * Avant, la page envoyait les 506 d'avance « puisqu'ils etaient charges » :
+   * pres de 1,6 Mo de JSON vers le navigateur pour qu'on en lise un. Le
+   * panneau va desormais chercher le sien — une requete d'une poignee de
+   * millisecondes, et plus aucune donnee d'autrui dans le navigateur.
+   */
+  const [dossier, setDossier] = useState<BuyerInboxRow | null>(null);
+  const [chargement, setChargement] = useState(false);
+  const [echec, setEchec] = useState<string | null>(null);
+  /** La demande en cours : une reponse qui arrive apres un changement de
+      carte ne doit pas ecraser la suivante. */
+  const demandeRef = useRef(0);
+
+  async function demanderDossier(c: BuyerKanbanCard) {
+    const n = ++demandeRef.current;
+    setChargement(true);
+    setEchec(null);
+    const r = await safeAction(() =>
+      chargerDossierAction({ buyerProfileId: c.buyerProfileId, interestId: c.interestId }),
+    );
+    if (n !== demandeRef.current) return; // une autre carte a ete ouverte depuis
+    setChargement(false);
+    if (!r.ok) {
+      setEchec(r.error ?? "Dossier indisponible.");
+      return;
+    }
+    setDossier(("dossier" in r ? r.dossier : undefined) ?? null);
+  }
 
   /** Vrai si l'on peut quitter le dossier ouvert : sinon on demande. */
   function peutQuitter(): boolean {
@@ -225,7 +272,7 @@ export function BuyerKanbanBoard({
     return ordre;
   }, [columns]);
 
-  const rowOuverte = ouvert ? rowsById.get(ouvert) ?? null : null;
+  const rowOuverte = ouvert ? dossier : null;
   const { position, total: totalFile } = positionDansLaFile(ordreFile, ouvert);
 
   /** Ouvrir une carte demarre une file : celle du tableau affiche. */
@@ -235,6 +282,8 @@ export function BuyerKanbanBoard({
     if (!peutQuitter()) return;
     if (ordreFile.length === 0) setOrdreFile(ordreTableau);
     setOuvert(cle);
+    setDossier(null);
+    void demanderDossier(c);
   }
 
   const commitMove = (cle: string, fromStage: string, toStage: string) => {
@@ -422,7 +471,7 @@ export function BuyerKanbanBoard({
                     Vide
                   </p>
                 ) : (
-                  items.map((c) => (
+                  (deplie[col] ? items : items.slice(0, PLAFOND_COLONNE)).map((c) => (
                     <Card
                       key={cleCarte(c)}
                       card={c}
@@ -448,17 +497,136 @@ export function BuyerKanbanBoard({
                         setOverStage(null);
                       }}
                       onKeyDown={(e) => onCardKeyDown(e, c)}
-                      onMenuMove={(toStage) => commitMove(cleCarte(c), stageOf(c), toStage)}
-                      onOuvrir={rowsById.has(cleCarte(c)) ? () => ouvrirDossier(c) : undefined}
-                      row={rowsById.get(cleCarte(c))}
+                      onDemanderMenu={() => setMenuPour(cleCarte(c))}
+                      onOuvrir={() => ouvrirDossier(c)}
                     />
                   ))
                 )}
+
+                {/* LE RESTE DE LA COLONNE, A LA DEMANDE.
+                    Le nombre est explicite : « voir les 239 autres » dit ce
+                    qu'on ne regarde pas, la ou un « ... » laisserait croire
+                    qu'il n'y a plus rien. Une fois deplie, on ne replie pas —
+                    personne ne demande a en voir moins. */}
+                {!deplie[col] && items.length > PLAFOND_COLONNE ? (
+                  <button
+                    type="button"
+                    className="crm-kanban-suite"
+                    onClick={() => setDeplie((d) => ({ ...d, [col]: true }))}
+                  >
+                    Voir les {items.length - PLAFOND_COLONNE} autres
+                  </button>
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* ------------------------------------------------------------------
+          LE MENU DE DEPLACEMENT, UNIQUE POUR TOUT LE TABLEAU.
+
+          Il remplace les 460 <select> d'avant. Le glisser-deposer reste le
+          geste courant ; celui-ci est le chemin au clavier et a la souris
+          lente, et il n'a aucune raison d'exister tant qu'on ne l'a pas
+          demande.
+
+          Les colonnes pilotees par une action dediee y figurent quand meme,
+          desactivees et annotees : une liste amputee sans explication laissait
+          croire a un bug. On dit pourquoi, au lieu de taire.
+          ------------------------------------------------------------------ */}
+      {menuPour && byId.get(menuPour) ? (
+        <div
+          className="crm-deplacer-fond"
+          role="presentation"
+          onClick={() => setMenuPour(null)}
+        >
+          <div
+            className="crm-deplacer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Déplacer ${byId.get(menuPour)!.name}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="crm-deplacer__titre">
+              Déplacer <strong>{byId.get(menuPour)!.name}</strong> vers…
+            </p>
+            <div className="crm-deplacer__choix">
+              {movableBuyerStages(stageOf(byId.get(menuPour)!)).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="crm-deplacer__etape"
+                  onClick={() => {
+                    const c = byId.get(menuPour);
+                    setMenuPour(null);
+                    if (c) commitMove(cleCarte(c), stageOf(c), s);
+                  }}
+                >
+                  {buyerStageLabels[s]}
+                </button>
+              ))}
+              {BUYER_KANBAN_COLUMNS.filter((s) => isProtectedBuyerStage(s)).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="crm-deplacer__etape"
+                  disabled
+                  title="Cette étape passe par une action dédiée (confirmation, motif, audit)"
+                >
+                  {buyerStageLabels[s]} — par l&rsquo;action dédiée
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="crm-btn crm-btn--sm crm-btn--ghost mt-1"
+              onClick={() => setMenuPour(null)}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* PENDANT QUE LE DOSSIER ARRIVE.
+          Le panneau se remplissait instantanement du temps ou la page envoyait
+          les 506 d'avance. Il demande desormais le sien : quelques dizaines de
+          millisecondes, parfois davantage sur un reseau lent — et un clic qui
+          ne produit RIEN a l'ecran se lit comme une panne. On montre donc
+          l'attente, et on montre l'echec. */}
+      {ouvert && !rowOuverte ? (
+        <aside className="crm-panneau" aria-label="Chargement du dossier" aria-busy={chargement}>
+          {echec ? (
+            <div className="crm-panneau__vide">
+              <p className="crm-avertissement" role="status">
+                {echec}
+              </p>
+              <button
+                type="button"
+                className="crm-btn crm-btn--sm"
+                onClick={() => {
+                  const c = ouvert ? byId.get(ouvert) : null;
+                  if (c) void demanderDossier(c);
+                }}
+              >
+                Réessayer
+              </button>
+              <button
+                type="button"
+                className="crm-btn crm-btn--sm crm-btn--ghost"
+                onClick={() => setOuvert(null)}
+              >
+                Fermer
+              </button>
+            </div>
+          ) : (
+            <p className="crm-panneau__vide" role="status" aria-live="polite">
+              Chargement du dossier…
+            </p>
+          )}
+        </aside>
+      ) : null}
 
       {rowOuverte ? (
         <PanneauTraitement
@@ -501,9 +669,8 @@ function Card({
   onDragStart,
   onDragEnd,
   onKeyDown,
-  onMenuMove,
+  onDemanderMenu,
   onOuvrir,
-  row,
 }: {
   card: BuyerKanbanCard;
   canMove: boolean;
@@ -517,17 +684,15 @@ function Card({
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
-  onMenuMove: (toStage: string) => void;
+  /** Ouvre le menu de deplacement UNIQUE du tableau, sur cette carte. */
+  onDemanderMenu: () => void;
   /** Ouvre le panneau de traitement, SANS quitter le pipeline. */
   onOuvrir?: () => void;
-  /** Le dossier COMPLET, quand la page le fournit : la carte affiche alors
-      les memes informations que la liste. */
-  row?: BuyerInboxRow;
 }) {
   const targets = movableBuyerStages(currentStage);
   // Forme COURTE, comme en liste : le libelle long est la question telle
   // qu'elle a ete posee, et il tient sur deux lignes dans une carte.
-  const budget = row ? libelleBudget(row) : null;
+  const budget = card.budgetLabel;
   return (
     <div
       className={`crm-kanban-card flex flex-col gap-2 p-3 ${
@@ -594,11 +759,9 @@ function Card({
                   Aucun projet rattaché
                 </span>
               ) : null}
-              {row ? (
-                <span className="text-xs text-[var(--crm-text-faint)]">
-                  Arrivé le {formatJour(row.createdAt)}
-                </span>
-              ) : null}
+              <span className="text-xs text-[var(--crm-text-faint)]">
+                Arrivé le {formatJour(card.createdAt)}
+              </span>
             </div>
 
             {/* LES MEMES INFORMATIONS QUE LA LISTE, DANS LE MEME ORDRE.
@@ -610,8 +773,7 @@ function Card({
                 interet » l'etait sur les 82 manifestations, puisque rien ne
                 remet jamais ce statut a zero. Une alerte toujours vraie
                 n'alerte de rien, elle masque celles qui comptent. */}
-            {row ? (
-              <dl className="crm-kanban-faits mt-2">
+            <dl className="crm-kanban-faits mt-2">
                 <dt>Budget</dt>
                 <dd>
                   {budget ? (
@@ -623,8 +785,8 @@ function Card({
 
                 <dt>Responsable</dt>
                 <dd>
-                  {row.assigneeNames.length > 0 ? (
-                    <span className="crm-ellipsis">{row.assigneeNames.join(", ")}</span>
+                  {card.assigneeNames.length > 0 ? (
+                    <span className="crm-ellipsis">{card.assigneeNames.join(", ")}</span>
                   ) : (
                     <span className="text-[var(--crm-text-faint)]">Non affecté</span>
                   )}
@@ -632,18 +794,18 @@ function Card({
 
                 <dt>Prochaine action</dt>
                 <dd>
-                  {row.nextActionTitle ? (
+                  {card.nextActionTitle ? (
                     <>
-                      <span className="crm-ellipsis">{row.nextActionTitle}</span>
-                      {row.nextActionAt ? (
+                      <span className="crm-ellipsis">{card.nextActionTitle}</span>
+                      {card.nextActionAt ? (
                         <span
                           className={
-                            row.overdue
+                            card.overdue
                               ? "font-semibold text-[var(--crm-danger)]"
                               : "text-[var(--crm-text-faint)]"
                           }
                         >
-                          {formatDateTime(row.nextActionAt)}
+                          {formatDateTime(card.nextActionAt)}
                         </span>
                       ) : null}
                     </>
@@ -651,8 +813,7 @@ function Card({
                     <span className="text-[var(--crm-text-faint)]">À programmer</span>
                   )}
                 </dd>
-              </dl>
-            ) : null}
+            </dl>
 
             {/*
               CE QUE LA PERSONNE CHERCHE, SANS OUVRIR LA FICHE.
@@ -677,16 +838,16 @@ function Card({
               entière. Au-delà, le texte complet reste accessible au survol, et
               d'un clic dans le dossier.
             */}
-            {row?.lastNote ? (
-              <div className="crm-kanban-note" title={row.lastNote}>
+            {card.lastNote ? (
+              <div className="crm-kanban-note" title={card.lastNote}>
                 <span className="crm-kanban-note__quand">
-                  {row.lastNoteAt ? formatDateTime(row.lastNoteAt) : "Dernière note"}
-                  {row.lastNoteBy ? ` · ${row.lastNoteBy}` : ""}
+                  {card.lastNoteAt ? formatDateTime(card.lastNoteAt) : "Dernière note"}
+                  {card.lastNoteBy ? ` · ${card.lastNoteBy}` : ""}
                 </span>
                 {/* La coupe porte sur le TEXTE SEUL. Englober la date dans le
                     bloc coupé lui faisait manger une des trois lignes, et la
                     dernière ressortait tranchée en deux hors de l'encadré. */}
-                <span className="crm-kanban-note__texte">{row.lastNote}</span>
+                <span className="crm-kanban-note__texte">{card.lastNote}</span>
               </div>
             ) : null}
           </button>
@@ -694,28 +855,22 @@ function Card({
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {/* La qualification est ECRITE, comme en liste : jamais une
                 couleur seule. */}
-            {row ? (
-              <span className={`crm-qualif crm-qualif--${QUALIFICATION_BADGE[row.qualification]}`}>
-                {QUALIFICATION_LABELS[row.qualification]}
-              </span>
-            ) : null}
+            <span className={`crm-qualif crm-qualif--${QUALIFICATION_BADGE[card.qualification]}`}>
+              {QUALIFICATION_LABELS[card.qualification]}
+            </span>
             {/* La SEULE pastille d'alerte qui reste, celle que la liste garde
                 aussi : un rappel en retard est un fait, pas un etat permanent. */}
             {card.overdue ? <Chip variant="danger">En retard</Chip> : null}
           </div>
 
-          {row ? (
-            <ContactRapide
-              numero={row.phoneMasked}
-              email={row.emailMasked}
-              messageWhatsApp={row.whatsappMessage}
-              prenom={row.firstName}
-              className="mt-2"
-              compact
-            />
-          ) : card.phoneMasked ? (
-            <p className="mt-1 text-[11px] text-[var(--crm-text-faint)]">{card.phoneMasked}</p>
-          ) : null}
+          <ContactRapide
+            numero={card.phoneMasked}
+            email={card.emailMasked}
+            messageWhatsApp={card.whatsappMessage}
+            prenom={card.firstName}
+            className="mt-2"
+            compact
+          />
         </div>
         {saving ? <span className="shrink-0 text-[11px] text-[var(--crm-azur)]">…</span> : null}
       </div>
@@ -726,36 +881,22 @@ function Card({
         </p>
       ) : null}
 
+      {/* UN BOUTON, PAS UN MENU DEROULANT.
+          Chaque carte portait son propre <select> et ses neuf <option> : a
+          460 cartes, 460 menus et pres de 4 000 noeuds dessines pour un geste
+          qu'on fait une fois de temps en temps — le deplacement courant se
+          fait au glisser-deposer. Le menu est desormais UNIQUE, au niveau du
+          tableau, et ne se dessine qu'a l'ouverture. */}
       {canMove && targets.length > 0 ? (
-        <label className="flex items-center gap-1.5">
-          <span className="sr-only">Déplacer {card.name} vers une étape</span>
-          <select
-            className="crm-select text-xs"
-            value=""
-            disabled={saving}
-            onChange={(e) => {
-              const v = e.target.value;
-              e.currentTarget.selectedIndex = 0;
-              if (v) onMenuMove(v);
-            }}
-            aria-label={`Déplacer ${card.name} vers une étape`}
-          >
-            <option value="">Déplacer vers…</option>
-            {targets.map((s) => (
-              <option key={s} value={s}>
-                {buyerStageLabels[s]}
-              </option>
-            ))}
-            {/* Les colonnes pilotees par une action dediee figurent quand meme,
-                desactivees et annotees : une liste amputee sans explication
-                laissait croire a un bug. On dit pourquoi, au lieu de taire. */}
-            {BUYER_KANBAN_COLUMNS.filter((s) => isProtectedBuyerStage(s)).map((s) => (
-              <option key={s} value={s} disabled>
-                {buyerStageLabels[s]} — par l&rsquo;action dédiée
-              </option>
-            ))}
-          </select>
-        </label>
+        <button
+          type="button"
+          className="crm-kanban-deplacer"
+          disabled={saving}
+          onClick={onDemanderMenu}
+          aria-haspopup="dialog"
+        >
+          Déplacer vers…
+        </button>
       ) : null}
 
       {notice ? (
