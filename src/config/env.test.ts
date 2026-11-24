@@ -12,6 +12,8 @@ import {
   isTurnstileTestSiteKey,
   isCommunicationDispatchEnabled,
   isLumailConfigured,
+  isMetaAdsReadConfigured,
+  isPilotageCronConfigured,
   isTwilioConfigured,
   parseEnv,
   safeInternalPath,
@@ -324,5 +326,36 @@ describe("ALERTE_LEAD_IMMEDIATE", () => {
       expect(() => parseEnv({ ALERTE_LEAD_IMMEDIATE: faute })).not.toThrow();
       expect(parseEnv({ ALERTE_LEAD_IMMEDIATE: faute }).ALERTE_LEAD_IMMEDIATE).toBe("tous");
     }
+  });
+});
+
+describe("pilotage pub — lecture Meta et lecture du matin", () => {
+  it("une variable posée VIDE compte comme absente : la configuration ne tombe pas", () => {
+    for (const vide of ["", "   ", "\n"]) {
+      const e = parseEnv({ META_ADS_READ_TOKEN: vide, META_AD_ACCOUNT_ID: vide, CRON_SECRET: vide });
+      expect(e.META_ADS_READ_TOKEN).toBeUndefined();
+      expect(e.META_AD_ACCOUNT_ID).toBeUndefined();
+      expect(e.CRON_SECRET).toBeUndefined();
+      expect(isMetaAdsReadConfigured(e)).toBe(false);
+      expect(isPilotageCronConfigured(e)).toBe(false);
+    }
+  });
+
+  it("une valeur collée avec un espace de trop est nettoyée", () => {
+    const e = parseEnv({ META_ADS_READ_TOKEN: " faux-jeton \n", META_AD_ACCOUNT_ID: " act_1234567 " });
+    expect(e.META_ADS_READ_TOKEN).toBe("faux-jeton");
+    expect(e.META_AD_ACCOUNT_ID).toBe("act_1234567");
+    expect(isMetaAdsReadConfigured(e)).toBe(true);
+  });
+
+  it("le compte doit être un identifiant numérique (avec ou sans « act_ »)", () => {
+    expect(isMetaAdsReadConfigured(parseEnv({ META_ADS_READ_TOKEN: "x", META_AD_ACCOUNT_ID: "1234567" }))).toBe(true);
+    expect(isMetaAdsReadConfigured(parseEnv({ META_ADS_READ_TOKEN: "x", META_AD_ACCOUNT_ID: "mon compte" }))).toBe(false);
+    expect(isMetaAdsReadConfigured(parseEnv({ META_AD_ACCOUNT_ID: "1234567" }))).toBe(false);
+  });
+
+  it("le secret du matin : 16 caractères au moins", () => {
+    expect(isPilotageCronConfigured(parseEnv({ CRON_SECRET: "trop-court" }))).toBe(false);
+    expect(isPilotageCronConfigured(parseEnv({ CRON_SECRET: "0123456789abcdef" }))).toBe(true);
   });
 });

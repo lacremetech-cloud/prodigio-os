@@ -46,3 +46,43 @@ export function messagePilotage(code: string | undefined, message: string | unde
   console.error("pilotage : erreur base non traduite", { code: code ?? "sans code" });
   return "Une erreur technique empêche cet enregistrement. Réessayez ; si cela persiste, signalez-le.";
 }
+
+/**
+ * Une panne de la base pendant une lecture ou une écriture du pilotage. Elle
+ * porte l'ÉTAPE (où) et le CODE (quoi : SQLSTATE PostgreSQL ou code PostgREST),
+ * jamais le texte brut de la base, qui peut citer une valeur. De quoi
+ * diagnostiquer depuis le journal de Vercel sans rien exposer.
+ */
+export class LectureImpossible extends Error {
+  constructor(
+    readonly code: string | undefined,
+    readonly etape?: string,
+  ) {
+    super(etape ? `lecture impossible (${etape})` : "lecture du pilotage impossible");
+    this.name = "LectureImpossible";
+  }
+}
+
+export class EcritureImpossible extends Error {
+  constructor(
+    readonly etape: string,
+    readonly code: string | undefined,
+  ) {
+    super(`écriture impossible (${etape})`);
+    this.name = "EcritureImpossible";
+  }
+}
+
+export interface DetailDePanne {
+  erreur: string;
+  etape: string | null;
+  code: string | null;
+}
+
+/** Ce qu'une panne laisse dire sans risque : son genre, l'étape, le code. Jamais son texte. */
+export function detailDeLaPanne(cause: unknown): DetailDePanne {
+  if (cause instanceof LectureImpossible || cause instanceof EcritureImpossible) {
+    return { erreur: cause.name, etape: cause.etape ?? null, code: cause.code ?? null };
+  }
+  return { erreur: cause instanceof Error ? cause.name : "inconnue", etape: null, code: null };
+}

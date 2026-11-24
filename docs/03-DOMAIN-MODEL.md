@@ -639,3 +639,71 @@ Tout est **réservé aux administrateurs**, en lecture comme en écriture.
 - **Bien** 0..1 — **Mandat** : sa photographie peut fournir la part de Prodigio.
 - Un bien qui porte un historique de pilotage ne se supprime pas
   (`on delete restrict`).
+
+---
+
+## Extension — Pilotage pub, étape 2 : la lecture Meta
+
+Migration `supabase/migrations/20261112170000_pilotage_lecture_meta.sql`,
+**strictement additive**. Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 7.
+**Lecture seule chez Meta** : rien n'y est jamais écrit. Tables lisibles des
+seuls administrateurs ; les chiffres Meta ne s'écrivent que par le rôle de
+service (la lecture du matin), jamais depuis un navigateur.
+
+### Nouveaux objets
+
+| Objet du modèle | Définition | Table |
+|---|---|---|
+| **Lecture Meta** (synchro) | Une lecture : déclencheur (`matin` ou `manuel`, et qui l'a demandée), période relue, jusqu'où les chiffres sont complets, nombre d'appels et de lignes, devise du compte, statut `en_cours` → `reussie` · `partielle` · `echec`, message d'erreur clair. **Journal figé** : une lecture close ne se modifie plus, aucune ne s'efface. | `pilotage_meta_synchros` |
+| **Statistique d'une pub, un jour** | Ce que Meta rapporte pour **une pub un jour donné** : dépense en centimes (HT), impressions, couverture et fréquence du jour, clics, clics sur lien, CTR, CPM, leads (action `lead` seule), actions et coûts par action **bruts**, identifiants et noms de la campagne, de l'ensemble et de la pub **tels que Meta les donnait**. Une ligne par (jour, pub) ; une période relue **remplace** la précédente. | `pilotage_meta_insights` |
+| **Contrôle du jour** | Pour chaque jour lu : la somme des pubs (calculée en base) face à la dépense du compte lue au niveau du compte. | `pilotage_meta_controles` |
+| **Pub** | Nom, ensemble, campagne, statut de diffusion, **lien d'aperçu** (`https` seulement), date de création chez Meta. | `pilotage_meta_pubs` |
+| **Couverture d'une période** | Personnes uniques touchées sur une **période proposée** (aujourd'hui … toute la période), pour un bien ou pour le total : la couverture **ne s'additionne pas**, elle se lit chez Meta pour chaque portée. Vide (avec la raison) quand elle ne peut pas être lue. | `pilotage_meta_couverture` |
+| **Règle de rattachement** | Relie une dépense à des biens : un **jeton** de la convention de nommage (`VERDUN` dans `VERDUN \| ANGLE \| FORMAT \| V1`) ou un **identifiant de campagne** (exception), vers **un ou plusieurs biens** (groupe, au prorata du prix affiché) ou vers **« hors portefeuille »**. **Se retire, ne s'efface pas** ; une règle en vigueur par jeton ou campagne. | `pilotage_meta_regles` |
+| **Pub d'origine d'une demande** | L'identifiant de la pub Meta d'une demande acquéreur, tiré d'`utm_id` (adresse du formulaire, puis première visite) ou d'un `utm_content` numérique. Complété sans jamais écraser. | `buyer_interests.meta_ad_id` |
+
+### Énumérations
+
+- **Déclencheur d'une lecture** : `matin` (Vercel Cron) · `manuel` (bouton d'un
+  administrateur).
+- **Statut d'une lecture** : `en_cours` → `reussie` · `partielle` (le temps a
+  manqué, la suivante reprend) · `echec`.
+- **Période proposée** : `aujourdhui` · `hier` · `7_derniers_jours` ·
+  `cette_semaine` · `30_derniers_jours` · `ce_mois` · `mois_dernier` ·
+  `cette_annee` · `toute_la_periode`. Les 7 et 30 derniers jours s'arrêtent à
+  hier ; une semaine commence le lundi.
+- **Type de règle** : `jeton` · `campagne`. **Cible** : `biens` ·
+  `hors_portefeuille`.
+- **Rattachement d'une dépense** (calculé, non stocké) : un ou plusieurs biens ·
+  hors portefeuille · **orpheline**.
+
+### Distinctions fondamentales ajoutées
+
+- **Rattachement calculé ≠ rattachement stocké.** Les statistiques gardent les
+  noms et identifiants **tels que Meta les donnait** ; le rattachement à un bien
+  se **calcule à la lecture**, à partir des règles en vigueur (exception de
+  campagne, puis jeton du nom de la pub, puis jeton du nom de la campagne).
+  Changer une règle reclasse tout l'historique sans relire Meta, et sans
+  réécrire une seule statistique.
+- **Hors portefeuille ≠ orpheline.** Hors portefeuille : rattachée **exprès** à
+  rien (un ancien bien), visible mais exclue des indicateurs. Orpheline :
+  rattachée à rien **faute de règle**, comptée dans les totaux et signalée.
+- **Lead Meta ≠ demande du CRM.** Le lead est un chiffre que Meta rapporte ; la
+  demande acquéreur est un dossier du CRM. `meta_ad_id` les relie pub par pub ;
+  aucun nombre de l'un ne remplace l'autre.
+- **Couverture ≠ somme des couvertures.** Une même personne touchée par deux
+  pubs ne compte qu'une fois : la couverture d'une portée se lit chez Meta, elle
+  ne s'additionne jamais.
+- **Lecture Meta ≠ AuditEvent.** Le journal des lectures est une table du
+  pilotage ; seules les règles (ajout, retrait) laissent une trace au journal
+  d'audit, sans leur contenu.
+
+### Relations
+
+- **Lecture Meta** 1 — N **Statistique d'une pub, un jour** (la dernière lecture
+  qui a relu ce jour).
+- **Pub** 1 — N **Statistique d'une pub, un jour** (par l'identifiant Meta, sans
+  clé étrangère : une statistique peut précéder la fiche de la pub).
+- **Règle de rattachement** N — N **Bien** (liste de biens de la règle).
+- **Bien** 0..1 — N **Couverture d'une période** (aucun bien : le total).
+- **Demande acquéreur** N — 0..1 **Pub** (par `meta_ad_id`).
