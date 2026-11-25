@@ -3007,3 +3007,16 @@
   color: var(--crm-text-dim);
   font-size: 13px;
 }
+
+/* La fleche d'une entree de menu qui mene HORS du CRM (les briefs, servis sur
+   une adresse publique derriere un code). Discrete : elle previent, elle
+   n'attire pas. */
+.crm-nav-item__externe {
+  margin-left: auto;
+  padding-left: 6px;
+  color: var(--crm-text-faint);
+  font-size: 11px;
+}
+.crm-nav-item:hover .crm-nav-item__externe {
+  color: var(--crm-text-dim);
+}
