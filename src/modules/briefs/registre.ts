@@ -1,5 +1,6 @@
 import "server-only";
 import { CHALET_6511 } from "@/content/briefs/chalet-6511";
+import { CHALET_6511_MATIERE } from "@/content/briefs/chalet-6511-matiere";
 
 /**
  * LE REGISTRE DES BRIEFS.
@@ -39,6 +40,15 @@ export interface Brief {
    */
   empreinteDuCode: string;
   document: string;
+  /**
+   * CE SUR QUOI L'ASSISTANT RÉPOND, et rien d'autre.
+   *
+   * La fiche de synthèse et l'entretien intégral — la matière brute, plus
+   * complète que la page elle-même. C'est ce qui permet de répondre « la salle
+   * de sport fait 8,43 × 4,17 m » sans l'inventer, et de dire « ce n'est pas
+   * dans le dossier » quand ce n'est pas écrit.
+   */
+  matiere: string;
 }
 
 export const BRIEFS: readonly Brief[] = [
@@ -52,6 +62,7 @@ export const BRIEFS: readonly Brief[] = [
     empreinteDuCode:
       "scrypt$16384$8$1$d072dfbfd732bb4da746dd18d4615814$a82dd4d91ac42f281b62599fd786a9d578a89313d7808d84673b91327baccf6b",
     document: CHALET_6511,
+    matiere: CHALET_6511_MATIERE,
   },
 ];
 
