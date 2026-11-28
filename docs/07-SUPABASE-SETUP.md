@@ -1711,3 +1711,94 @@ dépôt ; aucun chiffre du CRM n'est écrit ici) :
 - **À voir en usage réel** : la trace du premier `Lead` arrivé après la
   migration (porte étroite, par le client serveur) ; après la fusion, le
   premier envoi depuis le panneau « Enregistrer et suivant ».
+
+---
+
+## 22. Conversions Meta — les nouveaux signaux en essai (`20261128210000_signaux_meta_en_essai`) — **NON APPLIQUÉE**
+
+Détail : [27-CONVERSIONS-META.md](27-CONVERSIONS-META.md), « Les nouveaux
+signaux de l'étape 4 ». Empreinte SHA-256 du fichier :
+`9c52846ae722eec3e51e0619959cb37ddc0a206199512dd2596f043d9ea1687b`.
+
+Sur une base où elle manque, rien ne tombe et rien ne part : le code des
+nouveaux signaux est en essai ; leurs lignes « simulee » s'écrivent
+« erreur » (le motif est inconnu de l'ancienne fonction) ; celles des paliers,
+nées sans session, sont ignorées par l'ancienne porte étroite ; « déjà
+essayé ? » répond non.
+
+### Pourquoi
+
+Étape 4, PR « nouveaux signaux », décidée par Victor le 28/11/2026 (« 1. OUi
+go », « 3. ok ») : `LeadQualifie`, `Contact`, `SubmitApplication` et les
+paliers `LeadBudgetAuMoins…`, d'abord en essai.
+
+### Ce qu'elle change
+
+| Objet | Modification |
+|---|---|
+| `meta_conversion_log_resultat_check` | Réécrite en **sur-ensemble strict** : les sept motifs de § 21, plus `simulee`. |
+| `crm_meta_conversion_log(text, text, uuid, text, text)` | `create or replace`, même signature, mêmes droits (`anon`, `authenticated` ; plus `public`). Sans session, la porte étroite accepte le `Lead` **et les quatre paliers** d'une demande réelle de moins de quinze minutes, **chacun une seule fois** ; rien d'autre. Avec une session, toujours l'équipe seulement. `simulee` accepté. |
+| `crm_meta_conversion_deja_simulee(text)` | Nouvelle : vrai si ce signal a déjà été essayé (`simulee`) ou envoyé. `SECURITY DEFINER`, membre de l'équipe seulement (faux sinon), un booléen. |
+
+**Aucune ligne du journal touchée.** Rejouable ; verrou borné à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+select pg_get_constraintdef(oid) from pg_constraint
+ where conrelid = 'public.meta_conversion_log'::regclass and conname = 'meta_conversion_log_resultat_check';
+-- attendu : les sept motifs du § 21
+
+select resultat, count(*) from public.meta_conversion_log group by 1 order by 1;
+-- attendu : aucun motif hors de ces sept
+
+select to_regprocedure('public.crm_meta_conversion_deja_simulee(text)') is not null as deja_simulee,
+       position('elsif not public.crm_has_access() then' in prosrc) > 0 as garde_equipe
+  from pg_proc where pronamespace = 'public'::regnamespace and proname = 'crm_meta_conversion_log';
+-- attendu : false | true (la version du § 21 est en place)
+```
+
+### Contrôles après application
+
+```sql
+select pg_get_constraintdef(oid) from pg_constraint
+ where conrelid = 'public.meta_conversion_log'::regclass and conname = 'meta_conversion_log_resultat_check';
+-- attendu : les huit motifs (… 'simulee')
+
+select p.proname, p.prosecdef as definer,
+       has_function_privilege('public', p.oid, 'execute') as public,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie,
+       position('LeadBudgetAuMoins3M' in p.prosrc) > 0 as paliers,
+       position('crm_has_access()' in p.prosrc) > 0 as equipe
+  from pg_proc p
+ where p.pronamespace = 'public'::regnamespace
+   and p.proname in ('crm_meta_conversion_log', 'crm_meta_conversion_deja_simulee', 'crm_meta_conversion_deja_envoyee')
+ order by 1;
+-- attendu :
+--   crm_meta_conversion_deja_envoyee | true | false | false | true | false | true
+--   crm_meta_conversion_deja_simulee | true | false | false | true | false | true
+--   crm_meta_conversion_log          | true | false | true  | true | true  | true
+
+select count(*) from public.meta_conversion_log;
+-- attendu : le même nombre qu'avant (aucune ligne touchée)
+```
+
+Ensuite, après la fusion et le déploiement, sans rien provoquer : à la
+prochaine demande réelle, le journal doit porter son `Lead` « envoyee » et,
+pour une réponse de budget, ses paliers « simulee » ; aux prochains gestes de
+l'équipe, `LeadQualifie`, `Contact`, `SubmitApplication` « simulee ». Rien ne
+part chez Meta tant que Victor n'a pas posé les interrupteurs.
+`scripts/conversions-meta-controles.sql` met ces lignes en face des faits du
+CRM.
+
+### Vérification locale
+
+- Rejeu de toutes les migrations sur une base vierge ; la migration, appliquée
+  deux fois de suite, passe sans erreur.
+- `scripts/conversions-meta.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée, y compris la section « les nouveaux signaux, en
+  essai » : sans session, les paliers d'une demande fraîche passent, chacun
+  une fois — pas ceux d'une demande d'hier, ni un signal du CRM, ni un nom
+  forgé ; « déjà essayé ? » vrai pour un essai et pour un envoi, faux pour un
+  refus, faux hors de l'équipe ; un essai ne compte pas comme un envoi.

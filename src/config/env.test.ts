@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  modeNouveauxSignaux,
+  modePaliers,
   isEstimationSlackConfigured,
   canonicalSiteUrl,
   googleOAuthRedirectUri,
@@ -357,5 +359,35 @@ describe("pilotage pub — lecture Meta et lecture du matin", () => {
   it("le secret du matin : 16 caractères au moins", () => {
     expect(isPilotageCronConfigured(parseEnv({ CRON_SECRET: "trop-court" }))).toBe(false);
     expect(isPilotageCronConfigured(parseEnv({ CRON_SECRET: "0123456789abcdef" }))).toBe(true);
+  });
+});
+
+describe("les interrupteurs des nouveaux signaux Meta (étape 4) : l'essai par défaut", () => {
+  /** La valeur telle que Vercel la donnerait, relue comme au démarrage. */
+  const modes = (valeur: string | undefined) => {
+    const e = parseEnv({ META_CAPI_SIGNAUX: valeur, META_CAPI_PALIERS: valeur });
+    return [modeNouveauxSignaux(e), modePaliers(e)];
+  };
+
+  it("absents ou vides : l'essai", () => {
+    expect(modes(undefined)).toEqual(["essai", "essai"]);
+    expect(modes("")).toEqual(["essai", "essai"]);
+    expect(modes("   ")).toEqual(["essai", "essai"]);
+  });
+
+  it("seul « envoi » envoie — les espaces autour sont ignorés", () => {
+    expect(modes("envoi")).toEqual(["envoi", "envoi"]);
+    expect(modes("  envoi ")).toEqual(["envoi", "envoi"]);
+  });
+
+  it("toute autre valeur garde l'essai, la casse comprise", () => {
+    for (const v of ["Envoi", "ENVOI", "oui", "true", "1", "envoyer", "essai", "envoi!"]) {
+      expect(modes(v), v).toEqual(["essai", "essai"]);
+    }
+  });
+
+  it("les deux sont indépendants : les paliers ne suivent pas les autres signaux", () => {
+    const e = parseEnv({ META_CAPI_SIGNAUX: "envoi" });
+    expect([modeNouveauxSignaux(e), modePaliers(e)]).toEqual(["envoi", "essai"]);
   });
 });

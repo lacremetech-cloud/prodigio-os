@@ -17,6 +17,8 @@ export {
   isSmsFactorConfigured,
   isMetaCapiConfigured,
   isProductionDeployment,
+  modeNouveauxSignaux,
+  modePaliers,
   isMetaAdsReadConfigured,
   isPilotageCronConfigured,
   isGoogleCalendarConfigured,
@@ -31,4 +33,5 @@ export {
   TURNSTILE_TEST_SITE_KEYS,
   TURNSTILE_TEST_SECRET_KEYS,
   type Env,
+  type ModeSignaux,
 } from "./env";

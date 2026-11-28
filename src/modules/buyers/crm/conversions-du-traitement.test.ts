@@ -43,8 +43,23 @@ describe("les conversions d'un traitement", () => {
     ]);
   });
 
+  it("entrer en « R1 planifié » : le nouveau signal « Contact » (en essai)", () => {
+    expect(conversionsDuTraitement({ etapeAvant: "a_rappeler", etapeApres: "r1_planifie", visiteInscrite: false })).toEqual(["contact"]);
+    expect(conversionsDuTraitement({ etapeAvant: "r1_planifie", etapeApres: "r1_planifie", visiteInscrite: false })).toEqual([]);
+  });
+
+  it("devenir « qualifié » ou « gros potentiel » : « LeadQualifie » (en essai), une décision de l'équipe", () => {
+    const base = { etapeAvant: "en_discussion", etapeApres: "en_discussion", visiteInscrite: false };
+    expect(conversionsDuTraitement({ ...base, qualificationAvant: "a_qualifier", qualificationApres: "qualifie" })).toEqual(["lead_qualifie"]);
+    expect(conversionsDuTraitement({ ...base, qualificationAvant: "a_qualifier", qualificationApres: "gros_potentiel" })).toEqual(["lead_qualifie"]);
+    // Passer de « qualifié » à « gros potentiel » n'est pas une nouvelle qualification.
+    expect(conversionsDuTraitement({ ...base, qualificationAvant: "qualifie", qualificationApres: "gros_potentiel" })).toEqual([]);
+    expect(conversionsDuTraitement({ ...base, qualificationAvant: "a_qualifier", qualificationApres: "non_qualifie" })).toEqual([]);
+    expect(conversionsDuTraitement(base)).toEqual([]);
+  });
+
   it("les autres étapes ne déclenchent rien", () => {
-    for (const apres of ["a_rappeler", "r1_planifie", "offre_en_cours", "vivier", "pas_interesse", "mauvais_numero"]) {
+    for (const apres of ["a_rappeler", "offre_en_cours", "vivier", "pas_interesse", "mauvais_numero"]) {
       expect(conversionsDuTraitement({ etapeAvant: "a_contacter", etapeApres: apres, visiteInscrite: false }), apres).toEqual([]);
     }
   });

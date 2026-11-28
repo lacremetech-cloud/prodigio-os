@@ -20,6 +20,8 @@ import {
   bienDeLaManifestation,
   conversionProspect,
 } from "@/modules/analytics/meta/conversions";
+import type { MetaIdentity } from "@/modules/analytics/meta/capi";
+import { signauxDeBudget } from "@/modules/analytics/meta/signaux";
 import { normalizePhone } from "@/modules/mandates/funnel/normalize";
 
 import {
@@ -199,6 +201,27 @@ export async function submitUniversalInterestAction(
             .select("buyer_profile_id")
             .eq("id", interetId)
             .maybeSingle();
+          /* L'identite du prospect, la meme pour son `Lead` et pour ses
+             paliers de budget. */
+          const identite: MetaIdentity = {
+            email: request.answers.emailRaw,
+            phone: normalizePhone(request.answers.phoneRaw, request.answers.phoneCountry),
+            firstName: request.answers.firstName,
+            lastName: request.answers.lastName,
+            country: request.answers.phoneCountry,
+            externalId:
+              (profil as { buyer_profile_id?: string | null } | null)?.buyer_profile_id ??
+              null,
+            fbclid: touche?.fbclid ?? null,
+            clickedAt: touche?.at ?? null,
+            // Le navigateur du prospect : c'est le seul moment ou il est le
+            // sien. Les conversions suivantes partent du CRM, ou il serait
+            // celui du commercial.
+            clientUserAgent: request.context.userAgent ?? null,
+            // Relevee avant `after()` : voir la capture en tete d'action.
+            clientIpAddress: adresseVisiteur,
+          };
+          const sourceUrl = request.context.originUrl ?? touche?.url ?? null;
           await conversionProspect({
             interestId: interetId,
             // Pour la trace : sans client, l'envoi partirait sans laisser
@@ -206,25 +229,20 @@ export async function submitUniversalInterestAction(
             supabase: lecteur,
             propertyName: bien?.nom ?? null,
             propertyId: bien?.id ?? null,
-            sourceUrl: request.context.originUrl ?? touche?.url ?? null,
-            identity: {
-              email: request.answers.emailRaw,
-              phone: normalizePhone(request.answers.phoneRaw, request.answers.phoneCountry),
-              firstName: request.answers.firstName,
-              lastName: request.answers.lastName,
-              country: request.answers.phoneCountry,
-              externalId:
-                (profil as { buyer_profile_id?: string | null } | null)?.buyer_profile_id ??
-                null,
-              fbclid: touche?.fbclid ?? null,
-              clickedAt: touche?.at ?? null,
-              // Le navigateur du prospect : c'est le seul moment ou il est le
-              // sien. Les conversions suivantes partent du CRM, ou il serait
-              // celui du commercial.
-              clientUserAgent: request.context.userAgent ?? null,
-              // Relevee avant `after()` : voir la capture en tete d'action.
-              clientIpAddress: adresseVisiteur,
-            },
+            sourceUrl,
+            identity: identite,
+          });
+          /* Les paliers de budget (« au moins 500 000 € », « au moins 1 M€ »…),
+             d'apres la reponse DECLAREE : EN ESSAI par defaut, rien ne part
+             (docs/27). Aucun montant n'accompagne un palier. */
+          await signauxDeBudget({
+            supabase: lecteur,
+            interestId: interetId,
+            reponse: request.answers.budgetChoice,
+            identity: identite,
+            sourceUrl,
+            propertyName: bien?.nom ?? null,
+            propertyId: bien?.id ?? null,
           });
         } catch (cause) {
           console.warn("conversion Meta non emise", {

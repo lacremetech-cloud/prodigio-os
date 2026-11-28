@@ -24,6 +24,35 @@ la base a écrit (l'étape avant et après, la visite réellement inscrite), pas
 seul choix fait à l'écran. Sans bien précis (« Général »), la conversion se
 rattache à la demande la plus récente de la personne.
 
+## Les nouveaux signaux de l'étape 4 — EN ESSAI
+
+Décidés par Victor le 28/11/2026 (noms validés le même jour). **En essai,
+rien ne part chez Meta** : le journal note ce qui serait parti (`simulee`), ou
+pourquoi cela ne partirait pas (`hors_production`, `sans_correspondance`,
+`deja_envoyee`).
+
+| Ce qu'on suit | Événement | Déclencheur réel | Identifiant | Interrupteur |
+| --- | --- | --- | --- | --- |
+| Qualifié | `LeadQualifie` | la personne devient « qualifié » ou « gros potentiel » (panneau, ancien traitement, qualification) | `leadqualifie-<demande>` | `META_CAPI_SIGNAUX` |
+| R1 planifié | `Contact` | le dossier entre en « R1 planifié » (Kanban, panneau) | `contact-<demande>` | `META_CAPI_SIGNAUX` |
+| Offre | `SubmitApplication` | une offre est enregistrée (la demande du bien de l'offre) | `offre-<demande>` | `META_CAPI_SIGNAUX` |
+| Paliers de budget | `LeadBudgetAuMoins500k`, `…1M`, `…2M`, `…3M` | au dépôt, un par palier que la réponse **déclarée** atteint (cumulatifs) | `<palier>-<demande>` | `META_CAPI_PALIERS` |
+
+- **Chaque signal ne s'essaie qu'une fois** par demande (`crm_meta_conversion_deja_simulee`) ;
+  un essai ne compte pas comme un envoi : au passage à l'envoi réel, il partira.
+  En essai, un signal déjà essayé **n'écrit rien** (une ligne `deja_envoyee`
+  se lirait comme un envoi) : sa première ligne `simulee` suffit.
+- **Aucun montant ne part**, jamais : un palier porte son nom, qui dit ce qu'il
+  est, et le bien, comme les autres conversions. `LeadQualifie` ne porte ni
+  montant ni réponse de budget.
+- **Les interrupteurs** se posent dans Vercel, par Victor lui-même : seule la
+  valeur `envoi` envoie vraiment — les espaces autour sont ignorés, la casse
+  non (« Envoi » garde l'essai) ; toute autre valeur, ou l'absence, garde
+  l'essai. `/api/health` dit l'état des deux (`signaux_meta` : « essai » ou
+  « envoi »). `META_CAPI_PALIERS=envoi` n'est posé **qu'aux trois
+  conditions** de la section suivante. Pour tous les signaux, la mention du
+  formulaire doit d'abord être corrigée et validée (dernière section).
+
 ## Pourquoi côté serveur
 
 Les bloqueurs, le refus des cookies tiers et iOS font disparaître une part
@@ -163,7 +192,8 @@ D'où trois règles, pour l'étape 4 et après :
   juriste (ci-dessous), puis son feu vert explicite pour le premier envoi
   (docs/05, n° 46). Validé par Victor le 28/11/2026, avec les noms
   `LeadBudgetAuMoins500k`, `LeadBudgetAuMoins1M`, `LeadBudgetAuMoins2M` et
-  `LeadBudgetAuMoins3M`.
+  `LeadBudgetAuMoins3M` ; construits en essai (interrupteur
+  `META_CAPI_PALIERS`, section précédente).
 - **« A un projet » n'est pas un critère neutre** tant qu'il est tiré de la
   question du budget : toutes les réponses « oui » sont des tranches qui
   commencent à 500 000 €. Victor a choisi le 28/11/2026 de ne pas séparer la

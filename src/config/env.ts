@@ -124,6 +124,16 @@ const envSchema = z.object({
   META_CAPI_PIXEL_ID: z.string().min(1).optional(),
   META_CAPI_ACCESS_TOKEN: z.string().min(1).optional(),
   META_CAPI_TEST_EVENT_CODE: z.string().min(1).optional(),
+  // Les NOUVEAUX signaux de l'étape 4 (LeadQualifie, Contact,
+  // SubmitApplication) et les PALIERS de budget (LeadBudgetAuMoins…) partent
+  // EN ESSAI : rien n'est envoyé, le journal note ce qui serait parti
+  // (« simulee »). Seule la valeur `envoi` les envoie vraiment (les espaces
+  // autour sont ignorés, la casse non : « Envoi » garde l'essai) ; toute autre
+  // valeur, ou l'absence, garde l'essai. Posées par Victor lui-même dans
+  // Vercel, et seulement aux conditions de docs/27 (pour les paliers : l'accord
+  // écrit de Meta, la mention du formulaire validée, son feu vert explicite).
+  META_CAPI_SIGNAUX: facultatifTolerant,
+  META_CAPI_PALIERS: facultatifTolerant,
 
   // --- SMSFactor (accuse de reception envoye au prospect) ---
   // Jeton d'API et nom d'expediteur. STRICTEMENT serveur : jamais prefixes
@@ -699,6 +709,18 @@ export function isPreviewDeployment(
  * effets qui sortent de l'application — une conversion envoyée à Meta depuis
  * un aperçu compterait un vrai Lead pour une demande de recette.
  */
+export type ModeSignaux = "essai" | "envoi";
+
+/** Les nouveaux signaux (LeadQualifie, Contact, SubmitApplication) : en essai sauf `envoi` exact. */
+export function modeNouveauxSignaux(source: Pick<Env, "META_CAPI_SIGNAUX"> = env): ModeSignaux {
+  return source.META_CAPI_SIGNAUX === "envoi" ? "envoi" : "essai";
+}
+
+/** Les paliers de budget (LeadBudgetAuMoins…) : en essai sauf `envoi` exact. */
+export function modePaliers(source: Pick<Env, "META_CAPI_PALIERS"> = env): ModeSignaux {
+  return source.META_CAPI_PALIERS === "envoi" ? "envoi" : "essai";
+}
+
 export function isProductionDeployment(
   source: Pick<Env, "VERCEL_ENV"> = env,
 ): boolean {

@@ -58,6 +58,9 @@ select v.id, o.id, '10000000-0000-0000-0000-000000000001', 'v1', v.cle, '{}'::js
 -- =============================================================================
 do $$
 begin
+  if has_function_privilege('anon', 'public.crm_meta_conversion_deja_simulee(text)', 'execute') then
+    raise exception 'ÉCHEC : anon peut demander si un signal a été essayé';
+  end if;
   if not has_function_privilege('anon', 'public.crm_meta_conversion_log(text,text,uuid,text,text)', 'execute') then
     raise exception 'ÉCHEC : le dépôt public ne peut plus tracer son Lead';
   end if;
@@ -157,6 +160,66 @@ begin
     raise exception 'ÉCHEC : « déjà partie » pour une conversion qui n''est pas partie';
   end if;
   raise notice 'ok : déjà partie, seulement si envoyée';
+end $$;
+reset role;
+
+-- =============================================================================
+\echo '--- 4 bis. Les nouveaux signaux, en essai (migration 20261128210000)'
+-- =============================================================================
+-- Sans session : les paliers d'une demande fraîche passent, chacun une fois ;
+-- ceux d'une demande d'hier et les signaux du CRM, non. (La session de la
+-- section précédente est d'abord effacée : sans elle, auth.uid() est nul.)
+set local request.jwt.claim.sub = '';
+set local role anon;
+do $$
+begin
+  perform public.crm_meta_conversion_log('LeadBudgetAuMoins500k', 'simulee', '60000000-0000-0000-0000-000000000001', 'LeadBudgetAuMoins500k-1');
+  perform public.crm_meta_conversion_log('LeadBudgetAuMoins1M', 'simulee', '60000000-0000-0000-0000-000000000001', 'LeadBudgetAuMoins1M-1');
+  -- Ignorés :
+  perform public.crm_meta_conversion_log('LeadBudgetAuMoins1M', 'simulee', '60000000-0000-0000-0000-000000000001', 'LeadBudgetAuMoins1M-1-bis');
+  perform public.crm_meta_conversion_log('LeadBudgetAuMoins500k', 'simulee', '60000000-0000-0000-0000-000000000002', 'LeadBudgetAuMoins500k-2');
+  perform public.crm_meta_conversion_log('LeadQualifie', 'simulee', '60000000-0000-0000-0000-000000000001', 'leadqualifie-1');
+  perform public.crm_meta_conversion_log('LeadBudgetAuMoins9M', 'simulee', '60000000-0000-0000-0000-000000000001', 'forge');
+end $$;
+reset role;
+do $$
+declare v text;
+begin
+  select string_agg(event_id || '=' || resultat, ' ' order by event_id) into v
+    from public.meta_conversion_log where event_name like 'LeadBudgetAuMoins%' or event_name = 'LeadQualifie' or event_id = 'forge';
+  if v is distinct from 'LeadBudgetAuMoins1M-1=simulee LeadBudgetAuMoins500k-1=simulee' then
+    raise exception 'ÉCHEC : paliers sans session = %', v;
+  end if;
+  raise notice 'ok : sans session, les paliers d''une demande fraîche, chacun une fois';
+end $$;
+
+-- Avec une session de l'équipe : un signal essayé, puis « déjà essayé ? ».
+set local role authenticated;
+set local request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
+do $$
+begin
+  perform public.crm_meta_conversion_log('LeadQualifie', 'simulee', '60000000-0000-0000-0000-000000000002', 'leadqualifie-2');
+  if not public.crm_meta_conversion_deja_simulee('leadqualifie-2') then
+    raise exception 'ÉCHEC : un essai n''est pas reconnu';
+  end if;
+  if not public.crm_meta_conversion_deja_simulee('qualifie-2-envoyee') then
+    raise exception 'ÉCHEC : un envoi réel ne compte pas comme déjà fait';
+  end if;
+  if public.crm_meta_conversion_deja_simulee('qualifie-2-refus') or public.crm_meta_conversion_deja_simulee('jamais-vu') then
+    raise exception 'ÉCHEC : « déjà essayé » pour un signal qui ne l''a pas été';
+  end if;
+  -- Un essai ne compte pas comme un envoi : au passage à l'envoi, il partira.
+  if public.crm_meta_conversion_deja_envoyee('leadqualifie-2') then
+    raise exception 'ÉCHEC : un essai compte comme un envoi';
+  end if;
+end $$;
+set local request.jwt.claim.sub = 'd0000000-0000-0000-0000-00000000000d';
+do $$
+begin
+  if public.crm_meta_conversion_deja_simulee('leadqualifie-2') then
+    raise exception 'ÉCHEC : un compte extérieur interroge le journal';
+  end if;
+  raise notice 'ok : « déjà essayé ? » pour l''équipe seulement ; un essai n''est pas un envoi';
 end $$;
 reset role;
 
