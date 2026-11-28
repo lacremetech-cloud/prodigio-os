@@ -88,7 +88,17 @@ après visite » : ce sont quatre informations différentes.
 
 ## 3. Pipeline Acquéreurs
 
-Distinct du pipeline Mandats. Onze étapes :
+Distinct du pipeline Mandats.
+
+> **Historique.** Le tableau ci-dessous décrit la V1 (août 2026). Depuis le
+> 10/11/2026, le pipeline compte **neuf étapes**, définies une seule fois en
+> base (`crm_etapes_acquereur()`) : à contacter, à rappeler, R1 planifié,
+> dossier envoyé / à relancer, visite planifiée, offre en cours, pas
+> intéressé, vivier, mauvais numéro. Aucune n'est plus protégée : le
+> glisser-déposer accepte toutes les colonnes. Les actions métier de la fiche
+> sont décrites plus bas, telles qu'elles fonctionnent aujourd'hui.
+
+Onze étapes en V1 :
 
 | Étape | Libellé |
 |---|---|
@@ -104,21 +114,28 @@ Distinct du pipeline Mandats. Onze étapes :
 | `acquereur_gagne` | Acquéreur gagné 🔒 |
 | `perdu` | Perdu 🔒 |
 
-### Étapes protégées (🔒)
+### Actions métier de la fiche : offre, résultat, réouverture
 
-« Offre en cours », « Acquéreur gagné » et « Perdu » **ne s'atteignent jamais
-par un simple changement de colonne**. Elles exigent une action métier dédiée,
-avec confirmation, motif et audit :
+En V1, « Offre en cours », « Acquéreur gagné » et « Perdu » étaient des étapes
+**protégées**, atteintes seulement par une action dédiée. Depuis le pipeline à
+neuf étapes, la protection est levée ; les trois actions restent les seules à
+**noter une offre, un résultat ou une réouverture**, avec motif et journal :
 
 - `crm_buyer_record_offer` — bien concerné, montant facultatif, commentaire ;
+  le dossier passe en « **Offre en cours** » ;
 - `crm_buyer_record_outcome` — **motif obligatoire si « perdu »**, réservé
-  administrateur / manager ;
+  administrateur / manager ; « **perdu** » range le dossier dans « **Pas
+  intéressé** », « **gagné** » laisse l'étape **inchangée** (le résultat est
+  noté sur la fiche) ;
 - `crm_buyer_reopen` — réouverture d'un dossier clos, **motif obligatoire**,
-  réservé administrateur / manager.
+  réservé administrateur / manager ; le résultat est effacé et le dossier
+  repart dans « **À rappeler** ».
 
-La garde est appliquée **en base** (`crm_buyer_set_stage` rejette ces étapes) et
-répliquée côté interface pour expliquer le refus et orienter vers la bonne
-action — jamais l'inverse.
+Du 10/11 au 23/11/2026, ces trois actions échouaient : elles écrivaient encore
+des étapes du pipeline à huit colonnes (`offre`, `gagne`, `perdu`, `visite`),
+que la base refusait. Remises en état par la migration
+`20261123200000_formulaires_acquereur_neuf_etapes` (docs/07 § 18, installée
+le 28/11/2026), selon la règle décidée par Victor le 23/11/2026.
 
 ### Standards du Kanban (identiques au CRM Mandats)
 
