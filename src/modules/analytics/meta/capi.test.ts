@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ configure: true }));
+const h = vi.hoisted(() => ({ configure: true, production: true }));
 
 vi.mock("@/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/config")>();
@@ -13,6 +13,7 @@ vi.mock("@/config", async (importOriginal) => {
       META_CAPI_TEST_EVENT_CODE: undefined,
     },
     isMetaCapiConfigured: () => h.configure,
+    isProductionDeployment: () => h.production,
   };
 });
 
@@ -29,6 +30,7 @@ const IDENTITE = {
 
 beforeEach(() => {
   h.configure = true;
+  h.production = true;
   vi.restoreAllMocks();
 });
 
@@ -105,6 +107,14 @@ describe("envoyerConversionMeta", () => {
       identity: IDENTITE,
     });
     expect(res).toEqual({ sent: false, reason: "non_configure" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("hors du déploiement de production (un aperçu partage la base), rien ne part", async () => {
+    h.production = false;
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const res = await envoyerConversionMeta({ eventName: "Lead", eventId: "lead-1", identity: IDENTITE });
+    expect(res).toEqual({ sent: false, reason: "hors_production" });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

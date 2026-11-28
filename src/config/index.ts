@@ -16,6 +16,7 @@ export {
   isBuyerSlackConfigured,
   isSmsFactorConfigured,
   isMetaCapiConfigured,
+  isProductionDeployment,
   isMetaAdsReadConfigured,
   isPilotageCronConfigured,
   isGoogleCalendarConfigured,

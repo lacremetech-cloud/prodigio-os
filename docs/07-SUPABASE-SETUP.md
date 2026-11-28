@@ -1578,3 +1578,136 @@ chiffre du CRM ni aucun seuil n'est écrit ici) :
   s'affiche dès que la base a confirmé (docs/05, n° 49).
 - **Non vérifiés** : téléphone, thème sombre, les autres périodes, un réglage
   à quatre tranches sur un vrai bien, la vue générale.
+
+---
+
+## 21. Conversions Meta — le journal des envois (`20261128190000_conversions_meta_reparees`) — **APPLIQUÉE le 28/11/2026**
+
+Détail : [27-CONVERSIONS-META.md](27-CONVERSIONS-META.md). Empreinte SHA-256
+du fichier : `848c5c33e85677be64af0c86105649b7068c129ffd07cd611cdff63a24bd79c4`
+(version complétée le 28/11/2026 après la relecture de la session de l'iMac :
+garde « membre de l'équipe » et fonction de ménage ; la version
+`a0868a90…ef51` n'a pas été installée).
+
+Sur une base où elle manque, rien ne tombe : les conversions partent comme
+avant ; `hors_production` et `deja_envoyee` s'écrivent « erreur » au journal
+(l'ancienne fonction ne les connaît pas), et la vérification « déjà partie ? »
+répond non (la fonction n'existe pas) — au pire un doublon, jamais une perte.
+
+### Pourquoi
+
+Étape 4 du pilotage, PR « réparer », validée par Victor le 28/11/2026. Le
+journal des envois était ouvert au public : `crm_meta_conversion_log`
+s'exécutait sans compte (droit par défaut du schéma, relevé en production).
+Et Meta ne dédoublonne qu'à 48 heures : un dossier revenu « en discussion »
+plus tard recomptait sa conversion. Relevé à la relecture : l'inscription
+libre est ouverte dans Supabase Auth, donc « avec une session » ne veut pas
+dire « de l'équipe » ; et une fonction de ménage posée à la main le
+22/10/2026, `menage_ponctuel_20261022()`, absente du dépôt, était exécutable
+sans compte.
+
+### Ce qu'elle change
+
+| Objet | Modification |
+|---|---|
+| `meta_conversion_log_resultat_check` | Réécrite en **sur-ensemble strict** : les cinq motifs d'avant, plus `hors_production` et `deja_envoyee`. |
+| `crm_meta_conversion_log(text, text, uuid, text, text)` | `create or replace`, même signature. **Sans session**, n'écrit plus que le `Lead` d'une demande réelle de moins de quinze minutes, pas encore tracée (le dépôt public, et le client serveur qui trace le Lead en production) ; tout le reste est ignoré, sans erreur. **Avec une session**, un membre de l'équipe seulement (`crm_has_access()`, adhésion active) ; sinon l'appel est ignoré, sans erreur. Les deux motifs nouveaux sont acceptés. Droits : `anon` et `authenticated`, donnés explicitement ; plus `public`. |
+| `crm_meta_conversion_deja_envoyee(text)` | Nouvelle : vrai si une conversion de cet identifiant est déjà partie (`envoyee`). `SECURITY DEFINER`, membre de l'équipe seulement (faux sinon), un booléen. |
+| Deux index du journal | Par identifiant d'événement, et par demande et événement. |
+| `menage_ponctuel_20261022()` | **Si elle existe** : exécution retirée à `public`, `anon` et `authenticated`. Elle n'est pas supprimée (accord de Victor requis). |
+
+**Aucune ligne du journal touchée.** Rejouable ; verrou borné à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+select pg_get_constraintdef(oid) from pg_constraint
+ where conrelid = 'public.meta_conversion_log'::regclass and conname = 'meta_conversion_log_resultat_check';
+-- attendu : les cinq motifs (envoyee, non_configure, sans_correspondance, refus, erreur)
+
+select resultat, count(*) from public.meta_conversion_log group by 1 order by 1;
+-- attendu : seulement ces cinq motifs (la contrainte réécrite ne peut rien refuser)
+
+select has_function_privilege('anon', 'public.crm_meta_conversion_log(text,text,uuid,text,text)', 'execute') as anon,
+       to_regprocedure('public.crm_meta_conversion_deja_envoyee(text)') is not null as deja;
+-- attendu : true | false
+```
+
+### Contrôles après application
+
+```sql
+select pg_get_constraintdef(oid) from pg_constraint
+ where conrelid = 'public.meta_conversion_log'::regclass and conname = 'meta_conversion_log_resultat_check';
+-- attendu : les sept motifs
+
+select p.proname, p.prosecdef as definer,
+       has_function_privilege('public', p.oid, 'execute') as public,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie,
+       position('if auth.uid() is null then' in p.prosrc) > 0 as porte_etroite,
+       position('crm_has_access()' in p.prosrc) > 0 as equipe
+  from pg_proc p
+ where p.pronamespace = 'public'::regnamespace
+   and p.proname in ('crm_meta_conversion_log', 'crm_meta_conversion_deja_envoyee')
+ order by 1;
+-- attendu :
+--   crm_meta_conversion_deja_envoyee | true | false | false | true | false | true
+--   crm_meta_conversion_log          | true | false | true  | true | true  | true
+
+-- La fonction de ménage, si elle existe : plus aucun client.
+select has_function_privilege('public', p.oid, 'execute') as public,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie
+  from pg_proc p
+ where p.pronamespace = 'public'::regnamespace and p.proname = 'menage_ponctuel_20261022';
+-- attendu : false | false | false (aucune ligne si elle n'existe pas)
+
+select count(*) from public.meta_conversion_log;
+-- attendu : le même nombre qu'avant (aucune ligne touchée)
+```
+
+Ensuite, après la fusion et le déploiement : lancer
+`scripts/conversions-meta-controles.sql` (lecture seule) sur les semaines qui
+suivent, et vérifier que les entrées en discussion et en visite faites depuis
+le panneau « Enregistrer et suivant » ont leur ligne au journal.
+
+### Vérification locale
+
+- Rejeu de toutes les migrations sur une base vierge ; la migration, appliquée
+  deux fois de suite, passe sans erreur.
+- `scripts/conversions-meta.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée : droits ; sans session, une seule ligne écrite (le Lead
+  de la demande fraîche) sur sept tentatives ; les sept motifs avec une
+  session, un motif inconnu devient « erreur » ; un compte hors de l'équipe
+  n'écrit ni ne lit rien ; « déjà partie ? » vrai seulement pour un envoi
+  réel ; la requête de contrôle compte ce décor.
+- La fonction de ménage, recréée à l'identique en local, ouverte à `anon` et
+  `authenticated`, puis la migration rejouée : plus aucun client ne
+  l'exécute (seuls `postgres` et `service_role`) ; la copie locale est
+  ensuite effacée.
+
+### Résultat de l'application (28/11/2026)
+
+Appliquée en production par la session de l'iMac, dans l'éditeur SQL de
+Supabase, à 19 h 14, avec l'accord écrit de Victor (« Oui, installe-la »,
+19 h 13, pour la version complétée) ; tête de la PR et empreinte
+`848c5c33…79c4` revérifiées juste avant, sur le contenu collé ; contrôle
+automatique au vert. Relevés faits sur place (non revérifiables depuis le
+dépôt ; aucun chiffre du CRM n'est écrit ici) :
+
+- **Avant** : contrainte aux cinq motifs ; le journal ne portait que deux
+  d'entre eux ; fonction d'origine en place ; `crm_has_access()` présente,
+  sans argument ; `menage_ponctuel_20261022()` présente, exécutable par
+  `public`, `anon`, `authenticated` et `service_role`.
+- **Après** : contrainte aux sept motifs ; `crm_meta_conversion_log` : même
+  signature, definer, `public` false, `anon` true, `authenticated` true, porte
+  étroite et garde « équipe » présentes, corps identique au fichier ;
+  `crm_meta_conversion_deja_envoyee` : definer, `public` false, `anon` false,
+  `authenticated` true, garde « équipe » présente, corps identique au
+  fichier, faux sans session ; `menage_ponctuel_20261022()` : plus aucun
+  client (restent `postgres` et `service_role`) ; les deux index créés ;
+  journal : le même nombre de lignes qu'avant, RLS et politique de lecture
+  inchangées. Aucun essai d'écriture.
+- **À voir en usage réel** : la trace du premier `Lead` arrivé après la
+  migration (porte étroite, par le client serveur) ; après la fusion, le
+  premier envoi depuis le panneau « Enregistrer et suivant ».

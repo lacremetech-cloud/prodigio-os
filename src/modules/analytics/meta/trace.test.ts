@@ -36,7 +36,9 @@ describe("le journal des conversions", () => {
     // C'est le motif le plus sournois : l'envoi ne part même pas, et sans
     // trace il ne laisse rien derrière lui.
     expect(conversions).toContain('reason: "sans_correspondance"');
-    expect(conversions.match(/tracer\(supabase, "Schedule"/g)?.length).toBe(2);
+    // Trois traces pour la visite : déjà partie, sans correspondance, envoi.
+    expect(conversions.match(/tracer\(supabase, "Schedule"/g)?.length).toBe(3);
+    expect(conversions.match(/tracer\(supabase, "CompleteRegistration"/g)?.length).toBe(3);
   });
 
   it("le journal ne peut JAMAIS faire échouer ce qu'il observe", () => {
@@ -45,11 +47,17 @@ describe("le journal des conversions", () => {
     expect(sql).toContain("exception when others then");
   });
 
-  it("la conversion « Lead » est tracée, bien qu'émise SANS session", () => {
-    /* Elle part d'un dépôt de formulaire public. Un garde `auth.uid() is
-       null` aurait rendu la trace muette sur la conversion la plus
-       fréquente — exactement l'inverse du but. */
-    expect(sql).toContain("PAS de garde sur `auth.uid()`");
+  it("la conversion « Lead » est tracée, bien qu'émise SANS session — et c'est tout ce qu'un appel sans session peut écrire", () => {
+    /* Elle part d'un dépôt de formulaire public : la trace doit s'écrire
+       sans session. Mais le journal était ouvert à `anon` sans limite ; depuis
+       le 28/11/2026 (étape 4, « réparer »), un appel sans session n'écrit que
+       le `Lead` d'une demande réelle de moins de quinze minutes, pas encore
+       tracée. */
+    const reparee = readFileSync(join(DOSSIER, "20261128190000_conversions_meta_reparees.sql"), "utf8");
+    expect(reparee).toContain("if auth.uid() is null then");
+    expect(reparee).toContain("if p_event_name is distinct from 'Lead'");
+    expect(reparee).toContain("i.created_at > now() - interval '15 minutes'");
+    expect(reparee).toContain("grant execute on function public.crm_meta_conversion_log(text, text, uuid, text, text) to anon, authenticated");
     expect(readFileSync("src/modules/buyers/funnel/universal-submit.ts", "utf8")).toContain(
       "supabase: lecteur,",
     );
@@ -63,7 +71,7 @@ describe("le journal des conversions", () => {
   });
 
   it("les motifs enregistrés sont exactement ceux que le code peut produire", () => {
-    const motifs = ["envoyee", "non_configure", "sans_correspondance", "refus", "erreur"];
+    const motifs = ["envoyee", "non_configure", "sans_correspondance", "refus", "erreur", "hors_production", "deja_envoyee"];
     for (const m of motifs) expect(sql, m).toContain(`'${m}'`);
     /* `capi.ts` est la source : si un motif y apparaît un jour sans être
        ajouté à la contrainte, la base refuserait la ligne — et la trace
@@ -71,5 +79,38 @@ describe("le journal des conversions", () => {
     const capi = readFileSync("src/modules/analytics/meta/capi.ts", "utf8");
     const declares = [...capi.matchAll(/reason:\s*"([a-z_]+)"/g)].map((m) => m[1]!);
     for (const d of new Set(declares)) expect(motifs, `motif « ${d} » inconnu de la base`).toContain(d);
+  });
+
+  it("« déjà partie ? » : un membre de l'équipe seulement, un booléen seulement", () => {
+    const reparee = readFileSync(join(DOSSIER, "20261128190000_conversions_meta_reparees.sql"), "utf8");
+    expect(reparee).toContain("revoke all on function public.crm_meta_conversion_deja_envoyee(text) from public, anon");
+    expect(reparee).toContain("grant execute on function public.crm_meta_conversion_deja_envoyee(text) to authenticated");
+    expect(reparee).toMatch(/crm_meta_conversion_deja_envoyee\(p_event_id text\)\s+returns boolean/);
+    expect(reparee).toMatch(/select auth\.uid\(\) is not null\s+and public\.crm_has_access\(\)/);
+  });
+
+  it("avec une session, seul un membre de l'équipe écrit au journal — le dépôt public garde sa porte étroite", () => {
+    /* L'inscription libre est ouverte dans Supabase Auth (relevé du
+       28/11/2026) : « avec une session » ne veut pas dire « de l'équipe ».
+       Le chemin sans session, lui, ne rencontre pas cette garde : en
+       production, la trace du Lead passe par le client serveur, sans uid. */
+    const reparee = readFileSync(join(DOSSIER, "20261128190000_conversions_meta_reparees.sql"), "utf8");
+    const sans = reparee.indexOf("if auth.uid() is null then");
+    const garde = reparee.indexOf("elsif not public.crm_has_access() then");
+    expect(sans).toBeGreaterThan(-1);
+    expect(garde).toBeGreaterThan(sans);
+    expect(reparee.slice(garde, reparee.indexOf("end if;", garde))).toContain("return;");
+    // La fonction de ménage du 22/10/2026 : plus aucun client ne l'exécute, si elle existe.
+    expect(reparee).toContain("revoke all on function public.menage_ponctuel_20261022() from public, anon, authenticated");
+  });
+
+  it("la requête de contrôle ne fait que lire, et ne sort que des nombres", () => {
+    const controle = readFileSync("scripts/conversions-meta-controles.sql", "utf8")
+      .split("\n")
+      .map((l) => l.replace(/--.*$/, ""))
+      .join("\n")
+      .toLowerCase();
+    expect(controle).not.toMatch(/\b(insert|update|delete|truncate|alter|drop|create|grant|revoke)\b/);
+    expect(controle).not.toMatch(/contact_|email|phone|first_name|last_name|fbclid/);
   });
 });

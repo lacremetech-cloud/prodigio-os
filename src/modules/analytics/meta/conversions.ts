@@ -190,14 +190,56 @@ export async function conversionProspect(input: {
 }
 
 /**
+ * La même conversion est-elle déjà partie ? Meta ne dédoublonne un même
+ * `event_id` que sur 48 heures : un dossier revenu « en discussion » une
+ * semaine plus tard aurait compté deux fois. Le journal le sait, par une
+ * fonction qui ne rend qu'un booléen (il n'est lisible que de l'encadrement).
+ * Une lecture impossible n'empêche pas l'envoi : mieux vaut un doublon
+ * qu'une conversion perdue.
+ */
+export async function dejaEnvoyee(supabase: SupabaseClient, eventId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc("crm_meta_conversion_deja_envoyee", { p_event_id: eventId });
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * La manifestation à laquelle rattacher une conversion quand le fait concerne
+ * la personne sans bien précis (panneau de traitement, « Général ») : la plus
+ * récente, celle de la dernière publicité qui l'a amenée.
+ */
+export async function manifestationLaPlusRecente(
+  supabase: SupabaseClient,
+  buyerProfileId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("buyer_interests")
+    .select("id")
+    .eq("buyer_profile_id", buyerProfileId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+/**
  * `CompleteRegistration` — le dossier entre en discussion : quelqu'un a répondu
  * et la conversation est réelle. C'est une décision humaine, jamais un score.
+ * Une seule fois par manifestation : si elle est déjà partie, on le note et on
+ * n'envoie rien.
  */
 export async function conversionInscriptionTerminee(
   supabase: SupabaseClient,
   interestId: string,
 ): Promise<MetaSendOutcome> {
   const eventId = `qualifie-${interestId}`;
+  if (await dejaEnvoyee(supabase, eventId)) {
+    return tracer(supabase, "CompleteRegistration", eventId, interestId, { sent: false, reason: "deja_envoyee" });
+  }
   const contexte = await contexteDeLaManifestation(supabase, interestId);
   if (!contexte) {
     return tracer(supabase, "CompleteRegistration", eventId, interestId, {
@@ -226,6 +268,10 @@ export async function conversionRendezVous(
   at: Date = new Date(),
 ): Promise<MetaSendOutcome> {
   const eventId = `visite-${interestId}-${jour(at)}`;
+  // Le même jour, la même visite ne part qu'une fois (Kanban, puis panneau).
+  if (await dejaEnvoyee(supabase, eventId)) {
+    return tracer(supabase, "Schedule", eventId, interestId, { sent: false, reason: "deja_envoyee" });
+  }
   const contexte = await contexteDeLaManifestation(supabase, interestId);
   if (!contexte) {
     return tracer(supabase, "Schedule", eventId, interestId, {

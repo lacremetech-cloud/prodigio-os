@@ -7,7 +7,22 @@ du fait métier :
 | ------------------------ | ---------------------- | ---------------------------------------------- |
 | Prospect                 | `Lead`                 | une demande est déposée depuis un tunnel       |
 | Inscription terminée     | `CompleteRegistration` | le dossier entre à l’étape « En discussion »   |
-| Rendez-vous programmé    | `Schedule`             | le dossier entre à l'étape « Visite »          |
+| Rendez-vous programmé    | `Schedule`             | le dossier entre à l'étape « Visite planifiée », ou une visite est inscrite à l'agenda |
+
+### D'où elles partent (depuis le 28/11/2026)
+
+| Geste dans le CRM | Inscription terminée | Rendez-vous programmé |
+| --- | --- | --- |
+| Glisser la carte (Kanban), changer l'étape d'une demande | entrée en discussion | entrée en visite planifiée |
+| « Planifier une visite » | — | toujours |
+| Panneau « Enregistrer et suivant » (`crm_buyer_enregistrer`) | entrée en discussion | entrée en visite planifiée, ou visite inscrite (une seule fois si les deux) |
+| Ancien panneau de traitement | entrée en discussion | entrée en visite |
+
+Le panneau « Enregistrer et suivant », le plus utilisé, **n'envoyait rien**
+jusqu'au 28/11/2026 (étape 4 du pilotage, PR « réparer »). La règle suit ce que
+la base a écrit (l'étape avant et après, la visite réellement inscrite), pas le
+seul choix fait à l'écran. Sans bien précis (« Général »), la conversion se
+rattache à la demande la plus récente de la personne.
 
 ## Pourquoi côté serveur
 
@@ -22,7 +37,7 @@ elles se produisent dans le CRM, des jours après la visite du site.
 
 ## Configuration
 
-Deux variables, en production uniquement (Vercel) :
+Deux variables, en production uniquement (Vercel) — **décocher « Preview »** :
 
 ```
 META_CAPI_PIXEL_ID=<identifiant du pixel>
@@ -37,6 +52,12 @@ Business Manager.
 Absentes, **aucune conversion n'est émise** et l'application fonctionne à
 l'identique. C'est volontaire : une preview ne doit jamais polluer les
 statistiques d'un compte publicitaire.
+
+**Hors du déploiement de production, rien ne part, même si les variables sont
+là** (depuis le 28/11/2026). Elles étaient aussi posées pour les aperçus ; or un
+aperçu écrit dans la base de production : une demande de recette y aurait
+compté un vrai Lead. Le code vérifie désormais `VERCEL_ENV = production`, et le
+journal note `hors_production`.
 
 Pour vérifier, le temps d'un test, renseigner `META_CAPI_TEST_EVENT_CODE` avec
 le code affiché dans **Événements de test**. ⚠️ Laissé en place, il écarte les
@@ -66,13 +87,43 @@ Chaque événement porte un `event_id` déterministe :
 
 - `lead-<id de la demande>` — une demande, une conversion ;
 - `qualifie-<id du dossier>` — un dossier n'entre en discussion qu'une fois ;
-  y revenir plus tard ne recompte pas la conversion ;
+  y revenir plus tard ne recompte pas la conversion. Meta ne dédoublonne un
+  même identifiant que sur **48 heures** : depuis le 28/11/2026, le serveur
+  demande d'abord au journal si la conversion est déjà partie
+  (`crm_meta_conversion_deja_envoyee`), et n'envoie rien si c'est le cas
+  (`deja_envoyee` au journal) ;
 - `visite-<id du dossier>-<date>` — un retour en visite des mois plus tard est
   une vraie seconde conversion ; glisser la carte deux fois le même jour n'en
-  est pas une.
+  est pas une (même vérification au journal). L'identifiant porte le **jour du
+  geste** : une visite replanifiée un autre jour (panneau ou « Planifier une
+  visite ») renvoie donc un « rendez-vous programmé ». Et si l'étape d'avant
+  ne peut pas être lue au moment de l'enregistrement, une personne déjà en
+  visite planifiée peut en renvoyer un un autre jour.
 
 Si un pixel navigateur est ajouté plus tard sur les pages d'atterrissage, il
 devra réutiliser ces mêmes identifiants pour que Meta dédoublonne.
+
+## Le journal des envois
+
+`meta_conversion_log` garde le résultat de chaque envoi : `envoyee`, ou le
+motif — `non_configure`, `hors_production`, `deja_envoyee`,
+`sans_correspondance`, `refus`, `erreur`. Il se lit par l'encadrement ; il ne
+s'écrit que par `crm_meta_conversion_log`.
+
+**Il n'est plus ouvert au public** (28/11/2026). La fonction était exécutable
+sans compte, donc n'importe qui pouvait y écrire. Le dépôt public du
+formulaire en a besoin pour tracer son `Lead` : sans session, elle n'accepte
+plus que le `Lead` d'une demande réelle, arrivée il y a moins de quinze
+minutes, et pas encore tracée ; tout le reste est ignoré, sans erreur. Avec
+une session, il faut être **de l'équipe** (adhésion active) : l'inscription
+libre est ouverte dans Supabase Auth, et un compte créé de l'extérieur ne doit
+rien écrire — surtout pas une fausse conversion « partie », que la question
+« déjà partie ? » lirait.
+
+**Contrôle** : `scripts/conversions-meta-controles.sql` (lecture seule) met,
+semaine par semaine, les faits du CRM (demandes, entrées en discussion,
+entrées en visite et visites inscrites) en face du journal. Recette locale :
+`scripts/conversions-meta.sql`.
 
 ## Une mesure ne casse jamais le métier
 
