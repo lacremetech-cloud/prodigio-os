@@ -563,7 +563,7 @@ l'écran.
 | **Archivées** | Les demandes d'une personne archivée (`archive_le` : faux numéro, test, doublon) sont **écartées** partout, et leur nombre est dit. |
 | **Étape, qualification** | Celles de la **personne, aujourd'hui** : `buyer_profiles.pipeline_stage` (anciennes clés traduites par `crm_etape_v2`) et `.qualification`. Jamais les colonnes du même nom de `buyer_interests`, jamais `qualification_status` (valeurs par défaut, pas tenues à jour). |
 | **Personnes qualifiées** | Qualification « qualifié » ou « gros potentiel », aujourd'hui. |
-| **Étape atteinte** | L'étape actuelle, ou une étape du journal (`audit_events` de la personne, types `acquereur_stade` et `acquereur_traitement`, clé `stage` de `new_value`) ; « à contacter » pour toute personne arrivée. Une personne passée par une étape compte même si elle en est sortie. **Part** = atteinte ÷ personnes ; **passage** = atteinte de l'étape d'arrivée ÷ atteinte de l'étape de départ. |
+| **Étape atteinte** | L'étape actuelle, ou toute étape portée par un **événement de la personne** au journal (`audit_events`, `entity_type = 'buyer_profile'`, clé `stage` de `new_value` **ou** de `old_value`, **quel que soit le type** : stade, traitement, offre, résultat, réouverture…) ; « à contacter » pour toute personne arrivée. Une personne passée par une étape compte même si elle en est sortie — y compris quand elle y est arrivée par le formulaire Offre ou Résultat, qui écrivent leurs propres types d'événement. **Part** = atteinte ÷ personnes ; **passage** = atteinte de l'étape d'arrivée ÷ atteinte de l'étape de départ. |
 | **Visites** | Les tâches `kind = 'visite'` rattachées à une demande comptée (`tasks.interest_id`). La tuile = **à faire** (`a_faire`) + **faites** (`fait`) ; « à venir » = à faire et prévues à partir de maintenant ; annulées (`annule`) à part. |
 | **Offres** | Les personnes qui ont atteint « offre en cours » ; les **montants** saisis (`offer_amount_cents`) comptent pour le bien de l'offre (`offer_property_id`). Aucune offre : « aucune offre saisie », jamais 0 €. |
 | **Pub d'une demande** | Le premier identifiant **connu de la lecture Meta** (`pilotage_meta_pubs` ∪ `pilotage_meta_insights`) parmi : `meta_ad_id`, `utm_content` (colonne, adresse du formulaire, première visite), `utm_id` (adresse, première visite) ; sinon le **nom exact** d'une pub, s'il n'est porté que par une seule ; sinon la première **campagne** connue parmi `utm_campaign` (colonne, adresses) et `utm_id` ; sinon « **non rattachée** ». Un `utm_id` qui porte l'identifiant d'une campagne (Les Airelles) n'est donc jamais pris pour une pub. `meta_ad_id` n'est pas réécrit. |
@@ -588,10 +588,11 @@ docs/07 § 17) : `crm_pilotage_crm_par_jour`, `…_cohorte`, `…_par_pub`,
   est refusé ; `anon` ne peut pas les appeler ;
 - **n'écrivent rien** (aucune table, aucune colonne, aucune donnée touchée) ;
 - lisent chaque table une fois par appel : essayées sur dix fois le volume du
-  CRM de novembre 2026, moins de 2 secondes chacune (la production en accorde
-  8 à l'API). Réécrites pour cela, elles donnent exactement les mêmes
-  chiffres que leur première version sur 5 500 demandes fictives et quatre
-  périodes.
+  CRM de novembre 2026, 2,5 secondes au plus chacune (la production en
+  accorde 8 à l'API). Réécrites pour cela, elles donnaient exactement les
+  mêmes chiffres que leur première version (5 500 demandes fictives, quatre
+  périodes) ; la lecture élargie du journal (§ 9.2) est venue ensuite, à la
+  relecture de la session de l'iMac, et la requête de contrôle la suit.
 
 ### 9.4 La recette, bloc par bloc
 
@@ -640,7 +641,11 @@ requête donne **exactement** les chiffres que la page tire des fonctions.
   09/11/2026 (« Offre en cours » avait quitté le pipeline le 14/10/2026) :
   avant, personne ne pouvait les atteindre. L'écran le dit.
 - **Le journal** se rattache à la personne, pas au bien : l'étape atteinte
-  d'une personne vaut pour chacun de ses biens, comme son étape actuelle.
+  d'une personne vaut pour chacun de ses biens, comme son étape actuelle. Il
+  se lit dans **tout** événement de la personne, avant comme après le
+  changement : le formulaire Offre écrit un événement `acquereur_offre`, le
+  formulaire Résultat un `acquereur_resultat` (PR #85), et une personne
+  passée par l'offre puis déplacée reste comptée.
   Recoupé en production le 23/11/2026 par la session de l'iMac (lecture
   seule, comptes seulement) : chaque personne sortie de « à contacter » a un
   changement d'étape tracé, et le dernier événement donne bien l'étape

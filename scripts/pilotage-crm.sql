@@ -82,8 +82,13 @@ select v.id, o.id, v.contact, v.etape, v.qualif,
   public.organizations o where o.slug = 'prodigio';
 
 -- Le journal : Y est passée par « à rappeler » puis « visite » (ancienne clé de
--- « visite planifiée ») ; W est passée par « offre en cours ».
+-- « visite planifiée ») ; W est passée par « offre en cours » ; X est passée de
+-- « visite planifiée » à « offre en cours » par le formulaire Offre (événement
+-- 'acquereur_offre'), puis revenue à « dossier envoyé » : le journal se lit
+-- dans tout événement de la personne, avant (old_value) comme après.
 insert into public.audit_events (entity_type, entity_id, event_type, old_value, new_value) values
+  ('buyer_profile', '50000000-0000-0000-0000-0000000000a1', 'acquereur_offre',
+   '{"stage": "visite_planifiee"}', '{"stage": "offre_en_cours", "amount_cents": null}'),
   ('buyer_profile', '50000000-0000-0000-0000-0000000000a2', 'acquereur_traitement',
    '{"stage": "a_contacter", "qualification": "a_qualifier"}', '{"stage": "a_rappeler", "qualification": "a_qualifier"}'),
   ('buyer_profile', '50000000-0000-0000-0000-0000000000a2', 'acquereur_stade', '{"stage": "a_rappeler"}', '{"stage": "visite"}'),
@@ -208,8 +213,10 @@ begin
     raise exception 'ÉCHEC : Villa essai, étapes actuelles = %', v1->'etapes';
   end if;
   -- Étapes atteintes : tout le monde « à contacter » ; Y : à rappeler, visite
-  -- planifiée (ancienne clé « visite »), vivier ; X : dossier envoyé.
-  if v1->'atteintes' <> '{"a_contacter": 2, "a_rappeler": 1, "visite_planifiee": 1, "vivier": 1, "en_discussion": 1}'::jsonb then
+  -- planifiée (ancienne clé « visite »), vivier ; X : dossier envoyé (étape
+  -- actuelle), visite planifiée (avant l'offre) et offre en cours (événement
+  -- d'offre, alors qu'elle n'y est plus).
+  if v1->'atteintes' <> '{"a_contacter": 2, "a_rappeler": 1, "visite_planifiee": 2, "vivier": 1, "en_discussion": 1, "offre_en_cours": 1}'::jsonb then
     raise exception 'ÉCHEC : Villa essai, étapes atteintes = %', v1->'atteintes';
   end if;
   if v1->'qualification' <> '{"qualifie": 1, "non_qualifie": 1}'::jsonb then
@@ -218,7 +225,8 @@ begin
   if v1->'visites' <> '{"planifiees": 1, "a_venir": 1, "faites": 1, "annulees": 0}'::jsonb then
     raise exception 'ÉCHEC : Villa essai, visites = %', v1->'visites';
   end if;
-  if v1->'offres' <> '{"personnes": 0, "montants": 0, "somme_cents": 0}'::jsonb then
+  -- X est passée par « offre en cours » (sans montant saisi).
+  if v1->'offres' <> '{"personnes": 1, "montants": 0, "somme_cents": 0}'::jsonb then
     raise exception 'ÉCHEC : Villa essai, offres = %', v1->'offres';
   end if;
   if v1->'provenance' <> '{"fb": 1, "instagram": 1}'::jsonb then
@@ -278,7 +286,7 @@ begin
     into r
     from public.crm_pilotage_crm_par_pub('2026-11-01', '2026-11-20');
   -- demandes / personnes / qualifiés / visites (non annulées) / visites faites / offres
-  if r is distinct from '1:pub:111=1/1/1/1/0/0 1:pub:333=1/1/0/1/1/0 2:aucun:-=1/0/0/0/0/0 2:pub:222=1/1/1/0/0/0 3:campagne:903=1/1/1/0/0/1' then
+  if r is distinct from '1:pub:111=1/1/1/1/0/1 1:pub:333=1/1/0/1/1/0 2:aucun:-=1/0/0/0/0/0 2:pub:222=1/1/1/0/0/1 3:campagne:903=1/1/1/0/0/1' then
     raise exception 'ÉCHEC : par pub = %', r;
   end if;
   raise notice 'ok : un utm_id de campagne n''est pas une pub ; utm_content de la première visite retrouvé ; nom ambigu ramené à sa campagne';

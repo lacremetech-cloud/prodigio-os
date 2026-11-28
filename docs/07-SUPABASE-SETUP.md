@@ -1182,6 +1182,10 @@ l'installation ».
 - `scripts/pilotage-crm.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
   `safeupdate` émulée ; la requête de contrôle y donne exactement les
   chiffres de la page.
-- Sur dix fois le volume du CRM de novembre 2026 (fictif) : moins de
-  2 secondes par fonction ; mêmes chiffres que la première version des
-  fonctions et que la requête de contrôle, sur plusieurs périodes.
+- Sur dix fois le volume du CRM de novembre 2026 (fictif) : 2,5 secondes au
+  plus par fonction ; mêmes chiffres que la requête de contrôle, sur
+  plusieurs périodes.
+- Révision du 28/11/2026, avant toute application : l'étape atteinte se lit
+  dans tout événement de la personne (`old_value` comme `new_value`, quel que
+  soit le type), pour compter les offres et résultats écrits par les
+  formulaires de la fiche (PR #85). Relevé par la session de l'iMac.

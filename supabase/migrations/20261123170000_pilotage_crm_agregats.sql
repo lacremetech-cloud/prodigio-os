@@ -15,9 +15,11 @@
 --  - l'étape et la qualification sont celles de la PERSONNE
 --    (`buyer_profiles.pipeline_stage`, `.qualification`) ; une personne qui a
 --    des demandes sur deux biens compte dans chacun, une fois au total ;
---  - « étape atteinte » : l'étape actuelle, plus toute étape passée selon le
---    journal (`audit_events`, 'acquereur_stade' et 'acquereur_traitement'),
---    anciennes clés traduites par `crm_etape_v2` ; « à contacter » pour tous ;
+--  - « étape atteinte » : l'étape actuelle, plus toute étape portée par un
+--    événement de la personne au journal (`audit_events`, entity_type
+--    'buyer_profile', clé `stage` de `new_value` OU de `old_value`, quel que
+--    soit le type : stade, traitement, offre, résultat…), anciennes clés
+--    traduites par `crm_etape_v2` ; « à contacter » pour tous ;
 --  - une visite est une tâche `kind = 'visite'` rattachée à une demande de la
 --    période (`tasks.interest_id`) ;
 --  - une offre : une personne arrivée à « offre en cours », et les montants
@@ -267,12 +269,15 @@ begin
            bp.qualification,
            bp.offer_amount_cents,
            bp.offer_property_id,
-           array(select public.crm_etape_v2(ae.new_value ->> 'stage')
+           -- Toute étape portée par un événement de la personne : celle d'où
+           -- elle part (old_value) comme celle où elle arrive (new_value),
+           -- quel que soit le type d'événement.
+           array(select public.crm_etape_v2(s.etape)
                    from public.audit_events ae
+                  cross join lateral (values (ae.new_value ->> 'stage'), (ae.old_value ->> 'stage')) as s(etape)
                   where ae.entity_type = 'buyer_profile'
                     and ae.entity_id = pb.personne
-                    and ae.event_type in ('acquereur_stade', 'acquereur_traitement')
-                    and ae.new_value ? 'stage') as journal,
+                    and s.etape is not null) as journal,
            (select min(ba.user_id::text)
               from public.buyer_assignments ba
              where ba.buyer_profile_id = pb.personne
@@ -402,16 +407,17 @@ begin
       from public.buyer_profiles bp
      where bp.id in (select x.personne from a x where x.personne is not null)
   ),
-  -- Les personnes arrivées un jour à « offre en cours » : aujourd'hui, ou selon le journal.
+  -- Les personnes arrivées un jour à « offre en cours » : aujourd'hui, ou
+  -- selon le journal (tout événement de la personne, avant ou après).
   offres as (
     select pr.personne from profils pr where pr.en_offre
     union
     select ae.entity_id
       from public.audit_events ae
      where ae.entity_type = 'buyer_profile'
-       and ae.event_type in ('acquereur_stade', 'acquereur_traitement')
        and ae.entity_id in (select pr.personne from profils pr)
-       and public.crm_etape_v2(ae.new_value ->> 'stage') = 'offre_en_cours'
+       and (public.crm_etape_v2(ae.new_value ->> 'stage') = 'offre_en_cours'
+            or public.crm_etape_v2(ae.old_value ->> 'stage') = 'offre_en_cours')
   ),
   -- Les visites de chaque demande : non annulées, et faites.
   visites as (

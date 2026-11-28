@@ -23,8 +23,9 @@
 --  - l'étape et la qualification sont celles de la PERSONNE, aujourd'hui
 --    (`buyer_profiles.pipeline_stage`, `.qualification`), anciennes clés
 --    d'étape traduites par `crm_etape_v2` ;
---  - une étape ATTEINTE : l'actuelle, ou une étape du journal
---    (`audit_events` 'acquereur_stade' et 'acquereur_traitement'), et
+--  - une étape ATTEINTE : l'actuelle, ou toute étape portée par un événement
+--    de la personne au journal (`audit_events`, entity_type 'buyer_profile',
+--    clé `stage` de `new_value` ou de `old_value`, quel que soit le type), et
 --    « à contacter » pour toute personne arrivée ;
 --  - une VISITE : une tâche `kind = 'visite'` rattachée à une demande comptée
 --    (`tasks.interest_id`) ; « à faire » = statut 'a_faire', « à venir » =
@@ -80,12 +81,12 @@ profil as (
 atteinte as (
   select x.portee, x.personne, x.etape from profil x
   union
-  select x.portee, x.personne, public.crm_etape_v2(ae.new_value ->> 'stage')
+  select x.portee, x.personne, public.crm_etape_v2(s.etape)
     from pers x
     join public.audit_events ae
       on ae.entity_type = 'buyer_profile' and ae.entity_id = x.personne
-     and ae.event_type in ('acquereur_stade', 'acquereur_traitement')
-   where ae.new_value ->> 'stage' is not null
+   cross join lateral (values (ae.new_value ->> 'stage'), (ae.old_value ->> 'stage')) as s(etape)
+   where s.etape is not null
   union
   select x.portee, x.personne, 'a_contacter' from pers x
 ),
