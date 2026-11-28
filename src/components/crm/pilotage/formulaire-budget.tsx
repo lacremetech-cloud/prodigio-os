@@ -168,10 +168,21 @@ export function FormulaireBudget({
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
+        {/* « Enregistré » dès que la base a confirmé : le bouton n'attend pas
+            la fin du rafraîchissement de la page, qui a déjà duré plus de
+            trente secondes sur un programme (docs/05, n° 49). Il reste
+            désactivé jusque-là : pas de second envoi. */}
         <button type="submit" className="crm-btn crm-btn--primaire crm-btn--sm" disabled={pending}>
-          {pending ? "Enregistrement…" : initiale ? "Enregistrer cette nouvelle version" : "Enregistrer le budget du formulaire"}
+          {pending && !done
+            ? "Enregistrement…"
+            : initiale
+              ? "Enregistrer cette nouvelle version"
+              : "Enregistrer le budget du formulaire"}
         </button>
-        <Saved show={done && !pending} />
+        <Saved show={done} />
+        {done && pending ? (
+          <span className="text-[11px] text-[var(--crm-text-faint)]">La page se met à jour…</span>
+        ) : null}
         <FieldError error={erreurLocale ?? error} />
       </div>
       {/* La forme de la liste se dit tout de suite ; la cible et le motif, à l'envoi. */}

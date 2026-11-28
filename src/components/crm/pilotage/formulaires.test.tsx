@@ -213,7 +213,7 @@ describe("le formulaire du budget", () => {
   });
 
   it("envoie les tranches dans l'ordre de l'échelle, la cible et le motif", async () => {
-    const { getByLabelText, getByRole } = render(
+    const { getByLabelText, getByRole, findByText } = render(
       <FormulaireBudget propertyId={BIEN} jour="2026-11-28" initiale={{ tranches: ["500k_1m", "plus_1m"], cibleMinCentimes: M }} proposition={null} />,
     );
     // Passer à l'échelle haute : retirer « plus d'1 M€ », ajouter 1–2, 2–3 et plus de 3 M€ (dans le désordre).
@@ -232,5 +232,7 @@ describe("le formulaire du budget", () => {
       cibleMinCentimes: 2 * M,
       motif: "Seuil validé",
     });
+    // « Enregistré » dès que la base a confirmé (docs/05, n° 49).
+    expect(await findByText("Enregistré")).toBeTruthy();
   });
 });

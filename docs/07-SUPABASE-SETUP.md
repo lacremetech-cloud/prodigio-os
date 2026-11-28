@@ -1574,7 +1574,7 @@ chiffre du CRM ni aucun seuil n'est écrit ici) :
   resté sur « Enregistrement… » plus de trente secondes et la nouvelle version
   ne s'est affichée qu'après rechargement ; l'écriture, elle, était faite
   (visible à l'historique). Sur les deux autres biens, la page s'est mise à
-  jour en quelques secondes. Correctif prévu dans la PR suivante (docs/05,
-  n° 49).
+  jour en quelques secondes. Corrigé dans la même PR : « Enregistré »
+  s'affiche dès que la base a confirmé (docs/05, n° 49).
 - **Non vérifiés** : téléphone, thème sombre, les autres périodes, un réglage
   à quatre tranches sur un vrai bien, la vue générale.
