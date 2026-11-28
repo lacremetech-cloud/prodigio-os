@@ -8,7 +8,8 @@ import { getMembersMap } from "@/modules/crm/data/queries";
 import { jourParis } from "@/modules/pilotage/versions";
 import { cookies } from "next/headers";
 import { lirePeriode, adressePeriode, COOKIE_PERIODE } from "@/modules/pilotage/periode-choisie";
-import { lireTableauPilotage } from "@/modules/pilotage/tableau-lecture";
+import { lireCrmPilotage, lireTableauPilotage } from "@/modules/pilotage/tableau-lecture";
+import { SectionCrmBien } from "@/components/crm/pilotage/tableau/crm-sections";
 import { formatCentimes } from "@/modules/pilotage/affichage";
 import { statutCommercialLabels, typeCoutLabels, TYPES_COUT } from "@/modules/pilotage/labels";
 import { AccesReserve, Alertes, Cellule, ControleDuCalcul, ErreurLecture, JournalCouts, NonInstalle, TotauxDesLots } from "@/components/crm/pilotage/vues";
@@ -57,7 +58,11 @@ export default async function PilotageBienPage({
   const jour = jourParis(maintenant);
   const memorisee = (await cookies()).get(COOKIE_PERIODE)?.value;
   const { choix, corrigee } = lirePeriode(await searchParams, jour, memorisee ? decodeURIComponentSur(memorisee) : undefined);
-  const [lecture, membres] = await Promise.all([lireTableauPilotage(choix, maintenant), getMembersMap()]);
+  const [lecture, crm, membres] = await Promise.all([
+    lireTableauPilotage(choix, maintenant),
+    lireCrmPilotage(choix, maintenant),
+    getMembersMap(),
+  ]);
   if (lecture.etat === "non_installe") return <NonInstalle />;
   if (lecture.etat === "erreur") return <ErreurLecture />;
   const t = lecture.tableau;
@@ -225,6 +230,8 @@ export default async function PilotageBienPage({
           vide={t.lecture.lu ? "Aucune pub de ce bien n’a amené de lead sur la période." : "En attente de la première lecture Meta."}
         />
       </Section>
+
+      <SectionCrmBien t={t} b={b} crm={crm} membres={membres} />
 
       {s.alertes.length > 0 ? (
         <Section id="a-savoir" titre="À savoir">

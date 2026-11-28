@@ -713,3 +713,28 @@ service (la lecture du matin), jamais depuis un navigateur.
 - **Règle de rattachement** N — N **Bien** (liste de biens de la règle).
 - **Bien** 0..1 — N **Couverture d'une période** (aucun bien : le total).
 - **Demande acquéreur** N — 0..1 **Pub** (par `meta_ad_id`).
+
+## Extension — Pilotage pub, étape 3b : les chiffres du CRM
+
+Migration `supabase/migrations/20261123170000_pilotage_crm_agregats.sql`,
+détail dans [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9. **Aucun nouvel
+objet** : cinq fonctions de lecture comptent, par bien et sur une période, des
+objets existants — demande acquéreur, personne (profil acquéreur), tâche de
+visite, affectation, journal d'audit. La page n'en reçoit que des nombres ;
+la fonction de base (`crm_pilotage_crm_demandes_resolues`) rend une ligne par
+demande, faite d'identifiants seulement.
+
+### Distinctions à ne jamais confondre (ajouts 3b)
+
+- **Demande ≠ personne.** Une demande est un dossier entrant (`buyer_interests`) ;
+  une personne (`buyer_profiles`) peut en avoir plusieurs, sur plusieurs biens.
+  Chaque nombre de la page dit ce qu'il compte ; le total compte des personnes
+  **distinctes**.
+- **Étape d'une demande ≠ étape de la personne.** Seule l'étape de la personne
+  (`buyer_profiles.pipeline_stage`) est tenue à jour ; celle de la demande
+  garde sa valeur de départ et n'est jamais lue.
+- **Étape actuelle ≠ étape atteinte.** L'étape atteinte compte aussi les étapes
+  passées, d'après le journal : un « vivier » a pu avoir une visite.
+- **Pub d'une demande ≠ `meta_ad_id`.** La pub se décide à la lecture, d'après
+  les identifiants connus de la lecture Meta ; `meta_ad_id` reste la valeur
+  brute reçue et n'est pas réécrit.

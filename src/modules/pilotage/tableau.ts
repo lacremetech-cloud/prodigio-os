@@ -205,6 +205,8 @@ export interface EtatDeLaLecture {
 export interface TableauPilotage {
   jour: string;
   periode: PeriodeResolue;
+  /** Les noms des pubs et des campagnes, tels que Meta les donne (pour la page). */
+  noms: { pubs: Map<string, string>; campagnes: Map<string, string> };
   lecture: EtatDeLaLecture;
   biens: BienCalcule[];
   global: {
@@ -220,7 +222,19 @@ export interface TableauPilotage {
     nonRattachee: { depuisLeDebut: Exact; surLaPeriode: Exact; pubs: number };
   };
   serie: Serie;
+  /**
+   * La dépense et les leads Meta de la période, jour par jour : par bien (sa
+   * part des pubs communes comprise) et, sous `CLE_NON_RATTACHEE`, la dépense
+   * rattachée à aucun bien ; le hors portefeuille est exclu. Sert à compter
+   * « à partir d'un jour » (`metaAPartirDu`).
+   */
+  quotidien: Map<string, Map<string, MetaDuJour>>;
   alertes: Alerte[];
+}
+
+export interface MetaDuJour {
+  depense: Exact;
+  leads: Exact;
 }
 
 export const CLE_NON_RATTACHEE = "non_rattachee";
@@ -262,7 +276,8 @@ function choixValide(choix: ChoixPeriode): boolean {
 
 const dateCourte = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
-function libelleJour(jour: string): string {
+/** Un jour « AAAA-MM-JJ », écrit court (« 14 oct. 2026 »). */
+export function libelleJour(jour: string): string {
   return dateCourte.format(new Date(`${jour}T00:00:00Z`));
 }
 
@@ -468,6 +483,20 @@ function lundi(jourIso: string): string {
   return ajouterJours(jourIso, -((d.getUTCDay() + 6) % 7));
 }
 
+/** Les colonnes d'un graphique : un jour chacune, ou une semaine (du lundi) au-delà de deux mois. */
+export function decoupage(debut: string, fin: string): { pas: Serie["pas"]; points: { debut: string; fin: string }[] } {
+  if (fin < debut) return { pas: "jour", points: [] };
+  const pas: Serie["pas"] = nombreDeJours(debut, fin) > JOURS_MAX_AU_JOUR ? "semaine" : "jour";
+  const points = new Map<string, { debut: string; fin: string }>();
+  for (let j = debut; j <= fin; j = ajouterJours(j, 1)) {
+    const cle = pas === "jour" ? j : lundi(j);
+    const p = points.get(cle);
+    if (p) p.fin = j;
+    else points.set(cle, { debut: j, fin: j });
+  }
+  return { pas, points: [...points.values()] };
+}
+
 function serie(
   periode: PeriodeResolue,
   lignes: readonly LigneDuJour[],
@@ -476,14 +505,11 @@ function serie(
 ): Serie {
   const fin = couvertJusquAu && couvertJusquAu < periode.fin ? couvertJusquAu : periode.fin;
   if (!periode.debut || fin < periode.debut) return { pas: "jour", points: [], cles: [] };
-  const pas: Serie["pas"] = nombreDeJours(periode.debut, fin) > JOURS_MAX_AU_JOUR ? "semaine" : "jour";
-  const points = new Map<string, Point>();
-  for (let j = periode.debut; j <= fin; j = ajouterJours(j, 1)) {
-    const cle = pas === "jour" ? j : lundi(j);
-    const p = points.get(cle);
-    if (p) p.fin = j;
-    else points.set(cle, { debut: j, fin: j, depense: new Map(), leads: new Map() });
-  }
+  const colonnes = decoupage(periode.debut, fin);
+  const pas = colonnes.pas;
+  const points = new Map<string, Point>(
+    colonnes.points.map((c) => [c.debut, { debut: c.debut, fin: c.fin, depense: new Map(), leads: new Map() }]),
+  );
   const cles = new Set<string>();
   const ajouterA = (p: Point, cle: string, depense: Exact, leads: Exact) => {
     cles.add(cle);
@@ -503,6 +529,54 @@ function serie(
     }
   }
   return { pas, points: [...points.values()], cles: [...cles] };
+}
+
+/** La dépense et les leads de la période, jour par jour et par bien (voir `TableauPilotage.quotidien`). */
+function quotidien(
+  periode: PeriodeResolue,
+  lignes: readonly LigneDuJour[],
+  dest: ReadonlyMap<string, Destination>,
+): Map<string, Map<string, MetaDuJour>> {
+  const out = new Map<string, Map<string, MetaDuJour>>();
+  if (!periode.debut) return out;
+  const ajouterA = (cle: string, jour: string, depense: Exact, leads: Exact) => {
+    const jours = out.get(cle) ?? new Map<string, MetaDuJour>();
+    const v = jours.get(jour);
+    jours.set(jour, v ? { depense: plus(v.depense, depense), leads: plus(v.leads, leads) } : { depense, leads });
+    out.set(cle, jours);
+  };
+  for (const l of lignes) {
+    if (l.jour < periode.debut || l.jour > periode.fin) continue;
+    const d = dest.get(l.ad_id);
+    if (d?.type === "hors_portefeuille") continue;
+    if (d?.type === "biens") {
+      for (const [bien, poids] of d.poids) ajouterA(bien, l.jour, fois(exact(l.depense_cents), poids), fois(exact(l.leads), poids));
+    } else {
+      ajouterA(CLE_NON_RATTACHEE, l.jour, exact(l.depense_cents), exact(l.leads));
+    }
+  }
+  return out;
+}
+
+/**
+ * La dépense et les leads Meta de la période À PARTIR D'UN JOUR (inclus) :
+ * d'un bien (sa part des pubs communes comprise), ou de tout le portefeuille
+ * (`null` : les biens et la dépense non rattachée ; hors portefeuille exclu,
+ * comme au total de la période). `null` tant que Meta n'a pas été lu.
+ */
+export function metaAPartirDu(t: TableauPilotage, bien: string | null, depuis: string): MetaDuJour | null {
+  if (!t.lecture.lu) return null;
+  let depense = ZERO;
+  let leads = ZERO;
+  for (const [cle, jours] of t.quotidien) {
+    if (bien !== null && cle !== bien) continue;
+    for (const [jour, v] of jours) {
+      if (jour < depuis) continue;
+      depense = plus(depense, v.depense);
+      leads = plus(leads, v.leads);
+    }
+  }
+  return { depense, leads };
 }
 
 // -----------------------------------------------------------------------------
@@ -737,13 +811,22 @@ export function calculerTableau(e: EntreeTableau): TableauPilotage {
     global.rentabilite.margeNetteHT = global.rentabilite.roas;
   }
 
+  const noms: TableauPilotage["noms"] = { pubs: new Map(), campagnes: new Map() };
+  for (const p of e.meta.depuisLeDebut) {
+    if (p.ad_name) noms.pubs.set(p.ad_id, p.ad_name);
+    if (p.campaign_id && p.campaign_name) noms.campagnes.set(p.campaign_id, p.campaign_name);
+  }
+  for (const p of e.meta.pubs) if (p.ad_name && !noms.pubs.has(p.ad_id)) noms.pubs.set(p.ad_id, p.ad_name);
+
   return {
     jour: e.jour,
     periode,
+    noms,
     lecture,
     biens,
     global,
     serie: serie(periode, e.meta.parJour, dest, lecture.couvertJusquAu),
+    quotidien: quotidien(periode, e.meta.parJour, dest),
     alertes: alertes(e, lecture, biens, global, dest),
   };
 }

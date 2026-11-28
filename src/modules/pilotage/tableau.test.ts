@@ -11,9 +11,11 @@ import type {
 import { centimesArrondis, divise, entier, plus, type Exact } from "./exact";
 import { bornes } from "./meta/periodes";
 import type { RegleRattachement } from "./meta/rattachement";
+import { metaEnFace } from "./crm";
 import {
   calculerTableau,
   CLE_NON_RATTACHEE,
+  metaAPartirDu,
   resoudrePeriode,
   type BienDuTableau,
   type Calcule,
@@ -405,5 +407,68 @@ describe("pubs gagnantes, série par jour, alertes", () => {
     expect(resoudrePeriode({ type: "proposee", periode: "toute_la_periode" }, JOUR, null)).toMatchObject({ debut: null, fin: JOUR });
     expect(resoudrePeriode({ type: "proposee", periode: "30_derniers_jours" }, JOUR, null)).toMatchObject({ debut: "2026-10-24", fin: "2026-11-22" });
     expect(resoudrePeriode({ type: "dates", debut: "2026-11-01", fin: "2026-11-10" }, JOUR, null).libelle).toBe("Du 1 nov. 2026 au 10 nov. 2026");
+  });
+});
+
+describe("la dépense et les leads Meta « à partir d'un jour » (les mêmes jours que le CRM)", () => {
+  // Des totaux de la période cohérents avec le détail par jour.
+  const parJour = [
+    { jour: "2026-11-17", ad_id: "11", depense_cents: 10_000, leads: 2 },
+    { jour: "2026-11-20", ad_id: "22", depense_cents: 10_000, leads: 2 },
+    { jour: "2026-11-21", ad_id: "33", depense_cents: 9_999, leads: 9 },
+    { jour: "2026-11-21", ad_id: "44", depense_cents: 5_000, leads: 1 },
+  ];
+  const coherent = meta({
+    surLaPeriode: [
+      pub("11", { ad_name: "VILLA A | VUE | REEL | V1", depense_cents: 10_000, leads: 2 }),
+      pub("22", { ad_name: "GROUPE | DUO | REEL | V1", depense_cents: 10_000, leads: 2 }),
+      pub("33", { campaign_id: "120000000000000099", campaign_name: "Ancien bien", depense_cents: 9_999, leads: 9 }),
+      pub("44", { ad_name: "Copie de pub", depense_cents: 5_000, leads: 1 }),
+    ],
+    parJour,
+  });
+
+  it("depuis le début de la période : exactement les totaux de la période, par bien et au total", () => {
+    const t = tableau({ meta: coherent });
+    const debut = t.periode.debut!;
+    expect(debut).toBe(bornes("7_derniers_jours", JOUR).debut);
+    const total = metaAPartirDu(t, null, debut)!;
+    expect(total.depense).toEqual(t.global.surLaPeriode!.depense);
+    expect(total.leads).toEqual(t.global.surLaPeriode!.leads);
+    expect(euros(total.depense)).toBe(250); // hors portefeuille exclu, non rattaché compris
+    for (const b of t.biens) {
+      expect(metaAPartirDu(t, b.id, debut)!.depense, b.nom).toEqual(b.surLaPeriode!.depense);
+      expect(metaAPartirDu(t, b.id, debut)!.leads, b.nom).toEqual(b.surLaPeriode!.leads);
+    }
+  });
+
+  it("à partir d'un jour plus tardif : seuls les jours suivants comptent, la part d'une pub commune comprise", () => {
+    const t = tableau({ meta: coherent });
+    const a = metaAPartirDu(t, A, "2026-11-18")!;
+    const b = metaAPartirDu(t, B, "2026-11-18")!;
+    expect(plus(a.depense, b.depense)).toEqual(entier(10_000)); // la pub commune, entière, entre A et B
+    expect(plus(a.leads, b.leads)).toEqual(entier(2));
+    expect(metaAPartirDu(t, null, "2026-11-21")).toEqual({ depense: entier(5_000), leads: entier(1) });
+    expect(metaAPartirDu(t, A, "2026-11-22")).toEqual({ depense: entier(0), leads: entier(0) });
+  });
+
+  it("Meta pas encore lu : rien à compter, « en attente »", () => {
+    const t = tableau({ meta: meta({ ...coherent, lectures: [] }) });
+    expect(metaAPartirDu(t, null, "2026-11-17")).toBeNull();
+    expect(metaEnFace(t, null, "2026-10-14")).toEqual({ etat: "en_attente" });
+  });
+
+  it("Meta en face du CRM : à partir de la première demande reçue, ou rien si le CRM n'a encore rien reçu", () => {
+    const t = tableau({ meta: coherent });
+    expect(metaEnFace(t, null, "2026-11-20")).toEqual({
+      etat: "ok",
+      depuis: "2026-11-20",
+      decale: true,
+      depense: entier(15_000),
+      leads: entier(3),
+    });
+    expect(metaEnFace(t, null, "2026-10-14")).toMatchObject({ etat: "ok", depuis: t.periode.debut, decale: false });
+    expect(metaEnFace(t, A, null)).toEqual({ etat: "sans_demande" });
+    expect(metaEnFace(t, A, "2026-12-01")).toEqual({ etat: "sans_demande" });
   });
 });
