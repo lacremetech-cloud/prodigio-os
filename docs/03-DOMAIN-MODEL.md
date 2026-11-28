@@ -524,6 +524,12 @@ est obligatoire**, l'enregistrement est réservé aux rôles décisionnaires et
 tracé dans le journal d'audit. La réouverture d'un dossier clos est également
 une décision motivée et tracée.
 
+Sur les neuf étapes du pipeline (décision de Victor du 23/11/2026, migration
+`20261123200000_formulaires_acquereur_neuf_etapes`) : une **offre** place le
+dossier en « Offre en cours » ; **perdu** le range dans « Pas intéressé » ;
+**gagné** laisse l'étape inchangée (le résultat est noté sur la fiche) ; la
+**réouverture** efface le résultat et le ramène dans « À rappeler ».
+
 ---
 
 ## Extension — Communications V1 (objets du domaine communication)
