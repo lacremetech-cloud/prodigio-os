@@ -10,6 +10,8 @@ import { cookies } from "next/headers";
 import { lirePeriode, adressePeriode, COOKIE_PERIODE } from "@/modules/pilotage/periode-choisie";
 import { lireCrmPilotage, lireTableauPilotage } from "@/modules/pilotage/tableau-lecture";
 import { SectionCrmBien } from "@/components/crm/pilotage/tableau/crm-sections";
+import { SectionBudgetBien } from "@/components/crm/pilotage/tableau/budget";
+import { lireBudgets } from "@/modules/pilotage/queries";
 import { formatCentimes } from "@/modules/pilotage/affichage";
 import { statutCommercialLabels, typeCoutLabels, TYPES_COUT } from "@/modules/pilotage/labels";
 import { AccesReserve, Alertes, Cellule, ControleDuCalcul, ErreurLecture, JournalCouts, NonInstalle, TotauxDesLots } from "@/components/crm/pilotage/vues";
@@ -58,10 +60,12 @@ export default async function PilotageBienPage({
   const jour = jourParis(maintenant);
   const memorisee = (await cookies()).get(COOKIE_PERIODE)?.value;
   const { choix, corrigee } = lirePeriode(await searchParams, jour, memorisee ? decodeURIComponentSur(memorisee) : undefined);
-  const [lecture, crm, membres] = await Promise.all([
+  const [lecture, crm, membres, budgets] = await Promise.all([
     lireTableauPilotage(choix, maintenant),
     lireCrmPilotage(choix, maintenant),
     getMembersMap(),
+    // Tous les réglages (une poignée de lignes) : la section garde ceux du bien.
+    lireBudgets(),
   ]);
   if (lecture.etat === "non_installe") return <NonInstalle />;
   if (lecture.etat === "erreur") return <ErreurLecture />;
@@ -232,6 +236,8 @@ export default async function PilotageBienPage({
       </Section>
 
       <SectionCrmBien t={t} b={b} crm={crm} membres={membres} />
+
+      <SectionBudgetBien t={t} b={b} crm={crm} budgets={budgets} />
 
       {s.alertes.length > 0 ? (
         <Section id="a-savoir" titre="À savoir">

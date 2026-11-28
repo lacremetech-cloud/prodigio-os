@@ -65,6 +65,40 @@ describe("écran 1", () => {
     expect(screen.queryByLabelText("Plus de 3 millions d'euros")).toBeNull();
   });
 
+  it("sans réglage (ou réglage illisible relu à null), les trois réponses d'aujourd'hui", () => {
+    renderForm({ tranchesBudget: null });
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByLabelText("Plus de 1 million d'euros")).toBeTruthy();
+  });
+
+  it("avec les tranches réglées pour ce bien : « pas de projet » d'abord, puis elles, et seulement elles", () => {
+    renderForm({ tranchesBudget: ["1m_2m", "2m_3m", "plus_3m"] });
+    const libelles = screen.getAllByRole("radio").map((r) => r.closest("label")?.textContent?.trim());
+    expect(libelles).toEqual([
+      "Non, je n'ai pas de projet",
+      "Oui, entre 1 et 2 millions d'euros",
+      "Oui, entre 2 et 3 millions d'euros",
+      "Plus de 3 millions d'euros",
+    ]);
+    expect(screen.queryByLabelText("Oui, entre 500 000 € et 1 million d'euros")).toBeNull();
+    expect(screen.queryByLabelText("Plus de 1 million d'euros")).toBeNull();
+  });
+
+  it("une tranche réglée pour ce bien s'envoie telle quelle", async () => {
+    renderForm({ tranchesBudget: ["1m_2m", "2m_3m", "plus_3m"] });
+    fireEvent.click(screen.getByLabelText("Oui, entre 2 et 3 millions d'euros"));
+    fireEvent.click(screen.getByRole("button", { name: /continuer/i }));
+    await waitFor(() => screen.getByLabelText("Prénom"));
+    fireEvent.change(screen.getByLabelText("Prénom"), { target: { value: "Camille" } });
+    fireEvent.change(screen.getByLabelText("Nom"), { target: { value: "Durand" } });
+    fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "c@example.test" } });
+    fireEvent.change(screen.getByLabelText("Téléphone"), { target: { value: "0612345678" } });
+    fireEvent.click(screen.getByRole("button", { name: /recevoir la brochure/i }));
+    await waitFor(() => expect(submit).toHaveBeenCalled());
+    const payload = submit.mock.calls[0]?.[0] as { answers: Record<string, unknown> };
+    expect(payload.answers.budgetChoice).toBe("2m_3m");
+  });
+
   it("ne pose AUCUNE autre question de qualification", () => {
     renderForm();
     const texte = document.body.textContent ?? "";

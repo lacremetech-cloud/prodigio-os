@@ -73,6 +73,15 @@ Une seule question, au mot près :
 - Oui, entre 2 et 3 millions d'euros → `2m_3m`
 - Plus de 3 millions d'euros → `plus_3m`
 
+Depuis le 16/10/2026, le formulaire n'en propose que trois : « pas de
+projet », `500k_1m` et `plus_1m` (« Plus de 1 million d'euros »). Depuis le
+28/11/2026, **chaque bien peut choisir ses tranches** dans cette échelle
+(Pilotage pub → Données → le bien → « Budget du formulaire », docs/33 § 10) :
+« Non, je n'ai pas de projet » toujours en premier, puis les tranches du bien,
+qui se suivent sans trou ni chevauchement et finissent par une tranche
+ouverte. Sans réglage — ou si la lecture échoue — le formulaire garde ses
+trois réponses. L'envoi accepte toute réponse de l'échelle.
+
 **Aucune autre question de qualification** : ni horizon d'achat, ni nature de
 projet, ni financement. Le formulaire est court par décision, pas par oubli.
 

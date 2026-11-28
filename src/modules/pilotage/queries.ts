@@ -19,6 +19,7 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   Json,
+  PilotageBudgetFormulaireRow,
   PilotageConditionsRow,
   PilotageCoutFixeRow,
   PilotageLotRow,
@@ -135,6 +136,31 @@ export async function lirePilotage(propertyId?: string): Promise<Lecture<Donnees
     const code = cause instanceof LectureImpossible ? cause.code : undefined;
     if (estNonInstalle(code)) return { etat: "non_installe" };
     console.error("pilotage : lecture impossible", { code: code ?? "sans code" });
+    return { etat: "erreur" };
+  }
+}
+
+/**
+ * Les réglages du budget du formulaire (migration du 28/11/2026) : de tous les
+ * biens, ou d'un seul. Lus À PART des autres données du pilotage : tant que la
+ * migration n'est pas appliquée (aperçu sur la base de production), seule
+ * cette partie le dit, le reste du pilotage s'affiche.
+ */
+export async function lireBudgets(propertyId?: string): Promise<Lecture<PilotageBudgetFormulaireRow[]>> {
+  const supabase = await createSupabaseServerClient();
+  try {
+    const versions = await toutLire<PilotageBudgetFormulaireRow>((a, b) => {
+      const q = supabase.from("pilotage_budget_formulaire").select("*");
+      return (propertyId ? q.eq("property_id", propertyId) : q)
+        .order("saisi_le", { ascending: true })
+        .order("id", { ascending: true })
+        .range(a, b);
+    }, "budget du formulaire");
+    return { etat: "ok", donnees: versions };
+  } catch (cause) {
+    const code = cause instanceof LectureImpossible ? cause.code : undefined;
+    if (estNonInstalle(code)) return { etat: "non_installe" };
+    console.error("pilotage : budget du formulaire illisible", { code: code ?? "sans code" });
     return { etat: "erreur" };
   }
 }

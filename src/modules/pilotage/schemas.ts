@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import { erreurDuReglage, NOMBRE_MAX_TRANCHES } from "@/modules/buyers/funnel/tranches";
 import { BASES_HONORAIRES, NATURES_PRIX, STATUTS_COMMERCIAUX, TYPES_COUT } from "./labels";
 import { auPlusDecimales, estUnJour } from "./saisie";
 
@@ -131,6 +132,26 @@ export const annulationSchema = z.object({
   coutId: uuid,
   motif: z.string().trim().max(2000, "Motif trop long (2 000 caractères au plus).").nullable(),
 });
+
+/**
+ * Une version du budget du formulaire d'un bien : les tranches proposées (de la
+ * plus basse à la plus haute) et la cible. La règle est celle de la base
+ * (`pilotage_budget_erreur`), reprise par `erreurDuReglage`.
+ */
+export const budgetSchema = z
+  .object({
+    propertyId: uuid,
+    dateEffet: jour,
+    tranches: z.array(z.string()).max(NOMBRE_MAX_TRANCHES, "Quatre tranches de budget au plus."),
+    cibleMinCentimes: z.number({ error: "Choisissez la cible." }).int("Cible invalide.").positive("Cible invalide.").nullable(),
+    motif,
+  })
+  .superRefine((d, ctx) => {
+    const erreur = erreurDuReglage(d.tranches, d.cibleMinCentimes);
+    if (erreur) ctx.addIssue({ code: "custom", message: erreur });
+  });
+
+export type BudgetSaisie = z.infer<typeof budgetSchema>;
 
 /** Premier message d'une validation refusée, pour l'écran. */
 export function premierMessage(erreur: z.ZodError): string {

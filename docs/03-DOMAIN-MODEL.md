@@ -602,6 +602,7 @@ Tout est **réservé aux administrateurs**, en lecture comme en écriture.
 | **Lot de programme** | Unité vendue d'un programme (Les Airelles). Identité immuable : bien + **numéro**. | `pilotage_lots` |
 | **État d'un lot** | Description, prix, statut, prix de vente final, date de vente, retrait. États successifs ; le **dernier** fait foi. | `pilotage_lot_versions` |
 | **Coût fixe** | Dépense HT d'un bien (production/tournage, montage, photos, autre), avec note. Date et auteur de saisie notés d'office. **S'annule, ne s'efface pas** : l'annulation est datée et la ligne sort des calculs. | `pilotage_couts_fixes` |
+| **Budget du formulaire** (28/11/2026) | Pour **un bien** : les **tranches** de budget que son formulaire acquéreur propose (prises dans l'échelle commune ; « pas de projet » toujours en plus) et la **cible** (budget minimum d'une demande qui vaut la peine, au bas d'une tranche proposée). **Versionné** comme les conditions (date d'effet, auteur, motif ; rien ne se réécrit). Le formulaire public n'en lit que les tranches en vigueur ; la cible sert à Pilotage pub. **Distinct** du segment du bien et de la qualification de la personne ; rien n'en part chez Meta. | `pilotage_budget_formulaire` |
 
 ### Énumérations
 

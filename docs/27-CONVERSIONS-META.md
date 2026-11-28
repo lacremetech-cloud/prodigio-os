@@ -85,6 +85,50 @@ Un événement sans e-mail, téléphone ni `fbclid` n'est **pas** envoyé : il s
 compté sans jamais être rattaché à personne, et fausserait la lecture des
 campagnes.
 
+## Ce qui ne part jamais chez Meta : le budget
+
+Les conditions des Outils Meta Business (section 1.h, lues à la source le
+28/11/2026) interdisent de transmettre des données qui comprennent des
+informations financières **ou qui en sont tirées, directement ou
+indirectement** ; les **noms et les critères** des événements, des conversions
+personnalisées et des audiences ne doivent ni refléter ces informations, ni
+les laisser deviner, ni en dépendre. Depuis le 02/09/2025, Meta restreint
+d'office les conversions personnalisées qui suggèrent une situation
+financière.
+
+D'où trois règles, pour l'étape 4 et après :
+
+- **Un événement fondé sur la réponse de budget porte un nom qui le dit**
+  (« au moins 1 M€ », par exemple), jamais un nom neutre (« LeadPalier1 ») :
+  un nom neutre ne ferait que cacher le critère au contrôle de Meta. Victor a
+  choisi les paliers le 28/11/2026 et rapporte le même jour un accord **oral**
+  de Meta : selon son interlocuteur, le budget d'un projet immobilier n'entre
+  pas dans les informations visées. Aucun écrit à ce jour. Les paliers peuvent
+  donc être construits **en simulation** — rien ne part, le journal note ce
+  qui serait parti. **L'envoi réel attend trois conditions** : l'accord
+  **écrit** de Meta entre les mains de Victor (un accord oral ne protège pas
+  le compte si le contrôle automatique bloque la conversion ou si un examen
+  vient plus tard), la mention du formulaire corrigée et validée par un
+  juriste (ci-dessous), puis son feu vert explicite pour le premier envoi
+  (docs/05, n° 46). Validé par Victor le 28/11/2026, avec les noms
+  `LeadBudgetAuMoins500k`, `LeadBudgetAuMoins1M`, `LeadBudgetAuMoins2M` et
+  `LeadBudgetAuMoins3M`.
+- **« A un projet » n'est pas un critère neutre** tant qu'il est tiré de la
+  question du budget : toutes les réponses « oui » sont des tranches qui
+  commencent à 500 000 €. Victor a choisi le 28/11/2026 de ne pas séparer la
+  question : « aucun projet = lead mort ». Aucun signal « projet déclaré » à
+  part ; avec le formulaire d'aujourd'hui, le palier « au moins 500 000 € »
+  vaut toute demande sauf « pas de projet », aux mêmes conditions que les
+  autres paliers (docs/05, n° 47).
+- **« Qualifié » est une décision de l'équipe** sur l'ensemble du dossier :
+  projet réel, sérieux, délai, adéquation au bien. Ce n'est jamais un seuil
+  de budget recopié sous un autre nom, et l'événement ne porte ni montant ni
+  réponse de budget. Qu'il corresponde souvent aux bons budgets est une
+  conséquence observée, pas son critère.
+
+Aujourd'hui, rien de budgétaire ne part : le budget déclaré se lit dans
+Prodigio OS, pub par pub (docs/33 § 10).
+
 ## Point à trancher — l'information affichée au prospect
 
 Le formulaire annonce aujourd'hui : « Vos coordonnées […] ne sont pas cédées à

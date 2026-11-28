@@ -7,6 +7,7 @@ import { canPiloter } from "@/modules/crm/auth/roles";
 import { messagePilotage } from "./erreurs";
 import {
   annulationSchema,
+  budgetSchema,
   conditionsSchema,
   coutFixeSchema,
   lotSchema,
@@ -110,6 +111,29 @@ export async function saisirCoutFixeAction(input: unknown): Promise<ActionResult
   });
   if (error) return { ok: false, error: messagePilotage(error.code, error.message) };
   rafraichir(d.propertyId);
+  return { ok: true, data: (data as Record<string, unknown>) ?? undefined };
+}
+
+export async function enregistrerBudgetAction(input: unknown): Promise<ActionResult> {
+  const refus = await garde();
+  if (refus) return refus;
+  const parsed = budgetSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: premierMessage(parsed.error) };
+  const d = parsed.data;
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("crm_pilotage_enregistrer_budget", {
+    p_property_id: d.propertyId,
+    p_date_effet: d.dateEffet,
+    p_tranches: d.tranches,
+    // Validée non nulle par le schéma (`erreurDuReglage`).
+    p_cible_min_cents: d.cibleMinCentimes!,
+    p_motif: d.motif,
+  });
+  if (error) return { ok: false, error: messagePilotage(error.code, error.message) };
+  rafraichir(d.propertyId);
+  // L'onglet du bien dans Pilotage pub lit la cible en vigueur.
+  revalidatePath(`/crm/pilotage/biens/${d.propertyId}`);
   return { ok: true, data: (data as Record<string, unknown>) ?? undefined };
 }
 

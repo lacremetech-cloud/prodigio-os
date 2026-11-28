@@ -19,15 +19,40 @@ branché, il rapporte simplement moins, et personne ne le sait.
 | ☐ | Créer le bien et son formulaire acquéreur | Sans slug actif, aucune demande ne peut être enregistrée |
 | ☐ | Renseigner `allowed_origins` avec **le domaine final de la landing** | La balise de mesure et le formulaire sont refusés en silence depuis toute autre origine |
 | ☐ | Affecter le commercial responsable (`property_assignments`) | Sinon il ne voit pas les leads, et le récap du soir ne sait pas à qui écrire |
+| ☐ | Régler le **budget du formulaire** : Pilotage pub → Données → le bien → « Budget du formulaire » (les tranches proposées et la cible, avec un motif) | Sans réglage, le formulaire pose les réponses d'un bien autour du million, et Pilotage pub ne sait pas dire quelle part des demandes est dans la cible, ni à quel prix |
 
 Vérification :
 
 ```sql
 select public.buyer_form_context('<slug>');
+select public.buyer_form_budget('<slug>');
 ```
 
-Doit renvoyer le slug, `brochure_available: true`, et la landing dans
-`allowed_origins`.
+La première doit renvoyer le slug, `brochure_available: true`, et la landing
+dans `allowed_origins`. La seconde, les tranches que le formulaire propose
+aujourd'hui (`null` : aucun réglage, le formulaire garde ses réponses
+d'aujourd'hui).
+
+### Le budget du formulaire, en deux décisions
+
+Le formulaire demande « Avez-vous un projet ? Si oui, quel est votre budget ? ».
+« Non, je n'ai pas de projet » est toujours proposé ; les tranches, elles, se
+choisissent par bien dans l'échelle commune (500 000 € – 1 M€, 1 – 2 M€,
+2 – 3 M€, plus de 3 M€, ou plus d'1 M€ d'un bloc) :
+
+1. **Les tranches** : elles se suivent sans trou ni chevauchement, et la
+   dernière est ouverte (« plus de … »). Un chalet à 4 M€ distingue 1–2, 2–3
+   et plus de 3 M€ ; un programme à 500 000 € garde 500 000 € – 1 M€ et plus
+   d'1 M€.
+2. **La cible** : le budget minimum d'une demande qui vaut la peine, pris au
+   bas d'une tranche proposée. Pilotage pub en tire, pub par pub, la part des
+   demandes dans la cible et leur coût.
+
+L'écran propose un réglage d'après le prix (le prix affiché, ou le lot le
+moins cher d'un programme), à valider ou modifier ; rien n'est appliqué sans
+enregistrement. Les seuils se saisissent dans l'application, jamais dans le
+dépôt (public). Le budget reste dans le site : rien n'en part chez Meta
+(docs/33 § 10).
 
 ---
 

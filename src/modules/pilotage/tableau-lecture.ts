@@ -24,6 +24,7 @@ import { toutLire } from "./lecture-complete";
 import { ajouterJours, bornes } from "./meta/periodes";
 import type { RegleRattachement } from "./meta/rattachement";
 import { lirePilotage, nomDuBien } from "./queries";
+import type { LigneCrmBudget } from "./budget";
 import { mesuresCrmSchema, type LigneCrmJour, type LigneCrmPub, type MesuresCrm } from "./crm";
 import { calculerTableau, type ChoixPeriode, type LigneDuJour, type TableauPilotage } from "./tableau";
 import { jourParis } from "./versions";
@@ -138,6 +139,11 @@ export type LectureCrm =
       parPub: LigneCrmPub[];
       /** Le jour de la première demande reçue, par bien et au total (`null`), toutes périodes confondues. */
       debuts: Map<string | null, string>;
+      /**
+       * Les demandes par réponse de budget (migration du 28/11/2026), lues à
+       * part : sans elle, seule la partie budget de la page le dit.
+       */
+      budget: { etat: "ok"; lignes: LigneCrmBudget[] } | { etat: "non_installe" } | { etat: "erreur" };
     }
   | { etat: "non_installe" }
   | { etat: "erreur" };
@@ -154,6 +160,8 @@ export async function lireCrmPilotage(choix: ChoixPeriode, maintenant: Date): Pr
   const b = choix.type === "dates" ? { debut: choix.debut, fin: choix.fin } : bornes(choix.periode, jour);
   const args = { p_debut: b.debut, p_fin: b.fin };
   try {
+    // Le budget se lit en même temps ; il ne lève jamais (sa panne reste la sienne).
+    const budget = lireBudgetCrm(supabase, args);
     const [parJour, cohorte, parPub, debuts] = await Promise.all([
       toutLire<LigneCrmJour>(
         (a, z) => supabase.rpc("crm_pilotage_crm_par_jour", args).order("jour").order("property_id").range(a, z),
@@ -187,6 +195,7 @@ export async function lireCrmPilotage(choix: ChoixPeriode, maintenant: Date): Pr
       cohorte: mesures,
       parPub,
       debuts: new Map(debuts.map((d) => [d.property_id ?? null, d.premier_jour])),
+      budget: await budget,
     };
   } catch (cause) {
     const code = cause instanceof LectureImpossible ? cause.code : undefined;
@@ -200,3 +209,30 @@ export async function lireCrmPilotage(choix: ChoixPeriode, maintenant: Date): Pr
   }
 }
 
+/** Les demandes par réponse de budget : des comptes seulement, comme le reste du CRM de la page. */
+async function lireBudgetCrm(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  args: { p_debut: string | null; p_fin: string },
+): Promise<Extract<LectureCrm, { etat: "ok" }>["budget"]> {
+  try {
+    const lignes = await toutLire<LigneCrmBudget>(
+      (a, z) =>
+        supabase
+          .rpc("crm_pilotage_crm_budget", args)
+          .order("regroupement")
+          .order("property_id")
+          .order("niveau")
+          .order("ad_id")
+          .order("campaign_id")
+          .order("reponse")
+          .range(a, z),
+      "CRM, budget déclaré",
+    );
+    return { etat: "ok", lignes };
+  } catch (cause) {
+    const code = cause instanceof LectureImpossible ? cause.code : undefined;
+    if (estNonInstalle(code)) return { etat: "non_installe" };
+    console.error("pilotage : budget déclaré illisible", { code: code ?? null });
+    return { etat: "erreur" };
+  }
+}

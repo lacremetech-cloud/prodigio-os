@@ -5,7 +5,9 @@ import { requireCrmSession } from "@/modules/crm/auth/session";
 import { canPiloter } from "@/modules/crm/auth/roles";
 import { formatDateTime, nowMs } from "@/modules/crm/format";
 import { getMembersMap } from "@/modules/crm/data/queries";
-import { lirePilotage, nomDuBien } from "@/modules/pilotage/queries";
+import { lireBudgets, lirePilotage, nomDuBien } from "@/modules/pilotage/queries";
+import { prixDeReference, proposerReglage, reglageEnVigueur } from "@/modules/pilotage/budget";
+import { historique as historiqueDesVersions } from "@/modules/pilotage/versions";
 import { syntheseDuBien } from "@/modules/pilotage/synthese";
 import { jourParis } from "@/modules/pilotage/versions";
 import { formatCentimes } from "@/modules/pilotage/affichage";
@@ -26,6 +28,9 @@ import {
 import { FormulaireConditions } from "@/components/crm/pilotage/formulaire-conditions";
 import { AjouterLot, ModifierLot } from "@/components/crm/pilotage/lots";
 import { FormulaireCoutFixe } from "@/components/crm/pilotage/couts-fixes";
+import { FormulaireBudget } from "@/components/crm/pilotage/formulaire-budget";
+import { HistoriqueBudget, ResumeBudget } from "@/components/crm/pilotage/budget-vues";
+import { lireTranchesDuFormulaire } from "@/modules/buyers/funnel/tranches";
 
 export const metadata: Metadata = { title: "Données du pilotage — bien" };
 
@@ -48,7 +53,7 @@ export default async function DonneesDuBienPage({ params }: { params: Promise<{ 
   if (!canPiloter(session.roles)) return <AccesReserve />;
   if (!UUID.test(id)) notFound();
 
-  const [lecture, membres] = await Promise.all([lirePilotage(id), getMembersMap()]);
+  const [lecture, membres, budgets] = await Promise.all([lirePilotage(id), getMembersMap(), lireBudgets(id)]);
   if (lecture.etat === "non_installe") return <NonInstalle />;
   if (lecture.etat === "erreur") return <ErreurLecture />;
   const donnees = lecture.donnees[0];
@@ -70,6 +75,19 @@ export default async function DonneesDuBienPage({ params }: { params: Promise<{ 
   const parLots = c?.vente_par_lots ?? depart?.vente_par_lots ?? false;
   const sousMandat = donnees.bien.commercialization_origin === "mandat_prodigio";
   const nom = nomDuBien(donnees.bien);
+
+  // Le budget du formulaire : lu à part, pour qu'une base sans la migration du
+  // 28/11/2026 n'empêche pas d'afficher le reste.
+  const versionsBudget = budgets.etat === "ok" ? budgets.donnees : [];
+  const reglage = reglageEnVigueur(versionsBudget, jour);
+  const proposition = proposerReglage(prixDeReference(s));
+  // Comme pour les conditions : on part du réglage en vigueur, sinon du plus récent.
+  const plusRecent = historiqueDesVersions(versionsBudget)[0] ?? null;
+  const departBudget = reglage
+    ? { tranches: reglage.tranches, cibleMinCentimes: reglage.cibleMinCentimes }
+    : plusRecent
+      ? { tranches: lireTranchesDuFormulaire(plusRecent.tranches) ?? [], cibleMinCentimes: plusRecent.cible_min_cents }
+      : null;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -117,6 +135,24 @@ export default async function DonneesDuBienPage({ params }: { params: Promise<{ 
 
       <Section id="historique" titre="Historique des conditions">
         <HistoriqueConditions historique={s.historique} membres={membres} />
+      </Section>
+
+      <Section id="budget" titre="Budget du formulaire">
+        {budgets.etat === "non_installe" ? (
+          <p className="crm-wrap text-sm text-[var(--crm-text-faint)]">
+            Le budget du formulaire attend l’installation de la migration du 28/11/2026 dans la base (docs/07 § 20).
+            D’ici là, le formulaire propose ses réponses d’aujourd’hui.
+          </p>
+        ) : budgets.etat === "erreur" ? (
+          <p className="text-sm text-[var(--crm-text-faint)]">Le budget du formulaire n’a pas pu être lu. Réessayez dans un instant.</p>
+        ) : (
+          <>
+            <ResumeBudget reglage={reglage} proposition={proposition} />
+            <FormulaireBudget propertyId={donnees.bien.id} jour={jour} initiale={departBudget} proposition={proposition} />
+            <h3 className="text-sm font-semibold text-[var(--crm-text)]">Historique</h3>
+            <HistoriqueBudget versions={versionsBudget} jour={jour} membres={membres} />
+          </>
+        )}
       </Section>
 
       {parLots || s.lots.length > 0 || s.lotsRetires.length > 0 ? (
