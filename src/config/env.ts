@@ -127,8 +127,9 @@ const envSchema = z.object({
   // Les NOUVEAUX signaux de l'étape 4 (LeadQualifie, Contact,
   // SubmitApplication) et les PALIERS de budget (LeadBudgetAuMoins…) partent
   // EN ESSAI : rien n'est envoyé, le journal note ce qui serait parti
-  // (« simulee »). Seule la valeur exacte `envoi` les envoie vraiment ; toute
-  // autre valeur, ou l'absence, garde l'essai. Posées par Victor lui-même dans
+  // (« simulee »). Seule la valeur `envoi` les envoie vraiment (les espaces
+  // autour sont ignorés, la casse non : « Envoi » garde l'essai) ; toute autre
+  // valeur, ou l'absence, garde l'essai. Posées par Victor lui-même dans
   // Vercel, et seulement aux conditions de docs/27 (pour les paliers : l'accord
   // écrit de Meta, la mention du formulaire validée, son feu vert explicite).
   META_CAPI_SIGNAUX: facultatifTolerant,

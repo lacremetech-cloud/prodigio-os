@@ -7,6 +7,8 @@ import {
   isPilotageCronConfigured,
   isSmsFactorConfigured,
   isSupabaseAdminConfigured,
+  modeNouveauxSignaux,
+  modePaliers,
 } from "@/config";
 import { site } from "@/lib/site";
 
@@ -48,6 +50,13 @@ export function GET() {
            puis le secret de la tache planifiee. Deux booleens, jamais une valeur. */
         meta_lecture_pub: isMetaAdsReadConfigured(),
         lecture_du_matin: isPilotageCronConfigured(),
+      },
+      /* Les nouveaux signaux Meta de l'étape 4 : « essai » (rien ne part) ou
+         « envoi ». Deux mots, jamais une valeur secrète : on sait d'un coup
+         d'oeil ce qui est en ligne, sans attendre une ligne de journal. */
+      signaux_meta: {
+        nouveaux_signaux: modeNouveauxSignaux(),
+        paliers_de_budget: modePaliers(),
       },
       /* Le domaine, pas un secret : c'est l'adresse publique que portera le
          prochain SMS. Il est ici parce qu'une variable posée dans Vercel ne

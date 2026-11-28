@@ -73,10 +73,13 @@ export async function envoyerOuEssayer(e: {
 }): Promise<MetaSendOutcome> {
   const { conversion } = e;
   if (e.verifierDeja && e.supabase && (await dejaTracee(e.supabase, conversion.eventId, e.mode))) {
-    return tracer(e.supabase, conversion.eventName, conversion.eventId, e.interestId, {
-      sent: false,
-      reason: "deja_envoyee",
-    });
+    const deja: MetaSendOutcome = { sent: false, reason: "deja_envoyee" };
+    /* En essai, rien n'est jamais parti : écrire « deja_envoyee » se lirait
+       comme un envoi. Un signal déjà essayé n'écrit donc rien — sa ligne
+       « simulee » dit déjà ce qui serait parti. À l'envoi réel, le motif dit
+       vrai, et il s'écrit. */
+    if (e.mode === "essai") return deja;
+    return tracer(e.supabase, conversion.eventName, conversion.eventId, e.interestId, deja);
   }
   let resultat: MetaSendOutcome;
   if (e.mode === "envoi") {

@@ -40,12 +40,16 @@ pourquoi cela ne partirait pas (`hors_production`, `sans_correspondance`,
 
 - **Chaque signal ne s'essaie qu'une fois** par demande (`crm_meta_conversion_deja_simulee`) ;
   un essai ne compte pas comme un envoi : au passage à l'envoi réel, il partira.
+  En essai, un signal déjà essayé **n'écrit rien** (une ligne `deja_envoyee`
+  se lirait comme un envoi) : sa première ligne `simulee` suffit.
 - **Aucun montant ne part**, jamais : un palier porte son nom, qui dit ce qu'il
   est, et le bien, comme les autres conversions. `LeadQualifie` ne porte ni
   montant ni réponse de budget.
 - **Les interrupteurs** se posent dans Vercel, par Victor lui-même : seule la
-  valeur exacte `envoi` envoie vraiment ; toute autre valeur, ou l'absence,
-  garde l'essai. `META_CAPI_PALIERS=envoi` n'est posé **qu'aux trois
+  valeur `envoi` envoie vraiment — les espaces autour sont ignorés, la casse
+  non (« Envoi » garde l'essai) ; toute autre valeur, ou l'absence, garde
+  l'essai. `/api/health` dit l'état des deux (`signaux_meta` : « essai » ou
+  « envoi »). `META_CAPI_PALIERS=envoi` n'est posé **qu'aux trois
   conditions** de la section suivante. Pour tous les signaux, la mention du
   formulaire doit d'abord être corrigée et validée (dernière section).
 

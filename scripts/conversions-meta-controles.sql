@@ -26,7 +26,8 @@
 -- ou pourquoi elle n'est pas partie : non_configure, hors_production (un
 -- aperçu), deja_envoyee, sans_correspondance (ni e-mail, ni téléphone, ni
 -- fbclid), refus (Meta a refusé), erreur, simulee (en essai : rien n'est
--- parti, voici ce qui serait parti).
+-- parti, voici ce qui serait parti). En essai, un signal déjà essayé n'écrit
+-- rien : « deja_envoyee » ne se lit donc que pour un envoi réel.
 --
 -- À LIRE AVEC SES LIMITES : une entrée « en discussion » d'une personne sans
 -- demande ne peut rien envoyer ; une visite inscrite et une entrée en visite

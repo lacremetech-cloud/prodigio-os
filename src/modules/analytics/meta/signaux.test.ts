@@ -107,7 +107,7 @@ describe("en essai, rien ne part", () => {
     expect(res).toEqual({ sent: false, reason: "sans_correspondance" });
   });
 
-  it("déjà essayé : le journal le dit, rien ne se refait", async () => {
+  it("déjà essayé : rien ne se refait, et rien ne s'écrit (une ligne « deja_envoyee » se lirait comme un envoi)", async () => {
     const lignes: Record<string, unknown>[] = [];
     const supabase = {
       rpc: async (fn: string, args: Record<string, unknown>) => {
@@ -124,7 +124,29 @@ describe("en essai, rien ne part", () => {
       conversion: { eventName: "LeadQualifie", eventId: "leadqualifie-i-1", identity: IDENTITE },
     });
     expect(res).toEqual({ sent: false, reason: "deja_envoyee" });
-    expect(lignes).toHaveLength(1);
+    expect(lignes).toHaveLength(0);
+  });
+
+  it("à l'envoi réel, déjà parti : le journal le dit, rien ne repart", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const lignes: Record<string, unknown>[] = [];
+    const supabase = {
+      rpc: async (fn: string, args: Record<string, unknown>) => {
+        if (fn === "crm_meta_conversion_log") lignes.push(args);
+        if (fn === "crm_meta_conversion_deja_envoyee") return { data: true, error: null };
+        return { data: null, error: null };
+      },
+    } as unknown as Parameters<typeof envoyerOuEssayer>[0]["supabase"];
+    const res = await envoyerOuEssayer({
+      supabase,
+      mode: "envoi",
+      interestId: "i-1",
+      verifierDeja: true,
+      conversion: { eventName: "Contact", eventId: "contact-i-1", identity: IDENTITE },
+    });
+    expect(res).toEqual({ sent: false, reason: "deja_envoyee" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(lignes).toEqual([expect.objectContaining({ p_resultat: "deja_envoyee" })]);
   });
 
   it("l'interrupteur sur « envoi » : l'envoi réel part", async () => {
