@@ -90,7 +90,7 @@ describe("chaque page du pilotage vérifie le rôle administrateur avant de lire
     it(fichier.split("/src/app/")[1]!, () => {
       const garde = code.indexOf("if (!canPiloter(session.roles)) return <AccesReserve />;");
       expect(garde).toBeGreaterThan(-1);
-      for (const lecture of ["lireTableauPilotage(", "lirePilotage(", "lireTableauMeta("]) {
+      for (const lecture of ["lireTableauPilotage(", "lireCrmPilotage(", "lirePilotage(", "lireTableauMeta("]) {
         const i = code.indexOf(lecture);
         if (i > -1) expect(i, `${lecture} avant le contrôle du rôle`).toBeGreaterThan(garde);
       }

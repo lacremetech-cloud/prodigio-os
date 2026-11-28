@@ -1089,3 +1089,133 @@ avant de lancer). Relevés faits sur place (non revérifiables depuis le dépôt
 - Avec la vraie extension installée :
   `PGOPTIONS='-c session_preload_libraries=safeupdate' psql -d prodigio -f scripts/pilotage-meta.sql`.
 
+
+---
+
+## 17. Pilotage pub — étape 3b, les chiffres du CRM (`20261123170000_pilotage_crm_agregats`) — **APPLIQUÉE le 28/11/2026**
+
+Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9. Sur une base où elle
+manque, la section « Le CRM » de la page Pilotage affiche « les chiffres du CRM
+attendent l'installation de la migration du 23/11/2026 » ; le reste de la page
+s'affiche.
+
+### Ce qu'elle crée
+
+| Objet | Rôle |
+|---|---|
+| `crm_pilotage_crm_demandes_resolues(date, date)` | Les demandes de la période, résolues (bien, personne, jour de Paris, pub ou campagne, provenance) ; base des trois suivantes. |
+| `crm_pilotage_crm_par_jour(date, date)` | Les demandes reçues par bien et par jour (graphique). |
+| `crm_pilotage_crm_cohorte(date, date)` | Par bien et au total : demandes, personnes, étapes (aujourd'hui, atteintes), qualification, visites, offres, provenance, responsables, rattachement aux pubs. |
+| `crm_pilotage_crm_par_pub(date, date)` | Par bien et par pub (ou campagne, ou non rattachée) : demandes, personnes, qualifiées, visites, dont faites, offres. |
+| `crm_pilotage_crm_debuts()` | Le jour de la première demande reçue, par bien et au total (« mêmes jours »). |
+
+Toutes : `plpgsql`, `stable`, **`security invoker`** (la RLS de l'appelant
+s'applique), `search_path` fixé, contrôle du rôle **administrateur** en
+première ligne (`crm_has_role` : `crm_require_role` n'est pas exécutable par
+un client) ; `execute` retiré à `public` et à `anon`, accordé à
+`authenticated`.
+
+**Ce qu'elles rendent.** Les quatre que lit la page (`par_jour`, `cohorte`,
+`par_pub`, `debuts`) ne rendent **que des comptes**. La cinquième,
+`crm_pilotage_crm_demandes_resolues`, leur sert de base et rend **une ligne
+par demande**, faite d'identifiants seulement : demande, bien, personne, jour,
+pub ou campagne, provenance (`utm_source`). Aucun champ personnel (ni nom, ni
+téléphone, ni e-mail, ni adresse de formulaire), administrateur seulement ; la
+page ne l'appelle pas. L'en-tête de la migration les résume trop vite en
+« elles ne rendent que des comptes » : c'est ce paragraphe qui fait foi.
+
+### Ce qu'elle modifie sur l'existant
+
+**Rien.** Aucune table, aucune colonne, aucune donnée, aucune fonction
+existante remplacée ; aucune écriture (`safeupdate` n'a rien à refuser).
+`meta_ad_id` n'est pas réécrit. Rejouable ; attente de verrou bornée à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+-- Aucune des cinq fonctions n'existe encore.
+select count(*) from pg_proc
+ where pronamespace = 'public'::regnamespace and proname like 'crm\_pilotage\_crm\_%';
+-- attendu : 0
+
+-- Les deux fonctions qu'elles appellent sont en place et exécutables par un client connecté.
+select proname, has_function_privilege('authenticated', oid, 'execute') as authentifie
+  from pg_proc
+ where pronamespace = 'public'::regnamespace and proname in ('crm_has_role', 'crm_etape_v2')
+ order by 1;
+-- attendu : crm_etape_v2 | true ; crm_has_role | true
+```
+
+### Contrôles après application
+
+```sql
+select p.proname,
+       pg_get_function_identity_arguments(p.oid) as arguments,
+       p.prosecdef as security_definer,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie
+  from pg_proc p
+ where p.pronamespace = 'public'::regnamespace and p.proname like 'crm\_pilotage\_crm\_%'
+ order by 1;
+-- attendu : 5 lignes — cohorte, debuts, demandes_resolues, par_jour, par_pub ;
+--           security_definer = false, anon = false, authentifie = true
+
+-- Sans administrateur connecté (l'éditeur SQL n'en a pas), l'appel est refusé.
+select * from public.crm_pilotage_crm_debuts();
+-- attendu : ERREUR « pilotage réservé aux administrateurs »
+```
+
+Puis, sur la page Pilotage (aperçu de la branche, ou production après la
+fusion) : la section « Le CRM » affiche ses chiffres. La recette les compare,
+bloc par bloc, à `scripts/pilotage-crm-controles.sql` (une requête en lecture
+seule, comptes seulement ; correspondance des blocs : docs/33 § 9.4).
+
+Retour arrière, s'il le fallait et avec l'accord de Victor : supprimer les cinq
+fonctions ; aucune donnée n'en dépend, et la page revient à « attendent
+l'installation ».
+
+### Vérification locale
+
+- Rejeu des 69 migrations sur une base vierge ; migration appliquée deux fois
+  de suite sans erreur.
+- `scripts/pilotage-crm.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée ; la requête de contrôle y donne exactement les
+  chiffres de la page.
+- Sur dix fois le volume du CRM de novembre 2026 (fictif) : 2,5 secondes au
+  plus par fonction ; mêmes chiffres que la requête de contrôle, sur
+  plusieurs périodes.
+- Révision du 28/11/2026, avant toute application : l'étape atteinte se lit
+  dans tout événement de la personne (`old_value` comme `new_value`, quel que
+  soit le type), pour compter les offres et résultats écrits par les
+  formulaires de la fiche (PR #85). Relevé par la session de l'iMac.
+
+### Résultat de l'application (28/11/2026)
+
+Appliquée en production par la session de l'iMac, dans l'éditeur SQL de
+Supabase, avec l'accord écrit de Victor (« Oui, les deux », le 28/11/2026 vers
+9 h 30, pour cette migration et celle du § 18) ; empreinte vérifiée dans
+l'éditeur avant chaque lancement. Relevés faits sur place (non revérifiables
+depuis le dépôt ; aucun chiffre du CRM n'est écrit ici) :
+
+- **Avant** : rien n'avait bougé depuis le 23/11 (aucune fonction
+  `crm_pilotage_crm_%`, aucune migration nouvelle sur `main`).
+- **Vers 9 h 33** : la version du 23/11 (empreinte `da62349d…`), le message
+  annonçant la révision n'étant pas encore arrivé ; contrôles conformes.
+- **Vers 9 h 40** : la version révisée (empreinte `2f9077f6…`, celle du
+  dépôt), installée par-dessus après relecture du différentiel. Contrôles
+  conformes : cinq fonctions, `security_definer = false`, `anon = false`,
+  `authenticated = true` ; `crm_pilotage_crm_debuts()` refusée dans l'éditeur
+  (« pilotage réservé aux administrateurs ») ; les cinq définitions en base
+  sont identiques au fichier, au caractère près.
+- **Recette** (aperçu de la branche, requête de contrôle lancée dans la même
+  minute) : conforme sur tous les blocs, vue générale et onglet de chacun des
+  trois biens, sur toute la période et sur des dates au choix (01/11 au
+  15/11/2026, graphique compris) ; « aucune offre saisie » et « — », jamais
+  0 € ; les demandes des Airelles retrouvent leurs pubs ; coûts cohérents
+  avec la pub HT de la page ; la révision ne change aucun chiffre du jour.
+  Page complète en 2,4 à 3,9 s sur toute la période (limite de 8 s). Non
+  vérifiés : téléphone, thème sombre, autres périodes proposées.
+- **Remarques pour la suite** (docs/05, n° 44 et 45) : des pubs homonymes
+  d'un même bien donnent deux lignes de même libellé dans « pub par pub » ;
+  le taux de passage compare deux groupes différents et peut dépasser
+  100 %.
