@@ -70,6 +70,18 @@ const row: BuyerInboxRow = {
 };
 
 const card: BuyerKanbanCard = {
+  budgetLabel: "Plus d'1 M€",
+  assigneeNames: row.assigneeNames,
+  nextActionTitle: row.nextActionTitle,
+  nextActionAt: row.nextActionAt,
+  createdAt: row.createdAt,
+  qualification: row.qualification,
+  lastNote: row.lastNote,
+  lastNoteAt: row.lastNoteAt,
+  lastNoteBy: row.lastNoteBy,
+  emailMasked: row.emailMasked,
+  whatsappMessage: row.whatsappMessage,
+  firstName: row.firstName,
   interestId: row.interestId,
   propertyId: row.lastPropertyId,
   buyerProfileId: row.buyerProfileId,
@@ -95,9 +107,8 @@ const card: BuyerKanbanCard = {
 const monter = (over: Partial<BuyerInboxRow> = {}) =>
   render(
     <BuyerKanbanBoard
-      cards={[{ ...card, overdue: over.overdue ?? card.overdue }]}
+      cards={[{ ...card, ...over, overdue: over.overdue ?? card.overdue }]}
       canMove
-      rows={[{ ...row, ...over }]}
       membres={[{ userId: "u-1", name: "Jean-Charles C." }]}
     />,
   );

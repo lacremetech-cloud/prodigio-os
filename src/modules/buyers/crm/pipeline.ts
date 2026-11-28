@@ -43,6 +43,36 @@ export interface BuyerKanbanCard {
   noNextAction: boolean;
   newInterest: boolean;
   phoneMasked: string | null;
+
+  /* ------------------------------------------------------------------
+     CE QUE LA CARTE DESSINE, ET RIEN DE PLUS.
+
+     Jusqu'au 24 novembre, la carte recevait le dossier COMPLET — les memes
+     506 `BuyerInboxRow` que la liste — parce que le panneau de traitement en
+     avait besoin « et qu'ils etaient deja charges ». Prix reel : pres de
+     1,6 Mo de JSON vers le navigateur a chaque ouverture du pipeline, pour
+     qu'on en lise UN.
+
+     Ce n'etait pas une faille — la RLS filtre, les coordonnees sont masquees
+     avant l'envoi — mais c'etait 281 personnes dans le navigateur pour en
+     ouvrir une : ni minimal, ni journalisable. Le panneau va desormais
+     chercher son dossier a l'ouverture, et la carte ne porte que ces
+     quelques champs.
+     ------------------------------------------------------------------ */
+  /** Budget EFFECTIF, deja mis en mots cote serveur. */
+  budgetLabel: string | null;
+  assigneeNames: string[];
+  nextActionTitle: string | null;
+  nextActionAt: string | null;
+  createdAt: string;
+  qualification: string;
+  lastNote: string | null;
+  lastNoteAt: string | null;
+  lastNoteBy: string | null;
+  emailMasked: string | null;
+  /** Message WhatsApp pre-ecrit DU BIEN. `null` = le texte de repli. */
+  whatsappMessage: string | null;
+  firstName: string | null;
 }
 
 /**

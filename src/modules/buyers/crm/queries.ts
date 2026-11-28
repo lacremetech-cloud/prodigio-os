@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { contactName } from "@/modules/crm/format";
 import { maskContactValue } from "@/modules/crm/auth/roles";
 import { getMembersMap, memberDisplayName, type MemberInfo } from "@/modules/crm/data/queries";
-import { budgetEffectif } from "./budget";
+import { budgetEffectif, libelleBudget } from "./budget";
 import type { BuyerKanbanCard } from "./pipeline";
 import type {
   ActivityRow,
@@ -201,6 +201,19 @@ export const PLAFOND_LISTE = 2000;
 export async function loadBuyerList(
   canViewContacts: boolean,
   client?: SupabaseClient<Database>,
+  /**
+   * UN SEUL DOSSIER, quand c'est tout ce qu'on veut.
+   *
+   * Le panneau de traitement du pipeline ouvre UNE fiche a la fois. Avant, la
+   * page lui envoyait les 506 d'avance « puisqu'elles etaient chargees » —
+   * 1,6 Mo vers le navigateur pour en lire une. Il les demande desormais a
+   * l'ouverture, et cet argument restreint les requetes a ce dossier-la.
+   *
+   * Le MEME code construit la ligne dans les deux cas : c'est ce qui garantit
+   * que le panneau et la liste ne pourront jamais raconter deux histoires. On
+   * se contente de donner moins a manger aux requetes.
+   */
+  unSeulProfil?: string,
 ): Promise<BuyerListBundle> {
   const supabase = client ?? (await createSupabaseServerClient());
 
@@ -216,9 +229,9 @@ export async function loadBuyerList(
     members,
     { data: activityByProfile },
   ] = await Promise.all([
-    supabase
-      .from("buyer_profiles")
-      .select("*")
+    (unSeulProfil
+      ? supabase.from("buyer_profiles").select("*").eq("id", unSeulProfil)
+      : supabase.from("buyer_profiles").select("*"))
       /* LES FICHES ARCHIVÉES SORTENT DE TOUTES LES LISTES, ICI ET NULLE PART
          AILLEURS. Tout ce que renvoie cette fonction — les lignes, le Kanban,
          les six compteurs, le récapitulatif par e-mail de 8 h 30, 13 h et
@@ -228,15 +241,21 @@ export async function loadBuyerList(
          L'administrateur les retrouve par `loadArchivedBuyers`. */
       .is("archive_le", null)
       .order("last_interest_at", { ascending: false })
-      .limit(PLAFOND_LISTE),
+      .limit(unSeulProfil ? 1 : PLAFOND_LISTE),
     supabase.from("contacts").select("*").limit(PLAFOND_LISTE),
-    supabase
-      .from("buyer_interests")
-      .select("*")
-      .not("buyer_profile_id", "is", null)
+    (unSeulProfil
+      ? supabase.from("buyer_interests").select("*").eq("buyer_profile_id", unSeulProfil)
+      : supabase.from("buyer_interests").select("*").not("buyer_profile_id", "is", null))
       .order("created_at", { ascending: false })
       .limit(PLAFOND_LISTE),
-    supabase.from("buyer_assignments").select("*").is("released_at", null).limit(PLAFOND_LISTE),
+    (unSeulProfil
+      ? supabase
+          .from("buyer_assignments")
+          .select("*")
+          .is("released_at", null)
+          .eq("buyer_profile_id", unSeulProfil)
+      : supabase.from("buyer_assignments").select("*").is("released_at", null))
+      .limit(PLAFOND_LISTE),
     supabase
       .from("tasks")
       .select("*")
@@ -639,6 +658,24 @@ export function toKanbanCard(item: BuyerListItem, qualificationLabel: string): B
     noNextAction: item.noNextAction,
     newInterest: item.newInterest,
     phoneMasked: item.phoneMasked,
+    /* Les faits que la carte affiche. Ils sortent du MEME `item` que la
+       ligne de liste : aucune requete de plus, et aucun risque que la carte
+       et la fiche racontent deux histoires. */
+    budgetLabel: libelleBudget({
+      budgetChoice: item.budgetChoice,
+      budgetBand: item.budgetBand,
+    }),
+    assigneeNames: item.assignees.map((a) => a.name),
+    nextActionTitle: item.nextTask?.title ?? null,
+    nextActionAt: item.nextTask?.due_at ?? null,
+    createdAt: item.profile.created_at,
+    qualification: item.qualification,
+    lastNote: item.lastNote,
+    lastNoteAt: item.lastNoteAt,
+    lastNoteBy: item.lastNoteBy,
+    emailMasked: item.emailMasked,
+    whatsappMessage: item.whatsappMessage,
+    firstName: item.firstName,
   };
 }
 
