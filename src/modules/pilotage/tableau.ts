@@ -234,6 +234,12 @@ export interface TableauPilotage {
    * « à partir d'un jour » (`metaAPartirDu`).
    */
   quotidien: Map<string, Map<string, MetaDuJour>>;
+  /**
+   * La dépense de la période, jour par jour, par bien PUIS par pub (la part
+   * d'une pub commune comprise) : pour le coût d'une pub sur les mêmes jours
+   * que le CRM (`depensePubAPartirDu`).
+   */
+  quotidienParPub: Map<string, Map<string, Map<string, Exact>>>;
   alertes: Alerte[];
 }
 
@@ -572,6 +578,43 @@ function quotidien(
   return out;
 }
 
+/** La dépense de la période, jour par jour, par bien puis par pub (voir `TableauPilotage.quotidienParPub`). */
+function quotidienParPub(
+  periode: PeriodeResolue,
+  lignes: readonly LigneDuJour[],
+  dest: ReadonlyMap<string, Destination>,
+): Map<string, Map<string, Map<string, Exact>>> {
+  const out = new Map<string, Map<string, Map<string, Exact>>>();
+  if (!periode.debut) return out;
+  for (const l of lignes) {
+    if (l.jour < periode.debut || l.jour > periode.fin) continue;
+    const d = dest.get(l.ad_id);
+    if (d?.type !== "biens") continue;
+    for (const [bien, poids] of d.poids) {
+      const pubs = out.get(bien) ?? new Map<string, Map<string, Exact>>();
+      const jours = pubs.get(l.ad_id) ?? new Map<string, Exact>();
+      jours.set(l.jour, plus(jours.get(l.jour) ?? ZERO, fois(exact(l.depense_cents), poids)));
+      pubs.set(l.ad_id, jours);
+      out.set(bien, pubs);
+    }
+  }
+  return out;
+}
+
+/**
+ * La dépense d'UNE pub pour un bien (sa part, si la pub est commune), sur la
+ * période et à partir d'un jour (inclus). `null` tant que Meta n'a pas été lu ;
+ * un vrai zéro si la pub n'a rien dépensé ces jours-là.
+ */
+export function depensePubAPartirDu(t: TableauPilotage, bien: string, adId: string, depuis: string): Exact | null {
+  if (!t.lecture.lu) return null;
+  let depense = ZERO;
+  for (const [jour, v] of t.quotidienParPub.get(bien)?.get(adId) ?? []) {
+    if (jour >= depuis) depense = plus(depense, v);
+  }
+  return depense;
+}
+
 /**
  * La dépense et les leads Meta de la période À PARTIR D'UN JOUR (inclus) :
  * d'un bien (sa part des pubs communes comprise), ou de tout le portefeuille
@@ -859,6 +902,7 @@ export function calculerTableau(e: EntreeTableau): TableauPilotage {
     global,
     serie: serie(periode, e.meta.parJour, dest, lecture.couvertJusquAu),
     quotidien: quotidien(periode, e.meta.parJour, dest),
+    quotidienParPub: quotidienParPub(periode, e.meta.parJour, dest),
     alertes: alertes(e, lecture, biens, global, dest),
   };
 }

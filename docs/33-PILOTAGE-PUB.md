@@ -122,11 +122,18 @@ s'affiche « au moins … (1 ligne manque) ».
 ### Notions à ne pas confondre
 
 - **Nature du prix ≠ base HT/TTC des honoraires.** Les Airelles sont vendues sur
-  une grille de prix **HT** de promoteur (TVA immobilière sur le neuf) ; ce prix
-  HT est **pris comme prix affiché**, comme Victor l'a décidé. La base HT/TTC des
-  honoraires, elle, dit si le **taux de commission** est TTC. Deux champs
-  distincts ; jamais l'un n'est déduit de l'autre (constitution, §1). La
-  question de la base des Airelles reste ouverte ([05](05-OPEN-QUESTIONS.md), E).
+  une grille de prix **HT** de promoteur (TVA immobilière sur le neuf). Victor a
+  tranché le 28/11/2026 : la commission se calcule sur le **prix TTC** des
+  lots ; les lots sont donc saisis à leur prix TTC, comme prix affiché FAI
+  ([05](05-OPEN-QUESTIONS.md), n° 21). La base HT/TTC des honoraires, elle, dit
+  si le **taux de commission** est TTC. Deux champs distincts ; jamais l'un
+  n'est déduit de l'autre (constitution, §1). Le choix « Prix HT de la grille
+  du promoteur, pris comme prix affiché » reste proposé ; son retrait attend
+  Victor (n° 48).
+- **Cible du budget ≠ segment ≠ qualification.** La cible du budget du
+  formulaire (§ 10) dit quelles **réponses** de budget valent la peine pour un
+  bien ; elle ne classe ni le bien (segment) ni la personne (qualification,
+  décision de l'équipe).
 - **Part saisie ≠ photographie du mandat.** Pour un bien sous mandat, la part de
   Prodigio peut venir de la photographie économique du mandat (part laissée
   vide). Si les deux existent et diffèrent, le calcul retient la part saisie et
@@ -711,3 +718,149 @@ Migration installée en production le 28/11/2026, recette conforme (docs/07
   premier et dernier jours de diffusion lus chez Meta, et le lien « Voir la
   pub ». Rien en base : ces informations viennent de la lecture Meta déjà
   enregistrée.
+
+---
+
+## 10. Le budget du formulaire, bien par bien (28/11/2026)
+
+Demande de Victor du 28/11/2026 : « à chaque bien, ça va plus ou moins
+dépendre ». Un chalet à 4 M€ ne pose pas la même question qu'un programme à
+500 000 €, et un bon lead ne s'y juge pas au même seuil. Les seuils qu'il a
+validés pour le portefeuille se saisissent **dans l'application** après
+l'installation de la migration, jamais dans le dépôt.
+
+**Le budget reste dans le site** : rien de ce qui suit n'est envoyé à Meta
+(§ 10.5).
+
+### 10.1 Le réglage, dans les données du pilotage
+
+Pilotage pub → Données → le bien → **Budget du formulaire**. Une version
+porte :
+
+- **les tranches** que le formulaire propose, prises dans l'échelle commune :
+  500 000 € – 1 M€, plus d'1 M€, 1 – 2 M€, 2 – 3 M€, plus de 3 M€. « Non, je
+  n'ai pas de projet » est **toujours** proposé, en premier, et n'est pas une
+  tranche. Les tranches se suivent sans trou ni chevauchement, de la plus
+  basse à la plus haute ; la dernière est **ouverte** (« plus de … ») ; quatre
+  au plus ;
+- **la cible** : le budget minimum d'une demande qui vaut la peine, pris au
+  **bas d'une tranche proposée** (une demande est dans la cible si le bas de
+  sa réponse l'atteint ; « pas de projet » n'y est jamais) ;
+- une date d'effet, un motif, l'auteur et l'heure de saisie.
+
+Comme les conditions : **rien ne se réécrit, rien ne s'efface** ; modifier,
+c'est ajouter une version. La version en vigueur un jour donné est la plus
+récente par date d'effet sans dépasser ce jour ; à date égale, la dernière
+saisie. La règle des tranches et de la cible est tenue par la base
+(`pilotage_budget_erreur`, dans la contrainte de la table et dans la fonction
+de saisie) et reprise à l'écran pour répondre tout de suite. Le journal
+d'audit ne reçoit que le bien et la date d'effet.
+
+**Une proposition d'après le prix**, à valider ou modifier, jamais appliquée
+d'office : le prix affiché (vente en un bloc) ou le lot suivi le moins cher
+(programme). Sous 2 M€, les tranches d'aujourd'hui (500 000 € – 1 M€, plus
+d'1 M€) ; à partir de 2 M€, 1 – 2 M€, 2 – 3 M€, plus de 3 M€. La cible
+proposée est le plus haut bas de tranche qui ne dépasse pas le prix.
+
+### 10.2 Le formulaire public
+
+`/bien/<slug>/interet` propose « pas de projet », puis les tranches **en
+vigueur aujourd'hui** pour le bien, lues par `buyer_form_budget(slug)` —
+ouverte au visiteur, mêmes conditions que le contexte du formulaire
+(formulaire actif ou vitrine publiée), et qui ne rend **que les tranches** :
+jamais la cible, jamais l'historique.
+
+**Sans réglage, avec un réglage illisible, ou tant que la migration n'est pas
+installée, le formulaire garde ses trois réponses d'aujourd'hui** : une panne
+ici ne coûte jamais une demande. Un réglage enregistré atteint le formulaire
+en une minute au plus (mémoire courte du serveur). L'envoi accepte toute
+réponse de l'échelle : une demande commencée avant un changement de réglage
+n'est pas refusée.
+
+### 10.3 Dans Pilotage pub : « Le budget déclaré »
+
+Une section de l'onglet de chaque bien, sur la période choisie :
+
+- **les tuiles** : demandes qui ont répondu (sur le total) ; demandes dans la
+  cible et leur part ; **coût par demande dans la cible** ; personnes
+  qualifiées dans la cible ;
+- **par réponse** : demandes, part des réponses, personnes, qualifiées, et si
+  la réponse est dans la cible ; une réponse que le formulaire ne propose plus
+  reste lue, et le dit ;
+- **pub par pub** : demandes, celles qui ont répondu, celles dans la cible,
+  leur part, et le coût par demande dans la cible.
+
+LES DÉFINITIONS (dites à l'écran) :
+
+| Notion | Définition |
+|---|---|
+| Réponse retenue d'une demande | Le budget **corrigé par l'équipe** sur la personne (`buyer_profiles.budget_choice_corrige`), sinon la réponse déclarée (`buyer_interests.budget_choice`) ; aucune des deux : « sans réponse ». |
+| Réponse d'une personne | Sa correction, sinon la réponse de sa demande la plus récente **qui en porte une** — la règle de la fiche acquéreur, prise dans le bien, la pub ou le total. Une personne compte une fois. |
+| Dans la cible | Le bas de la réponse atteint la cible **en vigueur aujourd'hui** (pour toute période, comme les conditions de commission). « Pas de projet » : jamais. Sans réponse : ni dedans ni dehors. |
+| Part dans la cible | Demandes dans la cible ÷ demandes **qui ont répondu**. |
+| Coût par demande dans la cible | La dépense Meta des **mêmes jours** que le CRM (à partir de sa première demande pour le bien) ÷ ces demandes ; par pub, la dépense de la pub pour ce bien (sa part, si elle est commune). Une ligne « campagne » (pub inconnue) n'a pas de coût : sa dépense est comptée sur les pubs ; une demande non rattachée non plus. |
+| Qualifiée | « Qualifié » ou « gros potentiel » aujourd'hui, comme partout dans la page. |
+
+**Sans cible réglée**, les réponses se lisent, mais la part et le coût sont
+« manquants » — jamais 0. La période, les personnes archivées écartées et la
+pub de chaque demande suivent les définitions du § 9.2.
+
+En base : `crm_pilotage_crm_budget(début, fin)`, SECURITY INVOKER,
+administrateur seul, qui ne rend que des comptes par regroupement (`bien`,
+`pub`, `total`) et par réponse retenue. Elle s'appuie sur
+`crm_pilotage_crm_demandes_resolues` : les demandes et leur pub sont
+exactement celles des autres chiffres du CRM.
+
+### 10.4 La recette
+
+`scripts/budget-par-bien-controles.sql` : **une seule requête, en lecture
+seule**, qui recalcule les nombres de la section sur les tables, sans passer
+par la fonction de la page. Mettre les dates de la période dans `p`, lancer,
+comparer :
+
+| Bloc de la page | Lignes du contrôle |
+|---|---|
+| Tableau « par réponse » (demandes, personnes, qualifiées) ; « TOTAL » en personnes distinctes | `15 budget par réponse` · `<réponse> · demandes / personnes / qualifiées` |
+| Tuile « Ont répondu » | la somme des `· demandes` du bien, sauf `(sans réponse)` |
+| Demandes dans la cible, part | les `· demandes` dont la réponse est dans la cible (§ 10.3) ÷ « ont répondu » |
+| Pub par pub | `16 budget par pub` · `<pub ou campagne> · <réponse> · demandes` |
+| Coût par demande dans la cible | la pub HT des mêmes jours (§ 9.4, « Leads Meta et coûts ») ÷ les demandes dans la cible |
+
+Les réponses s'y écrivent par leur clé : `aucun_projet` (« Pas de projet »),
+`500k_1m`, `plus_1m`, `1m_2m`, `2m_3m`, `plus_3m`.
+
+Recette locale : `scripts/budget-par-bien.sql` (§ 10.6). Au volume (dix fois
+le CRM de novembre 2026, données fictives), la fonction répond comme la
+lecture « pub par pub » déjà en place (1,5 s en local), et ses totaux refont
+exactement `crm_pilotage_crm_par_pub` et la cohorte.
+
+### 10.5 Rien de budgétaire vers Meta
+
+Les conditions des Outils Meta Business (section 1.h) visent les données
+fondées, même indirectement, sur une information financière, et les noms
+comme les critères des événements, des conversions et des audiences
+(docs/27). Cette section n'envoie rien. Les paliers que Victor a choisis le
+28/11/2026 se construiront à l'étape 4, en simulation, sous des noms qui
+disent ce qu'ils sont ; l'envoi réel attend l'accord écrit de Meta, la
+mention du formulaire corrigée et validée, et le feu vert explicite de
+Victor ([05](05-OPEN-QUESTIONS.md), n° 46). « Qualifié », s'il part un jour
+chez Meta, reste une décision de l'équipe sur l'ensemble du dossier, jamais
+un seuil de budget sous un autre nom.
+
+### 10.6 Recette locale
+
+- `scripts/budget-par-bien.sql`, sur une base locale vierge
+  (`scripts/replay-migrations.sh`), lancé depuis la racine du dépôt : droits
+  (l'administrateur règle et lit ; manager et commercial refusés ; `anon` ne
+  lit que les tranches, par `buyer_form_budget`) ; règle des tranches et de
+  la cible ; motif ; journal sans montant ; rien ne se réécrit, rien ne
+  s'efface, et la contrainte tient même hors de la fonction ; le formulaire
+  public lit la version en vigueur, pas une version à venir, et rien pour un
+  formulaire fermé ou un slug inconnu ; les chiffres par réponse, par bien,
+  par pub et au total sur un décor dont chaque réponse est connue ; enfin, la
+  requête de contrôle du § 10.4 donne les chiffres de la page. Tout est
+  annulé. Même résultat avec la règle `safeupdate` émulée.
+- Tests : `src/modules/buyers/funnel/tranches.test.ts` (la règle, ici et en
+  base, au mot près), `src/modules/pilotage/budget.test.ts` (cible, part,
+  coût, pub par pub, mêmes jours, proposition), le formulaire de saisie et
+  le formulaire public.

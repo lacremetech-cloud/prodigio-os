@@ -8,20 +8,24 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }))
 type Charge = Record<string, unknown>;
 const conditions = vi.fn<(p: Charge) => Promise<{ ok: true }>>(async () => ({ ok: true }));
 const cout = vi.fn<(p: Charge) => Promise<{ ok: true }>>(async () => ({ ok: true }));
+const budget = vi.fn<(p: Charge) => Promise<{ ok: true }>>(async () => ({ ok: true }));
 vi.mock("@/modules/pilotage/actions", () => ({
   enregistrerConditionsAction: (p: unknown) => conditions(p as Charge),
   enregistrerLotAction: async () => ({ ok: true }),
   saisirCoutFixeAction: (p: unknown) => cout(p as Charge),
   annulerCoutFixeAction: async () => ({ ok: true }),
+  enregistrerBudgetAction: (p: unknown) => budget(p as Charge),
 }));
 
 import { FormulaireConditions } from "./formulaire-conditions";
 import { FormulaireCoutFixe } from "./couts-fixes";
+import { FormulaireBudget } from "./formulaire-budget";
 
 afterEach(() => {
   cleanup();
   conditions.mockClear();
   cout.mockClear();
+  budget.mockClear();
 });
 
 const BIEN = "6f1d2c3b-4a5e-4f60-8a9b-0c1d2e3f4a5b";
@@ -156,5 +160,77 @@ describe("le formulaire des coûts fixes", () => {
     fireEvent.click(getByRole("button", { name: "Enregistrer le coût" }));
     expect((await findByRole("alert")).textContent).toMatch(/type.*montant/);
     expect(cout).not.toHaveBeenCalled();
+  });
+});
+
+describe("le formulaire du budget", () => {
+  const M = 100_000_000;
+  const coche = (getByLabelText: (t: string) => HTMLElement, libelle: string) =>
+    (getByLabelText(libelle) as HTMLInputElement).checked;
+
+  it("sans réglage ni prix : les tranches d'aujourd'hui, et la cible reste à choisir", () => {
+    const { getByLabelText } = render(<FormulaireBudget propertyId={BIEN} jour="2026-11-28" initiale={null} proposition={null} />);
+    expect(coche(getByLabelText, "Oui, entre 500 000 € et 1 million d'euros")).toBe(true);
+    expect(coche(getByLabelText, "Plus de 1 million d'euros")).toBe(true);
+    expect(coche(getByLabelText, "Plus de 3 millions d'euros")).toBe(false);
+    expect((getByLabelText(/Cible/) as HTMLSelectElement).value).toBe("");
+  });
+
+  it("part de la proposition d'après le prix, et n'envoie rien sans motif", async () => {
+    const { getByLabelText, getByRole, findByRole } = render(
+      <FormulaireBudget
+        propertyId={BIEN}
+        jour="2026-11-28"
+        initiale={null}
+        proposition={{ tranches: ["1m_2m", "2m_3m", "plus_3m"], cibleMinCentimes: 3 * M, prixCentimes: 4 * M, depuis: "prix_affiche" }}
+      />,
+    );
+    expect(coche(getByLabelText, "Oui, entre 1 et 2 millions d'euros")).toBe(true);
+    expect(coche(getByLabelText, "Plus de 1 million d'euros")).toBe(false);
+    expect((getByLabelText(/Cible/) as HTMLSelectElement).value).toBe(String(3 * M));
+    fireEvent.click(getByRole("button", { name: /enregistrer le budget/i }));
+    expect((await findByRole("alert")).textContent).toMatch(/motif/i);
+    expect(budget).not.toHaveBeenCalled();
+  });
+
+  it("dit tout de suite qu'une liste a un trou, et refuse de l'envoyer", async () => {
+    const { getByLabelText, getByRole, getByText } = render(
+      <FormulaireBudget propertyId={BIEN} jour="2026-11-28" initiale={{ tranches: ["500k_1m", "1m_2m", "2m_3m", "plus_3m"], cibleMinCentimes: M }} proposition={null} />,
+    );
+    fireEvent.click(getByLabelText("Oui, entre 1 et 2 millions d'euros"));
+    expect(getByText(/Les tranches doivent se suivre/)).toBeTruthy();
+    fireEvent.change(getByLabelText("Motif"), { target: { value: "Essai" } });
+    fireEvent.click(getByRole("button", { name: /nouvelle version/i }));
+    expect(budget).not.toHaveBeenCalled();
+  });
+
+  it("une cible qui n'est plus le bas d'une tranche proposée tombe, et se rechoisit", () => {
+    const { getByLabelText } = render(
+      <FormulaireBudget propertyId={BIEN} jour="2026-11-28" initiale={{ tranches: ["500k_1m", "plus_1m"], cibleMinCentimes: M }} proposition={null} />,
+    );
+    fireEvent.click(getByLabelText("Plus de 1 million d'euros"));
+    expect((getByLabelText(/Cible/) as HTMLSelectElement).value).toBe("");
+  });
+
+  it("envoie les tranches dans l'ordre de l'échelle, la cible et le motif", async () => {
+    const { getByLabelText, getByRole } = render(
+      <FormulaireBudget propertyId={BIEN} jour="2026-11-28" initiale={{ tranches: ["500k_1m", "plus_1m"], cibleMinCentimes: M }} proposition={null} />,
+    );
+    // Passer à l'échelle haute : retirer « plus d'1 M€ », ajouter 1–2, 2–3 et plus de 3 M€ (dans le désordre).
+    fireEvent.click(getByLabelText("Plus de 1 million d'euros"));
+    fireEvent.click(getByLabelText("Plus de 3 millions d'euros"));
+    fireEvent.click(getByLabelText("Oui, entre 1 et 2 millions d'euros"));
+    fireEvent.click(getByLabelText("Oui, entre 2 et 3 millions d'euros"));
+    fireEvent.change(getByLabelText(/Cible/), { target: { value: String(2 * M) } });
+    fireEvent.change(getByLabelText("Motif"), { target: { value: "Seuil validé" } });
+    fireEvent.click(getByRole("button", { name: /nouvelle version/i }));
+    await waitFor(() => expect(budget).toHaveBeenCalledTimes(1));
+    expect(budget.mock.calls[0]![0]).toEqual({
+      propertyId: BIEN,
+      dateEffet: "2026-11-28",
+      tranches: ["500k_1m", "1m_2m", "2m_3m", "plus_3m"],
+      cibleMinCentimes: 2 * M,
+      motif: "Seuil validé",
+    });
   });
 });

@@ -1421,3 +1421,119 @@ aucun chiffre du CRM n'est écrit ici) :
 - **Non vérifiés** : un taux non nul sur des données réelles (il n'en existe
   pas au 28/11/2026 ; couvert par la recette locale), la cible des liens
   « Voir la pub », la vue générale de l'aperçu, téléphone et thème sombre.
+
+---
+
+## 20. Budget du formulaire par bien (`20261128150000_budget_du_formulaire_par_bien`) — **NON APPLIQUÉE**
+
+Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 10. Empreinte SHA-256 du
+fichier : `06fb599f7b478f1137c80d40576a5a0b1d68eb0fb9a01ff9ddb70b74652d3d4c`.
+
+Sur une base où elle manque, rien ne tombe : le formulaire public garde ses
+trois réponses d'aujourd'hui, l'écran des données dit « attend l'installation
+de la migration du 28/11/2026 », et la section « Le budget déclaré » de
+Pilotage pub aussi ; tout le reste s'affiche.
+
+### Pourquoi
+
+Demande de Victor du 28/11/2026 : des réponses de budget et une cible propres
+à chaque bien, réglées dans l'application ; et, dans Pilotage pub, la part et
+le coût des demandes dans la cible, pub par pub. Rien n'est envoyé à Meta.
+
+### Ce qu'elle crée
+
+| Objet | Rôle |
+|---|---|
+| `pilotage_budget_formulaire` | Par bien, versionné : les tranches proposées (`text[]`), la cible (`cible_min_cents`), date d'effet, motif, auteur. RLS : lecture par un administrateur seul ; aucun droit d'écriture accordé ; déclencheur `pilotage_ligne_immuable` (ni réécriture, ni effacement) ; contrainte `pilotage_budget_formulaire_regle`. |
+| `pilotage_budget_erreur(text[], bigint)` | La règle d'un réglage (tranches connues, contiguës, croissantes, la dernière ouverte ; cible au bas d'une tranche proposée). `immutable` ; exécutable par aucun client. |
+| `crm_pilotage_enregistrer_budget(uuid, date, text[], bigint, text)` | Ajoute une version. `SECURITY DEFINER`, `search_path` fixé, `crm_require_role('administrateur')` ; journal `pilotage_budget` / `pilotage_budget_saisi` avec le bien et la date d'effet seulement. `authenticated`, jamais `anon`. |
+| `buyer_form_budget(text)` | Pour le formulaire PUBLIC : les seules tranches en vigueur aujourd'hui (jour de Paris), aux mêmes conditions que `buyer_form_context`. Jamais la cible. `anon` et `authenticated`. |
+| `crm_pilotage_crm_budget(date, date)` | Pilotage pub : demandes, personnes et qualifiées par réponse retenue, par bien, par pub et au total. `SECURITY INVOKER`, administrateur seul, des comptes seulement. `authenticated`, jamais `anon`. |
+
+### Ce qu'elle modifie sur l'existant
+
+Les deux listes fermées du journal d'audit, **réécrites en entier en
+sur-ensemble strict** (reprise de `20261112170000`, une valeur ajoutée à
+chacune : `pilotage_budget`, `pilotage_budget_saisi` ; le test
+`audit-contraintes` le vérifie). La réécriture relit la table du journal : son
+verrou est borné à 2 s, la migration échoue plutôt que d'attendre. **Aucune
+table existante modifiée, aucune donnée insérée ni réécrite.** Rejouable.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+-- Rien de la migration n'existe encore.
+select to_regclass('public.pilotage_budget_formulaire') as table_budget,
+       (select count(*) from pg_proc where pronamespace = 'public'::regnamespace
+          and proname in ('pilotage_budget_erreur', 'crm_pilotage_enregistrer_budget',
+                          'buyer_form_budget', 'crm_pilotage_crm_budget')) as fonctions;
+-- attendu : null | 0
+
+-- Les valeurs ajoutées au journal ne sont pas encore écrites (la réécriture
+-- des contraintes ne peut donc rien refuser), et les fonctions appelées existent.
+select (select count(*) from public.audit_events
+         where entity_type = 'pilotage_budget' or event_type = 'pilotage_budget_saisi') as deja_ecrits,
+       to_regprocedure('public.crm_pilotage_crm_demandes_resolues(date,date)') is not null as resolution,
+       to_regprocedure('public.buyer_choice_bounds(text)') is not null as bornes,
+       to_regprocedure('public.pilotage_ligne_immuable()') is not null as garde;
+-- attendu : 0 | true | true | true
+```
+
+### Contrôles après application
+
+```sql
+select p.proname,
+       p.prosecdef as security_definer,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie
+  from pg_proc p
+ where p.pronamespace = 'public'::regnamespace
+   and p.proname in ('pilotage_budget_erreur', 'crm_pilotage_enregistrer_budget',
+                     'buyer_form_budget', 'crm_pilotage_crm_budget')
+ order by 1;
+-- attendu :
+--   buyer_form_budget               | true  | true  | true
+--   crm_pilotage_crm_budget         | false | false | true
+--   crm_pilotage_enregistrer_budget | true  | false | true
+--   pilotage_budget_erreur          | false | false | false
+
+select relrowsecurity as rls,
+       has_table_privilege('anon', oid, 'select') as anon_lit,
+       has_table_privilege('authenticated', oid, 'insert') as client_ecrit,
+       (select count(*) from public.pilotage_budget_formulaire) as versions
+  from pg_class where oid = 'public.pilotage_budget_formulaire'::regclass;
+-- attendu : true | false | false | 0
+
+-- Sans réglage, le formulaire public garde ses réponses d'aujourd'hui.
+select public.buyer_form_budget('<slug d''un bien>');
+-- attendu : null
+
+-- Sans administrateur connecté (l'éditeur SQL n'en a pas), la lecture des chiffres est refusée.
+select * from public.crm_pilotage_crm_budget(null, current_date);
+-- attendu : ERREUR « pilotage réservé aux administrateurs »
+```
+
+Ensuite, dans l'application, sous le compte administrateur : saisir le budget
+de chaque bien (Pilotage pub → Données → le bien → « Budget du formulaire »),
+avec ses seuils validés (docs/33 § 10). Le formulaire du bien les propose
+dans la minute. La recette compare la section « Le budget déclaré » de
+l'onglet d'un bien à `scripts/budget-par-bien-controles.sql` (lecture seule,
+§ 10.4 de docs/33).
+
+### Vérification locale
+
+- Rejeu de toutes les migrations sur une base vierge ; la migration,
+  appliquée deux fois de suite, passe sans erreur.
+- `scripts/budget-par-bien.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée : droits, saisie et refus, journal sans montant,
+  immuabilité, contrainte tenue hors de la fonction, formulaire public (version
+  en vigueur, pas une version à venir, rien pour un bien fermé), chiffres par
+  réponse sur un décor connu ; la requête de contrôle y donne exactement les
+  chiffres de la page (46 lignes).
+- `scripts/pilotage-crm.sql`, `scripts/pilotage-donnees.sql`,
+  `scripts/pilotage-meta.sql`, `scripts/formulaires-acquereur.sql` : toujours
+  **RÉUSSIES** après la réécriture des listes du journal.
+- Sur dix fois le volume du CRM de novembre 2026 (fictif) :
+  `crm_pilotage_crm_budget` en 1,5 s, comme `crm_pilotage_crm_par_pub` ; ses
+  totaux refont exactement `crm_pilotage_crm_par_pub` et la cohorte, et la
+  requête de contrôle donne les mêmes chiffres que la page (4 352 lignes).

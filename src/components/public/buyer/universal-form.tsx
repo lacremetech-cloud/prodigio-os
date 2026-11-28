@@ -14,11 +14,11 @@ import { BUYER_TURNSTILE_ACTION } from "@/modules/buyers/funnel/turnstile";
 import { submitUniversalInterestAction } from "@/modules/buyers/funnel/universal-submit";
 import { universalSubmissionRequestSchema } from "@/modules/buyers/funnel/universal-payload";
 import {
-  BUDGET_CHOICES_PROPOSES,
   universalStepOneSchema,
   universalStepTwoSchema,
   type BuyerBudgetChoice,
 } from "@/modules/buyers/funnel/universal";
+import { reponsesDuFormulaire, type TrancheBudget } from "@/modules/buyers/funnel/tranches";
 import { textes, type LangueFormulaire } from "@/modules/buyers/funnel/langue";
 import {
   isEmbedded,
@@ -77,6 +77,7 @@ export function UniversalBuyerForm({
   propertyName,
   brochureAvailable,
   langue = "fr",
+  tranchesBudget = null,
 }: {
   slug: string;
   /** Renseigné UNIQUEMENT si la vitrine est publiée. Sinon la page reste anonyme. */
@@ -84,8 +85,14 @@ export function UniversalBuyerForm({
   brochureAvailable: boolean;
   /** Lue dans l'URL (`?lang=`). Absente ou inconnue : le français, comme avant. */
   langue?: LangueFormulaire;
+  /**
+   * Les tranches de budget réglées pour ce bien (données du pilotage). `null` :
+   * aucun réglage, ou réglage illisible — les réponses d'aujourd'hui.
+   */
+  tranchesBudget?: readonly TrancheBudget[] | null;
 }) {
   const t = textes(langue);
+  const reponsesBudget = reponsesDuFormulaire(tranchesBudget);
   const [step, setStep] = useState<1 | 2>(1);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -330,11 +337,10 @@ export function UniversalBuyerForm({
           <fieldset className="uf-fieldset">
             <legend className="uf-title">{t.questionBudget}</legend>
             <div className="uf-choices">
-              {/* Les TROIS réponses proposées, et non toutes celles qui
-                  peuvent exister en base : les anciennes tranches restent
-                  lisibles sur les dossiers qui les portent, mais on ne les
-                  propose plus. */}
-              {BUDGET_CHOICES_PROPOSES.map((choice) => (
+              {/* « Pas de projet », puis les tranches réglées pour CE bien
+                  (sans réglage : les trois réponses d'aujourd'hui) — et non
+                  toutes celles qui peuvent exister en base. */}
+              {reponsesBudget.map((choice) => (
                 <label
                   key={choice}
                   className={`uf-choice ${draft.budgetChoice === choice ? "uf-choice--on" : ""}`}

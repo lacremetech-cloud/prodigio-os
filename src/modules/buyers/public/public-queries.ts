@@ -2,6 +2,7 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/config";
+import { lireTranchesDuFormulaire, type TrancheBudget } from "@/modules/buyers/funnel/tranches";
 import type { PublicPropertyContent, PublicPropertySnapshot } from "./snapshot";
 
 /**
@@ -108,4 +109,32 @@ export async function getBuyerFormContext(slug: string): Promise<BuyerFormContex
 
   memoireContexte.set(slug, { contexte, expire: Date.now() + DUREE_MEMOIRE_MS });
   return contexte;
+}
+
+/**
+ * Les tranches de budget que le formulaire de ce bien propose aujourd'hui,
+ * réglées dans les données du pilotage (migration du 28/11/2026). Jamais la
+ * cible : elle reste au pilotage.
+ *
+ * `null` — le formulaire garde alors ses réponses d'aujourd'hui — sans réglage,
+ * pour un réglage illisible, ou si la base n'a pas encore la migration : une
+ * panne ici ne doit jamais coûter une demande. Lu à part du contexte, que la
+ * mesure des visites appelle aussi et qui n'en a pas besoin ; même mémoire
+ * courte, et un échec n'y est jamais gardé.
+ */
+const memoireBudget = new Map<string, { tranches: TrancheBudget[] | null; expire: number }>();
+
+export async function getBuyerFormBudget(slug: string): Promise<TrancheBudget[] | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const connu = memoireBudget.get(slug);
+  if (connu && connu.expire > Date.now()) return connu.tranches;
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("buyer_form_budget", { p_slug: slug });
+  if (error) return null;
+
+  const tranches = lireTranchesDuFormulaire(data);
+  memoireBudget.set(slug, { tranches, expire: Date.now() + DUREE_MEMOIRE_MS });
+  return tranches;
 }

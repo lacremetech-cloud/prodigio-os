@@ -1450,6 +1450,25 @@ export type PilotageLotRow = {
   cree_par: string | null;
 };
 
+/**
+ * Le budget du formulaire d'un bien (20261128150000), VERSIONNÉ comme les
+ * conditions : les tranches proposées et la cible. Réservé aux
+ * administrateurs ; le formulaire public ne lit que les tranches, par
+ * `buyer_form_budget`. Rien n'est envoyé à Meta.
+ */
+export type PilotageBudgetFormulaireRow = {
+  id: string;
+  property_id: string;
+  date_effet: string;
+  /** De la plus basse à la plus haute ; « pas de projet » est proposé en plus. */
+  tranches: string[];
+  /** Budget minimum d'une demande dans la cible, en centimes. */
+  cible_min_cents: number;
+  motif: string;
+  saisi_le: string;
+  saisi_par: string | null;
+};
+
 export type PilotageLotVersionRow = {
   id: string;
   lot_id: string;
@@ -1637,6 +1656,7 @@ export interface Database {
       pilotage_lots: WithMutations<PilotageLotRow>;
       pilotage_lot_versions: WithMutations<PilotageLotVersionRow>;
       pilotage_couts_fixes: WithMutations<PilotageCoutFixeRow>;
+      pilotage_budget_formulaire: WithMutations<PilotageBudgetFormulaireRow>;
       pilotage_meta_synchros: WithMutations<PilotageMetaSynchroRow>;
       pilotage_meta_insights: WithMutations<PilotageMetaInsightRow>;
       pilotage_meta_controles: WithMutations<PilotageMetaControleRow>;
@@ -2636,6 +2656,33 @@ export interface Database {
         Args: Record<string, never>;
         Returns: { property_id: string | null; premier_jour: string }[];
       };
+      /* Budget du formulaire par bien (20261128150000). */
+      crm_pilotage_enregistrer_budget: {
+        Args: {
+          p_property_id: string;
+          p_date_effet: string;
+          p_tranches: string[];
+          p_cible_min_cents: number;
+          p_motif: string;
+        };
+        Returns: Json;
+      };
+      crm_pilotage_crm_budget: {
+        Args: { p_debut: string | null; p_fin: string };
+        Returns: {
+          regroupement: "bien" | "pub" | "total";
+          property_id: string | null;
+          niveau: "pub" | "campagne" | "aucun" | null;
+          ad_id: string | null;
+          campaign_id: string | null;
+          reponse: string | null;
+          demandes: number;
+          personnes: number;
+          qualifies: number;
+        }[];
+      };
+      /* Lecture PUBLIQUE (anon) : les seules tranches en vigueur, jamais la cible. */
+      buyer_form_budget: { Args: { p_slug: string }; Returns: string[] | null };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

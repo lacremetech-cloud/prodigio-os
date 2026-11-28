@@ -181,7 +181,7 @@ function Liste({ titre, lignes, note }: { titre: string; lignes: { libelle: stri
 }
 
 /** Ce qui distingue une pub d'une autre de même nom : sa campagne, ses jours de diffusion, son aperçu. */
-function DetailPub({ fiche }: { fiche: FichePub | undefined }) {
+export function DetailPub({ fiche }: { fiche: FichePub | undefined }) {
   if (!fiche) return null;
   const jours =
     fiche.premierJour && fiche.dernierJour

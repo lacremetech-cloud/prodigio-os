@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AttributionCapture } from "@/components/mandate/attribution-capture";
-import { getBuyerFormContext } from "@/modules/buyers/public/public-queries";
+import { getBuyerFormBudget, getBuyerFormContext } from "@/modules/buyers/public/public-queries";
 import { UniversalBuyerForm } from "@/components/public/buyer/universal-form";
 import { normaliserLangue, textes } from "@/modules/buyers/funnel/langue";
 
@@ -41,7 +41,7 @@ export default async function BuyerInterestPage({ params, searchParams }: PagePr
   const { slug } = await params;
   const langue = normaliserLangue((await searchParams).lang);
 
-  const context = await getBuyerFormContext(slug);
+  const [context, tranchesBudget] = await Promise.all([getBuyerFormContext(slug), getBuyerFormBudget(slug)]);
   if (!context) notFound();
 
   return (
@@ -52,6 +52,7 @@ export default async function BuyerInterestPage({ params, searchParams }: PagePr
         propertyName={context.publicName}
         brochureAvailable={context.brochureAvailable}
         langue={langue}
+        tranchesBudget={tranchesBudget}
       />
     </>
   );

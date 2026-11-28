@@ -15,6 +15,7 @@ import { metaEnFace } from "./crm";
 import {
   calculerTableau,
   CLE_NON_RATTACHEE,
+  depensePubAPartirDu,
   metaAPartirDu,
   resoudrePeriode,
   type BienDuTableau,
@@ -456,6 +457,25 @@ describe("la dépense et les leads Meta « à partir d'un jour » (les mêmes jo
     const t = tableau({ meta: meta({ ...coherent, lectures: [] }) });
     expect(metaAPartirDu(t, null, "2026-11-17")).toBeNull();
     expect(metaEnFace(t, null, "2026-10-14")).toEqual({ etat: "en_attente" });
+    expect(depensePubAPartirDu(t, A, "11", "2026-11-17")).toBeNull();
+  });
+
+  it("pub par pub : la dépense d'une pub pour un bien (sa part d'une pub commune), et la somme des pubs fait celle du bien", () => {
+    const t = tableau({ meta: coherent });
+    for (const b of t.biens) {
+      const pubs = [...(t.quotidienParPub.get(b.id)?.keys() ?? [])];
+      expect(pubs.length, b.nom).toBeGreaterThan(0);
+      for (const depuis of [t.periode.debut!, "2026-11-18", "2026-11-21", "2026-11-22"]) {
+        const somme = pubs.reduce((s, ad) => plus(s, depensePubAPartirDu(t, b.id, ad, depuis)!), entier(0));
+        expect(somme, `${b.nom} depuis le ${depuis}`).toEqual(metaAPartirDu(t, b.id, depuis)!.depense);
+      }
+    }
+    // La pub commune « 22 » se partage entre A et B : les deux parts font la pub entière.
+    expect(plus(depensePubAPartirDu(t, A, "22", "2026-11-18")!, depensePubAPartirDu(t, B, "22", "2026-11-18")!)).toEqual(
+      entier(10_000),
+    );
+    // Une pub sans dépense pour ce bien : un vrai zéro, pas « en attente ».
+    expect(depensePubAPartirDu(t, A, "inconnue", t.periode.debut!)).toEqual(entier(0));
   });
 
   it("Meta en face du CRM : à partir de la première demande reçue, ou rien si le CRM n'a encore rien reçu", () => {
