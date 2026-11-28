@@ -2861,3 +2861,162 @@
   line-height: 1.4;
   color: var(--crm-text-faint);
 }
+
+/* LE RESTE D'UNE COLONNE DU PIPELINE, A LA DEMANDE.
+   Discret : ce n'est pas une action metier, c'est un « et apres ? ». Il prend
+   toute la largeur de la colonne pour qu'on le trouve sans le chercher, au
+   bout du defilement, la ou l'oeil arrive. */
+.crm-kanban-suite {
+  width: 100%;
+  padding: 9px 10px;
+  /* PLEIN ET SOLIDE, PAS UN POINTILLE PALE.
+     Premiere version : texte `--crm-text-faint` en 11 px sur fond transparent,
+     borde de pointilles `--crm-line`. Reglee sur le theme SOMBRE, qui est le
+     defaut du code — mais l'equipe travaille en CLAIR, ou la meme regle donne
+     4,8:1 pour le texte et 1,5:1 pour le trait. Un bouton qu'on ne voit pas
+     est un bouton qui n'existe pas. */
+  /* Il emprunte la couleur DE SA COLONNE, deja posee sur `--col-vif` juste
+     au-dessus. Un gris neutre se noyait : le fond de la zone est lui-meme une
+     teinte pale de cette couleur, si bien qu'un remplissage `--crm-panel-2`
+     et une bordure `--crm-line-hover` n'y faisaient que 1,6:1. */
+  border: 1px solid color-mix(in srgb, var(--col-vif, var(--crm-line)) 48%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--col-vif, var(--crm-line)) 16%, var(--crm-panel));
+  color: var(--crm-text);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.crm-kanban-suite:hover {
+  border-color: color-mix(in srgb, var(--col-vif, var(--crm-line)) 75%, transparent);
+  background: color-mix(in srgb, var(--col-vif, var(--crm-line)) 28%, var(--crm-panel));
+}
+.crm-kanban-suite:focus-visible {
+  outline: 2px solid var(--crm-focus);
+  outline-offset: 2px;
+}
+
+/* LE MENU « DEPLACER VERS... », UNIQUE POUR TOUT LE PIPELINE.
+   Il remplace un <select> par carte. Centre plutot qu'ancre : le tableau
+   defile horizontalement, et un menu ancre sur une carte qui glisse sous le
+   doigt se retrouve a cote de la plaque. */
+.crm-deplacer-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.crm-deplacer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(360px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--crm-line);
+  border-radius: 14px;
+  background: var(--crm-panel);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+}
+.crm-deplacer__titre {
+  margin: 0;
+  color: var(--crm-text-dim);
+  font-size: 13px;
+}
+.crm-deplacer__titre strong {
+  color: var(--crm-text);
+}
+.crm-deplacer__choix {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.crm-deplacer__etape {
+  padding: 9px 12px;
+  border: 1px solid var(--crm-line-soft);
+  border-radius: 10px;
+  background: var(--crm-panel-2);
+  color: var(--crm-text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.crm-deplacer__etape:hover:not(:disabled) {
+  border-color: var(--crm-line-hover);
+  background: var(--crm-hover);
+}
+.crm-deplacer__etape:disabled {
+  color: var(--crm-text-faint);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.crm-deplacer__etape:focus-visible {
+  outline: 2px solid var(--crm-focus);
+  outline-offset: 2px;
+}
+
+/* Le bouton qui l'ouvre, sur la carte. */
+.crm-kanban-deplacer {
+  width: 100%;
+  padding: 7px 10px;
+  /* Meme correction que `.crm-kanban-suite` : la bordure `--crm-line-soft` et
+     le texte en 11 px disparaissaient sur le theme clair. */
+  border: 1px solid var(--crm-line-hover);
+  border-radius: 8px;
+  background: var(--crm-panel-2);
+  /* Pleine force : c'est une action, pas une legende. En `--crm-text-dim` sur
+     le theme clair, elle se lisait comme du texte eteint. */
+  color: var(--crm-text);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+.crm-kanban-deplacer:hover:not(:disabled) {
+  border-color: var(--crm-text-faint);
+  background: var(--crm-hover);
+  color: var(--crm-text);
+}
+.crm-kanban-deplacer:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.crm-kanban-deplacer:focus-visible {
+  outline: 2px solid var(--crm-focus);
+  outline-offset: 2px;
+}
+
+/* L'ATTENTE ET L'ECHEC, DANS LE PANNEAU DE TRAITEMENT.
+   Le dossier arrive du serveur : entre le clic et son arrivee, l'ecran doit
+   dire qu'il travaille, et dire s'il a echoue. */
+.crm-panneau__vide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 24px 20px;
+  color: var(--crm-text-dim);
+  font-size: 13px;
+}
+
+/* La fleche d'une entree de menu qui mene HORS du CRM (les briefs, servis sur
+   une adresse publique derriere un code). Discrete : elle previent, elle
+   n'attire pas. */
+.crm-nav-item__externe {
+  margin-left: auto;
+  padding-left: 6px;
+  color: var(--crm-text-faint);
+  font-size: 11px;
+}
+.crm-nav-item:hover .crm-nav-item__externe {
+  color: var(--crm-text-dim);
+}

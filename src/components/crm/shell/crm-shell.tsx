@@ -20,6 +20,12 @@ interface NavItem {
   label: string;
   icon: string;
   exact?: boolean;
+  /**
+   * Une page qui vit HORS du CRM — les briefs, servis sur une adresse publique
+   * derrière un code. Elle s'ouvre dans un onglet à part : on y va pour
+   * chercher un lien à transmettre, pas pour quitter son écran de travail.
+   */
+  externe?: boolean;
 }
 
 export type Univers = "mandats" | "biens";
@@ -47,6 +53,12 @@ const UNIVERS: Record<Univers, { label: string; accueil: string; items: NavItem[
       { href: "/crm/biens", label: "Fabrique de biens", icon: "◆" },
       { href: "/crm/acquereurs", label: "Acquéreurs", icon: "◉" },
       { href: "/crm/visites", label: "Visites", icon: "◷" },
+      /* Les briefs de production vivent sur une adresse PUBLIQUE, derrière un
+         code, parce qu'ils se partagent à des vidéastes et des monteurs qui
+         n'auront jamais de compte. Mais l'équipe, elle, ne doit pas avoir à
+         retenir cette adresse : l'entrée est ici, à côté des biens dont ces
+         dossiers parlent. */
+      { href: "/briefs", label: "Briefs", icon: "▣", externe: true },
     ],
   },
 };
@@ -91,6 +103,10 @@ const NAV_COMMERCIAL: NavItem[] = [
   // rendez-vous d'estimation du CRM Mandats, dont il ne voit rien.
   { href: "/crm/visites", label: "Visites", icon: "◷" },
   { href: "/crm/taches", label: "Tâches", icon: "✓" },
+  /* Les briefs, oui — et c'est cohérent avec la règle ci-dessus plutôt qu'une
+     exception : cette porte-là n'est PAS fermée au commercial. Il prépare ses
+     appels et ses visites avec le dossier du bien, et il a le code. */
+  { href: "/briefs", label: "Briefs", icon: "▣", externe: true },
 ];
 
 /**
@@ -147,11 +163,19 @@ function Lien({
       onClick={onNavigate}
       aria-current={actif ? "page" : undefined}
       className="crm-nav-item"
+      {...(item.externe
+        ? { target: "_blank", rel: "noreferrer noopener" }
+        : {})}
     >
       <span aria-hidden className="crm-nav-item__icon">
         {item.icon}
       </span>
       {item.label}
+      {item.externe ? (
+        <span aria-hidden className="crm-nav-item__externe">
+          ↗
+        </span>
+      ) : null}
     </Link>
   );
 }

@@ -10,7 +10,12 @@ import {
 } from "./vocabulaire";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCrmSession } from "@/modules/crm/auth/session";
-import { canArchiveBuyer, canDecideMandate } from "@/modules/crm/auth/roles";
+import {
+  canArchiveBuyer,
+  canDecideMandate,
+  canViewContactDetails,
+} from "@/modules/crm/auth/roles";
+import { loadBuyerList, toInboxRow, type BuyerInboxRow } from "./queries";
 import { evaluateBuyerMove } from "./pipeline";
 import { mettreEnFormeLaNote } from "./resume-ia";
 import { LONGUEUR_MAX_MATIERE } from "./gabarit-note";
@@ -982,4 +987,53 @@ export async function structurerNoteAction(
     return { ok: false, error: messages[resultat.motif] };
   }
   return { ok: true, note: resultat.note, tronquee: resultat.tronquee };
+}
+
+/* ---------------------------------------------------------------------------
+   CHARGER UN DOSSIER, A L'OUVERTURE DU PANNEAU
+
+   Le pipeline envoyait au navigateur les 506 dossiers d'avance, pour que le
+   panneau de traitement s'ouvre sans attendre. Pres de 1,6 Mo de JSON a chaque
+   ouverture de l'ecran, pour qu'on en lise un.
+
+   Ce n'etait pas une faille : la RLS filtre, et les coordonnees sont masquees
+   AVANT l'envoi. Mais c'etaient 281 personnes — noms, budgets, notes privees —
+   deposees dans un navigateur pour en ouvrir une seule. Ni minimal au sens du
+   RGPD, ni journalisable : rien ne distinguait « il a consulte un dossier » de
+   « il les a tous aspires ».
+
+   Le panneau demande donc le sien a l'ouverture. C'est le MEME `loadBuyerList`
+   qui le construit, restreint a ce profil — une seule facon de fabriquer une
+   ligne, donc aucun risque que le panneau et la liste divergent.
+   --------------------------------------------------------------------------- */
+const dossierDemandeSchema = z.object({
+  buyerProfileId: z.string().uuid(),
+  /** La carte ouverte : une personne sur UN projet. Absent = dossier general. */
+  interestId: z.string().uuid().nullable().optional(),
+});
+
+export async function chargerDossierAction(
+  input: unknown,
+): Promise<ActionResult & { dossier?: BuyerInboxRow }> {
+  const session = await requireCrmSession();
+  const parsed = dossierDemandeSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Saisie invalide." };
+  }
+  const { buyerProfileId, interestId } = parsed.data;
+
+  const { items } = await loadBuyerList(
+    canViewContactDetails(session.roles),
+    undefined,
+    buyerProfileId,
+  );
+
+  /* Une personne peut suivre deux biens : on rend la LIGNE de la carte
+     ouverte, pas la premiere venue, sinon le panneau parlerait de Verdun
+     devant une carte Jean Jaures. */
+  const item =
+    (interestId ? items.find((i) => i.interestId === interestId) : null) ?? items[0] ?? null;
+  if (!item) return { ok: false, error: "Dossier introuvable." };
+
+  return { ok: true, dossier: toInboxRow(item) };
 }

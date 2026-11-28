@@ -123,11 +123,6 @@ export default async function BuyersPipelinePage({
     toKanbanCard(item, definitionQualification(item.qualification).label),
   );
 
-  /* Les MEMES dossiers, en entier, pour le panneau de traitement : la carte ne
-     porte pas l'e-mail, la qualification, la derniere note ni la prochaine
-     tache. Ils sont deja charges — le bandeau les utilise juste au-dessus. */
-  const lignes = retenues.map(toInboxRow);
-
   /* Un compte suspendu — le compte de recette, par exemple — ne doit pas être
      proposé : on croirait avoir confié le dossier. La règle vit dans un seul
      endroit, `membresAffectables`. */
@@ -302,7 +297,6 @@ export default async function BuyersPipelinePage({
           recherche,
         })}
         rechercheInitiale={recherche}
-        rows={lignes}
         membres={memberOptions}
         /* Qui peut TRAITER un dossier peut le confier : les commerciaux
            travaillent ensemble et se repassent les leads. La base applique la

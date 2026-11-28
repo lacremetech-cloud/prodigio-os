@@ -144,13 +144,21 @@ describe("le budget affiché est le plus récent QUI EXISTE", () => {
   });
 
   it("les quatre surfaces lisent le même libellé", () => {
+    /* La carte du pipeline ne figure plus ici, et c'est un RENFORCEMENT, pas
+       un relachement : depuis le 24/11/2026 elle ne calcule plus son libelle
+       du tout — `toKanbanCard` le lui donne tout fait, en passant par la meme
+       fonction. Une surface de moins ou la regle pouvait diverger. */
     for (const f of [
       "src/components/crm/buyers/buyer-inbox.tsx",
-      "src/components/crm/buyers/buyer-kanban.tsx",
+      "src/modules/buyers/crm/queries.ts",
       "src/components/crm/buyers/panneau-traitement.tsx",
       "src/app/crm/acquereurs/[id]/page.tsx",
     ]) {
       expect(readFileSync(f, "utf8"), f).toContain("libelleBudget");
     }
+    /* Et la carte, elle, n'a plus le droit de le recalculer dans son coin. */
+    expect(readFileSync("src/components/crm/buyers/buyer-kanban.tsx", "utf8")).not.toContain(
+      "libelleBudget",
+    );
   });
 });
