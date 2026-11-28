@@ -1581,7 +1581,7 @@ chiffre du CRM ni aucun seuil n'est écrit ici) :
 
 ---
 
-## 21. Conversions Meta — le journal des envois (`20261128190000_conversions_meta_reparees`) — **NON APPLIQUÉE**
+## 21. Conversions Meta — le journal des envois (`20261128190000_conversions_meta_reparees`) — **APPLIQUÉE le 28/11/2026**
 
 Détail : [27-CONVERSIONS-META.md](27-CONVERSIONS-META.md). Empreinte SHA-256
 du fichier : `848c5c33e85677be64af0c86105649b7068c129ffd07cd611cdff63a24bd79c4`
@@ -1685,3 +1685,29 @@ le panneau « Enregistrer et suivant » ont leur ligne au journal.
   `authenticated`, puis la migration rejouée : plus aucun client ne
   l'exécute (seuls `postgres` et `service_role`) ; la copie locale est
   ensuite effacée.
+
+### Résultat de l'application (28/11/2026)
+
+Appliquée en production par la session de l'iMac, dans l'éditeur SQL de
+Supabase, à 19 h 14, avec l'accord écrit de Victor (« Oui, installe-la »,
+19 h 13, pour la version complétée) ; tête de la PR et empreinte
+`848c5c33…79c4` revérifiées juste avant, sur le contenu collé ; contrôle
+automatique au vert. Relevés faits sur place (non revérifiables depuis le
+dépôt ; aucun chiffre du CRM n'est écrit ici) :
+
+- **Avant** : contrainte aux cinq motifs ; le journal ne portait que deux
+  d'entre eux ; fonction d'origine en place ; `crm_has_access()` présente,
+  sans argument ; `menage_ponctuel_20261022()` présente, exécutable par
+  `public`, `anon`, `authenticated` et `service_role`.
+- **Après** : contrainte aux sept motifs ; `crm_meta_conversion_log` : même
+  signature, definer, `public` false, `anon` true, `authenticated` true, porte
+  étroite et garde « équipe » présentes, corps identique au fichier ;
+  `crm_meta_conversion_deja_envoyee` : definer, `public` false, `anon` false,
+  `authenticated` true, garde « équipe » présente, corps identique au
+  fichier, faux sans session ; `menage_ponctuel_20261022()` : plus aucun
+  client (restent `postgres` et `service_role`) ; les deux index créés ;
+  journal : le même nombre de lignes qu'avant, RLS et politique de lecture
+  inchangées. Aucun essai d'écriture.
+- **À voir en usage réel** : la trace du premier `Lead` arrivé après la
+  migration (porte étroite, par le client serveur) ; après la fusion, le
+  premier envoi depuis le panneau « Enregistrer et suivant ».
