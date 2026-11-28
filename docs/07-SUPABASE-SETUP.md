@@ -1325,3 +1325,70 @@ de lancer. Relevés faits sur place (non revérifiables depuis le dépôt) :
 - **Aucun essai d'écriture** : pas de donnée de test en production. La
   première vraie offre saisie par l'équipe passera le dossier en « Offre en
   cours ».
+
+---
+
+## 19. Pilotage pub — taux de passage sur les mêmes personnes (`20261128110000_pilotage_crm_passages`) — **NON APPLIQUÉE**
+
+Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9.7. À appliquer avec
+l'accord écrit de Victor, comme les précédentes. Tant qu'elle manque, la page
+Pilotage affiche le taux de passage « manquant (attend l'installation de la
+migration du 28/11/2026) » ; tout le reste s'affiche.
+
+### Pourquoi
+
+Relevé à la recette du 28/11/2026 (docs/05, n° 45). Le taux de passage
+« A → B » divisait les personnes ayant atteint B par celles ayant atteint A,
+soit deux groupes différents. Il pouvait dépasser 100 %.
+
+### Ce qu'elle change
+
+| Objet | Modification |
+|---|---|
+| `crm_pilotage_crm_cohorte(date, date)` | `create or replace` : le même corps que la version du § 17 (révisée), plus une clé `passages` dans chaque objet de comptes. Elle donne, par bien et au total, les personnes passées par « dossier envoyé » ET « visite planifiée », et par « visite planifiée » ET « offre en cours ». |
+
+Même signature, même `SECURITY INVOKER`, même contrôle du rôle administrateur
+en première ligne. Droits rappelés : `authenticated`, jamais `anon`. **Aucune
+table, aucune colonne, aucune donnée touchée ; aucune écriture.** Rejouable ;
+attente de verrou bornée à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+-- La cohorte en place ne rend pas encore les passages.
+select position('''passages''' in prosrc) > 0 as passages
+  from pg_proc where pronamespace = 'public'::regnamespace and proname = 'crm_pilotage_crm_cohorte';
+-- attendu : false
+```
+
+### Contrôles après application
+
+```sql
+select position('''passages''' in prosrc) > 0 as passages,
+       prosecdef as security_definer,
+       has_function_privilege('anon', oid, 'execute') as anon,
+       has_function_privilege('authenticated', oid, 'execute') as authentifie
+  from pg_proc where pronamespace = 'public'::regnamespace and proname = 'crm_pilotage_crm_cohorte';
+-- attendu : true, false, false, true
+
+-- Sans administrateur connecté (l'éditeur SQL n'en a pas), l'appel est refusé.
+select * from public.crm_pilotage_crm_cohorte(null, current_date);
+-- attendu : ERREUR « pilotage réservé aux administrateurs »
+```
+
+Ensuite, sur la page Pilotage (onglet d'un bien), chaque taux de passage
+s'écrit « X % — M des N personnes passées par « A » ». La recette le compare
+au bloc `14 passage` de `scripts/pilotage-crm-controles.sql`.
+
+### Vérification locale
+
+- Rejeu de toutes les migrations sur une base vierge ; la migration,
+  appliquée deux fois de suite, passe sans erreur. Sa fonction ne diffère de
+  celle du § 17 que par les deux comptes de passage et la clé `passages`.
+- `scripts/pilotage-crm.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée. Elle vérifie notamment un passage qu'on comptait à
+  200 % et qui vaut désormais 100 %. La requête de contrôle y donne exactement
+  les chiffres de la page (124 lignes).
+- Sur dix fois le volume du CRM de novembre 2026 (fictif) : cohorte en 2,1 s ;
+  la requête de contrôle donne les mêmes chiffres que la page sur plusieurs
+  périodes.

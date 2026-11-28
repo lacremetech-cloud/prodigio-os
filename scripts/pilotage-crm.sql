@@ -225,6 +225,13 @@ begin
   if v1->'visites' <> '{"planifiees": 1, "a_venir": 1, "faites": 1, "annulees": 0}'::jsonb then
     raise exception 'ÉCHEC : Villa essai, visites = %', v1->'visites';
   end if;
+  -- Taux de passage sur les MÊMES personnes : « dossier envoyé » → « visite
+  -- planifiée » : X seule (Y est passée par la visite sans « dossier envoyé ») ;
+  -- « visite planifiée » → « offre en cours » : X. L'ancien calcul (atteinte
+  -- d'arrivée ÷ atteinte de départ) aurait donné 2 ÷ 1 = 200 %.
+  if v1->'passages' <> '{"en_discussion>visite_planifiee": 1, "visite_planifiee>offre_en_cours": 1}'::jsonb then
+    raise exception 'ÉCHEC : Villa essai, passages = %', v1->'passages';
+  end if;
   -- X est passée par « offre en cours » (sans montant saisi).
   if v1->'offres' <> '{"personnes": 1, "montants": 0, "somme_cents": 0}'::jsonb then
     raise exception 'ÉCHEC : Villa essai, offres = %', v1->'offres';
@@ -366,6 +373,8 @@ r (bloc, portee, mesure, valeur) as (
               cross join lateral (values ('demandes', pp.demandes), ('personnes', pp.personnes), ('qualifiées', pp.qualifies),
                                          ('visites', pp.visites), ('dont faites', pp.visites_faites), ('offres', pp.offres)) m(nom, valeur)
   union all select '13 premier jour du CRM', db.property_id, db.premier_jour::text, 1 from db
+  union all select '14 passage', c.property_id, e.key, e.value::text::numeric
+              from c, jsonb_each(coalesce(c.mesures->'passages', '{}'::jsonb)) e
 )
 select r.bloc,
        case when r.portee is null then 'TOTAL'

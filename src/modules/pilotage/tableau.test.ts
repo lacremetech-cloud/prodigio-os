@@ -472,3 +472,17 @@ describe("la dépense et les leads Meta « à partir d'un jour » (les mêmes jo
     expect(metaEnFace(t, A, "2026-12-01")).toEqual({ etat: "sans_demande" });
   });
 });
+
+describe("deux pubs de même nom se distinguent : campagne, jours de diffusion, aperçu", () => {
+  it("chaque pub porte sa campagne, ses premier et dernier jours chez Meta, et son lien d'aperçu s'il existe", () => {
+    const t = tableau();
+    expect(t.fichesPubs.get("11")).toEqual({
+      nom: "VILLA A | VUE | REEL | V1",
+      campagne: "Campagne",
+      premierJour: "2026-10-01",
+      dernierJour: "2026-11-22",
+      lienApercu: "https://exemple.test/apercu/11",
+    });
+    expect(t.fichesPubs.get("22")).toMatchObject({ campagne: "Campagne", lienApercu: null });
+  });
+});

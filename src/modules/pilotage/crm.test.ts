@@ -28,6 +28,7 @@ const MESURES: MesuresCrm = {
   provenance: { fb: 5, facebook: 1, ig: 3, instagram: 1, "": 2 },
   responsables: { "": 8, "c0000000-0000-0000-0000-00000000000c": 2 },
   pub: { pub: 9, campagne: 1, aucun: 2 },
+  passages: { "en_discussion>visite_planifiee": 2, "visite_planifiee>offre_en_cours": 0 },
 };
 
 /** La dépense (en centimes) et les leads Meta des jours comparables. */
@@ -104,10 +105,29 @@ describe("les étapes : aujourd'hui, atteintes, et les taux de passage", () => {
 
   it("d'une étape à l'autre : « dossier envoyé » → « visite planifiée » → « offre en cours »", () => {
     const [versVisite, versOffre] = calculerCrm(MESURES, { etat: "en_attente" }).passages;
-    expect(versVisite!.taux).toEqual({ etat: "ok", valeur: divise(entier(2), entier(4)) });
-    expect(versOffre!.taux).toEqual({ etat: "ok", valeur: entier(0) });
+    expect(versVisite).toMatchObject({ depart: 4, ensemble: 2, taux: { etat: "ok", valeur: divise(entier(2), entier(4)) } });
+    expect(versOffre).toMatchObject({ depart: 2, ensemble: 0, taux: { etat: "ok", valeur: entier(0) } });
     // Personne n'a atteint l'étape de départ : pas de taux, pas de 0 %.
     expect(calculerCrm(MESURES_VIDES, { etat: "en_attente" }).passages[0]!.taux.etat).toBe("sans_objet");
+  });
+
+  it("sur les MÊMES personnes : jamais au-delà de 100 %, même quand l'arrivée compte plus de monde que le départ", () => {
+    // 1 personne passée par « dossier envoyé » ; 2 par « visite planifiée », dont 1 sans « dossier envoyé ».
+    const m: MesuresCrm = {
+      ...MESURES,
+      atteintes: { a_contacter: 3, en_discussion: 1, visite_planifiee: 2 },
+      passages: { "en_discussion>visite_planifiee": 1, "visite_planifiee>offre_en_cours": 0 },
+    };
+    const [versVisite] = calculerCrm(m, { etat: "en_attente" }).passages;
+    expect(versVisite!.taux).toEqual({ etat: "ok", valeur: entier(1) }); // 100 %, et non 200 %
+  });
+
+  it("tant que la base ne donne pas les passages (migration du 28/11/2026), le taux est « manquant », jamais deviné", () => {
+    const ancienne: MesuresCrm = { ...MESURES };
+    delete ancienne.passages;
+    const [versVisite] = calculerCrm(ancienne, { etat: "en_attente" }).passages;
+    expect(versVisite).toMatchObject({ ensemble: null, taux: { etat: "manquant" } });
+    expect(mesuresCrmSchema.parse(ancienne)).toEqual(ancienne);
   });
 });
 
@@ -155,12 +175,25 @@ const PERSONNELLES = /\b(contact_first_name|contact_last_name|contact_email\w*|c
 
 describe("aucune donnée personnelle d'acquéreur dans le pilotage", () => {
   it("les fonctions de lecture du CRM ne touchent à aucune colonne personnelle", () => {
-    const sql = readFileSync(join(process.cwd(), "supabase", "migrations", "20261123170000_pilotage_crm_agregats.sql"), "utf8")
-      .split("\n")
-      .map((l) => l.replace(/--.*$/, ""))
-      .join("\n");
-    expect(sql).not.toMatch(PERSONNELLES);
-    expect(sql).not.toMatch(/\b(email|phone|telephone)\b/i);
+    for (const fichier of ["20261123170000_pilotage_crm_agregats.sql", "20261128110000_pilotage_crm_passages.sql"]) {
+      const sql = readFileSync(join(process.cwd(), "supabase", "migrations", fichier), "utf8")
+        .split("\n")
+        .map((l) => l.replace(/--.*$/, ""))
+        .join("\n");
+      expect(sql, fichier).not.toMatch(PERSONNELLES);
+      expect(sql, fichier).not.toMatch(/\b(email|phone|telephone)\b/i);
+    }
+  });
+
+  it("la cohorte remplacée le 28/11/2026 garde son contrôle du rôle, ses droits, et n'écrit rien", () => {
+    const sql = readFileSync(join(process.cwd(), "supabase", "migrations", "20261128110000_pilotage_crm_passages.sql"), "utf8");
+    const declarees = [...sql.matchAll(/create or replace function public\.(\w+)\(/g)].map((m) => m[1]);
+    expect(declarees).toEqual(["crm_pilotage_crm_cohorte"]);
+    expect(sql).toMatch(/security invoker/);
+    expect(sql).toContain("if not public.crm_has_role('administrateur') then");
+    expect(sql).toContain("revoke all on function public.crm_pilotage_crm_cohorte(date, date) from public, anon;");
+    expect(sql).not.toMatch(/grant execute[^;]*\banon\b/);
+    expect(sql.replace(/--.*$/gm, "")).not.toMatch(/\b(insert|update|delete|truncate|alter|drop)\b/i);
   });
 
   it("chaque fonction de lecture vérifie le rôle administrateur, et n'est jamais ouverte à anon", () => {

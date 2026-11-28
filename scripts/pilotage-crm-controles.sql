@@ -40,7 +40,9 @@
 --    campagne connue parmi `utm_campaign` (colonne, adresses) et `utm_id` ;
 --    sinon « non rattachée » ;
 --  - le RESPONSABLE : l'affectation active de la personne
---    (`buyer_assignments`, `released_at` vide) — pas l'équipe du bien.
+--    (`buyer_assignments`, `released_at` vide) — pas l'équipe du bien ;
+--  - un TAUX DE PASSAGE « A → B » se calcule sur les mêmes personnes :
+--    passées par A et par B (bloc 14) ÷ passées par A (bloc 06).
 -- =============================================================================
 
 with
@@ -255,6 +257,23 @@ resultats (bloc, portee, mesure, valeur) as (
     left join public.buyer_profiles bp on bp.id = bi.buyer_profile_id
    where bp.archive_le is null
    group by grouping sets ((bi.property_id), ())
+  union all
+  -- 14 · Taux de passage, sur les MÊMES personnes : passées par l'étape de
+  --      départ ET par l'étape d'arrivée. Taux = cette ligne ÷ la ligne
+  --      « étape atteinte » (bloc 06) de l'étape de départ.
+  select '14 passage', y.portee, y.passage, count(*)
+    from ((select a.portee, a.personne, 'en_discussion>visite_planifiee' as passage
+             from atteinte a where a.etape = 'en_discussion'
+           intersect
+           select a.portee, a.personne, 'en_discussion>visite_planifiee'
+             from atteinte a where a.etape = 'visite_planifiee')
+          union all
+          (select a.portee, a.personne, 'visite_planifiee>offre_en_cours'
+             from atteinte a where a.etape = 'visite_planifiee'
+           intersect
+           select a.portee, a.personne, 'visite_planifiee>offre_en_cours'
+             from atteinte a where a.etape = 'offre_en_cours')) y
+   group by y.portee, y.passage
 )
 select r.bloc,
        case when r.portee is null then 'TOTAL' else coalesce(nullif(btrim(pr.project_name), ''), nullif(btrim(pr.commercial_title), ''), r.portee::text) end as bien,
