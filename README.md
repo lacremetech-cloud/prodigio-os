@@ -230,7 +230,8 @@ polices auto-hébergées via `next/font` — **Cormorant Garamond** (titres
   période, en nombres seulement (migration `20261123170000`, **appliquée le
   28/11/2026**, recette conforme — docs/07 §17 ; définitions et recette bloc
   par bloc : docs/33 §9). Suite : taux de passage sur les mêmes personnes
-  (migration `20261128110000`, **non appliquée** — docs/07 §19).
+  (migration `20261128110000`, **appliquée le 28/11/2026**, recette conforme —
+  docs/07 §19).
 - [docs/08-MEDIA-CREDITS.md](docs/08-MEDIA-CREDITS.md) — Crédits et licences des
   photographies (sélection éditoriale provisoire).
 - [docs/adr/001-TECHNICAL-FOUNDATION.md](docs/adr/001-TECHNICAL-FOUNDATION.md) —

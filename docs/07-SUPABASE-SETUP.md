@@ -1328,12 +1328,11 @@ de lancer. Relevés faits sur place (non revérifiables depuis le dépôt) :
 
 ---
 
-## 19. Pilotage pub — taux de passage sur les mêmes personnes (`20261128110000_pilotage_crm_passages`) — **NON APPLIQUÉE**
+## 19. Pilotage pub — taux de passage sur les mêmes personnes (`20261128110000_pilotage_crm_passages`) — **APPLIQUÉE le 28/11/2026**
 
-Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9.7. À appliquer avec
-l'accord écrit de Victor, comme les précédentes. Tant qu'elle manque, la page
-Pilotage affiche le taux de passage « manquant (attend l'installation de la
-migration du 28/11/2026) » ; tout le reste s'affiche.
+Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9.7. Sur une base où elle
+manque, la page Pilotage affiche le taux de passage « manquant (attend
+l'installation de la migration du 28/11/2026) » ; tout le reste s'affiche.
 
 ### Pourquoi
 
@@ -1392,3 +1391,33 @@ au bloc `14 passage` de `scripts/pilotage-crm-controles.sql`.
 - Sur dix fois le volume du CRM de novembre 2026 (fictif) : cohorte en 2,1 s ;
   la requête de contrôle donne les mêmes chiffres que la page sur plusieurs
   périodes.
+
+### Résultat de l'application (28/11/2026)
+
+Appliquée en production par la session de l'iMac, dans l'éditeur SQL de
+Supabase, vers 10 h 30, avec l'accord écrit de Victor (« Oui, installe-la »,
+le 28/11/2026 vers 10 h 28) ; empreinte `74d3ad18…` vérifiée dans l'éditeur
+avant de lancer. Relevés faits sur place (non revérifiables depuis le dépôt ;
+aucun chiffre du CRM n'est écrit ici) :
+
+- **Avant** : contrôle d'avant conforme (`passages = false`) ; la fonction du
+  fichier ne différait de celle installée le matin que par les deux comptes et
+  la clé `passages`.
+- **Après** : `passages = true`, `security_definer = false`, `anon = false`,
+  `authenticated = true` ; cinq fonctions `crm_pilotage_crm_%` ; appel refusé
+  dans l'éditeur (« pilotage réservé aux administrateurs ») ; définition en
+  base identique au fichier, au caractère près.
+- **Production, ancien code** : la section du CRM s'affiche toujours, mêmes
+  chiffres ; la clé en plus est ignorée jusqu'à la fusion.
+- **Recette** (aperçu de la branche, requête de contrôle lancée dans la même
+  minute, toute la période) : taux de passage et « M des N personnes »
+  conformes aux blocs 14 et 06 pour les trois biens ; « pub par pub »
+  identique au contrôle ligne à ligne, chaque pub avec sa campagne, ses jours
+  de diffusion et « Voir la pub » — les pubs homonymes se distinguent par
+  leurs dates ; le reste du contrôle est inchangé.
+- **Temps** : 4,5 à 5,3 s pour un onglet sur l'aperçu (premiers
+  chargements), 3,4 s en production avec la même fonction ; plus long que le
+  matin (2,4 à 3,9 s) : à surveiller.
+- **Non vérifiés** : un taux non nul sur des données réelles (il n'en existe
+  pas au 28/11/2026 ; couvert par la recette locale), la cible des liens
+  « Voir la pub », la vue générale de l'aperçu, téléphone et thème sombre.

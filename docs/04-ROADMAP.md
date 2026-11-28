@@ -194,8 +194,8 @@ Pilotage à parité avec le cockpit (fusionnée, PR #82 et #83) ; 3b, les donné
 du CRM par bien, en nombres seulement (docs/33 § 9 ; migration
 `20261123170000`, appliquée le 28/11/2026, recette conforme — docs/07 § 17).
 Suite du 28/11/2026 (docs/33 § 9.7) : taux de passage sur les mêmes personnes
-(migration `20261128110000`, non appliquée — docs/07 § 19) et pubs homonymes
-distinguées.
+(migration `20261128110000`, appliquée le 28/11/2026, recette conforme —
+docs/07 § 19) et pubs homonymes distinguées.
 
 ---
 

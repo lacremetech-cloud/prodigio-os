@@ -695,6 +695,8 @@ requête donne **exactement** les chiffres que la page tire des fonctions.
 ### 9.7 Suite du 28/11/2026 : taux de passage et pubs homonymes
 
 Décidée par Victor le 28/11/2026 (« Oui, PR de suite »), après la recette.
+Migration installée en production le 28/11/2026, recette conforme (docs/07
+§ 19).
 
 - **Taux de passage sur les mêmes personnes.** La migration
   `20261128110000_pilotage_crm_passages` (docs/07 § 19) remplace la seule
