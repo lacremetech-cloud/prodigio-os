@@ -1092,11 +1092,11 @@ avant de lancer). Relevés faits sur place (non revérifiables depuis le dépôt
 
 ---
 
-## 18. Fiche acquéreur — offre, résultat, réouverture (`20261123200000_formulaires_acquereur_neuf_etapes`) — **NON APPLIQUÉE**
+## 18. Fiche acquéreur — offre, résultat, réouverture (`20261123200000_formulaires_acquereur_neuf_etapes`) — **APPLIQUÉE le 28/11/2026**
 
 Détail : [20-CRM-ACQUEREURS.md](20-CRM-ACQUEREURS.md), « Actions métier de la
-fiche ». À appliquer avec l'accord écrit de Victor. Indépendante du pilotage
-pub (§ 17) : l'ordre des deux est indifférent.
+fiche ». Indépendante du pilotage pub (§ 17) : l'ordre des deux est
+indifférent.
 
 ### Pourquoi
 
@@ -1177,3 +1177,21 @@ l'équipe : aucune donnée de test en base.
   intact. Son premier contrôle échoue bien sur l'ancienne version de l'offre.
 - `src/modules/buyers/crm/etapes-ecrites.test.ts` relit la dernière
   définition de chaque fonction `crm_buyer_*` des migrations.
+
+### Résultat de l'application (28/11/2026)
+
+Appliquée en production par la session de l'iMac, dans l'éditeur SQL de
+Supabase, vers 9 h 34, avec l'accord écrit de Victor (« Oui, les deux », le
+28/11/2026 vers 9 h 30) ; empreinte `ba565bda…` vérifiée dans l'éditeur avant
+de lancer. Relevés faits sur place (non revérifiables depuis le dépôt) :
+
+- **Avant** : contrôle d'avant conforme (les trois versions en place
+  écrivaient des étapes refusées) ; leurs définitions étaient identiques à
+  celles relevées le 23/11.
+- **Après** : `security_definer = true`, `anon = false`,
+  `authenticated = true`, `service_role = true` ; plus aucune fonction
+  `crm_buyer_%` n'écrit une étape hors des neuf ; les trois définitions en
+  base sont identiques au fichier, au caractère près.
+- **Aucun essai d'écriture** : pas de donnée de test en production. La
+  première vraie offre saisie par l'équipe passera le dossier en « Offre en
+  cours ».

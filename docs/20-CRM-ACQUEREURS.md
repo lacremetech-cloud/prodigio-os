@@ -134,8 +134,8 @@ neuf étapes, la protection est levée ; les trois actions restent les seules à
 Du 10/11 au 23/11/2026, ces trois actions échouaient : elles écrivaient encore
 des étapes du pipeline à huit colonnes (`offre`, `gagne`, `perdu`, `visite`),
 que la base refusait. Remises en état par la migration
-`20261123200000_formulaires_acquereur_neuf_etapes` (docs/07 § 18), selon la
-règle décidée par Victor le 23/11/2026.
+`20261123200000_formulaires_acquereur_neuf_etapes` (docs/07 § 18, installée
+le 28/11/2026), selon la règle décidée par Victor le 23/11/2026.
 
 ### Standards du Kanban (identiques au CRM Mandats)
 
