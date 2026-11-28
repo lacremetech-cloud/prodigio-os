@@ -94,7 +94,11 @@ Chaque événement porte un `event_id` déterministe :
   (`deja_envoyee` au journal) ;
 - `visite-<id du dossier>-<date>` — un retour en visite des mois plus tard est
   une vraie seconde conversion ; glisser la carte deux fois le même jour n'en
-  est pas une (même vérification au journal).
+  est pas une (même vérification au journal). L'identifiant porte le **jour du
+  geste** : une visite replanifiée un autre jour (panneau ou « Planifier une
+  visite ») renvoie donc un « rendez-vous programmé ». Et si l'étape d'avant
+  ne peut pas être lue au moment de l'enregistrement, une personne déjà en
+  visite planifiée peut en renvoyer un un autre jour.
 
 Si un pixel navigateur est ajouté plus tard sur les pages d'atterrissage, il
 devra réutiliser ces mêmes identifiants pour que Meta dédoublonne.
@@ -110,7 +114,11 @@ s'écrit que par `crm_meta_conversion_log`.
 sans compte, donc n'importe qui pouvait y écrire. Le dépôt public du
 formulaire en a besoin pour tracer son `Lead` : sans session, elle n'accepte
 plus que le `Lead` d'une demande réelle, arrivée il y a moins de quinze
-minutes, et pas encore tracée ; tout le reste est ignoré, sans erreur.
+minutes, et pas encore tracée ; tout le reste est ignoré, sans erreur. Avec
+une session, il faut être **de l'équipe** (adhésion active) : l'inscription
+libre est ouverte dans Supabase Auth, et un compte créé de l'extérieur ne doit
+rien écrire — surtout pas une fausse conversion « partie », que la question
+« déjà partie ? » lirait.
 
 **Contrôle** : `scripts/conversions-meta-controles.sql` (lecture seule) met,
 semaine par semaine, les faits du CRM (demandes, entrées en discussion,

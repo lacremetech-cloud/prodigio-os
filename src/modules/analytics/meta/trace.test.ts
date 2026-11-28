@@ -81,11 +81,27 @@ describe("le journal des conversions", () => {
     for (const d of new Set(declares)) expect(motifs, `motif « ${d} » inconnu de la base`).toContain(d);
   });
 
-  it("« déjà partie ? » : un client connecté seulement, un booléen seulement", () => {
+  it("« déjà partie ? » : un membre de l'équipe seulement, un booléen seulement", () => {
     const reparee = readFileSync(join(DOSSIER, "20261128190000_conversions_meta_reparees.sql"), "utf8");
     expect(reparee).toContain("revoke all on function public.crm_meta_conversion_deja_envoyee(text) from public, anon");
     expect(reparee).toContain("grant execute on function public.crm_meta_conversion_deja_envoyee(text) to authenticated");
     expect(reparee).toMatch(/crm_meta_conversion_deja_envoyee\(p_event_id text\)\s+returns boolean/);
+    expect(reparee).toMatch(/select auth\.uid\(\) is not null\s+and public\.crm_has_access\(\)/);
+  });
+
+  it("avec une session, seul un membre de l'équipe écrit au journal — le dépôt public garde sa porte étroite", () => {
+    /* L'inscription libre est ouverte dans Supabase Auth (relevé du
+       28/11/2026) : « avec une session » ne veut pas dire « de l'équipe ».
+       Le chemin sans session, lui, ne rencontre pas cette garde : en
+       production, la trace du Lead passe par le client serveur, sans uid. */
+    const reparee = readFileSync(join(DOSSIER, "20261128190000_conversions_meta_reparees.sql"), "utf8");
+    const sans = reparee.indexOf("if auth.uid() is null then");
+    const garde = reparee.indexOf("elsif not public.crm_has_access() then");
+    expect(sans).toBeGreaterThan(-1);
+    expect(garde).toBeGreaterThan(sans);
+    expect(reparee.slice(garde, reparee.indexOf("end if;", garde))).toContain("return;");
+    // La fonction de ménage du 22/10/2026 : plus aucun client ne l'exécute, si elle existe.
+    expect(reparee).toContain("revoke all on function public.menage_ponctuel_20261022() from public, anon, authenticated");
   });
 
   it("la requête de contrôle ne fait que lire, et ne sort que des nombres", () => {

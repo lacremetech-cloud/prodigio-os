@@ -13,7 +13,11 @@
 --      n'accepte plus que le `Lead` d'une demande qui existe, arrivée il y a
 --      moins de quinze minutes, et pas encore tracée. Tout autre appel sans
 --      session est ignoré, sans erreur (le journal ne doit jamais faire
---      échouer ce qu'il observe). Avec une session, rien ne change.
+--      échouer ce qu'il observe). AVEC une session, il faut aussi être de
+--      l'équipe (adhésion active, `crm_has_access`) : l'inscription libre est
+--      ouverte dans Supabase Auth (relevé du 28/11/2026), et un compte créé de
+--      l'extérieur ne doit rien écrire — surtout pas une fausse « envoyee »,
+--      que la question « déjà partie ? » lirait.
 --
 --   2. DEUX MOTIFS DE PLUS, dans la contrainte et dans la fonction :
 --        - `hors_production` : le fait a eu lieu, mais depuis un déploiement
@@ -26,12 +30,18 @@
 --   3. `crm_meta_conversion_deja_envoyee(event_id)` : vrai si une conversion
 --      de cet identifiant est déjà partie. SECURITY DEFINER (le journal n'est
 --      lisible que de l'encadrement, alors que c'est le commercial qui déplace
---      la carte) ; client connecté seulement ; ne rend qu'un booléen.
+--      la carte) ; membre de l'équipe seulement ; ne rend qu'un booléen.
+--
+--   4. `menage_ponctuel_20261022()`, fonction de ménage posée à la main en
+--      production le 22/10/2026 (absente du dépôt), était exécutable sans
+--      compte : elle efface du journal les lignes de la vérification de mise
+--      en service. Son exécution est retirée à tout client, si elle existe.
+--      Elle n'est pas supprimée : la supprimer demande l'accord de Victor.
 --
 -- STRICTEMENT LIMITÉE : la contrainte du journal réécrite en sur-ensemble
--- strict (aucune valeur retirée), une fonction remplacée (même signature,
--- mêmes droits pour un client connecté), une fonction ajoutée. Aucune ligne
--- du journal touchée. Rejouable.
+-- strict (aucune valeur retirée), une fonction remplacée (même signature),
+-- une fonction ajoutée, deux index, un droit retiré. Aucune ligne du journal
+-- touchée. Rejouable.
 -- =============================================================================
 
 begin;
@@ -77,6 +87,9 @@ begin
                    where l.interest_id = p_interest_id and l.event_name = 'Lead') then
       return;
     end if;
+  -- AVEC UNE SESSION : un membre de l'équipe seulement (adhésion active).
+  elsif not public.crm_has_access() then
+    return;
   end if;
 
   insert into public.meta_conversion_log (interest_id, event_name, event_id, resultat, detail)
@@ -93,7 +106,7 @@ end;
 $function$;
 
 comment on function public.crm_meta_conversion_log(text, text, uuid, text, text) is
-  'Trace le résultat d''un envoi de conversion Meta. Sans session (dépôt public), n''accepte que le Lead d''une demande réelle de moins de quinze minutes, pas encore tracée. Ne lève jamais.';
+  'Trace le résultat d''un envoi de conversion Meta. Sans session (dépôt public), n''accepte que le Lead d''une demande réelle de moins de quinze minutes, pas encore tracée ; avec une session, un membre de l''équipe seulement. Ne lève jamais.';
 
 -- Le dépôt public en a besoin (sans session) : le droit est donné à `anon`
 -- explicitement, et la porte étroite ci-dessus en limite l'usage.
@@ -111,13 +124,14 @@ security definer
 set search_path = public, pg_temp
 as $$
   select auth.uid() is not null
+     and public.crm_has_access()
      and p_event_id is not null
      and exists (select 1 from public.meta_conversion_log l
                   where l.event_id = p_event_id and l.resultat = 'envoyee');
 $$;
 
 comment on function public.crm_meta_conversion_deja_envoyee(text) is
-  'Vrai si une conversion Meta de cet identifiant est déjà partie (journal « envoyee »). Client connecté seulement ; ne rend qu''un booléen.';
+  'Vrai si une conversion Meta de cet identifiant est déjà partie (journal « envoyee »). Membre de l''équipe seulement (faux sinon) ; ne rend qu''un booléen.';
 
 revoke all on function public.crm_meta_conversion_deja_envoyee(text) from public, anon;
 grant execute on function public.crm_meta_conversion_deja_envoyee(text) to authenticated;
@@ -130,5 +144,15 @@ create index if not exists meta_conversion_log_evenement
 create index if not exists meta_conversion_log_demande
   on public.meta_conversion_log (interest_id, event_name)
   where interest_id is not null;
+
+-- -----------------------------------------------------------------------------
+-- 4. La fonction de ménage du 22/10/2026 : plus aucun client ne l'exécute.
+-- -----------------------------------------------------------------------------
+do $$
+begin
+  if to_regprocedure('public.menage_ponctuel_20261022()') is not null then
+    execute 'revoke all on function public.menage_ponctuel_20261022() from public, anon, authenticated';
+  end if;
+end $$;
 
 commit;

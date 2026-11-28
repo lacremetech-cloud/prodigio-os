@@ -8,7 +8,8 @@
 --  2. sans session, seul le `Lead` d'une demande réelle, récente et pas encore
 --     tracée s'écrit ; tout le reste est ignoré, sans erreur ;
 --  3. avec une session, les sept motifs s'écrivent, un motif inconnu devient
---     « erreur » ;
+--     « erreur » ; un compte hors de l'équipe (inscription libre) n'écrit
+--     ni ne lit rien ;
 --  4. « déjà partie ? » ne répond vrai que pour un envoi réel.
 --
 -- Se joue sur une base LOCALE montée par `scripts/replay-migrations.sh` :
@@ -27,7 +28,10 @@ begin
 end $$;
 
 -- --- Le décor (fictif) ----------------------------------------------------------
-insert into auth.users (id, email) values ('c0000000-0000-0000-0000-00000000000c', 'commercial@crm.test');
+-- Un commercial de l'équipe, et un compte inscrit de l'extérieur, sans adhésion.
+insert into auth.users (id, email) values
+  ('c0000000-0000-0000-0000-00000000000c', 'commercial@crm.test'),
+  ('d0000000-0000-0000-0000-00000000000d', 'exterieur@crm.test');
 
 insert into public.organization_memberships (user_id, organization_id, role, status)
 select 'c0000000-0000-0000-0000-00000000000c', o.id, 'commercial', 'actif'
@@ -112,6 +116,28 @@ begin
     raise exception 'ÉCHEC : motifs écrits = %', v;
   end if;
   raise notice 'ok : motifs';
+end $$;
+
+-- =============================================================================
+\echo '--- 3 bis. Avec une session, mais hors de l''équipe : rien ne s''écrit, rien ne se lit'
+-- =============================================================================
+set local role authenticated;
+set local request.jwt.claim.sub = 'd0000000-0000-0000-0000-00000000000d';
+do $$
+begin
+  perform public.crm_meta_conversion_log('CompleteRegistration', 'envoyee', '60000000-0000-0000-0000-000000000002', 'qualifie-forgee');
+  perform public.crm_meta_conversion_log('Lead', 'envoyee', '60000000-0000-0000-0000-000000000001', 'lead-forgee');
+  if public.crm_meta_conversion_deja_envoyee('qualifie-2-envoyee') then
+    raise exception 'ÉCHEC : un compte extérieur interroge le journal';
+  end if;
+end $$;
+reset role;
+do $$
+begin
+  if exists (select 1 from public.meta_conversion_log where event_id in ('qualifie-forgee', 'lead-forgee')) then
+    raise exception 'ÉCHEC : un compte extérieur a écrit au journal';
+  end if;
+  raise notice 'ok : un compte hors de l''équipe n''écrit ni ne lit rien';
 end $$;
 
 -- =============================================================================
