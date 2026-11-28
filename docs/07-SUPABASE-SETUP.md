@@ -1424,7 +1424,7 @@ aucun chiffre du CRM n'est écrit ici) :
 
 ---
 
-## 20. Budget du formulaire par bien (`20261128150000_budget_du_formulaire_par_bien`) — **NON APPLIQUÉE**
+## 20. Budget du formulaire par bien (`20261128150000_budget_du_formulaire_par_bien`) — **APPLIQUÉE le 28/11/2026**
 
 Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 10. Empreinte SHA-256 du
 fichier : `06fb599f7b478f1137c80d40576a5a0b1d68eb0fb9a01ff9ddb70b74652d3d4c`.
@@ -1537,3 +1537,44 @@ l'onglet d'un bien à `scripts/budget-par-bien-controles.sql` (lecture seule,
   `crm_pilotage_crm_budget` en 1,5 s, comme `crm_pilotage_crm_par_pub` ; ses
   totaux refont exactement `crm_pilotage_crm_par_pub` et la cohorte, et la
   requête de contrôle donne les mêmes chiffres que la page (4 352 lignes).
+
+### Résultat de l'application (28/11/2026)
+
+Appliquée en production par la session de l'iMac, dans l'éditeur SQL de
+Supabase, à 14 h 59, avec l'accord écrit de Victor (« Oui, les deux », pour
+l'installation puis la saisie de ses seuils) ; tête de la PR et empreinte
+`06fb599f…3d4c` revérifiées juste avant, empreinte recontrôlée dans
+l'éditeur. Relevés faits sur place (non revérifiables depuis le dépôt ; aucun
+chiffre du CRM ni aucun seuil n'est écrit ici) :
+
+- **Avant** : contrôles d'avant conformes (table absente, aucune fonction,
+  aucun événement des deux nouveaux types) ; listes du journal relues, aucune
+  valeur écrite hors des nouvelles listes ; fonctions et colonnes appelées
+  présentes.
+- **Après** : droits des quatre fonctions et de la table exactement comme
+  ci-dessus ; listes du journal à jour, les deux valeurs présentes ;
+  `buyer_form_budget` à null pour chaque bien avant la saisie ; lecture des
+  chiffres refusée dans l'éditeur (42501) ; texte des fonctions en base
+  identique au fichier, au caractère près ; règle des tranches essayée sur
+  sept cas (trois valables, quatre refusés avec la bonne phrase).
+- **Saisie** : les seuils de Victor, un réglage par bien, saisis par l'écran
+  des données sous le compte administrateur (15 h 01 – 15 h 02), avec un
+  motif ; une version par bien en base, un événement au journal par saisie
+  (bien et date d'effet seulement) ; `buyer_form_budget` rend ensuite les
+  tranches de chaque bien. La proposition d'après le prix donnait d'emblée la
+  cible retenue.
+- **Recette** (aperçu de la branche, toute la période, requête de contrôle
+  lancée dans la minute) : blocs 15 et 16 identiques à l'écran pour les trois
+  biens et au total — demandes, personnes, qualifiées, « dans la cible »,
+  pub par pub et non rattachées ; le coût par demande dans la cible retombe
+  sur la dépense des mêmes jours divisée par ces demandes.
+- **Temps** : 4,0 à 4,3 s par onglet sur l'aperçu ; à surveiller.
+- **Défaut relevé, non bloquant** : sur la page des données d'un bien vendu
+  par lots, après « Enregistrer le budget du formulaire », le bouton est
+  resté sur « Enregistrement… » plus de trente secondes et la nouvelle version
+  ne s'est affichée qu'après rechargement ; l'écriture, elle, était faite
+  (visible à l'historique). Sur les deux autres biens, la page s'est mise à
+  jour en quelques secondes. Correctif prévu dans la PR suivante (docs/05,
+  n° 49).
+- **Non vérifiés** : téléphone, thème sombre, les autres périodes, un réglage
+  à quatre tranches sur un vrai bien, la vue générale.
