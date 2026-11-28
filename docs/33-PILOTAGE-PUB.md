@@ -796,7 +796,7 @@ LES DÉFINITIONS (dites à l'écran) :
 |---|---|
 | Réponse retenue d'une demande | Le budget **corrigé par l'équipe** sur la personne (`buyer_profiles.budget_choice_corrige`), sinon la réponse déclarée (`buyer_interests.budget_choice`) ; aucune des deux : « sans réponse ». |
 | Réponse d'une personne | Sa correction, sinon la réponse de sa demande la plus récente **qui en porte une** — la règle de la fiche acquéreur, prise dans le bien, la pub ou le total. Une personne compte une fois. |
-| Dans la cible | Le bas de la réponse atteint la cible **en vigueur aujourd'hui** (pour toute période, comme les conditions de commission). « Pas de projet » : jamais. Sans réponse : ni dedans ni dehors. |
+| Dans la cible | Le bas de la réponse atteint la cible **en vigueur aujourd'hui** (pour toute période, comme les conditions de commission). « Pas de projet » : jamais — pour Victor, « aucun projet = lead mort » (28/11/2026). Sans réponse : ni dedans ni dehors. |
 | Part dans la cible | Demandes dans la cible ÷ demandes **qui ont répondu**. |
 | Coût par demande dans la cible | La dépense Meta des **mêmes jours** que le CRM (à partir de sa première demande pour le bien) ÷ ces demandes ; par pub, la dépense de la pub pour ce bien (sa part, si elle est commune). Une ligne « campagne » (pub inconnue) n'a pas de coût : sa dépense est comptée sur les pubs ; une demande non rattachée non plus. |
 | Qualifiée | « Qualifié » ou « gros potentiel » aujourd'hui, comme partout dans la page. |

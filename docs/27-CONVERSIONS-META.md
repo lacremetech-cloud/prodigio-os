@@ -110,11 +110,16 @@ D'où trois règles, pour l'étape 4 et après :
   le compte si le contrôle automatique bloque la conversion ou si un examen
   vient plus tard), la mention du formulaire corrigée et validée par un
   juriste (ci-dessous), puis son feu vert explicite pour le premier envoi
-  (docs/05, n° 46).
+  (docs/05, n° 46). Validé par Victor le 28/11/2026, avec les noms
+  `LeadBudgetAuMoins500k`, `LeadBudgetAuMoins1M`, `LeadBudgetAuMoins2M` et
+  `LeadBudgetAuMoins3M`.
 - **« A un projet » n'est pas un critère neutre** tant qu'il est tiré de la
   question du budget : toutes les réponses « oui » sont des tranches qui
-  commencent à 500 000 €. Il ne le deviendrait qu'avec une question séparée,
-  sans montant (docs/05, n° 47).
+  commencent à 500 000 €. Victor a choisi le 28/11/2026 de ne pas séparer la
+  question : « aucun projet = lead mort ». Aucun signal « projet déclaré » à
+  part ; avec le formulaire d'aujourd'hui, le palier « au moins 500 000 € »
+  vaut toute demande sauf « pas de projet », aux mêmes conditions que les
+  autres paliers (docs/05, n° 47).
 - **« Qualifié » est une décision de l'équipe** sur l'ensemble du dossier :
   projet réel, sérieux, délai, adéquation au bien. Ce n'est jamais un seuil
   de budget recopié sous un autre nom, et l'événement ne porte ni montant ni
