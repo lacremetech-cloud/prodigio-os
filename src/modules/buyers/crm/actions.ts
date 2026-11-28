@@ -25,6 +25,7 @@ import {
   manifestationLaPlusRecente,
 } from "@/modules/analytics/meta/conversions";
 import { conversionsDuTraitement } from "./conversions-du-traitement";
+import { signalContact, signalLeadQualifie, signalOffre } from "@/modules/analytics/meta/signaux";
 
 /**
  * Actions serveur de MUTATION du CRM Acquéreurs. Elles délèguent aux fonctions
@@ -141,6 +142,10 @@ export async function setBuyerStageAction(input: unknown): Promise<ActionResult>
     // retour de carte dans la meme journee ne compte pas deux fois.
     enArrierePlan(() => conversionRendezVous(supabase, parsed.data.interestId));
   }
+  if (etapeReelle === "r1_planifie") {
+    // Nouveau signal `Contact` (étape 4), EN ESSAI par défaut : rien ne part.
+    enArrierePlan(() => signalContact(supabase, parsed.data.interestId));
+  }
   revalidateBuyer(parsed.data.buyerProfileId);
   return { ok: true };
 }
@@ -196,6 +201,13 @@ export async function qualifyBuyerAction(input: unknown): Promise<ActionResult> 
     p_reason: d.reason ?? null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+  if (d.status === "qualifie") {
+    // Nouveau signal `LeadQualifie` (étape 4), EN ESSAI par défaut ; une fois par demande.
+    enArrierePlan(async () => {
+      const interet = await manifestationLaPlusRecente(supabase, d.buyerProfileId);
+      if (interet) await signalLeadQualifie(supabase, interet);
+    });
+  }
   revalidateBuyer(d.buyerProfileId);
   return { ok: true };
 }
@@ -366,6 +378,15 @@ export async function recordBuyerOfferAction(input: unknown): Promise<ActionResu
     p_note: d.note ?? null,
   });
   if (error) return { ok: false, error: humanize(error.code, error.message) };
+  /* Nouveau signal `SubmitApplication` (étape 4), EN ESSAI par défaut : la
+     demande du bien de l'offre (sinon la plus récente). Le montant ne part
+     jamais. */
+  enArrierePlan(async () => {
+    const interet =
+      (await manifestationLaPlusRecente(supabase, d.buyerProfileId, d.propertyId ?? null)) ??
+      (await manifestationLaPlusRecente(supabase, d.buyerProfileId));
+    if (interet) await signalOffre(supabase, interet);
+  });
   revalidateBuyer(d.buyerProfileId);
   return { ok: true };
 }
@@ -714,7 +735,7 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
      fait autorité, et une conversion déjà partie n'est pas renvoyée. */
   const { data: avant } = await supabase
     .from("buyer_profiles")
-    .select("pipeline_stage")
+    .select("pipeline_stage, qualification")
     .eq("id", d.buyerProfileId)
     .maybeSingle();
 
@@ -752,6 +773,7 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
     task_id?: string | null;
     next_action_assignee?: string | null;
     stage?: string | null;
+    qualification?: string | null;
   } | null;
 
   /*
@@ -763,10 +785,14 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
    * précis (« Général »), la conversion se rattache à la demande la plus
    * récente de la personne — celle de la dernière publicité qui l'a amenée.
    */
+  const lu = avant as { pipeline_stage?: string | null; qualification?: string | null } | null;
   const aEnvoyer = conversionsDuTraitement({
-    etapeAvant: (avant as { pipeline_stage?: string | null } | null)?.pipeline_stage ?? null,
+    etapeAvant: lu?.pipeline_stage ?? null,
     etapeApres: retour?.stage ?? null,
     visiteInscrite: d.nextActionKind === "visite" && Boolean(d.nextActionAt) && Boolean(retour?.task_id),
+    // Une qualification illisible avant ne déclenche rien : « qualifié » se dit une fois.
+    qualificationAvant: lu ? (lu.qualification ?? null) : "qualifie",
+    qualificationApres: retour?.qualification ?? null,
   });
   if (aEnvoyer.length > 0) {
     enArrierePlan(async () => {
@@ -774,7 +800,10 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
       if (!interet) return;
       for (const c of aEnvoyer) {
         if (c === "inscription_terminee") await conversionInscriptionTerminee(supabase, interet);
-        else await conversionRendezVous(supabase, interet);
+        else if (c === "rendez_vous") await conversionRendezVous(supabase, interet);
+        // Les nouveaux signaux de l'étape 4 : EN ESSAI par défaut, rien ne part.
+        else if (c === "contact") await signalContact(supabase, interet);
+        else await signalLeadQualifie(supabase, interet);
       }
     });
   }
@@ -852,6 +881,10 @@ export async function recordBuyerTreatmentAction(input: unknown): Promise<Action
   }
   if (d.stage === "visite") {
     enArrierePlan(() => conversionRendezVous(supabase, d.interestId));
+  }
+  if (d.qualification === "qualifie" || d.qualification === "gros_potentiel") {
+    // Nouveau signal `LeadQualifie` (étape 4), EN ESSAI par défaut ; une fois par demande.
+    enArrierePlan(() => signalLeadQualifie(supabase, d.interestId));
   }
 
   revalidateBuyer(d.buyerProfileId);

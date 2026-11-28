@@ -71,7 +71,7 @@ describe("le journal des conversions", () => {
   });
 
   it("les motifs enregistrés sont exactement ceux que le code peut produire", () => {
-    const motifs = ["envoyee", "non_configure", "sans_correspondance", "refus", "erreur", "hors_production", "deja_envoyee"];
+    const motifs = ["envoyee", "non_configure", "sans_correspondance", "refus", "erreur", "hors_production", "deja_envoyee", "simulee"];
     for (const m of motifs) expect(sql, m).toContain(`'${m}'`);
     /* `capi.ts` est la source : si un motif y apparaît un jour sans être
        ajouté à la contrainte, la base refuserait la ligne — et la trace
@@ -112,5 +112,18 @@ describe("le journal des conversions", () => {
       .toLowerCase();
     expect(controle).not.toMatch(/\b(insert|update|delete|truncate|alter|drop|create|grant|revoke)\b/);
     expect(controle).not.toMatch(/contact_|email|phone|first_name|last_name|fbclid/);
+  });
+
+  it("la dernière définition (signaux en essai) : le Lead et les quatre paliers sans session, l'équipe avec une session", () => {
+    const essai = readFileSync(join(DOSSIER, "20261128210000_signaux_meta_en_essai.sql"), "utf8");
+    // Les paliers en base portent exactement les noms du code.
+    for (const nom of ["LeadBudgetAuMoins500k", "LeadBudgetAuMoins1M", "LeadBudgetAuMoins2M", "LeadBudgetAuMoins3M"]) {
+      expect(essai, nom).toContain(`'${nom}'`);
+      expect(readFileSync("src/modules/analytics/meta/signaux.ts", "utf8"), nom).toContain(`"${nom}"`);
+    }
+    expect(essai).toContain("l.interest_id = p_interest_id and l.event_name = p_event_name");
+    expect(essai).toContain("elsif not public.crm_has_access() then");
+    expect(essai).toContain("'simulee'");
+    expect(essai).toContain("revoke all on function public.crm_meta_conversion_deja_simulee(text) from public, anon");
   });
 });

@@ -41,7 +41,19 @@ const TIMEOUT_MS = 4000;
  * DÉNOMINATEUR — sans lui, on connaît le nombre de demandes sans jamais savoir
  * combien de visites il a fallu pour les obtenir.
  */
-export type MetaEventName = "PageView" | "Lead" | "CompleteRegistration" | "Schedule";
+export type MetaEventName =
+  | "PageView"
+  | "Lead"
+  | "CompleteRegistration"
+  | "Schedule"
+  /* Les nouveaux signaux de l'étape 4 (docs/27), EN ESSAI par défaut. */
+  | "LeadQualifie"
+  | "Contact"
+  | "SubmitApplication"
+  | "LeadBudgetAuMoins500k"
+  | "LeadBudgetAuMoins1M"
+  | "LeadBudgetAuMoins2M"
+  | "LeadBudgetAuMoins3M";
 
 export interface MetaIdentity {
   email?: string | null;
@@ -85,6 +97,8 @@ export type MetaSendOutcome =
         | "hors_production"
         /** La même conversion (même `event_id`) est déjà partie. */
         | "deja_envoyee"
+        /** En essai : rien n'est parti, le journal note ce qui serait parti. */
+        | "simulee"
         | "sans_correspondance"
         | "refus"
         | "erreur";

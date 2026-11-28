@@ -54,7 +54,7 @@ interface ContexteInteret {
   customData: Record<string, unknown> | undefined;
 }
 
-async function contexteDeLaManifestation(
+export async function contexteDeLaManifestation(
   supabase: SupabaseClient,
   interestId: string,
 ): Promise<ContexteInteret | null> {
@@ -144,7 +144,7 @@ export function donneesDuBien(
  * planifiee reste planifiee, meme si sa trace ne s'ecrit pas. D'ou le
  * `catch` muet ici, et le `exception when others` cote base.
  */
-async function tracer(
+export async function tracer(
   supabase: SupabaseClient | null | undefined,
   eventName: string,
   eventId: string | null,
@@ -214,11 +214,12 @@ export async function dejaEnvoyee(supabase: SupabaseClient, eventId: string): Pr
 export async function manifestationLaPlusRecente(
   supabase: SupabaseClient,
   buyerProfileId: string,
+  /** Seulement les demandes de ce bien (une offre porte sur un bien). */
+  propertyId: string | null = null,
 ): Promise<string | null> {
-  const { data } = await supabase
-    .from("buyer_interests")
-    .select("id")
-    .eq("buyer_profile_id", buyerProfileId)
+  let requete = supabase.from("buyer_interests").select("id").eq("buyer_profile_id", buyerProfileId);
+  if (propertyId) requete = requete.eq("property_id", propertyId);
+  const { data } = await requete
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(1)
