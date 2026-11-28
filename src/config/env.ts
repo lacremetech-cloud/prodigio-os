@@ -692,3 +692,15 @@ export function isPreviewDeployment(
 ): boolean {
   return source.VERCEL_ENV === "preview";
 }
+
+/**
+ * Vrai sur le déploiement de **production** Vercel, et nulle part ailleurs : ni
+ * sur un aperçu (qui partage la base de production), ni en local. Sert aux
+ * effets qui sortent de l'application — une conversion envoyée à Meta depuis
+ * un aperçu compterait un vrai Lead pour une demande de recette.
+ */
+export function isProductionDeployment(
+  source: Pick<Env, "VERCEL_ENV"> = env,
+): boolean {
+  return source.VERCEL_ENV === "production";
+}

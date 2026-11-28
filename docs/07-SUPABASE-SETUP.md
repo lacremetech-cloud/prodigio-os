@@ -1578,3 +1578,87 @@ chiffre du CRM ni aucun seuil n'est écrit ici) :
   s'affiche dès que la base a confirmé (docs/05, n° 49).
 - **Non vérifiés** : téléphone, thème sombre, les autres périodes, un réglage
   à quatre tranches sur un vrai bien, la vue générale.
+
+---
+
+## 21. Conversions Meta — le journal des envois (`20261128190000_conversions_meta_reparees`) — **NON APPLIQUÉE**
+
+Détail : [27-CONVERSIONS-META.md](27-CONVERSIONS-META.md). Empreinte SHA-256
+du fichier : `a0868a90057251a5308746afdb95b3f1b167545769cdfbf98029b01296c5ef51`.
+
+Sur une base où elle manque, rien ne tombe : les conversions partent comme
+avant ; `hors_production` et `deja_envoyee` s'écrivent « erreur » au journal
+(l'ancienne fonction ne les connaît pas), et la vérification « déjà partie ? »
+répond non (la fonction n'existe pas) — au pire un doublon, jamais une perte.
+
+### Pourquoi
+
+Étape 4 du pilotage, PR « réparer », validée par Victor le 28/11/2026. Le
+journal des envois était ouvert au public : `crm_meta_conversion_log`
+s'exécutait sans compte (droit par défaut du schéma, relevé en production).
+Et Meta ne dédoublonne qu'à 48 heures : un dossier revenu « en discussion »
+plus tard recomptait sa conversion.
+
+### Ce qu'elle change
+
+| Objet | Modification |
+|---|---|
+| `meta_conversion_log_resultat_check` | Réécrite en **sur-ensemble strict** : les cinq motifs d'avant, plus `hors_production` et `deja_envoyee`. |
+| `crm_meta_conversion_log(text, text, uuid, text, text)` | `create or replace`, même signature. **Sans session**, n'écrit plus que le `Lead` d'une demande réelle de moins de quinze minutes, pas encore tracée (le dépôt public) ; tout le reste est ignoré, sans erreur. Avec une session, rien ne change, sauf les deux motifs acceptés. Droits : `anon` et `authenticated`, donnés explicitement ; plus `public`. |
+| `crm_meta_conversion_deja_envoyee(text)` | Nouvelle : vrai si une conversion de cet identifiant est déjà partie (`envoyee`). `SECURITY DEFINER`, client connecté seulement, un booléen. |
+| Deux index du journal | Par identifiant d'événement, et par demande et événement. |
+
+**Aucune ligne du journal touchée.** Rejouable ; verrou borné à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+select pg_get_constraintdef(oid) from pg_constraint
+ where conrelid = 'public.meta_conversion_log'::regclass and conname = 'meta_conversion_log_resultat_check';
+-- attendu : les cinq motifs (envoyee, non_configure, sans_correspondance, refus, erreur)
+
+select resultat, count(*) from public.meta_conversion_log group by 1 order by 1;
+-- attendu : seulement ces cinq motifs (la contrainte réécrite ne peut rien refuser)
+
+select has_function_privilege('anon', 'public.crm_meta_conversion_log(text,text,uuid,text,text)', 'execute') as anon,
+       to_regprocedure('public.crm_meta_conversion_deja_envoyee(text)') is not null as deja;
+-- attendu : true | false
+```
+
+### Contrôles après application
+
+```sql
+select pg_get_constraintdef(oid) from pg_constraint
+ where conrelid = 'public.meta_conversion_log'::regclass and conname = 'meta_conversion_log_resultat_check';
+-- attendu : les sept motifs
+
+select p.proname, p.prosecdef as definer,
+       has_function_privilege('anon', p.oid, 'execute') as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authentifie,
+       position('if auth.uid() is null then' in p.prosrc) > 0 as porte_etroite
+  from pg_proc p
+ where p.pronamespace = 'public'::regnamespace
+   and p.proname in ('crm_meta_conversion_log', 'crm_meta_conversion_deja_envoyee')
+ order by 1;
+-- attendu :
+--   crm_meta_conversion_deja_envoyee | true | false | true | false
+--   crm_meta_conversion_log          | true | true  | true | true
+
+select count(*) from public.meta_conversion_log;
+-- attendu : le même nombre qu'avant (aucune ligne touchée)
+```
+
+Ensuite, après la fusion et le déploiement : lancer
+`scripts/conversions-meta-controles.sql` (lecture seule) sur les semaines qui
+suivent, et vérifier que les entrées en discussion et en visite faites depuis
+le panneau « Enregistrer et suivant » ont leur ligne au journal.
+
+### Vérification locale
+
+- Rejeu de toutes les migrations sur une base vierge ; la migration, appliquée
+  deux fois de suite, passe sans erreur.
+- `scripts/conversions-meta.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée : droits ; sans session, une seule ligne écrite (le Lead
+  de la demande fraîche) sur sept tentatives ; les sept motifs avec une
+  session, un motif inconnu devient « erreur » ; « déjà partie ? » vrai
+  seulement pour un envoi réel ; la requête de contrôle compte ce décor.

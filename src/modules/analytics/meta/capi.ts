@@ -1,4 +1,4 @@
-import { env, isMetaCapiConfigured } from "@/config";
+import { env, isMetaCapiConfigured, isProductionDeployment } from "@/config";
 import {
   buildFbc,
   hashCity,
@@ -77,7 +77,18 @@ export interface MetaConversion {
 
 export type MetaSendOutcome =
   | { sent: true }
-  | { sent: false; reason: "non_configure" | "sans_correspondance" | "refus" | "erreur" };
+  | {
+      sent: false;
+      reason:
+        | "non_configure"
+        /** Le fait a eu lieu depuis un déploiement qui n'est pas la production. */
+        | "hors_production"
+        /** La même conversion (même `event_id`) est déjà partie. */
+        | "deja_envoyee"
+        | "sans_correspondance"
+        | "refus"
+        | "erreur";
+    };
 
 /**
  * Construit le bloc `user_data`. Exporté pour être testable sans réseau : c'est
@@ -154,13 +165,19 @@ export function buildEventPayload(conversion: MetaConversion): Record<string, un
 
 /**
  * Envoie une conversion. Ne lève jamais : renvoie la raison d'un non-envoi.
- * Hors production ou sans configuration, l'appel est simplement ignoré — le
- * CRM fonctionne à l'identique.
+ * Sans configuration, ou hors du déploiement de production, l'appel est
+ * ignoré — le CRM fonctionne à l'identique.
+ *
+ * HORS PRODUCTION, RIEN NE PART. Les variables de l'API de conversions étaient
+ * aussi posées pour les aperçus Vercel (relevé du 28/11/2026) ; or un aperçu
+ * écrit dans la base de production : une demande de recette y aurait compté
+ * un vrai Lead chez Meta. Le motif `hors_production` le dit au journal.
  */
 export async function envoyerConversionMeta(
   conversion: MetaConversion,
 ): Promise<MetaSendOutcome> {
   if (!isMetaCapiConfigured()) return { sent: false, reason: "non_configure" };
+  if (!isProductionDeployment()) return { sent: false, reason: "hors_production" };
 
   const event = buildEventPayload(conversion);
   const userData = event.user_data as Record<string, unknown>;

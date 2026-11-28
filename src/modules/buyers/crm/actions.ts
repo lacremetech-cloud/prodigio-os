@@ -22,7 +22,9 @@ import { LONGUEUR_MAX_MATIERE } from "./gabarit-note";
 import {
   conversionInscriptionTerminee,
   conversionRendezVous,
+  manifestationLaPlusRecente,
 } from "@/modules/analytics/meta/conversions";
+import { conversionsDuTraitement } from "./conversions-du-traitement";
 
 /**
  * Actions serveur de MUTATION du CRM Acquéreurs. Elles délèguent aux fonctions
@@ -706,6 +708,16 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
   }
 
   const supabase = await createSupabaseServerClient();
+
+  /* L'étape AVANT, pour ne déclencher une conversion que sur une ENTRÉE
+     réelle (voir plus bas). Une lecture impossible n'empêche rien : la base
+     fait autorité, et une conversion déjà partie n'est pas renvoyée. */
+  const { data: avant } = await supabase
+    .from("buyer_profiles")
+    .select("pipeline_stage")
+    .eq("id", d.buyerProfileId)
+    .maybeSingle();
+
   const { data: ecrit, error } = await supabase.rpc("crm_buyer_enregistrer", {
     p_buyer_profile_id: d.buyerProfileId,
     p_interest_id: d.interestId ?? null,
@@ -739,7 +751,33 @@ export async function enregistrerTraitementAction(input: unknown): Promise<Actio
   const retour = ecrit as {
     task_id?: string | null;
     next_action_assignee?: string | null;
+    stage?: string | null;
   } | null;
+
+  /*
+   * LES CONVERSIONS META, AUSSI DEPUIS CE PANNEAU.
+   *
+   * C'est le chemin le plus utilisé pour faire avancer un dossier, et il
+   * n'envoyait rien (relevé du 28/11/2026, docs/27). On suit ce que la base
+   * a ÉCRIT : l'étape avant et après, et la visite inscrite. Sans bien
+   * précis (« Général »), la conversion se rattache à la demande la plus
+   * récente de la personne — celle de la dernière publicité qui l'a amenée.
+   */
+  const aEnvoyer = conversionsDuTraitement({
+    etapeAvant: (avant as { pipeline_stage?: string | null } | null)?.pipeline_stage ?? null,
+    etapeApres: retour?.stage ?? null,
+    visiteInscrite: d.nextActionKind === "visite" && Boolean(d.nextActionAt) && Boolean(retour?.task_id),
+  });
+  if (aEnvoyer.length > 0) {
+    enArrierePlan(async () => {
+      const interet = d.interestId ?? (await manifestationLaPlusRecente(supabase, d.buyerProfileId));
+      if (!interet) return;
+      for (const c of aEnvoyer) {
+        if (c === "inscription_terminee") await conversionInscriptionTerminee(supabase, interet);
+        else await conversionRendezVous(supabase, interet);
+      }
+    });
+  }
   if (d.nextActionAssignee && retour?.task_id) {
     if (retour.next_action_assignee !== d.nextActionAssignee) {
       revalidateBuyer(d.buyerProfileId);
