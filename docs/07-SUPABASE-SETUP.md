@@ -1325,3 +1325,99 @@ de lancer. Relevés faits sur place (non revérifiables depuis le dépôt) :
 - **Aucun essai d'écriture** : pas de donnée de test en production. La
   première vraie offre saisie par l'équipe passera le dossier en « Offre en
   cours ».
+
+---
+
+## 19. Pilotage pub — taux de passage sur les mêmes personnes (`20261128110000_pilotage_crm_passages`) — **APPLIQUÉE le 28/11/2026**
+
+Détail : [33-PILOTAGE-PUB.md](33-PILOTAGE-PUB.md) § 9.7. Sur une base où elle
+manque, la page Pilotage affiche le taux de passage « manquant (attend
+l'installation de la migration du 28/11/2026) » ; tout le reste s'affiche.
+
+### Pourquoi
+
+Relevé à la recette du 28/11/2026 (docs/05, n° 45). Le taux de passage
+« A → B » divisait les personnes ayant atteint B par celles ayant atteint A,
+soit deux groupes différents. Il pouvait dépasser 100 %.
+
+### Ce qu'elle change
+
+| Objet | Modification |
+|---|---|
+| `crm_pilotage_crm_cohorte(date, date)` | `create or replace` : le même corps que la version du § 17 (révisée), plus une clé `passages` dans chaque objet de comptes. Elle donne, par bien et au total, les personnes passées par « dossier envoyé » ET « visite planifiée », et par « visite planifiée » ET « offre en cours ». |
+
+Même signature, même `SECURITY INVOKER`, même contrôle du rôle administrateur
+en première ligne. Droits rappelés : `authenticated`, jamais `anon`. **Aucune
+table, aucune colonne, aucune donnée touchée ; aucune écriture.** Rejouable ;
+attente de verrou bornée à 2 s.
+
+### Avant d'appliquer (lecture seule)
+
+```sql
+-- La cohorte en place ne rend pas encore les passages.
+select position('''passages''' in prosrc) > 0 as passages
+  from pg_proc where pronamespace = 'public'::regnamespace and proname = 'crm_pilotage_crm_cohorte';
+-- attendu : false
+```
+
+### Contrôles après application
+
+```sql
+select position('''passages''' in prosrc) > 0 as passages,
+       prosecdef as security_definer,
+       has_function_privilege('anon', oid, 'execute') as anon,
+       has_function_privilege('authenticated', oid, 'execute') as authentifie
+  from pg_proc where pronamespace = 'public'::regnamespace and proname = 'crm_pilotage_crm_cohorte';
+-- attendu : true, false, false, true
+
+-- Sans administrateur connecté (l'éditeur SQL n'en a pas), l'appel est refusé.
+select * from public.crm_pilotage_crm_cohorte(null, current_date);
+-- attendu : ERREUR « pilotage réservé aux administrateurs »
+```
+
+Ensuite, sur la page Pilotage (onglet d'un bien), chaque taux de passage
+s'écrit « X % — M des N personnes passées par « A » ». La recette le compare
+au bloc `14 passage` de `scripts/pilotage-crm-controles.sql`.
+
+### Vérification locale
+
+- Rejeu de toutes les migrations sur une base vierge ; la migration,
+  appliquée deux fois de suite, passe sans erreur. Sa fonction ne diffère de
+  celle du § 17 que par les deux comptes de passage et la clé `passages`.
+- `scripts/pilotage-crm.sql` : **RECETTE RÉUSSIE**, avec et sans la règle
+  `safeupdate` émulée. Elle vérifie notamment un passage qu'on comptait à
+  200 % et qui vaut désormais 100 %. La requête de contrôle y donne exactement
+  les chiffres de la page (124 lignes).
+- Sur dix fois le volume du CRM de novembre 2026 (fictif) : cohorte en 2,1 s ;
+  la requête de contrôle donne les mêmes chiffres que la page sur plusieurs
+  périodes.
+
+### Résultat de l'application (28/11/2026)
+
+Appliquée en production par la session de l'iMac, dans l'éditeur SQL de
+Supabase, vers 10 h 30, avec l'accord écrit de Victor (« Oui, installe-la »,
+le 28/11/2026 vers 10 h 28) ; empreinte `74d3ad18…` vérifiée dans l'éditeur
+avant de lancer. Relevés faits sur place (non revérifiables depuis le dépôt ;
+aucun chiffre du CRM n'est écrit ici) :
+
+- **Avant** : contrôle d'avant conforme (`passages = false`) ; la fonction du
+  fichier ne différait de celle installée le matin que par les deux comptes et
+  la clé `passages`.
+- **Après** : `passages = true`, `security_definer = false`, `anon = false`,
+  `authenticated = true` ; cinq fonctions `crm_pilotage_crm_%` ; appel refusé
+  dans l'éditeur (« pilotage réservé aux administrateurs ») ; définition en
+  base identique au fichier, au caractère près.
+- **Production, ancien code** : la section du CRM s'affiche toujours, mêmes
+  chiffres ; la clé en plus est ignorée jusqu'à la fusion.
+- **Recette** (aperçu de la branche, requête de contrôle lancée dans la même
+  minute, toute la période) : taux de passage et « M des N personnes »
+  conformes aux blocs 14 et 06 pour les trois biens ; « pub par pub »
+  identique au contrôle ligne à ligne, chaque pub avec sa campagne, ses jours
+  de diffusion et « Voir la pub » — les pubs homonymes se distinguent par
+  leurs dates ; le reste du contrôle est inchangé.
+- **Temps** : 4,5 à 5,3 s pour un onglet sur l'aperçu (premiers
+  chargements), 3,4 s en production avec la même fonction ; plus long que le
+  matin (2,4 à 3,9 s) : à surveiller.
+- **Non vérifiés** : un taux non nul sur des données réelles (il n'en existe
+  pas au 28/11/2026 ; couvert par la recette locale), la cible des liens
+  « Voir la pub », la vue générale de l'aperçu, téléphone et thème sombre.

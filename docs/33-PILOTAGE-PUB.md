@@ -552,7 +552,9 @@ l'écran.
   fois, part des personnes arrivées) et les **taux de passage** « dossier
   envoyé → visite planifiée → offre en cours » ; qualification, provenance,
   responsables ; **pub par pub** (demandes, personnes, qualifiées, visites,
-  dont faites, offres), avec la part non rattachée.
+  dont faites, offres), avec la part non rattachée ; sous chaque pub, sa
+  campagne, ses jours de diffusion chez Meta et le lien « Voir la pub », qui
+  distinguent deux pubs de même nom.
 - Tant que la migration du 23/11/2026 n'est pas installée (docs/07 § 17),
   seule la section « Le CRM » le dit ; le reste de la page s'affiche.
 
@@ -566,7 +568,7 @@ l'écran.
 | **Archivées** | Les demandes d'une personne archivée (`archive_le` : faux numéro, test, doublon) sont **écartées** partout, et leur nombre est dit. |
 | **Étape, qualification** | Celles de la **personne, aujourd'hui** : `buyer_profiles.pipeline_stage` (anciennes clés traduites par `crm_etape_v2`) et `.qualification`. Jamais les colonnes du même nom de `buyer_interests`, jamais `qualification_status` (valeurs par défaut, pas tenues à jour). |
 | **Personnes qualifiées** | Qualification « qualifié » ou « gros potentiel », aujourd'hui. |
-| **Étape atteinte** | L'étape actuelle, ou toute étape portée par un **événement de la personne** au journal (`audit_events`, `entity_type = 'buyer_profile'`, clé `stage` de `new_value` **ou** de `old_value`, **quel que soit le type** : stade, traitement, offre, résultat, réouverture…) ; « à contacter » pour toute personne arrivée. Une personne passée par une étape compte même si elle en est sortie — y compris quand elle y est arrivée par le formulaire Offre ou Résultat, qui écrivent leurs propres types d'événement. **Part** = atteinte ÷ personnes ; **passage** = atteinte de l'étape d'arrivée ÷ atteinte de l'étape de départ. |
+| **Étape atteinte** | L'étape actuelle, ou toute étape portée par un **événement de la personne** au journal (`audit_events`, `entity_type = 'buyer_profile'`, clé `stage` de `new_value` **ou** de `old_value`, **quel que soit le type** : stade, traitement, offre, résultat, réouverture…) ; « à contacter » pour toute personne arrivée. Une personne passée par une étape compte même si elle en est sortie — y compris quand elle y est arrivée par le formulaire Offre ou Résultat, qui écrivent leurs propres types d'événement. **Part** = atteinte ÷ personnes. **Taux de passage « A → B »**, sur les **mêmes personnes** : passées par A **et** par B ÷ passées par A (jamais au-delà de 100 % ; migration du 28/11/2026, § 9.7). |
 | **Visites** | Les tâches `kind = 'visite'` rattachées à une demande comptée (`tasks.interest_id`). La tuile = **à faire** (`a_faire`) + **faites** (`fait`) ; « à venir » = à faire et prévues à partir de maintenant ; annulées (`annule`) à part. |
 | **Offres** | Les personnes qui ont atteint « offre en cours » ; les **montants** saisis (`offer_amount_cents`) comptent pour le bien de l'offre (`offer_property_id`). Aucune offre : « aucune offre saisie », jamais 0 €. |
 | **Pub d'une demande** | Le premier identifiant **connu de la lecture Meta** (`pilotage_meta_pubs` ∪ `pilotage_meta_insights`) parmi : `meta_ad_id`, `utm_content` (colonne, adresse du formulaire, première visite), `utm_id` (adresse, première visite) ; sinon le **nom exact** d'une pub, s'il n'est porté que par une seule ; sinon la première **campagne** connue parmi `utm_campaign` (colonne, adresses) et `utm_id` ; sinon « **non rattachée** ». Un `utm_id` qui porte l'identifiant d'une campagne (Les Airelles) n'est donc jamais pris pour une pub. `meta_ad_id` n'est pas réécrit. |
@@ -613,7 +615,8 @@ plus simple), lancer, comparer :
 | Graphique « Demandes reçues » | `03 par jour` (une semaine = la somme de ses jours, du lundi au dimanche) |
 | Tuile « Personnes qualifiées » ; liste « Qualification » | `04 qualification` (la tuile = qualifie + gros_potentiel) |
 | Étapes, colonne « Aujourd'hui » ; « Commission en jeu » | `05 étape aujourd'hui` |
-| Étapes, « Atteinte au moins une fois », part, taux de passage | `06 étape atteinte` (÷ `02 personnes`, ou ÷ l'étape de départ) |
+| Étapes, « Atteinte au moins une fois », part | `06 étape atteinte` (÷ `02 personnes`) |
+| Taux de passage « A → B » (« M des N personnes passées par A ») | `14 passage` · A>B (= M) ÷ `06 étape atteinte` · A (= N) |
 | Tuile « Visites » (faites, à faire, annulées) | `07 visites` (la tuile = à faire + faites) |
 | Tuile « Offres », montants saisis | `08 offres` |
 | Liste « Provenance » | `09 provenance` (regroupée à l'écran, § 9.2) |
@@ -666,10 +669,11 @@ requête donne **exactement** les chiffres que la page tire des fonctions.
 - Le « **compterDossiers** » du CRM et sa tuile « En cours » comptent encore
   sur l'ancienne étape `nouveau` : la page Pilotage ne s'en sert pas
   (docs/05, n° 42).
-- Relevés à la recette du 28/11/2026, pour la suite : deux pubs homonymes
-  d'un même bien donnent deux lignes de même libellé dans « pub par pub »
-  (docs/05, n° 44) ; le taux de passage compare deux groupes différents et
-  peut dépasser 100 % (docs/05, n° 45).
+- Relevés à la recette du 28/11/2026 et repris par la suite du 28/11/2026
+  (§ 9.7) : deux pubs homonymes d'un même bien donnaient deux lignes de même
+  libellé dans « pub par pub » (docs/05, n° 44) ; le taux de passage
+  comparait deux groupes différents et pouvait dépasser 100 % (docs/05,
+  n° 45).
 
 ### 9.6 Recette locale
 
@@ -687,3 +691,23 @@ requête donne **exactement** les chiffres que la page tire des fonctions.
 - `src/modules/pilotage/crm.test.ts` : coûts et leurs états, mêmes jours,
   parts et passages, provenance, graphique ; garde-fous (aucune colonne
   personnelle, rôle vérifié, jamais `anon`, contrôle en lecture seule).
+
+### 9.7 Suite du 28/11/2026 : taux de passage et pubs homonymes
+
+Décidée par Victor le 28/11/2026 (« Oui, PR de suite »), après la recette.
+Migration installée en production le 28/11/2026, recette conforme (docs/07
+§ 19).
+
+- **Taux de passage sur les mêmes personnes.** La migration
+  `20261128110000_pilotage_crm_passages` (docs/07 § 19) remplace la seule
+  fonction `crm_pilotage_crm_cohorte` : elle rend en plus, par bien et au
+  total, les personnes passées par les **deux** étapes de chaque passage suivi
+  (`passages` : « dossier envoyé » → « visite planifiée », « visite
+  planifiée » → « offre en cours »). La page en tire le taux (passées par les
+  deux ÷ passées par le départ) et l'écrit en clair : « M des N personnes
+  passées par « A » ». Tant que la migration n'est pas installée, le taux est
+  « manquant », jamais deviné. Contrôle : bloc `14 passage`.
+- **Pubs homonymes.** Sous chaque pub de « pub par pub » : sa campagne, ses
+  premier et dernier jours de diffusion lus chez Meta, et le lien « Voir la
+  pub ». Rien en base : ces informations viennent de la lecture Meta déjà
+  enregistrée.

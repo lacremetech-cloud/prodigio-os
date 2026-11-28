@@ -207,6 +207,11 @@ export interface TableauPilotage {
   periode: PeriodeResolue;
   /** Les noms des pubs et des campagnes, tels que Meta les donne (pour la page). */
   noms: { pubs: Map<string, string>; campagnes: Map<string, string> };
+  /**
+   * Ce qui distingue deux pubs de même nom : leur campagne, leurs jours de
+   * diffusion lus chez Meta (depuis le début) et leur lien d'aperçu.
+   */
+  fichesPubs: Map<string, FichePub>;
   lecture: EtatDeLaLecture;
   biens: BienCalcule[];
   global: {
@@ -230,6 +235,15 @@ export interface TableauPilotage {
    */
   quotidien: Map<string, Map<string, MetaDuJour>>;
   alertes: Alerte[];
+}
+
+export interface FichePub {
+  nom: string | null;
+  campagne: string | null;
+  /** Premier et dernier jour où Meta rapporte la pub. */
+  premierJour: string | null;
+  dernierJour: string | null;
+  lienApercu: string | null;
 }
 
 export interface MetaDuJour {
@@ -818,10 +832,28 @@ export function calculerTableau(e: EntreeTableau): TableauPilotage {
   }
   for (const p of e.meta.pubs) if (p.ad_name && !noms.pubs.has(p.ad_id)) noms.pubs.set(p.ad_id, p.ad_name);
 
+  const fichesPubs: TableauPilotage["fichesPubs"] = new Map();
+  for (const p of e.meta.depuisLeDebut) {
+    fichesPubs.set(p.ad_id, {
+      nom: p.ad_name,
+      campagne: p.campaign_name,
+      premierJour: p.premier_jour,
+      dernierJour: p.dernier_jour,
+      lienApercu: null,
+    });
+  }
+  for (const p of e.meta.pubs) {
+    const f = fichesPubs.get(p.ad_id);
+    const campagne = p.campaign_id ? (noms.campagnes.get(p.campaign_id) ?? null) : null;
+    if (f) f.lienApercu = p.lien_apercu;
+    else fichesPubs.set(p.ad_id, { nom: p.ad_name, campagne, premierJour: null, dernierJour: null, lienApercu: p.lien_apercu });
+  }
+
   return {
     jour: e.jour,
     periode,
     noms,
+    fichesPubs,
     lecture,
     biens,
     global,

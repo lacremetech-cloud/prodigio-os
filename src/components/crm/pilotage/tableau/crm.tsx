@@ -2,7 +2,7 @@ import type { MemberInfo } from "@/modules/crm/data/noms";
 import { memberDisplayName } from "@/modules/crm/data/noms";
 import { formatCentimes } from "@/modules/pilotage/affichage";
 import type { CrmCalcule, LigneCrmPub } from "@/modules/pilotage/crm";
-import { libelleJour, type TableauPilotage } from "@/modules/pilotage/tableau";
+import { libelleJour, type FichePub, type TableauPilotage } from "@/modules/pilotage/tableau";
 import { Tuile, Valeur } from "./valeurs";
 
 /**
@@ -127,14 +127,18 @@ export function EtapesCrm({ crm }: { crm: CrmCalcule }) {
       </div>
       <ul className="flex flex-col gap-1 text-xs text-[var(--crm-text-dim)]">
         {crm.passages.map((p) => (
-          <li key={`${p.de}-${p.vers}`}>
+          <li key={`${p.de}-${p.vers}`} className="crm-wrap">
             Taux de passage « {p.de} » → « {p.vers} » : <Valeur calcule={p.taux} format="pourcent" />
+            {p.ensemble !== null && p.depart > 0
+              ? ` — ${nombre.format(p.ensemble)} des ${nombre.format(p.depart)} personne${p.depart > 1 ? "s" : ""} passée${p.depart > 1 ? "s" : ""} par « ${p.de} »`
+              : null}
           </li>
         ))}
       </ul>
       <p className="crm-wrap text-xs text-[var(--crm-text-faint)]">
         « Atteinte » : l’étape actuelle, ou une étape passée selon le journal du CRM ; une personne passée par une
-        étape compte même si elle en est sortie. « R1 planifié » et « Offre en cours » n’existent que depuis le
+        étape compte même si elle en est sortie. Un taux de passage se calcule sur les mêmes personnes : parmi celles
+        passées par l’étape de départ, la part passée aussi par l’étape d’arrivée. « R1 planifié » et « Offre en cours » n’existent que depuis le
         09/11/2026 (« Offre en cours » avait quitté le pipeline le 14/10/2026) : avant, personne ne pouvait les atteindre.
       </p>
     </div>
@@ -176,8 +180,42 @@ function Liste({ titre, lignes, note }: { titre: string; lignes: { libelle: stri
   );
 }
 
+/** Ce qui distingue une pub d'une autre de même nom : sa campagne, ses jours de diffusion, son aperçu. */
+function DetailPub({ fiche }: { fiche: FichePub | undefined }) {
+  if (!fiche) return null;
+  const jours =
+    fiche.premierJour && fiche.dernierJour
+      ? fiche.premierJour === fiche.dernierJour
+        ? `le ${libelleJour(fiche.premierJour)}`
+        : `du ${libelleJour(fiche.premierJour)} au ${libelleJour(fiche.dernierJour)}`
+      : null;
+  const texte = [fiche.campagne, jours].filter(Boolean).join(" · ");
+  if (!texte && !fiche.lienApercu) return null;
+  return (
+    <span className="mt-0.5 block text-[11px] font-normal text-[var(--crm-text-faint)]">
+      {texte}
+      {fiche.lienApercu ? (
+        <>
+          {texte ? " · " : ""}
+          <a href={fiche.lienApercu} target="_blank" rel="noopener noreferrer" className="text-[var(--crm-univers)] underline">
+            Voir la pub
+          </a>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
 /** Par pub : demandes, personnes, qualifiés, visites, offres ; la part non rattachée dite. */
-export function ParPubCrm({ lignes, noms }: { lignes: LigneCrmPub[]; noms: TableauPilotage["noms"] }) {
+export function ParPubCrm({
+  lignes,
+  noms,
+  fiches,
+}: {
+  lignes: LigneCrmPub[];
+  noms: TableauPilotage["noms"];
+  fiches: TableauPilotage["fichesPubs"];
+}) {
   if (lignes.length === 0) return <p className="text-sm text-[var(--crm-text-faint)]">Aucune demande sur la période.</p>;
   const ordre = { pub: 0, campagne: 1, aucun: 2 } as const;
   const triees = [...lignes].sort((a, b) => ordre[a.niveau] - ordre[b.niveau] || b.demandes - a.demandes);
@@ -209,6 +247,7 @@ export function ParPubCrm({ lignes, noms }: { lignes: LigneCrmPub[]; noms: Table
               <tr key={`${l.niveau}-${l.ad_id ?? ""}-${l.campaign_id ?? ""}`} className="border-t border-[var(--crm-line-soft)]">
                 <th scope="row" className="crm-wrap py-2 pr-3 text-left font-medium text-[var(--crm-text)]">
                   {libelle(l)}
+                  {l.niveau === "pub" ? <DetailPub fiche={fiches.get(l.ad_id ?? "")} /> : null}
                 </th>
                 <td className="py-2 pr-3 text-right tabular-nums">{nombre.format(l.demandes)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums text-[var(--crm-text-dim)]">{nombre.format(l.personnes)}</td>

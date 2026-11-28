@@ -12,7 +12,8 @@
  *    (l'étape et la qualification sont celles de la personne) ;
  *  - une personne archivée (faux numéro, test, doublon) est exclue ;
  *  - « étape atteinte » : l'étape actuelle, ou une étape passée selon le
- *    journal ; les taux de passage se calculent sur les étapes atteintes ;
+ *    journal ; un taux de passage « A → B » se calcule sur les MÊMES
+ *    personnes : parmi celles passées par A, la part passée aussi par B ;
  *  - les coûts et l'écart avec Meta comparent les MÊMES JOURS : la dépense et
  *    les leads Meta ne comptent qu'à partir de la première demande reçue dans
  *    le CRM (avant, les demandes n'y arrivaient pas).
@@ -39,6 +40,9 @@ export const mesuresCrmSchema = z.object({
   provenance: comptes,
   responsables: comptes,
   pub: z.object({ pub: compte, campagne: compte, aucun: compte }),
+  /** Personnes passées par les deux étapes d'un passage (« A>B ») ; absent
+      tant que la migration du 28/11/2026 n'est pas installée. */
+  passages: comptes.optional(),
 });
 
 export type MesuresCrm = z.infer<typeof mesuresCrmSchema>;
@@ -57,6 +61,7 @@ export const MESURES_VIDES: MesuresCrm = {
   provenance: {},
   responsables: {},
   pub: { pub: 0, campagne: 0, aucun: 0 },
+  passages: {},
 };
 
 export interface LigneCrmJour {
@@ -93,6 +98,10 @@ export interface LigneEtape {
 export interface Passage {
   de: string;
   vers: string;
+  /** Personnes passées par l'étape de départ. */
+  depart: number;
+  /** Parmi elles, celles passées aussi par l'étape d'arrivée ; `null` si la base ne le dit pas encore. */
+  ensemble: number | null;
   taux: Calcule;
 }
 
@@ -182,6 +191,8 @@ export function provenance(source: string): string {
   return SOURCES[source] ?? source;
 }
 
+const MIGRATION_PASSAGES = "attend l'installation de la migration du 28/11/2026";
+
 /** Les étapes atteintes en chaîne, pour les taux de passage d'une étape à l'autre. */
 const CHAINE: [EtapeAcquereur, EtapeAcquereur][] = [
   ["en_discussion", "visite_planifiee"],
@@ -198,11 +209,22 @@ export function calculerCrm(m: MesuresCrm, meta: MetaEnFace): CrmCalcule {
     atteinte: m.atteintes[e.valeur] ?? 0,
     part: part(m.atteintes[e.valeur] ?? 0, m.personnes, "aucune personne arrivée"),
   }));
-  const passages: Passage[] = CHAINE.map(([de, vers]) => ({
-    de: label(de),
-    vers: label(vers),
-    taux: part(m.atteintes[vers] ?? 0, m.atteintes[de] ?? 0, `personne n'a atteint « ${label(de)} »`),
-  }));
+  // Un passage se compte sur les MÊMES personnes : passées par le départ ET
+  // par l'arrivée, ÷ passées par le départ. Jamais au-delà de 100 %.
+  const passages: Passage[] = CHAINE.map(([de, vers]) => {
+    const depart = m.atteintes[de] ?? 0;
+    if (!m.passages) {
+      return { de: label(de), vers: label(vers), depart, ensemble: null, taux: { etat: "manquant", raison: MIGRATION_PASSAGES } };
+    }
+    const ensemble = m.passages[`${de}>${vers}`] ?? 0;
+    return {
+      de: label(de),
+      vers: label(vers),
+      depart,
+      ensemble,
+      taux: part(ensemble, depart, `personne n'a atteint « ${label(de)} »`),
+    };
+  });
 
   const regroupees = new Map<string, number>();
   for (const [source, n] of Object.entries(m.provenance)) {

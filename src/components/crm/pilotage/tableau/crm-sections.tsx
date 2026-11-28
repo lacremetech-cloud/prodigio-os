@@ -99,7 +99,7 @@ export function SectionCrmBien({
       <ListesCrm crm={calcule} membres={membres} />
       <div className="flex flex-col gap-2">
         <p className="text-sm font-semibold text-[var(--crm-text)]">Pub par pub</p>
-        <ParPubCrm lignes={crm.parPub.filter((l) => l.property_id === b.id)} noms={t.noms} />
+        <ParPubCrm lignes={crm.parPub.filter((l) => l.property_id === b.id)} noms={t.noms} fiches={t.fichesPubs} />
       </div>
     </Section>
   );
