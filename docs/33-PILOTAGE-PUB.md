@@ -523,6 +523,9 @@ d'acquéreur ne quitte la base, aucun nom, téléphone ni e-mail à l'écran, da
 les journaux ou dans les tests. Réservé aux administrateurs, en base comme à
 l'écran.
 
+**Installée en production le 28/11/2026, recette conforme sur tous les blocs**
+(docs/07 § 17).
+
 ### 9.1 Ce que montre la page
 
 - **Vue générale**, section « Le CRM · *période* », entre « Bien par bien » et
@@ -663,6 +666,10 @@ requête donne **exactement** les chiffres que la page tire des fonctions.
 - Le « **compterDossiers** » du CRM et sa tuile « En cours » comptent encore
   sur l'ancienne étape `nouveau` : la page Pilotage ne s'en sert pas
   (docs/05, n° 42).
+- Relevés à la recette du 28/11/2026, pour la suite : deux pubs homonymes
+  d'un même bien donnent deux lignes de même libellé dans « pub par pub »
+  (docs/05, n° 44) ; le taux de passage compare deux groupes différents et
+  peut dépasser 100 % (docs/05, n° 45).
 
 ### 9.6 Recette locale
 
